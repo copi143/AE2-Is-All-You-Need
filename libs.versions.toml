@@ -26,6 +26,14 @@ flk = "1.12.3+kotlin.2.0.21"
 
 mixin = "0.8.5"
 
+jei = "15.20.0.115"
+emi = "1.1.24+1.20.1"
+
+guideme = "20.1.7"
+ae2 = "15.4.10"
+gt = "7.5.3"
+mek = "1.20.1-10.4.16.80"
+
 [libraries]
 minecraft = { group = "com.mojang", name = "minecraft", version.ref = "minecraft" }
 fabricLoader = { group = "net.fabricmc", name = "fabric-loader", version.ref = "fabricLoader" }

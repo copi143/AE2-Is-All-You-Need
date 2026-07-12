@@ -1,7 +1,6 @@
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-// This should match the folder name of the project, or else IDEA may complain (see https://youtrack.jetbrains.com/issue/IDEA-317606)
-rootProject.name = "KotlinMultiloader"
+rootProject.name = "AE2-Is-All-You-Need"
 
 pluginManagement {
     repositories {
@@ -33,6 +32,7 @@ dependencyResolutionManagement {
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
 }
+
 include("common")
 include("fabric")
 include("forge")

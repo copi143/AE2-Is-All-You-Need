@@ -56,4 +56,38 @@ sourceSets.main.get().resources { srcDir("src/generated/resources") }
 dependencies {
     modImplementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
+
+    modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
+    modRuntimeOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
+
+    modCompileOnly("dev.emi:emi-forge:${libs.versions.emi.get()}:api")
+    modRuntimeOnly("dev.emi:emi-forge:${libs.versions.emi.get()}")
+
+    modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
+    modImplementation("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
+
+    modCompileOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+    modRuntimeOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+
+    modCompileOnly("mekanism:Mekanism:${libs.versions.mek.get()}:api")
+    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}")
+    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:additions")
+    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:generators")
+    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:tools")
+}
+
+repositories {
+    maven {
+        name = "TerraformersMC"
+        url = uri("https://maven.terraformersmc.com/")
+    }
+    maven {
+        name = "ModMaven"
+        url = uri("https://modmaven.dev/")
+    }
+    maven {
+        name = "GTCEu Maven"
+        url = uri("https://maven.gtceu.com")
+    }
+    mavenCentral()
 }

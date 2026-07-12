@@ -18,6 +18,28 @@ neoForge {
 
 dependencies {
     compileOnly(libs.mixin)
+
+    modCompileOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
+    modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")
+
+    modCompileOnly("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
+    modCompileOnly("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")
+}
+
+repositories {
+    maven {
+        name = "TerraformersMC"
+        url = uri("https://maven.terraformersmc.com/")
+    }
+    maven {
+        name = "ModMaven"
+        url = uri("https://modmaven.dev/")
+    }
+    maven {
+        name = "GTCEu Maven"
+        url = uri("https://maven.gtceu.com")
+    }
+    mavenCentral()
 }
 
 configurations {

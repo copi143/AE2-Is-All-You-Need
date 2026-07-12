@@ -15,6 +15,31 @@ dependencies {
     modImplementation(libs.fabricApi)
 
     modImplementation(libs.flk)
+
+    modCompileOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
+    modRuntimeOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
+
+    modCompileOnly("dev.emi:emi-fabric:${libs.versions.emi.get()}:api")
+    modRuntimeOnly("dev.emi:emi-fabric:${libs.versions.emi.get()}")
+
+    modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
+    modImplementation("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")
+}
+
+repositories {
+    maven {
+        name = "TerraformersMC"
+        url = uri("https://maven.terraformersmc.com/")
+    }
+    maven {
+        name = "ModMaven"
+        url = uri("https://modmaven.dev/")
+    }
+    maven {
+        name = "GTCEu Maven"
+        url = uri("https://maven.gtceu.com")
+    }
+    mavenCentral()
 }
 
 loom {
@@ -28,13 +53,13 @@ loom {
     runs {
         named("client") {
             client()
-            setConfigName("Fabric Client")
+            configName = "Fabric Client"
             ideConfigGenerated(true)
             runDir("runs/client")
         }
         named("server") {
             server()
-            setConfigName("Fabric Server")
+            configName = "Fabric Server"
             ideConfigGenerated(true)
             runDir("runs/server")
         }
