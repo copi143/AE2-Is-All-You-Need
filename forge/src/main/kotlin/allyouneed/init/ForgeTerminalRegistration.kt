@@ -1,12 +1,9 @@
 package allyouneed.forge.init
 
 import allyouneed.Constants
-import allyouneed.terminal.PseudoPatternTerminalBlockEntity
-import allyouneed.terminal.PseudoPatternTerminalRegistration
 import net.minecraftforge.eventbus.api.IEventBus
 import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
-import net.minecraftforge.registries.RegistryObject
 
 object ForgeTerminalRegistration {
     val BE: DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<*>> =

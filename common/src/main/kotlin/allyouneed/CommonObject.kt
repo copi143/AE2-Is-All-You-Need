@@ -1,8 +1,10 @@
 package allyouneed
 
 import allyouneed.api.machine.BuiltinMachineTypes
+import allyouneed.energy.EnergyCell
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.platform.Services
+import appeng.core.MainCreativeTab
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.Items
 

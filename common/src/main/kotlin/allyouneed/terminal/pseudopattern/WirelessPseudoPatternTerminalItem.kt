@@ -1,4 +1,4 @@
-package allyouneed.terminal
+package allyouneed.terminal.pseudopattern
 
 import appeng.api.implementations.menuobjects.ItemMenuHost
 import appeng.helpers.WirelessTerminalMenuHost

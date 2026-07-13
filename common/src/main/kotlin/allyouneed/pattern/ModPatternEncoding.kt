@@ -1,8 +1,6 @@
 package allyouneed.pattern
 
 import allyouneed.api.machine.MachineTypeRegistry
-import allyouneed.pattern.machine.MachinePatternItem
-import allyouneed.pattern.pseudo.PseudoPatternItem
 import appeng.api.stacks.GenericStack
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
@@ -12,17 +10,15 @@ object ModPatternEncoding {
 
     fun encodeMachinePattern(
         machineTypeId: ResourceLocation,
-        inputs: Array<GenericStack?>,
-        outputs: Array<GenericStack?>
+        inputs: Array<GenericStack>,
+        outputs: Array<GenericStack>,
     ): ItemStack {
         val item = ModItems.MACHINE_PATTERN
         return item.encode(machineTypeId, inputs, outputs)
     }
 
     fun encodePseudoPattern(
-        displayName: Component?,
-        icon: ItemStack?,
-        inputs: Array<GenericStack?>
+        displayName: Component?, icon: ItemStack?, inputs: Array<GenericStack?>
     ): ItemStack {
         val item = ModItems.PSEUDO_PATTERN
         return item.encode(displayName, icon, inputs)
@@ -35,7 +31,7 @@ object ModPatternEncoding {
     fun getMachineTypeIdFromItem(stack: ItemStack): ResourceLocation? {
         if (stack.isEmpty) return null
         for (mt in MachineTypeRegistry.getAll()) {
-            if (mt.machineItem.get() == stack.getItem()) {
+            if (mt.machineItem.get() == stack.item) {
                 return mt.id
             }
         }

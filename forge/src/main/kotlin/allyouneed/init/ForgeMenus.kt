@@ -1,8 +1,8 @@
 package allyouneed.forge.init
 
 import allyouneed.Constants
-import allyouneed.terminal.PseudoPatternTerminalMenu
-import allyouneed.terminal.WirelessPseudoPatternTerminalMenu
+import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
+import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
 import net.minecraft.world.inventory.MenuType
 import net.minecraftforge.eventbus.api.IEventBus
 import net.minecraftforge.registries.DeferredRegister

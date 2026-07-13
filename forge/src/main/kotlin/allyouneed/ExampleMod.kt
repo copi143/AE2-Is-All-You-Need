@@ -7,9 +7,19 @@ import net.minecraftforge.fml.common.Mod
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 
 @Mod(Constants.MOD_ID)
-class ExampleMod() {
+class ExampleMod {
     init {
         Constants.LOG.info("Hello Forge world from Kotlin!")
+
+        AllRegistries.blocks.forEach { entry ->
+            ForgeBlocks.BLOCKS.register(entry.id().path) { entry.block() }
+            ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
+        }
+
+        AllRegistries.items.forEach { entry ->
+            ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
+        }
+
         // Use KotlinForForge's MOD_BUS instead of FMLJavaModLoadingContext
         ForgeItems.register(MOD_BUS)
         ForgeBlocks.register(MOD_BUS)

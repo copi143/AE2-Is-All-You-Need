@@ -2,7 +2,7 @@ package allyouneed.fabric.init
 
 import allyouneed.Constants
 import allyouneed.pattern.ModItems
-import allyouneed.terminal.WirelessPseudoPatternTerminalItem
+import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries

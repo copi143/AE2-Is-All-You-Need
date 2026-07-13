@@ -1,8 +1,8 @@
 package allyouneed.fabric.init
 
 import allyouneed.Constants
-import allyouneed.terminal.PseudoPatternTerminalBlock
-import allyouneed.terminal.PseudoPatternTerminalBlockEntity
+import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
+import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
 import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntityTypeBuilder
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries

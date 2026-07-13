@@ -1,10 +1,8 @@
 package allyouneed.fabric.init
 
 import allyouneed.Constants
-import allyouneed.terminal.PseudoPatternTerminalMenu
-import allyouneed.terminal.WirelessPseudoPatternTerminalMenu
-import net.minecraft.core.Registry
-import net.minecraft.core.registries.BuiltInRegistries
+import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
+import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.inventory.MenuType
 

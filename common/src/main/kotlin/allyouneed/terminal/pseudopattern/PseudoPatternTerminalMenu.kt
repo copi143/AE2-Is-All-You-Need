@@ -1,14 +1,10 @@
-package allyouneed.terminal
+package allyouneed.terminal.pseudopattern
 
-import allyouneed.Constants
 import appeng.api.storage.ITerminalHost
-import appeng.api.util.IConfigurableObject
 import appeng.menu.implementations.MenuTypeBuilder
-import net.minecraft.network.chat.Component
+import appeng.menu.me.common.MEStorageMenu
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.MenuType
-import net.minecraft.world.item.ItemStack
-import net.minecraft.world.level.Level
 
 /**
  * Menu for the Pseudo Pattern Terminal (Block version).
@@ -18,7 +14,7 @@ class PseudoPatternTerminalMenu(
     id: Int,
     playerInventory: Inventory,
     host: ITerminalHost
-) : appeng.menu.me.common.MEStorageMenu(TYPE, id, playerInventory, host, true) {
+) : MEStorageMenu(TYPE, id, playerInventory, host, true) {
 
     companion object {
         val TYPE: MenuType<PseudoPatternTerminalMenu> = MenuTypeBuilder

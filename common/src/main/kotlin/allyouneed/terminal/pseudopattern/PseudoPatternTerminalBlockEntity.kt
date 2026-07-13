@@ -1,4 +1,4 @@
-package allyouneed.terminal
+package allyouneed.terminal.pseudopattern
 
 import appeng.api.storage.ITerminalHost
 import appeng.api.storage.MEStorage
@@ -6,12 +6,13 @@ import appeng.api.upgrades.IUpgradeInventory
 import appeng.api.upgrades.UpgradeInventories
 import appeng.api.util.IConfigManager
 import appeng.blockentity.grid.AENetworkBlockEntity
+import appeng.core.definitions.AEBlocks
 import appeng.menu.ISubMenu
 import appeng.menu.MenuOpener
-import appeng.menu.locator.MenuLocators
 import appeng.util.ConfigManager
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.block.state.BlockState
 
@@ -35,7 +36,7 @@ class PseudoPatternTerminalBlockEntity(
 
     override fun getUpgrades(): IUpgradeInventory =
         UpgradeInventories.forMachine(
-            appeng.core.definitions.AEBlocks.PATTERN_PROVIDER,
+            AEBlocks.PATTERN_PROVIDER,
             0
         ) { }
 
@@ -43,6 +44,6 @@ class PseudoPatternTerminalBlockEntity(
         MenuOpener.open(PseudoPatternTerminalMenu.TYPE, player, subMenu.getLocator(), true)
     }
 
-    override fun getMainMenuIcon(): net.minecraft.world.item.ItemStack =
-        net.minecraft.world.item.ItemStack(appeng.core.definitions.AEBlocks.PATTERN_PROVIDER)
+    override fun getMainMenuIcon(): ItemStack =
+        ItemStack(AEBlocks.PATTERN_PROVIDER)
 }

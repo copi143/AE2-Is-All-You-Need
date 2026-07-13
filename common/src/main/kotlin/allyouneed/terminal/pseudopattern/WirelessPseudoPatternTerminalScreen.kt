@@ -1,4 +1,4 @@
-package allyouneed.terminal
+package allyouneed.terminal.pseudopattern
 
 import appeng.client.gui.me.common.MEStorageScreen
 import appeng.client.gui.style.ScreenStyle

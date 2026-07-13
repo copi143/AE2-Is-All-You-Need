@@ -1,40 +1,38 @@
 package allyouneed.pattern.machine
 
+import allyouneed.api.machine.MachineType
+import allyouneed.api.machine.MachineTypeRegistry
+import allyouneed.pattern.AEPatternUtil
 import appeng.api.crafting.IPatternDetails
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.GenericStack
 import appeng.crafting.pattern.EncodedPatternItem
-import net.minecraft.world.item.Item
-import net.minecraft.world.item.ItemStack
-import net.minecraft.world.level.Level
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.Tag
 import net.minecraft.resources.ResourceLocation
-import allyouneed.api.machine.MachineType
-import allyouneed.api.machine.MachineTypeRegistry
-import allyouneed.pattern.AEPatternUtil
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.Level
 
 /**
  * Machine-specific pattern item.
  */
-class MachinePatternItem(props: Item.Properties) : EncodedPatternItem(props) {
+class MachinePatternItem(props: Properties) : EncodedPatternItem(props) {
 
-    fun encode(machineTypeId: ResourceLocation, inStacks: Array<GenericStack?>, outStacks: Array<GenericStack?>): ItemStack {
-        val tag = CompoundTag()
-        tag.putString("machineType", machineTypeId.toString())
-
-        val inList = ListTag()
-        for (gs in inStacks) if (gs != null) inList.add(GenericStack.writeTag(gs))
-        tag.put("in", inList)
-
-        val outList = ListTag()
-        for (gs in outStacks) if (gs != null) outList.add(GenericStack.writeTag(gs))
-        tag.put("out", outList)
-
-        val stack = ItemStack(this)
-        stack.tag = tag
-        return stack
+    fun encode(
+        machineTypeId: ResourceLocation,
+        inStacks: Array<GenericStack>,
+        outStacks: Array<GenericStack>,
+    ): ItemStack = ItemStack(this).apply {
+        tag = CompoundTag().apply {
+            putString("machineType", machineTypeId.toString())
+            put("in", ListTag().apply {
+                for (gs in inStacks) add(GenericStack.writeTag(gs))
+            })
+            put("out", ListTag().apply {
+                for (gs in outStacks) add(GenericStack.writeTag(gs))
+            })
+        }
     }
 
     override fun decode(stack: ItemStack, level: Level, tryRecovery: Boolean): IPatternDetails? {
@@ -57,8 +55,7 @@ class MachinePatternItem(props: Item.Properties) : EncodedPatternItem(props) {
  * We expose `getMachineType()` for Java Mixin code.
  */
 class AEMachinePattern(
-    private val definition: AEItemKey,
-    private val level: Level
+    private val definition: AEItemKey, private val level: Level
 ) : IPatternDetails {
 
     val machineTypeId: ResourceLocation
