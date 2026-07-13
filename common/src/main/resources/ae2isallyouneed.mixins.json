@@ -4,8 +4,15 @@
   "package": "allyouneed.mixin",
   "refmap": "${mod_id}.refmap.json",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [],
-  "client": ["MixinMinecraft"],
+  "mixins": [
+    "MolecularAssemblerBlockEntityMixin",
+    "MolecularAssemblerMenuMixin",
+    "PatternEncodingTermMenuMixin",
+    "PatternProviderLogicMixin"
+  ],
+  "client": [
+    "MixinMinecraft"
+  ],
   "server": [],
   "injectors": {
     "defaultRequire": 1

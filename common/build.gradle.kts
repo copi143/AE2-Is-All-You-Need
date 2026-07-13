@@ -19,11 +19,11 @@ neoForge {
 dependencies {
     compileOnly(libs.mixin)
 
-    modCompileOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
+    modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")
 
     modCompileOnly("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
-    modCompileOnly("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")
+    modCompileOnly("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
 }
 
 repositories {

@@ -18,6 +18,12 @@
         "adapter": "kotlin",
         "value": "allyouneed.ExampleModKt::init"
       }
+    ],
+    "client": [
+      {
+        "adapter": "kotlin",
+        "value": "allyouneed.ExampleModClientKt::initClient"
+      }
     ]
   },
   "mixins": ["${mod_id}.mixins.json", "${mod_id}.fabric.mixins.json"],

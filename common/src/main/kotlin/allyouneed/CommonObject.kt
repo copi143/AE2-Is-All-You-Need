@@ -1,5 +1,7 @@
 package allyouneed
 
+import allyouneed.api.machine.BuiltinMachineTypes
+import allyouneed.pattern.ModPatternDecoders
 import allyouneed.platform.Services
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.Items
@@ -28,5 +30,9 @@ object CommonObject {
         if (Services.PLATFORM.isModLoaded("examplemod")) {
             Constants.LOG.info("Hello to examplemod")
         }
+
+        // Register our machine types and pattern decoders
+        BuiltinMachineTypes.registerAll()
+        ModPatternDecoders.register()
     }
 }

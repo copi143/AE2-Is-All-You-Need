@@ -1,0 +1,4 @@
+package allyouneed
+
+object AllRegistries {
+}

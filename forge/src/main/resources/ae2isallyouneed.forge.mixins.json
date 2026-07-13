@@ -4,7 +4,12 @@
   "package": "allyouneed.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "${mod_id}.refmap.json",
-  "mixins": [],
+  "mixins": [
+    "MolecularAssemblerBlockEntityMixin",
+    "MolecularAssemblerMenuMixin",
+    "PatternEncodingTermMenuMixin",
+    "PatternProviderLogicMixin"
+  ],
   "client": ["MixinTitleScreen"],
   "server": [],
   "injectors": {
