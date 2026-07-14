@@ -11,6 +11,7 @@
     "PatternProviderLogicMixin"
   ],
   "client": [
+    "CreativeScreenSidebarMixin",
     "FacadeCreativeTabMixin"
   ],
   "server": [],

@@ -1,5 +1,6 @@
 package allyouneed
 
+import allyouneed.client.ForgeCreativeTab
 import allyouneed.forge.init.ForgeBlocks
 import allyouneed.forge.init.ForgeItems
 import allyouneed.forge.init.ForgeMenus
@@ -24,6 +25,7 @@ class ExampleMod {
         ForgeItems.register(MOD_BUS)
         ForgeBlocks.register(MOD_BUS)
         ForgeMenus.register(MOD_BUS)
+        ForgeCreativeTab.register(MOD_BUS)
         CommonObject.init()
     }
 }
