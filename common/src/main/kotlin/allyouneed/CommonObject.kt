@@ -2,9 +2,12 @@ package allyouneed
 
 import allyouneed.api.machine.BuiltinMachineTypes
 import allyouneed.energy.EnergyCell
+import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.platform.Services
+import appeng.api.parts.PartModels
 import appeng.core.MainCreativeTab
+import appeng.items.parts.PartModelsHelper
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.Items
 
@@ -33,8 +36,13 @@ object CommonObject {
             Constants.LOG.info("Hello to examplemod")
         }
 
-        // Register our machine types and pattern decoders
+        // Register our machine types, pattern decoders, and part models
         BuiltinMachineTypes.registerAll()
         ModPatternDecoders.register()
+        registerParts()
+    }
+
+    fun registerParts() {
+        PartModels.registerModels(PartModelsHelper.createModels(EntityP2PTunnelPart::class.java))
     }
 }

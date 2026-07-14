@@ -1,11 +1,13 @@
 package allyouneed.pattern
 
 import allyouneed.api.machine.BuiltinMachineTypes
+import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import appeng.api.crafting.PatternDetailsHelper
 import appeng.api.stacks.GenericStack
 import appeng.core.definitions.AEItems
+import appeng.items.parts.PartItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 
@@ -18,6 +20,10 @@ object ModItems {
 
     val PSEUDO_PATTERN: PseudoPatternItem by lazy {
         PseudoPatternItem(Item.Properties().stacksTo(1))
+    }
+
+    val ENTITY_P2P_TUNNEL: PartItem<EntityP2PTunnelPart> by lazy {
+        PartItem(Item.Properties().stacksTo(64), EntityP2PTunnelPart::class.java) { EntityP2PTunnelPart(it) }
     }
 
     fun registerItems(register: (String, Item) -> Item): Pair<MachinePatternItem, PseudoPatternItem> {

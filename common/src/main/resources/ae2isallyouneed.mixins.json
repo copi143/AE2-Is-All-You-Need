@@ -10,7 +10,9 @@
     "PatternEncodingTermMenuMixin",
     "PatternProviderLogicMixin"
   ],
-  "client": [],
+  "client": [
+    "FacadeCreativeTabMixin"
+  ],
   "server": [],
   "injectors": {
     "defaultRequire": 1
