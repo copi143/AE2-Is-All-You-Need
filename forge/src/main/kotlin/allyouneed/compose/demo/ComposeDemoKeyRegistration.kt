@@ -1,0 +1,13 @@
+package allyouneed.compose.demo
+
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent
+import net.minecraftforge.eventbus.api.SubscribeEvent
+import net.minecraftforge.fml.common.Mod
+
+@Mod.EventBusSubscriber(modid = "ae2isallyouneed", bus = Mod.EventBusSubscriber.Bus.MOD)
+object ComposeDemoKeyRegistration {
+    @SubscribeEvent
+    fun onRegisterKeys(event: RegisterKeyMappingsEvent) {
+        event.register(ComposeDemoKeybind.OPEN_DEMO)
+    }
+}

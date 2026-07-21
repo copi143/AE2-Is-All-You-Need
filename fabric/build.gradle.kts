@@ -1,6 +1,7 @@
 plugins {
     id("multiloader-loader")
     alias(libs.plugins.loom)
+    alias(libs.plugins.kotlinCompose)
 }
 
 val modId: String by project
@@ -24,6 +25,8 @@ dependencies {
 
     modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modImplementation("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")
+
+    implementation(libs.compose.runtime)
 }
 
 repositories {
@@ -38,6 +41,14 @@ repositories {
     maven {
         name = "GTCEu Maven"
         url = uri("https://maven.gtceu.com")
+    }
+    maven {
+        name = "JetBrains Compose"
+        url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+    }
+    maven {
+        name = "Google Android"
+        url = uri("https://dl.google.com/dl/android/maven2/")
     }
     mavenCentral()
 }

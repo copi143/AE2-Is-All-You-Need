@@ -3,6 +3,7 @@ import org.gradle.internal.extensions.stdlib.capitalized
 plugins {
     id("multiloader-loader")
     alias(libs.plugins.moddev)
+    alias(libs.plugins.kotlinCompose)
 }
 
 val modId: String by project
@@ -56,6 +57,7 @@ sourceSets.main.get().resources { srcDir("src/generated/resources") }
 dependencies {
     modImplementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
+    implementation(libs.compose.runtime)
 
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modRuntimeOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
@@ -88,6 +90,14 @@ repositories {
     maven {
         name = "GTCEu Maven"
         url = uri("https://maven.gtceu.com")
+    }
+    maven {
+        name = "JetBrains Compose"
+        url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+    }
+    maven {
+        name = "Google Android"
+        url = uri("https://dl.google.com/dl/android/maven2/")
     }
     mavenCentral()
 }

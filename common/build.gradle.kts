@@ -1,6 +1,7 @@
 plugins {
     id("multiloader-common")
     alias(libs.plugins.moddev)
+    alias(libs.plugins.kotlinCompose)
 }
 
 neoForge {
@@ -18,6 +19,7 @@ neoForge {
 
 dependencies {
     compileOnly(libs.mixin)
+    compileOnly(libs.compose.runtime)
 
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")
@@ -38,6 +40,14 @@ repositories {
     maven {
         name = "GTCEu Maven"
         url = uri("https://maven.gtceu.com")
+    }
+    maven {
+        name = "JetBrains Compose"
+        url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+    }
+    maven {
+        name = "Google Android"
+        url = uri("https://dl.google.com/dl/android/maven2/")
     }
     mavenCentral()
 }

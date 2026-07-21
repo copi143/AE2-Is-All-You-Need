@@ -4,6 +4,7 @@ kotlin = "2.0.21"
 moddev = "2.0.52-beta"
 loom = "1.9-SNAPSHOT"
 dokka = "1.9.20"
+compose = "1.7.3"
 
 minecraft = "1.20.1"
 minecraftRange = "[1.20.1, 1.20.2)"
@@ -41,9 +42,11 @@ fabricApi = { group = "net.fabricmc.fabric-api", name = "fabric-api", version.re
 flk = { group = "net.fabricmc", name = "fabric-language-kotlin", version.ref = "flk" }
 kff = { group = "thedarkcolour", name = "kotlinforforge", version.ref = "kff" }
 mixin = { group = "org.spongepowered", name = "mixin", version.ref = "mixin" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 moddev = { id = "net.neoforged.moddev.legacyforge", version.ref = "moddev" }
 loom = { id = "fabric-loom", version.ref = "loom" }
