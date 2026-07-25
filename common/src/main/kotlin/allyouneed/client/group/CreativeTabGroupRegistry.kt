@@ -1,6 +1,6 @@
 package allyouneed.client.group
 
-import allyouneed.Constants
+import allyouneed.rl
 import allyouneed.util.MODID
 import appeng.core.definitions.AEBlocks
 import net.minecraft.network.chat.Component
@@ -9,8 +9,8 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 
 object CreativeTabGroupRegistry {
-    val ALL_GROUP_ID = ResourceLocation(MODID, "all")
-    val AE2_GROUP_ID = ResourceLocation(MODID, "ae2")
+    val ALL_GROUP_ID = "all".rl
+    val AE2_GROUP_ID = "ae2".rl
 
     private val groups = LinkedHashMap<ResourceLocation, CreativeTabGroup>()
     private var selectedGroupId: ResourceLocation = ALL_GROUP_ID

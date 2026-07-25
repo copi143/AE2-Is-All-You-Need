@@ -3,11 +3,9 @@ package allyouneed.fabric.init
 import allyouneed.pattern.ModItems
 import allyouneed.rl
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
-import allyouneed.util.MODID
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.CreativeModeTabs
 import net.minecraft.world.item.Item
 
@@ -30,9 +28,7 @@ object FabricItems {
             BuiltInRegistries.ITEM, "entity_p2p_tunnel".rl, ENTITY_P2P_TUNNEL
         )
         Registry.register(
-            BuiltInRegistries.ITEM,
-            ResourceLocation(MODID, "wireless_pseudo_pattern_terminal"),
-            WIRELESS_PSEUDO_PATTERN_TERMINAL
+            BuiltInRegistries.ITEM, "wireless_pseudo_pattern_terminal".rl, WIRELESS_PSEUDO_PATTERN_TERMINAL
         )
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register { entries ->

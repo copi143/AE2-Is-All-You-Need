@@ -6,15 +6,21 @@ import allyouneed.util.Mi
 import appeng.api.ids.AEBlockIds
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
+import appeng.block.AEBaseEntityBlock
+import appeng.blockentity.AEBaseBlockEntity
 import appeng.block.networking.CreativeEnergyCellBlock
 import appeng.block.networking.EnergyCellBlock
 import appeng.block.networking.EnergyCellBlockItem
+import appeng.blockentity.networking.CreativeEnergyCellBlockEntity
+import appeng.blockentity.networking.EnergyCellBlockEntity
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.entity.BlockEntityType
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
@@ -70,5 +76,42 @@ enum class EnergyCell(
         BlockDefinition(blockName, blockId, block, item).apply {
             MainCreativeTab.add(this)
         }
+    }
+
+    lateinit var blockEntityType: BlockEntityType<*>
+        private set
+
+    @Suppress("UNCHECKED_CAST")
+    fun registerBEType() {
+        val block = define.block()
+        require(block is AEBaseEntityBlock<*>) { "EnergyCell block must be AEBaseEntityBlock" }
+
+        val typeRef = AtomicReference<BlockEntityType<*>>()
+
+        if (this == Creative) {
+            typeRef.set(BlockEntityType.Builder.of({ pos, state ->
+                CreativeEnergyCellBlockEntity(typeRef.get() as BlockEntityType<CreativeEnergyCellBlockEntity>, pos, state)
+            }, block).build(null as com.mojang.datafixers.types.Type<*>?))
+            blockEntityType = typeRef.get()
+            (block as AEBaseEntityBlock<CreativeEnergyCellBlockEntity>).setBlockEntity(
+                CreativeEnergyCellBlockEntity::class.java,
+                blockEntityType as BlockEntityType<CreativeEnergyCellBlockEntity>,
+                null,
+                null,
+            )
+        } else {
+            typeRef.set(BlockEntityType.Builder.of({ pos, state ->
+                EnergyCellBlockEntity(typeRef.get() as BlockEntityType<EnergyCellBlockEntity>, pos, state)
+            }, block).build(null as com.mojang.datafixers.types.Type<*>?))
+            blockEntityType = typeRef.get()
+            (block as AEBaseEntityBlock<EnergyCellBlockEntity>).setBlockEntity(
+                EnergyCellBlockEntity::class.java,
+                blockEntityType as BlockEntityType<EnergyCellBlockEntity>,
+                null,
+                null,
+            )
+        }
+
+        AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
     }
 }

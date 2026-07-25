@@ -1,9 +1,8 @@
 package allyouneed.fabric.init
 
-import allyouneed.Constants
+import allyouneed.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
-import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.inventory.MenuType
 
 object FabricMenus {
@@ -12,8 +11,8 @@ object FabricMenus {
         // We just ensure they are known; MenuTypeBuilder already calls InitMenuTypes.queueRegistration.
         // On Fabric we additionally register the MenuType if needed (AE2's MenuTypeBuilder handles it via its own init).
         // To be safe we explicitly register our types by referencing them.
-        val pseudoId = ResourceLocation(Constants.MOD_ID, "pseudo_pattern_terminal")
-        val wirelessId = ResourceLocation(Constants.MOD_ID, "wireless_pseudo_pattern_terminal")
+        val pseudoId = "pseudo_pattern_terminal".rl
+        val wirelessId = "wireless_pseudo_pattern_terminal".rl
 
         // AE2 MenuTypeBuilder already registers via InitMenuTypes.queueRegistration which is loader-aware.
         // Touch the static fields to ensure initialization order.

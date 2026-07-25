@@ -1,12 +1,12 @@
 package allyouneed.forge.init
 
-import allyouneed.Constants
+import allyouneed.util.MODID
 import appeng.api.features.P2PTunnelAttunement
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent
 
-@Mod.EventBusSubscriber(modid = Constants.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 object ForgeCommonEvents {
     @SubscribeEvent
     fun onCommonSetup(event: FMLCommonSetupEvent) {

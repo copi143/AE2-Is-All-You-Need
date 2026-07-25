@@ -1,9 +1,9 @@
 package allyouneed.forge.init
 
-import allyouneed.Constants
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
+import allyouneed.util.MODID
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntityType
@@ -15,9 +15,9 @@ import net.minecraftforge.registries.ForgeRegistries
 import net.minecraftforge.registries.RegistryObject
 
 object ForgeBlocks {
-    val BLOCKS: DeferredRegister<Block> = DeferredRegister.create(ForgeRegistries.BLOCKS, Constants.MOD_ID)
+    val BLOCKS: DeferredRegister<Block> = DeferredRegister.create(ForgeRegistries.BLOCKS, MODID)
     val BLOCK_ENTITIES: DeferredRegister<BlockEntityType<*>> =
-        DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, Constants.MOD_ID)
+        DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID)
 
     val PSEUDO_PATTERN_TERMINAL: RegistryObject<PseudoPatternTerminalBlock> =
         BLOCKS.register("pseudo_pattern_terminal") {

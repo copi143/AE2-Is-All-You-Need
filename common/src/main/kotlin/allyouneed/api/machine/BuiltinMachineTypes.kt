@@ -1,15 +1,14 @@
 package allyouneed.api.machine
 
-import allyouneed.Constants
+import allyouneed.rlMC
 import allyouneed.util.logger
-import allyouneed.vanillaLocation
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.Items
 
 object BuiltinMachineTypes {
     val CRAFTING_TABLE: MachineType by lazy {
         MachineType(
-            id = "minecraft:crafting_table".vanillaLocation(),
+            id = "crafting_table".rlMC,
             displayName = Component.translatable("block.minecraft.crafting_table"),
             machineItem = { Items.CRAFTING_TABLE },
             defaultCraftingTicks = 100,
@@ -19,7 +18,7 @@ object BuiltinMachineTypes {
 
     val FURNACE: MachineType by lazy {
         MachineType(
-            id = "minecraft:furnace".vanillaLocation(),
+            id = "furnace".rlMC,
             displayName = Component.translatable("block.minecraft.furnace"),
             machineItem = { Items.FURNACE },
             defaultCraftingTicks = 200,
@@ -29,7 +28,7 @@ object BuiltinMachineTypes {
 
     val BLAST_FURNACE: MachineType by lazy {
         MachineType(
-            id = "minecraft:blast_furnace".vanillaLocation(),
+            id = "blast_furnace".rlMC,
             displayName = Component.translatable("block.minecraft.blast_furnace"),
             machineItem = { Items.BLAST_FURNACE },
             defaultCraftingTicks = 100,
@@ -39,7 +38,7 @@ object BuiltinMachineTypes {
 
     val SMOKER: MachineType by lazy {
         MachineType(
-            id = "minecraft:smoker".vanillaLocation(),
+            id = "smoker".rlMC,
             displayName = Component.translatable("block.minecraft.smoker"),
             machineItem = { Items.SMOKER },
             defaultCraftingTicks = 100,

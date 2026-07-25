@@ -3,9 +3,10 @@ package allyouneed
 import allyouneed.util.MODID
 import net.minecraft.resources.ResourceLocation
 
-val String.rl get() = ResourceLocation(MODID, this)
+fun String.rl(ns: String) = ResourceLocation(ns, this)
 
-/**
- * @return [ResourceLocation] from the string using the vanilla namespace
- */
-fun String.vanillaLocation() = ResourceLocation(this)
+val String.rl get() = this.rl(MODID)
+
+val String.rlMC get() = this.rl("minecraft")
+
+val String.rlAE get() = this.rl("ae2")

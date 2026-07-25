@@ -1,12 +1,11 @@
 package allyouneed.fabric.init
 
-import allyouneed.Constants
+import allyouneed.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
 import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntityTypeBuilder
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.state.BlockBehaviour
@@ -20,7 +19,7 @@ object FabricBlocks {
     lateinit var PSEUDO_PATTERN_TERMINAL_BE: net.minecraft.world.level.block.entity.BlockEntityType<PseudoPatternTerminalBlockEntity>
 
     fun register() {
-        val blockId = ResourceLocation(Constants.MOD_ID, "pseudo_pattern_terminal")
+        val blockId = "pseudo_pattern_terminal".rl
 
         PSEUDO_PATTERN_TERMINAL_BE = FabricBlockEntityTypeBuilder.create(
             { pos, state -> PseudoPatternTerminalBlockEntity(PSEUDO_PATTERN_TERMINAL_BE, pos, state) },
