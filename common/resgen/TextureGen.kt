@@ -38,15 +38,15 @@ class TextureGen(private val output: Path) {
         return rgb.r in 0f..1f && rgb.g in 0f..1f && rgb.b in 0f..1f
     }
 
-    private fun gamutMap(hz: JzCzHz): JzCzHz {
-        if (hz.isInSRGBGamut()) return hz
-        if (hz.c <= 0.001f) return hz
+    private fun gamutMap(color: JzCzHz): JzCzHz {
+        if (color.isInSRGBGamut()) return color
+        if (color.c <= 0.001f) return color
         var lo = 0f
-        var hi = hz.c
-        var best = JzCzHz(hz.j, 0f, hz.h)
+        var hi = color.c
+        var best = JzCzHz(color.j, 0f, color.h)
         for (i in 0 until 16) {
             val mid = (lo + hi) / 2f
-            val candidate = JzCzHz(hz.j, mid, hz.h)
+            val candidate = JzCzHz(color.j, mid, color.h)
             if (candidate.isInSRGBGamut()) {
                 best = candidate
                 lo = mid

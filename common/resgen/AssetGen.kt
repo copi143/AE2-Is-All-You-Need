@@ -4,18 +4,22 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 @DslMarker
 annotation class AssetGenDsl
 
 @AssetGenDsl
-class AssetGen(private val modId: String, private val output: Path) {
+class AssetGen(private val modId: String, private val output: Path, private val langDir: Path? = null) {
 
     private val gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
     private val blockStates = mutableListOf<GeneratedFile>()
     private val blockModels = mutableListOf<GeneratedFile>()
     private val itemModels = mutableListOf<GeneratedFile>()
+    private val translations = linkedMapOf<String, String>()
 
     fun cubeAll(name: String, texture: String = "block/$name") {
         val modelJson = JsonObject().apply {
@@ -27,12 +31,18 @@ class AssetGen(private val modId: String, private val output: Path) {
         blockModels += GeneratedFile("models/block/$name.json", modelJson)
     }
 
+    fun translation(key: String, value: String) {
+        translations[key] = value
+    }
+
     fun cubeAllWithFullness(
         name: String,
+        displayName: String,
         maxFullness: Int = 4,
         texturePrefix: String = name,
         predicateKey: String = "ae2:fill_level",
     ) {
+        translations["block.$modId.$name"] = displayName
         for (i in 0..maxFullness) {
             val modelJson = JsonObject().apply {
                 addProperty("parent", "minecraft:block/cube_all")
@@ -70,7 +80,9 @@ class AssetGen(private val modId: String, private val output: Path) {
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
     }
 
-    fun simpleBlock(name: String, texture: String = "block/$name") {
+    fun simpleBlock(name: String, displayName: String, texture: String = "block/$name") {
+        translations["block.$modId.$name"] = displayName
+
         val modelJson = JsonObject().apply {
             addProperty("parent", "minecraft:block/cube_all")
             add("textures", JsonObject().apply {
@@ -101,11 +113,50 @@ class AssetGen(private val modId: String, private val output: Path) {
             path.parent.createDirectories()
             path.writeText(gson.toJson(file.json))
         }
+
+        val langOut = output.resolve("lang")
+        langOut.createDirectories()
+
+        if (translations.isNotEmpty()) {
+            val langJson = JsonObject().apply {
+                for ((key, value) in translations) {
+                    addProperty(key, value)
+                }
+            }
+            langOut.resolve("en_us.json").writeText(gson.toJson(langJson))
+        }
+
+        val enKeys = translations.keys
+
+        if (langDir != null && langDir.exists()) {
+            for (file in langDir.listDirectoryEntries("*.json")) {
+                val locale = file.fileName.toString().removeSuffix(".json")
+                if (locale == "en_us") continue
+
+                val localeJson = gson.fromJson(file.readText(), JsonObject::class.java)
+                val localeKeys: Set<String> = localeJson.keySet().toSet()
+
+                val missing = enKeys - localeKeys
+                val extra = localeKeys - enKeys
+
+                if (missing.isNotEmpty()) {
+                    println("[lang/$locale.json] Missing keys: ${missing.joinToString()}")
+                }
+                if (extra.isNotEmpty()) {
+                    println("[lang/$locale.json] Extra keys not in en_us: ${extra.joinToString()}")
+                }
+                if (missing.isEmpty() && extra.isEmpty()) {
+                    println("[lang/$locale.json] OK (${localeKeys.size} keys)")
+                }
+
+                langOut.resolve(file.fileName).writeText(gson.toJson(localeJson))
+            }
+        }
     }
 
     private data class GeneratedFile(val relativePath: String, val json: JsonObject)
 }
 
-fun assetGen(modId: String, output: Path, init: AssetGen.() -> Unit) {
-    AssetGen(modId, output).apply(init).generate()
+fun assetGen(modId: String, output: Path, langDir: Path? = null, init: AssetGen.() -> Unit) {
+    AssetGen(modId, output, langDir).apply(init).generate()
 }
