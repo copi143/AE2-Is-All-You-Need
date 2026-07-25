@@ -1,4 +1,4 @@
-package allyouneed.fabric
+package allyouneed
 
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalScreen
