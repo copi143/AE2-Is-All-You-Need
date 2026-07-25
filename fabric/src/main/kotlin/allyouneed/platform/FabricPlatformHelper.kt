@@ -1,6 +1,6 @@
 package allyouneed.platform
 
-import allyouneed.platform.services.PlatformHelper
+import allyouneed.util.PlatformHelper
 import net.fabricmc.loader.api.FabricLoader
 
 class FabricPlatformHelper : PlatformHelper {

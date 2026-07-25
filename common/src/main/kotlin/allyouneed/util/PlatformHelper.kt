@@ -1,4 +1,4 @@
-package allyouneed.platform.services
+package allyouneed.util
 
 interface PlatformHelper {
     /**

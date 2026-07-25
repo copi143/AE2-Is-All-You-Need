@@ -1,13 +1,11 @@
 package allyouneed
 
 import allyouneed.api.machine.BuiltinMachineTypes
-import allyouneed.energy.EnergyCell
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModPatternDecoders
-import allyouneed.platform.Services
+import allyouneed.util.Services
 import allyouneed.util.logger
 import appeng.api.parts.PartModels
-import appeng.core.MainCreativeTab
 import appeng.items.parts.PartModelsHelper
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.Items
@@ -23,8 +21,8 @@ object CommonObject {
     fun init() {
         logger.info(
             "Hello from Common init on {}! we are currently in a {} environment!",
-            Services.PLATFORM.getPlatformName(),
-            Services.PLATFORM.getEnvironmentName()
+            Services.platform.getPlatformName(),
+            Services.platform.getEnvironmentName()
         )
         logger.info("The ID for diamonds is {}", BuiltInRegistries.ITEM.getKey(Items.DIAMOND))
 
@@ -33,7 +31,7 @@ object CommonObject {
         // your own abstraction layer. You can learn more about this in our provided services class. In this example
         // we have an interface in the common code and use a loader specific implementation to delegate our call to
         // the platform specific approach.
-        if (Services.PLATFORM.isModLoaded("examplemod")) {
+        if (Services.platform.isModLoaded("examplemod")) {
             logger.info("Hello to examplemod")
         }
 

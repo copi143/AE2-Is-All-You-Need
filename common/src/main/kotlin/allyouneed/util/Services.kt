@@ -1,11 +1,9 @@
-package allyouneed.platform
+package allyouneed.util
 
-import allyouneed.platform.services.PlatformHelper
-import allyouneed.util.logger
-import java.util.*
+import java.util.ServiceLoader
 
 object Services {
-    val PLATFORM = load(PlatformHelper::class.java)
+    val platform = load(PlatformHelper::class.java)
 
     fun <T> load(clazz: Class<T>): T {
         val loadedService = ServiceLoader.load(clazz).findFirst().orElseThrow {

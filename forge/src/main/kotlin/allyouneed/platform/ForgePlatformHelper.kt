@@ -1,6 +1,6 @@
 package allyouneed.platform
 
-import allyouneed.platform.services.PlatformHelper
+import allyouneed.util.PlatformHelper
 import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.loading.FMLLoader
 
