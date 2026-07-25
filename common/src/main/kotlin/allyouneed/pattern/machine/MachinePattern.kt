@@ -42,11 +42,7 @@ class MachinePatternItem(props: Properties) : EncodedPatternItem(props) {
 
     override fun decode(what: AEItemKey, level: Level): IPatternDetails? {
         if (!what.hasTag()) return null
-        return try {
-            AEMachinePattern(what, level)
-        } catch (e: Exception) {
-            null
-        }
+        return runCatching { AEMachinePattern(what, level) }.getOrNull()
     }
 }
 

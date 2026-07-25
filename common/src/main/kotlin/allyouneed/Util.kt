@@ -1,8 +1,9 @@
 package allyouneed
 
+import allyouneed.util.MODID
 import net.minecraft.resources.ResourceLocation
 
-val String.rl get() = ResourceLocation(Constants.MOD_ID, this)
+val String.rl get() = ResourceLocation(MODID, this)
 
 /**
  * @return [ResourceLocation] from the string using the vanilla namespace

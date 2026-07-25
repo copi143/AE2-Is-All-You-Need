@@ -1,6 +1,7 @@
 package allyouneed.api.machine
 
 import allyouneed.Constants
+import allyouneed.util.logger
 import allyouneed.vanillaLocation
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.Items
@@ -51,6 +52,6 @@ object BuiltinMachineTypes {
         MachineTypeRegistry.register(FURNACE)
         MachineTypeRegistry.register(BLAST_FURNACE)
         MachineTypeRegistry.register(SMOKER)
-        Constants.LOG.info("Registered builtin MachineTypes")
+        logger.info("Registered builtin MachineTypes")
     }
 }

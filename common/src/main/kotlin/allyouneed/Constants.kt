@@ -1,11 +1,11 @@
 package allyouneed
 
+import allyouneed.util.MODID
+import allyouneed.util.MODNAME
+import allyouneed.util.logger
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 object Constants {
-    const val MOD_ID = "ae2isallyouneed"
-    const val MOD_NAME = "AE2 Is All You Need"
-    @JvmStatic // needed so Mixins can access
-    val LOG: Logger = LoggerFactory.getLogger(MOD_NAME)
+    const val MOD_ID = MODID
 }

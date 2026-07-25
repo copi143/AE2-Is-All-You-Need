@@ -1,5 +1,6 @@
 package allyouneed.parts.p2p
 
+import allyouneed.rl
 import appeng.api.config.PowerUnits
 import appeng.api.parts.IPartItem
 import appeng.api.parts.IPartModel
@@ -7,32 +8,29 @@ import appeng.items.parts.PartModels
 import appeng.parts.p2p.P2PModels
 import appeng.parts.p2p.P2PTunnelPart
 import net.minecraft.nbt.CompoundTag
-import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.entity.Entity
 
 class EntityP2PTunnelPart(partItem: IPartItem<*>) : P2PTunnelPart<EntityP2PTunnelPart>(partItem) {
 
     companion object {
-        private val MODELS = P2PModels(
-            ResourceLocation("ae2isallyouneed", "part/p2p/p2p_tunnel_entity")
-        )
+        private val MODELS = P2PModels("part/p2p/p2p_tunnel_entity".rl)
 
         @JvmStatic
         @PartModels
-        fun getModels(): List<IPartModel> = MODELS.getModels()
+        fun getModels(): List<IPartModel> = MODELS.models
     }
 
     private var nextOutputIndex: Int = 0
 
     override fun getPowerDrainPerTick(): Float = 2.0f
 
-    override fun getStaticModels(): IPartModel = MODELS.getModel(this.isPowered(), this.isActive())
+    override fun getStaticModels(): IPartModel = MODELS.getModel(this.isPowered, this.isActive)
 
     override fun onTunnelNetworkChange() {
     }
 
     override fun onEntityCollision(entity: Entity) {
-        if (isOutput()) return
+        if (isOutput) return
         if (!mainNode.isActive) return
         if (entity.portalCooldown > 0) return
 

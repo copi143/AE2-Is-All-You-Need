@@ -64,11 +64,25 @@ public abstract class CreativeScreenSidebarMixin {
     @Unique
     private static boolean isTabInSelectedGroup(CreativeModeTab tab) {
         CreativeTabGroup selected = CreativeTabGroupRegistry.INSTANCE.getSelectedGroup();
-        if (selected.getId().equals(CreativeTabGroupRegistry.INSTANCE.getAllGroup().getId())) {
+        ResourceLocation tabId = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
+        if (tabId == null) return false;
+
+        ResourceLocation ae2Id = CreativeTabGroupRegistry.INSTANCE.getAe2GroupId();
+        ResourceLocation allId = CreativeTabGroupRegistry.INSTANCE.getAllGroup().getId();
+
+        if (selected.getId().equals(allId)) {
+            // ALL：原版 + 其他模组的 tab，AE2 作为单独分类不在这里显示
+            if ("ae2".equals(tabId.getNamespace())) return false;
             return true;
         }
-        ResourceLocation tabId = BuiltInRegistries.CREATIVE_MODE_TAB.getKey(tab);
-        return tabId != null && selected.getTabIds().contains(tabId);
+
+        if (selected.getId().equals(ae2Id)) {
+            // AE2 分类：只显示 ae2 命名空间（包括 main 和 facades）
+            return "ae2".equals(tabId.getNamespace());
+        }
+
+        // 其他自定义组：只显示显式加进来的 tab
+        return selected.getTabIds().contains(tabId);
     }
 
     // --- Tab rendering filter ---

@@ -1,13 +1,16 @@
 package allyouneed.client.group
 
 import allyouneed.Constants
+import allyouneed.util.MODID
+import appeng.core.definitions.AEBlocks
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 
 object CreativeTabGroupRegistry {
-    val ALL_GROUP_ID = ResourceLocation(Constants.MOD_ID, "all")
+    val ALL_GROUP_ID = ResourceLocation(MODID, "all")
+    val AE2_GROUP_ID = ResourceLocation(MODID, "ae2")
 
     private val groups = LinkedHashMap<ResourceLocation, CreativeTabGroup>()
     private var selectedGroupId: ResourceLocation = ALL_GROUP_ID
@@ -15,13 +18,23 @@ object CreativeTabGroupRegistry {
     val allGroup: CreativeTabGroup by lazy {
         CreativeTabGroup(
             ALL_GROUP_ID,
-            Component.translatable("gui.${Constants.MOD_ID}.group.all"),
+            Component.translatable("gui.${MODID}.group.all"),
             { ItemStack(Items.CRAFTING_TABLE) }
         )
     }
 
+    val ae2Group: CreativeTabGroup by lazy {
+        CreativeTabGroup(
+            AE2_GROUP_ID,
+            Component.translatable("gui.${MODID}.group.ae2"),
+            { AEBlocks.CONTROLLER.stack() }
+        )
+        // 不再显式 addTab，让 isTabInSelectedGroup 通过命名空间 "ae2" 自动识别
+    }
+
     init {
         groups[ALL_GROUP_ID] = allGroup
+        groups[AE2_GROUP_ID] = ae2Group
     }
 
     fun register(group: CreativeTabGroup): CreativeTabGroup {
@@ -44,6 +57,8 @@ object CreativeTabGroupRegistry {
 
     fun getSelectedGroupId(): ResourceLocation = selectedGroupId
 
+    fun getAe2GroupId(): ResourceLocation = AE2_GROUP_ID
+
     fun setSelectedGroup(groupId: ResourceLocation) {
         if (groups.containsKey(groupId)) {
             selectedGroupId = groupId
@@ -56,6 +71,10 @@ object CreativeTabGroupRegistry {
         val selected = getSelectedGroup()
         if (selected.id == ALL_GROUP_ID) return true
         return selected.tabIds.contains(tabId)
+    }
+
+    fun isAe2Tab(tabId: ResourceLocation): Boolean {
+        return tabId.namespace == "ae2"
     }
 
     fun getVisibleTabIds(): Set<ResourceLocation> {

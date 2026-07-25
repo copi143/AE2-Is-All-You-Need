@@ -6,7 +6,7 @@ import allyouneed.fabric.init.FabricMenus
 import appeng.api.features.P2PTunnelAttunement
 
 fun init() {
-    Constants.LOG.info("Hello Fabric world from Kotlin!")
+    logger.info("Hello Fabric world from Kotlin!")
     FabricMenus.register()
     FabricItems.register()
     FabricBlocks.register()

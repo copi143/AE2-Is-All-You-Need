@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.Constants;
+import allyouneed.util.CommonKt;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,7 +13,7 @@ public class MixinTitleScreen {
 
     @Inject(at = @At("HEAD"), method = "init()V")
     private void init(CallbackInfo info) {
-        Constants.getLOG().info("This line is printed by an example mod mixin from Forge!");
-        Constants.getLOG().info("MC Version: {}", Minecraft.getInstance().getVersionType());
+        CommonKt.logger.info("This line is printed by an example mod mixin from Forge!");
+        CommonKt.logger.info("MC Version: {}", Minecraft.getInstance().getVersionType());
     }
 }

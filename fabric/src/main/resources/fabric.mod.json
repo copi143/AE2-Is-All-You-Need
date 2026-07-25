@@ -24,6 +24,12 @@
         "adapter": "kotlin",
         "value": "allyouneed.ExampleModClientKt::initClient"
       }
+    ],
+    "emi": [
+      {
+        "adapter": "kotlin",
+        "value": "allyouneed.integration.emi.Ae2EmiPlugin"
+      }
     ]
   },
   "mixins": ["${mod_id}.mixins.json", "${mod_id}.fabric.mixins.json"],
@@ -35,6 +41,6 @@
     "fabric-language-kotlin": ">=${flk_version}"
   },
   "suggests": {
-    "another-mod": "*"
+    "emi": "*"
   }
 }

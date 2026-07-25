@@ -4,13 +4,15 @@ import allyouneed.client.ForgeCreativeTab
 import allyouneed.forge.init.ForgeBlocks
 import allyouneed.forge.init.ForgeItems
 import allyouneed.forge.init.ForgeMenus
+import allyouneed.util.MODID
+import allyouneed.util.logger
 import net.minecraftforge.fml.common.Mod
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 
-@Mod(Constants.MOD_ID)
+@Mod(MODID)
 class ExampleMod {
     init {
-        Constants.LOG.info("Hello Forge world from Kotlin!")
+        logger.info("Hello Forge world from Kotlin!")
 
         AllRegistries.blocks.forEach { entry ->
             ForgeBlocks.BLOCKS.register(entry.id().path) { entry.block() }

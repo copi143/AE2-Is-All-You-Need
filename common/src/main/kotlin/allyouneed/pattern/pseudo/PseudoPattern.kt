@@ -1,19 +1,18 @@
 package allyouneed.pattern.pseudo
 
+import allyouneed.pattern.AEPatternUtil
 import appeng.api.crafting.IPatternDetails
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.GenericStack
 import appeng.crafting.pattern.EncodedPatternItem
-import net.minecraft.network.chat.Component
-import net.minecraft.world.item.Item
-import net.minecraft.world.item.ItemStack
-import net.minecraft.world.level.Level
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.Tag
-import allyouneed.pattern.AEPatternUtil
+import net.minecraft.network.chat.Component
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.Level
 
-class PseudoPatternItem(props: Item.Properties) : EncodedPatternItem(props) {
+class PseudoPatternItem(props: Properties) : EncodedPatternItem(props) {
 
     fun encode(displayName: Component?, icon: ItemStack?, inputs: Array<GenericStack?>): ItemStack {
         val tag = CompoundTag()
@@ -38,11 +37,7 @@ class PseudoPatternItem(props: Item.Properties) : EncodedPatternItem(props) {
 
     override fun decode(what: AEItemKey, level: Level): IPatternDetails? {
         if (!what.hasTag()) return null
-        return try {
-            AEPseudoPattern(what)
-        } catch (e: Exception) {
-            null
-        }
+        return runCatching { AEPseudoPattern(what) }.getOrNull()
     }
 }
 
@@ -55,7 +50,8 @@ class AEPseudoPattern(private val definition: AEItemKey) : IPatternDetails {
 
     init {
         val tag = definition.tag ?: throw IllegalStateException("Pseudo pattern without tag")
-        displayName = if (tag.contains("displayName")) Component.Serializer.fromJson(tag.getString("displayName")) else null
+        displayName =
+            if (tag.contains("displayName")) Component.Serializer.fromJson(tag.getString("displayName")) else null
         icon = if (tag.contains("iconItem")) ItemStack.of(tag.getCompound("iconItem")) else null
         sparseInputs = readArray(tag, "in")
         val condensed = AEPatternUtil.condenseStacks(sparseInputs)
