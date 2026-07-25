@@ -11,3 +11,10 @@ const val MODNAME = "AE2 Is All You Need"
 
 @JvmField
 val logger: Logger = LoggerFactory.getLogger(MODNAME)
+
+val Double.Ki get() = this * 1024.0
+val Double.Mi get() = this * 1024.0 * 1024.0
+val Double.Gi get() = this * 1024.0 * 1024.0 * 1024.0
+val Double.Ti get() = this * 1024.0 * 1024.0 * 1024.0 * 1024.0
+val Double.Pi get() = this * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0
+val Double.Ei get() = this * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0

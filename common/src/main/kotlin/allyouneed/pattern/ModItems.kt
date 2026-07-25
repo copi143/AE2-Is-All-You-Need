@@ -35,8 +35,7 @@ object ModItems {
 
 object ModPatternDecoders {
     fun register() {
-        // Register our custom pattern decoders so AE2 can understand our patterns
-        PatternDetailsHelper.registerDecoder(MachinePatternDecoder)
-        PatternDetailsHelper.registerDecoder(PseudoPatternDecoder)
+        // Decoders are now registered inside the Item constructors (see MachinePatternItem / PseudoPatternItem).
+        // We keep a no-op here so existing call sites do not break.
     }
 }

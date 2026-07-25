@@ -3,6 +3,7 @@ package allyouneed
 import allyouneed.fabric.init.FabricBlocks
 import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
+import allyouneed.util.logger
 import appeng.api.features.P2PTunnelAttunement
 
 fun init() {

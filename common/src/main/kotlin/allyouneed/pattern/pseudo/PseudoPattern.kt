@@ -1,7 +1,9 @@
 package allyouneed.pattern.pseudo
 
 import allyouneed.pattern.AEPatternUtil
+import allyouneed.pattern.PseudoPatternDecoder
 import appeng.api.crafting.IPatternDetails
+import appeng.api.crafting.PatternDetailsHelper
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.GenericStack
 import appeng.crafting.pattern.EncodedPatternItem
@@ -13,6 +15,10 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 
 class PseudoPatternItem(props: Properties) : EncodedPatternItem(props) {
+    init {
+        // Register decoder early, matching reference implementations (e.g. Probability-Pattern)
+        PatternDetailsHelper.registerDecoder(PseudoPatternDecoder)
+    }
 
     fun encode(displayName: Component?, icon: ItemStack?, inputs: Array<GenericStack?>): ItemStack {
         val tag = CompoundTag()
@@ -68,7 +74,12 @@ class AEPseudoPattern(private val definition: AEItemKey) : IPatternDetails {
 
     override fun getDefinition(): AEItemKey = definition
     override fun getInputs(): Array<IPatternDetails.IInput> = inputs
-    override fun getOutputs(): Array<GenericStack> = emptyArray() // no real outputs -> no auto-crafting
+    override fun getOutputs(): Array<GenericStack> = emptyArray()
+
+    override fun equals(other: Any?): Boolean =
+        other is AEPseudoPattern && other.definition == this.definition
+
+    override fun hashCode(): Int = definition.hashCode()
 
     private class Input(private val stack: GenericStack) : IPatternDetails.IInput {
         override fun getMultiplier(): Long = stack.amount()

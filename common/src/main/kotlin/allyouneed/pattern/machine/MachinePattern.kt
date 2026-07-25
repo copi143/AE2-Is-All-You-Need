@@ -3,7 +3,9 @@ package allyouneed.pattern.machine
 import allyouneed.api.machine.MachineType
 import allyouneed.api.machine.MachineTypeRegistry
 import allyouneed.pattern.AEPatternUtil
+import allyouneed.pattern.MachinePatternDecoder
 import appeng.api.crafting.IPatternDetails
+import appeng.api.crafting.PatternDetailsHelper
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.GenericStack
 import appeng.crafting.pattern.EncodedPatternItem
@@ -18,6 +20,10 @@ import net.minecraft.world.level.Level
  * Machine-specific pattern item.
  */
 class MachinePatternItem(props: Properties) : EncodedPatternItem(props) {
+    init {
+        // Register decoder at construction time (like ProbabilityPatternItem in references)
+        PatternDetailsHelper.registerDecoder(MachinePatternDecoder)
+    }
 
     fun encode(
         machineTypeId: ResourceLocation,
@@ -94,7 +100,16 @@ class AEMachinePattern(
     override fun getInputs(): Array<IPatternDetails.IInput> = inputs
     override fun getOutputs(): Array<GenericStack> = condensedOutputs
 
+    /**
+     * Called from Java Mixin for CRAFTING_GRID machine patterns.
+     * Return null for now (we drive manually or let assembler handle via other paths).
+     */
     fun asAssemblerPatternOrNull(): appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern? = null
+
+    override fun equals(other: Any?): Boolean =
+        other is AEMachinePattern && other.definition == this.definition
+
+    override fun hashCode(): Int = definition.hashCode()
 
     private class Input(private val stack: GenericStack) : IPatternDetails.IInput {
         override fun getMultiplier(): Long = stack.amount()

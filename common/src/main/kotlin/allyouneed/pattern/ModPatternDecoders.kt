@@ -1,8 +1,6 @@
 package allyouneed.pattern
 
-import allyouneed.pattern.machine.AEMachinePattern
 import allyouneed.pattern.machine.MachinePatternItem
-import allyouneed.pattern.pseudo.AEPseudoPattern
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import appeng.api.crafting.IPatternDetails
 import appeng.api.crafting.IPatternDetailsDecoder
@@ -12,9 +10,7 @@ import net.minecraft.world.level.Level
 
 object MachinePatternDecoder : IPatternDetailsDecoder {
     override fun isEncodedPattern(stack: ItemStack): Boolean {
-        if (stack.isEmpty) return false
-        val tag = stack.tag ?: return false
-        return tag.contains("machineType") && (tag.contains("in") || tag.contains("out"))
+        return stack.item is MachinePatternItem
     }
 
     override fun decodePattern(stack: ItemStack, level: Level, tryRecovery: Boolean): IPatternDetails? {
@@ -26,15 +22,17 @@ object MachinePatternDecoder : IPatternDetailsDecoder {
     }
 
     override fun decodePattern(what: AEItemKey, level: Level): IPatternDetails? {
+        val item = what.item
+        if (item is MachinePatternItem) {
+            return item.decode(what, level)
+        }
         return null
     }
 }
 
 object PseudoPatternDecoder : IPatternDetailsDecoder {
     override fun isEncodedPattern(stack: ItemStack): Boolean {
-        if (stack.isEmpty) return false
-        val tag = stack.tag ?: return false
-        return tag.contains("in")
+        return stack.item is PseudoPatternItem
     }
 
     override fun decodePattern(stack: ItemStack, level: Level, tryRecovery: Boolean): IPatternDetails? {
@@ -46,6 +44,10 @@ object PseudoPatternDecoder : IPatternDetailsDecoder {
     }
 
     override fun decodePattern(what: AEItemKey, level: Level): IPatternDetails? {
+        val item = what.item
+        if (item is PseudoPatternItem) {
+            return item.decode(what, level)
+        }
         return null
     }
 }

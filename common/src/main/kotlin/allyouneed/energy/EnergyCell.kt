@@ -1,6 +1,8 @@
 package allyouneed.energy
 
 import allyouneed.rl
+import allyouneed.util.Ki
+import allyouneed.util.Mi
 import appeng.api.ids.AEBlockIds
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
@@ -70,10 +72,3 @@ enum class EnergyCell(
         }
     }
 }
-
-val Double.Ki get() = this * 1024.0
-val Double.Mi get() = this * 1024.0 * 1024.0
-val Double.Gi get() = this * 1024.0 * 1024.0 * 1024.0
-val Double.Ti get() = this * 1024.0 * 1024.0 * 1024.0 * 1024.0
-val Double.Pi get() = this * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0
-val Double.Ei get() = this * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0
