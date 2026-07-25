@@ -67,8 +67,35 @@ configurations {
     }
 }
 
+sourceSets.create("resgen") {
+    compileClasspath += sourceSets.main.get().output
+    kotlin.srcDir("resgen")
+}.let {
+    tasks.register<JavaExec>("generateAssets") {
+        description = "Generates assets for the mod using the resgen source set."
+        dependsOn(it.compileClasspath)
+        dependsOn(tasks.named("classes"))
+        classpath = it.runtimeClasspath
+        mainClass.set("allyouneed.resgen.MainKt")
+        workingDir = rootProject.layout.projectDirectory.asFile
+    }
+    tasks.jar {
+        dependsOn(it)
+    }
+    dependencies {
+        "resgenImplementation"("com.github.ajalt.colormath:colormath:3.6.1")
+        "resgenImplementation"("com.google.code.gson:gson:2.10.1")
+        "resgenImplementation"(libs.compose.runtime)
+    }
+    sourceSets.main {
+        resources.srcDir("res")
+    }
+}
+
 artifacts {
     add("commonJava", sourceSets.main.get().java.sourceDirectories.singleFile)
     add("commonKotlin", sourceSets.main.get().kotlin.sourceDirectories.filter { !it.name.endsWith("java") }.singleFile)
-    add("commonResources", sourceSets.main.get().resources.sourceDirectories.singleFile)
+    sourceSets.main.get().resources.sourceDirectories.forEach { resourceDir ->
+        add("commonResources", resourceDir)
+    }
 }
