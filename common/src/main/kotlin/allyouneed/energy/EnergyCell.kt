@@ -23,6 +23,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.BiFunction
 import java.util.function.Supplier
+import kotlin.math.pow
 
 enum class EnergyCell(name: String, size: Double = -1.0) {
     Micro("Micro Energy Cell", 1.0.Ki), //
@@ -44,7 +45,19 @@ enum class EnergyCell(name: String, size: Double = -1.0) {
 
     val blockName: String = name
 
-    val blockId: ResourceLocation = name.lowercase().replace(" ", "_").rl
+    val blockId: ResourceLocation = run {
+        if (!(size > 0)) {
+            return@run name.lowercase().replace(" ", "_").rl
+        }
+        assert(size.toBits() and 0x00fffff_ffffffff == 0L)
+        val exp = (size.toBits() shr 52).toInt() - 1023
+        when {
+            exp >= 30 -> "${2.0.pow(exp - 30).toInt()}g_energy_cell".rl
+            exp >= 20 -> "${2.0.pow(exp - 20).toInt()}m_energy_cell".rl
+            exp >= 10 -> "${2.0.pow(exp - 10).toInt()}k_energy_cell".rl
+            else -> "${2.0.pow(exp).toInt()}b_energy_cell".rl
+        }
+    }
 
     val blockSupplier = if (size < 0) {
         Supplier<Block> { CreativeEnergyCellBlock() }

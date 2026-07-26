@@ -80,7 +80,7 @@ sourceSets.create("resgen") {
         workingDir = rootProject.layout.projectDirectory.asFile
     }
     tasks.jar {
-        dependsOn(it)
+        dependsOn(it.classesTaskName)
     }
     dependencies {
         "resgenImplementation"("com.github.ajalt.colormath:colormath:3.6.1")

@@ -1,8 +1,13 @@
 package allyouneed.fabric.init
 
+import allyouneed.iodrive.MEIODriveBlock
+import allyouneed.iodrive.MEIODriveBlockEntity
+import allyouneed.iodrive.MEIODriveRegistration
 import allyouneed.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
+import appeng.core.MainCreativeTab
+import appeng.core.definitions.BlockDefinition
 import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntityTypeBuilder
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
@@ -18,6 +23,12 @@ object FabricBlocks {
 
     lateinit var PSEUDO_PATTERN_TERMINAL_BE: net.minecraft.world.level.block.entity.BlockEntityType<PseudoPatternTerminalBlockEntity>
 
+    val ME_IO_DRIVE: MEIODriveBlock = MEIODriveBlock(
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
+    )
+
+    lateinit var ME_IO_DRIVE_BE: net.minecraft.world.level.block.entity.BlockEntityType<MEIODriveBlockEntity>
+
     fun register() {
         val blockId = "pseudo_pattern_terminal".rl
 
@@ -29,5 +40,26 @@ object FabricBlocks {
         Registry.register(BuiltInRegistries.BLOCK, blockId, PSEUDO_PATTERN_TERMINAL)
         Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, blockId, PSEUDO_PATTERN_TERMINAL_BE)
         Registry.register(BuiltInRegistries.ITEM, blockId, BlockItem(PSEUDO_PATTERN_TERMINAL, Item.Properties()))
+
+        val ioDriveId = "me_io_drive".rl
+
+        ME_IO_DRIVE_BE = FabricBlockEntityTypeBuilder.create(
+            { pos, state -> MEIODriveBlockEntity(ME_IO_DRIVE_BE, pos, state) },
+            ME_IO_DRIVE
+        ).build()
+        @Suppress("UNCHECKED_CAST")
+        (ME_IO_DRIVE as appeng.block.AEBaseEntityBlock<MEIODriveBlockEntity>).setBlockEntity(
+            MEIODriveBlockEntity::class.java, ME_IO_DRIVE_BE, null, null
+        )
+        MEIODriveRegistration.setBlockEntityType(ME_IO_DRIVE_BE)
+
+        Registry.register(BuiltInRegistries.BLOCK, ioDriveId, ME_IO_DRIVE)
+        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, ioDriveId, ME_IO_DRIVE_BE)
+        val ioDriveItem = BlockItem(ME_IO_DRIVE, Item.Properties())
+        Registry.register(BuiltInRegistries.ITEM, ioDriveId, ioDriveItem)
+
+        BlockDefinition("ME IO Drive", ioDriveId, ME_IO_DRIVE, ioDriveItem).also {
+            MainCreativeTab.add(it)
+        }
     }
 }
