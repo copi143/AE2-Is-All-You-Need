@@ -71,8 +71,7 @@ public abstract class CreativeScreenSidebarMixin {
         ResourceLocation allId = CreativeTabGroupRegistry.INSTANCE.getAllGroup().getId();
 
         if (selected.getId().equals(allId)) {
-            // ALL：原版 + 其他模组的 tab，AE2 作为单独分类不在这里显示
-            if ("ae2".equals(tabId.getNamespace())) return false;
+            // ALL：显示所有 tab
             return true;
         }
 
