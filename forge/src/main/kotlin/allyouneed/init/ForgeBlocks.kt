@@ -3,6 +3,9 @@ package allyouneed.forge.init
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
 import allyouneed.iodrive.MEIODriveRegistration
+import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlock
+import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlockEntity
+import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
 import allyouneed.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
@@ -44,6 +47,28 @@ object ForgeBlocks {
             WirelessPseudoPatternTerminalItem(Item.Properties().stacksTo(1))
         }
 
+    // Adaptive Pattern Terminal
+    val ADAPTIVE_PATTERN_TERMINAL: RegistryObject<AdaptivePatternTerminalBlock> =
+        BLOCKS.register("adaptive_pattern_terminal") {
+            AdaptivePatternTerminalBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f))
+        }
+
+    val ADAPTIVE_PATTERN_TERMINAL_BE: RegistryObject<BlockEntityType<AdaptivePatternTerminalBlockEntity>> =
+        BLOCK_ENTITIES.register("adaptive_pattern_terminal") {
+            val type = BlockEntityType.Builder.of(
+                { pos, state -> AdaptivePatternTerminalBlockEntity(ADAPTIVE_PATTERN_TERMINAL_BE.get(), pos, state) },
+                ADAPTIVE_PATTERN_TERMINAL.get()
+            ).build(null as com.mojang.datafixers.types.Type<*>?)
+            AdaptivePatternTerminalRegistration.setBlockEntityType(type)
+            type
+        }
+
+    val ADAPTIVE_PATTERN_TERMINAL_ITEM: RegistryObject<BlockItem> =
+        ForgeItems.ITEMS.register("adaptive_pattern_terminal") {
+            BlockItem(ADAPTIVE_PATTERN_TERMINAL.get(), Item.Properties())
+        }
+
+    // ME IO Drive
     val ME_IO_DRIVE_INSTANCE = MEIODriveBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f))
     val ME_IO_DRIVE_ITEM_INSTANCE = BlockItem(ME_IO_DRIVE_INSTANCE, Item.Properties())
 

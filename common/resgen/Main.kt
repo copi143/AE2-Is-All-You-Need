@@ -3,6 +3,7 @@ package allyouneed.resgen
 import java.nio.file.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
 
 data class CellEntry(
     val id: String,
@@ -46,6 +47,8 @@ fun main(args: Array<String>) {
         translation("itemGroup.$modId", "AE2 Is All You Need")
         translation("gui.$modId.group.all", "ALL")
         translation("gui.$modId.group.ae2", "AE2")
+        translation("gui.$modId.adaptive_probability", "Probability (p)")
+        translation("gui.$modId.adaptive_timeout", "Timeout (T)")
 
         for (cell in cells) {
             if (cell.isCreative) {
@@ -56,6 +59,12 @@ fun main(args: Array<String>) {
         }
 
         simpleBlock("me_io_drive", "ME IO Drive")
+
+        // Adaptive Pattern item (just an item model, no block)
+        item("adaptive_pattern", "Adaptive Pattern")
+
+        // Adaptive Pattern Terminal block
+        simpleBlock("adaptive_pattern_terminal", "Adaptive Pattern Terminal")
     }
 
     retexture(output) {
@@ -73,4 +82,18 @@ fun main(args: Array<String>) {
     val texOut = output.resolve("textures/block")
     texOut.createDirectories()
     sourceTextures.resolve("me_io_drive.png").copyTo(texOut.resolve("me_io_drive.png"), overwrite = true)
+
+    // Adaptive pattern terminal texture (placeholder - copy from pattern provider if available)
+    val ptTex = sourceTextures.resolve("me_io_drive.png")
+    if (ptTex.exists()) {
+        ptTex.copyTo(texOut.resolve("adaptive_pattern_terminal.png"), overwrite = true)
+    }
+
+    // Adaptive pattern item texture (placeholder)
+    val itemTexOut = output.resolve("textures/item")
+    itemTexOut.createDirectories()
+    val apTex = sourceTextures.resolve("me_io_drive.png")
+    if (apTex.exists()) {
+        apTex.copyTo(itemTexOut.resolve("adaptive_pattern.png"), overwrite = true)
+    }
 }

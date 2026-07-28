@@ -2,6 +2,7 @@ package allyouneed.forge.init
 
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModItems
+import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import allyouneed.util.MODID
@@ -19,6 +20,9 @@ object ForgeItems {
         ITEMS.register("machine_pattern") { ModItems.MACHINE_PATTERN }
 
     val PSEUDO_PATTERN: RegistryObject<PseudoPatternItem> = ITEMS.register("pseudo_pattern") { ModItems.PSEUDO_PATTERN }
+
+    val ADAPTIVE_PATTERN: RegistryObject<AdaptivePatternItem> =
+        ITEMS.register("adaptive_pattern") { ModItems.ADAPTIVE_PATTERN }
 
     val ENTITY_P2P_TUNNEL: RegistryObject<PartItem<EntityP2PTunnelPart>> =
         ITEMS.register("entity_p2p_tunnel") { ModItems.ENTITY_P2P_TUNNEL }

@@ -8,7 +8,8 @@
     "MolecularAssemblerBlockEntityMixin",
     "MolecularAssemblerMenuMixin",
     "PatternEncodingTermMenuMixin",
-    "PatternProviderLogicMixin"
+    "PatternProviderLogicMixin",
+    "CraftingServiceMixin"
   ],
   "client": [
     "CreativeScreenSidebarMixin",

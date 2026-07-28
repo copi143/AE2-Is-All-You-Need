@@ -35,6 +35,18 @@ class AssetGen(private val modId: String, private val output: Path, private val 
         translations[key] = value
     }
 
+    fun item(name: String, displayName: String, texture: String = "item/$name") {
+        translations["item.$modId.$name"] = displayName
+
+        val itemJson = JsonObject().apply {
+            addProperty("parent", "minecraft:item/generated")
+            add("textures", JsonObject().apply {
+                addProperty("layer0", "$modId:$texture")
+            })
+        }
+        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
     fun cubeAllWithFullness(
         name: String,
         displayName: String,

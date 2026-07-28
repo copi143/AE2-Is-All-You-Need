@@ -2,6 +2,8 @@
   "itemGroup.ae2isallyouneed": "AE2 就是全部所需",
   "gui.ae2isallyouneed.group.all": "全部",
   "gui.ae2isallyouneed.group.ae2": "AE2",
+  "gui.ae2isallyouneed.adaptive_probability": "概率 (p)",
+  "gui.ae2isallyouneed.adaptive_timeout": "超时 (T)",
   "block.ae2isallyouneed.1k_energy_cell": "微型能源元件",
   "block.ae2isallyouneed.4k_energy_cell": "简易能源元件",
   "block.ae2isallyouneed.16k_energy_cell": "基础能源元件",
@@ -18,5 +20,7 @@
   "block.ae2isallyouneed.64g_energy_cell": "恒星能源元件",
   "block.ae2isallyouneed.256g_energy_cell": "宇宙能源元件",
   "block.ae2isallyouneed.creative_energy_cell": "创造能源元件",
-  "block.ae2isallyouneed.me_io_drive": "ME IO 驱动器"
+  "block.ae2isallyouneed.me_io_drive": "ME IO 驱动器",
+  "item.ae2isallyouneed.adaptive_pattern": "自适应模式",
+  "block.ae2isallyouneed.adaptive_pattern_terminal": "自适应模式终端"
 }

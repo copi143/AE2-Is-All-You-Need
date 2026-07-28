@@ -3,6 +3,9 @@ package allyouneed.fabric.init
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
 import allyouneed.iodrive.MEIODriveRegistration
+import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlock
+import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlockEntity
+import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
 import allyouneed.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
@@ -23,6 +26,12 @@ object FabricBlocks {
 
     lateinit var PSEUDO_PATTERN_TERMINAL_BE: net.minecraft.world.level.block.entity.BlockEntityType<PseudoPatternTerminalBlockEntity>
 
+    val ADAPTIVE_PATTERN_TERMINAL: AdaptivePatternTerminalBlock = AdaptivePatternTerminalBlock(
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
+    )
+
+    lateinit var ADAPTIVE_PATTERN_TERMINAL_BE: net.minecraft.world.level.block.entity.BlockEntityType<AdaptivePatternTerminalBlockEntity>
+
     val ME_IO_DRIVE: MEIODriveBlock = MEIODriveBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
     )
@@ -41,6 +50,29 @@ object FabricBlocks {
         Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, blockId, PSEUDO_PATTERN_TERMINAL_BE)
         Registry.register(BuiltInRegistries.ITEM, blockId, BlockItem(PSEUDO_PATTERN_TERMINAL, Item.Properties()))
 
+        // Adaptive Pattern Terminal
+        val adaptiveId = "adaptive_pattern_terminal".rl
+
+        ADAPTIVE_PATTERN_TERMINAL_BE = FabricBlockEntityTypeBuilder.create(
+            { pos, state -> AdaptivePatternTerminalBlockEntity(ADAPTIVE_PATTERN_TERMINAL_BE, pos, state) },
+            ADAPTIVE_PATTERN_TERMINAL
+        ).build()
+        @Suppress("UNCHECKED_CAST")
+        (ADAPTIVE_PATTERN_TERMINAL as appeng.block.AEBaseEntityBlock<AdaptivePatternTerminalBlockEntity>).setBlockEntity(
+            AdaptivePatternTerminalBlockEntity::class.java, ADAPTIVE_PATTERN_TERMINAL_BE, null, null
+        )
+        AdaptivePatternTerminalRegistration.setBlockEntityType(ADAPTIVE_PATTERN_TERMINAL_BE)
+
+        Registry.register(BuiltInRegistries.BLOCK, adaptiveId, ADAPTIVE_PATTERN_TERMINAL)
+        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, adaptiveId, ADAPTIVE_PATTERN_TERMINAL_BE)
+        val adaptiveItem = BlockItem(ADAPTIVE_PATTERN_TERMINAL, Item.Properties())
+        Registry.register(BuiltInRegistries.ITEM, adaptiveId, adaptiveItem)
+
+        BlockDefinition("Adaptive Pattern Terminal", adaptiveId, ADAPTIVE_PATTERN_TERMINAL, adaptiveItem).also {
+            MainCreativeTab.add(it)
+        }
+
+        // ME IO Drive
         val ioDriveId = "me_io_drive".rl
 
         ME_IO_DRIVE_BE = FabricBlockEntityTypeBuilder.create(

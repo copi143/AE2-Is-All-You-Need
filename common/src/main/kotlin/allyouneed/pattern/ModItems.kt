@@ -2,6 +2,7 @@ package allyouneed.pattern
 
 import allyouneed.api.machine.BuiltinMachineTypes
 import allyouneed.parts.p2p.EntityP2PTunnelPart
+import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import appeng.api.crafting.PatternDetailsHelper
@@ -20,6 +21,10 @@ object ModItems {
 
     val PSEUDO_PATTERN: PseudoPatternItem by lazy {
         PseudoPatternItem(Item.Properties().stacksTo(1))
+    }
+
+    val ADAPTIVE_PATTERN: AdaptivePatternItem by lazy {
+        AdaptivePatternItem(Item.Properties().stacksTo(1))
     }
 
     val ENTITY_P2P_TUNNEL: PartItem<EntityP2PTunnelPart> by lazy {
