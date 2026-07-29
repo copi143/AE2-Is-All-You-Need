@@ -44,12 +44,43 @@ object ScriptManager {
         managerLogger.info("ScriptManager initialized with directory: $scriptsPath")
     }
 
+    fun loadEventClasses() {
+        val dir = scriptDir ?: return
+        val bytecodes = ScriptEventBus.getEventClassBytecodes()
+        if (bytecodes.isEmpty()) return
+
+        for ((eventType, bytecode) in bytecodes) {
+            if (ScriptEventBus.getEventClass(eventType) != null) continue
+            val safeName = eventType.replace(Regex("[^a-zA-Z0-9_]"), "_")
+            val classFileName = "kaptor/runtime/event/${safeName}.class"
+            val classFile = dir.resolve(classFileName)
+            Files.createDirectories(classFile.parent)
+            Files.write(classFile, bytecode)
+        }
+
+        classLoader = URLClassLoader(
+            arrayOf(dir.toUri().toURL()),
+            ScriptManager::class.java.classLoader
+        )
+
+        for ((eventType, _) in bytecodes) {
+            if (ScriptEventBus.getEventClass(eventType) != null) continue
+            val safeName = eventType.replace(Regex("[^a-zA-Z0-9_]"), "_")
+            try {
+                val clazz = classLoader!!.loadClass("kaptor.runtime.event.$safeName")
+                ScriptEventBus.registerEventClass(eventType, clazz)
+            } catch (e: Exception) {
+                managerLogger.error("Failed to load event class for $eventType", e)
+            }
+        }
+    }
+
     fun loadAllScripts() {
         val dir = scriptDir ?: return
         managerLogger.info("Loading all scripts from $dir")
 
         Files.list(dir).use { stream ->
-            stream.filter { it.toString().endsWith(".script") }.forEach { path ->
+            stream.filter { it.toString().endsWith(".script") || it.toString().endsWith(".kts") }.forEach { path ->
                 try {
                     loadScript(path)
                 } catch (e: Exception) {
@@ -62,14 +93,17 @@ object ScriptManager {
     }
 
     fun loadScript(path: Path): Boolean {
-        val name = path.fileName.toString().removeSuffix(".script")
+        val fileName = path.fileName.toString()
+        val name = if (fileName.endsWith(".kts")) fileName.removeSuffix(".kts") else fileName.removeSuffix(".script")
         val source = Files.readString(path)
 
         return try {
             val ast = parseWithAntlr(source, name)
 
             val ir = lowering.lower(ast)
-            val compiled = compiler.compile(ir, name)
+
+            val eventClassMap = buildEventClassMap()
+            val compiled = compiler.compile(ir, name, eventClassMap)
 
             unregisterScript(name)
 
@@ -165,7 +199,8 @@ object ScriptManager {
     }
 
     fun reloadScript(name: Path): Boolean {
-        val scriptName = name.fileName.toString().removeSuffix(".script")
+        val fileName = name.fileName.toString()
+        val scriptName = if (fileName.endsWith(".kts")) fileName.removeSuffix(".kts") else fileName.removeSuffix(".script")
         managerLogger.info("Reloading script: $scriptName")
         unregisterScript(scriptName)
         return loadScript(name)
@@ -198,14 +233,16 @@ object ScriptManager {
                         when (kind) {
                             StandardWatchEventKinds.ENTRY_CREATE,
                             StandardWatchEventKinds.ENTRY_MODIFY -> {
-                                if (filePath.toString().endsWith(".script")) {
+                                val f = filePath.toString()
+                                if (f.endsWith(".script") || f.endsWith(".kts")) {
                                     Thread.sleep(100)
                                     reloadScript(fullPath)
                                 }
                             }
                             StandardWatchEventKinds.ENTRY_DELETE -> {
-                                if (filePath.toString().endsWith(".script")) {
-                                    val name = filePath.toString().removeSuffix(".script")
+                                val f = filePath.toString()
+                                if (f.endsWith(".script") || f.endsWith(".kts")) {
+                                    val name = if (f.endsWith(".kts")) f.removeSuffix(".kts") else f.removeSuffix(".script")
                                     unregisterScript(name)
                                     managerLogger.info("Script deleted: $name")
                                 }
@@ -249,9 +286,18 @@ object ScriptManager {
 
     fun getLanguageService(): ScriptLanguageService = languageService
 
+    private fun buildEventClassMap(): Map<String, String> {
+        val map = mutableMapOf<String, String>()
+        for (eventType in ScriptEventBus.getRegisteredEventClassTypes()) {
+            val clazz = ScriptEventBus.getEventClass(eventType) ?: continue
+            map[eventType] = clazz.name.replace('.', '/')
+        }
+        return map
+    }
+
     fun reset() {
         stopHotReload()
-        ScriptEventBus.clearAll()
+        ScriptEventBus.resetAll()
         compiledScripts.clear()
         loadedHandlers.clear()
         scriptDir = null

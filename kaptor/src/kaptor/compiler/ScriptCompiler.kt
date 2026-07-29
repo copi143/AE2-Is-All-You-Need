@@ -16,7 +16,7 @@ class ScriptCompiler {
         classCounter = 0
     }
 
-    fun compile(ir: IrScriptFile, scriptName: String): CompiledScript {
+    fun compile(ir: IrScriptFile, scriptName: String, eventClassMap: Map<String, String> = emptyMap()): CompiledScript {
         val className = "script.${scriptName.replace('.', '_')}_${classCounter++}"
         val internalName = className.replace('.', '/')
 
@@ -36,7 +36,8 @@ class ScriptCompiler {
         generateInit(cw, internalName)
 
         for (handler in ir.handlers) {
-            generateHandler(cw, internalName, handler)
+            val eventClass = eventClassMap[handler.eventType]
+            generateHandler(cw, internalName, handler, eventClass)
         }
 
         generateGetEventTypes(cw, internalName, ir.handlers)
@@ -62,7 +63,7 @@ class ScriptCompiler {
         mv.visitEnd()
     }
 
-    private fun generateHandler(cw: ClassVisitor, internalName: String, handler: IrHandler) {
+    private fun generateHandler(cw: ClassVisitor, internalName: String, handler: IrHandler, eventClassName: String? = null) {
         val prefix = when (handler.hookType) {
             HookType.ON -> "handle"
             HookType.BEFORE -> "before"
@@ -74,7 +75,7 @@ class ScriptCompiler {
         val mv = cw.visitMethod(ACC_PUBLIC, methodName, methodDesc, null, null)
         mv.visitCode()
 
-        val ctx = MethodContext(mv, handler.costLimit)
+        val ctx = MethodContext(mv, handler.costLimit, eventClassName, handler.paramName)
         ctx.declareLocal("event", "Ljava/lang/Object;")
         mv.visitVarInsn(ALOAD, 1)
         mv.visitVarInsn(ASTORE, ctx.getLocal("event"))
@@ -295,9 +296,15 @@ class ScriptCompiler {
             }
             is IrFieldAccess -> {
                 compileExpression(ctx, expr.receiver)
-                ctx.mv.visitTypeInsn(CHECKCAST, "java/util/Map")
-                ctx.mv.visitLdcInsn(expr.fieldName)
-                ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true)
+                if (ctx.eventClassName != null && isEventVariable(ctx, expr.receiver)) {
+                    ctx.mv.visitTypeInsn(CHECKCAST, ctx.eventClassName)
+                    val getterName = "get${expr.fieldName.replaceFirstChar { it.uppercase() }}"
+                    ctx.mv.visitMethodInsn(INVOKEVIRTUAL, ctx.eventClassName, getterName, "()Ljava/lang/Object;", false)
+                } else {
+                    ctx.mv.visitTypeInsn(CHECKCAST, "java/util/Map")
+                    ctx.mv.visitLdcInsn(expr.fieldName)
+                    ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true)
+                }
             }
             is IrMethodCall -> {
                 compileExpression(ctx, expr.receiver)
@@ -522,11 +529,17 @@ class ScriptCompiler {
             }
             is IrFieldAccess -> {
                 compileExpression(ctx, target.receiver)
-                ctx.mv.visitTypeInsn(CHECKCAST, "java/util/Map")
-                ctx.mv.visitLdcInsn(target.fieldName)
-                ctx.mv.visitInsn(SWAP)
-                ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true)
-                ctx.mv.visitInsn(POP)
+                if (ctx.eventClassName != null && isEventVariable(ctx, target.receiver)) {
+                    val setterName = "set${target.fieldName.replaceFirstChar { it.uppercase() }}"
+                    ctx.mv.visitInsn(SWAP)
+                    ctx.mv.visitMethodInsn(INVOKEVIRTUAL, ctx.eventClassName, setterName, "(Ljava/lang/Object;)V", false)
+                } else {
+                    ctx.mv.visitTypeInsn(CHECKCAST, "java/util/Map")
+                    ctx.mv.visitLdcInsn(target.fieldName)
+                    ctx.mv.visitInsn(SWAP)
+                    ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true)
+                    ctx.mv.visitInsn(POP)
+                }
             }
             is IrIndexAccess -> {
                 compileExpression(ctx, target.receiver)
@@ -591,6 +604,11 @@ class ScriptCompiler {
         return name.replace(Regex("[^a-zA-Z0-9_]"), "_")
     }
 
+    private fun isEventVariable(ctx: MethodContext, expr: IrExpression): Boolean {
+        if (expr !is IrIdentifier) return false
+        return expr.name == "event" || expr.name == ctx.eventParamName
+    }
+
     companion object {
         const val TYPE_HANDLER_BASE = "kaptor/runtime/ScriptHandlerBase"
         const val TYPE_SANDBOX = "kaptor/runtime/ScriptSandbox"
@@ -599,7 +617,9 @@ class ScriptCompiler {
 
 class MethodContext(
     val mv: MethodVisitor,
-    val costLimit: Int
+    val costLimit: Int,
+    val eventClassName: String? = null,
+    val eventParamName: String? = null
 ) {
     var currentCost: Int = 0
     private val locals = mutableMapOf<String, Int>()

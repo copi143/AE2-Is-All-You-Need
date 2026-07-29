@@ -32,6 +32,8 @@ class EngineTest {
         engine.shutdown()
     }
 
+    private fun script(body: String): String = body.trimIndent() + "\n"
+
     // ── init / empty ──────────────────────────────────────────────
 
     @Test
@@ -92,9 +94,9 @@ class EngineTest {
 
     @Test
     fun `engine shutdown clears all handlers`() {
-        val script = """on("TestEvent") { event -> val x = event.name }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("TestEvent") { event -> val x = event.name }
+        """))
         engine.init(tempDir)
         assertTrue(ScriptEventBus.getRegisteredEventTypes().isNotEmpty())
         engine.shutdown()
@@ -121,11 +123,11 @@ class EngineTest {
 
     @Test
     fun `stats reflect loaded handlers`() {
-        val script = """on("A") { event -> val x = event.x }
-before("B") { event -> val y = event.y }
-after("C") { event -> val z = event.z }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("A") { event -> val x = event.x }
+            before("B") { event -> val y = event.y }
+            after("C") { event -> val z = event.z }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().loadedScripts)
         assertEquals(3, engine.getStats().totalHandlers)
@@ -134,14 +136,12 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `stats after loading multiple scripts`() {
-        Files.writeString(tempDir.resolve("a.script"),
-            """on("E1") { event -> val x = event.x }
-"""
-        )
-        Files.writeString(tempDir.resolve("b.script"),
-            """before("E2") { event -> val y = event.y }
-"""
-        )
+        Files.writeString(tempDir.resolve("a.script"), script("""
+            on("E1") { event -> val x = event.x }
+        """))
+        Files.writeString(tempDir.resolve("b.script"), script("""
+            before("E2") { event -> val y = event.y }
+        """))
         engine.init(tempDir)
         assertEquals(2, engine.getStats().loadedScripts)
         assertEquals(2, engine.getStats().totalHandlers)
@@ -159,9 +159,9 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `dispatch to unregistered event does not throw`() {
-        val script = """on("A") { event -> val x = event.x }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("A") { event -> val x = event.x }
+        """))
         engine.init(tempDir)
         assertDoesNotThrow {
             ScriptEventBus.dispatchEvent("NonExistent", emptyMap<String, Any>())
@@ -172,11 +172,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `engine load script with on handler`() {
-        val script = """on("TestEvent") { event ->
-    val name = event.name
-}
-"""
-        Files.writeString(tempDir.resolve("handler.script"), script)
+        Files.writeString(tempDir.resolve("handler.script"), script("""
+            on("TestEvent") { event ->
+                val name = event.name
+            }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().loadedScripts)
         assertTrue(engine.getLoadedScripts().contains("handler"))
@@ -189,11 +189,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `on handler body is invoked without error`() {
-        val script = """on("TestEvent") { event ->
-    val name = event.name
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("TestEvent") { event ->
+                val name = event.name
+            }
+        """))
         engine.init(tempDir)
         val entry = ScriptEventBus.getHandlersForType("TestEvent").first()
         assertDoesNotThrow {
@@ -203,9 +203,9 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `on handler with empty body`() {
-        val script = """on("TestEvent") {}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("TestEvent") {}
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertEquals(setOf("TestEvent"), engine.getStats().registeredEventTypes)
@@ -217,12 +217,12 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `on handler with val declaration in body`() {
-        val script = """on("E") { event ->
-    val x = 42
-    val y = x
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("E") { event ->
+                val x = 42
+                val y = x
+            }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         val entry = ScriptEventBus.getHandlersForType("E").first()
@@ -233,12 +233,12 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `on handler with var declaration and assignment`() {
-        val script = """on("E") { event ->
-    var x = 1
-    x = 42
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("E") { event ->
+                var x = 1
+                x = 42
+            }
+        """))
         engine.init(tempDir)
         val entry = ScriptEventBus.getHandlersForType("E").first()
         assertDoesNotThrow {
@@ -248,13 +248,13 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `on handler with if statement`() {
-        val script = """on("E") { event ->
-    if (true) {
-        val x = 1
-    }
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("E") { event ->
+                if (true) {
+                    val x = 1
+                }
+            }
+        """))
         engine.init(tempDir)
         val entry = ScriptEventBus.getHandlersForType("E").first()
         assertDoesNotThrow {
@@ -264,11 +264,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `on handler with return`() {
-        val script = """on("E") { event ->
-    return
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("E") { event ->
+                return
+            }
+        """))
         engine.init(tempDir)
         val entry = ScriptEventBus.getHandlersForType("E").first()
         assertDoesNotThrow {
@@ -280,11 +280,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `loads script with before hook`() {
-        val script = """before("TestEvent") { event ->
-    val name = event.name
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            before("TestEvent") { event ->
+                val name = event.name
+            }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertTrue(engine.getStats().registeredEventTypes.contains("TestEvent"))
@@ -295,11 +295,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `before handler body is invoked without error`() {
-        val script = """before("E") { event ->
-    val x = event.x
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            before("E") { event ->
+                val x = event.x
+            }
+        """))
         engine.init(tempDir)
         val entry = ScriptEventBus.getHandlersForType("E").first()
         assertEquals(HookType.BEFORE, entry.hookType)
@@ -310,14 +310,12 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `multiple before handlers for same event`() {
-        Files.writeString(tempDir.resolve("a.script"),
-            """before("E") { event -> val x = event.x }
-"""
-        )
-        Files.writeString(tempDir.resolve("b.script"),
-            """before("E") { event -> val y = event.y }
-"""
-        )
+        Files.writeString(tempDir.resolve("a.script"), script("""
+            before("E") { event -> val x = event.x }
+        """))
+        Files.writeString(tempDir.resolve("b.script"), script("""
+            before("E") { event -> val y = event.y }
+        """))
         engine.init(tempDir)
         assertEquals(2, engine.getStats().totalHandlers)
         assertEquals(2, ScriptEventBus.getHandlersForType("E").size)
@@ -328,11 +326,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `loads script with after hook`() {
-        val script = """after("TestEvent") { event ->
-    val name = event.name
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            after("TestEvent") { event ->
+                val name = event.name
+            }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertTrue(engine.getStats().registeredEventTypes.contains("TestEvent"))
@@ -343,11 +341,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `after handler body is invoked without error`() {
-        val script = """after("E") { event ->
-    val x = event.x
-}
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            after("E") { event ->
+                val x = event.x
+            }
+        """))
         engine.init(tempDir)
         val entry = ScriptEventBus.getHandlersForType("E").first()
         assertEquals(HookType.AFTER, entry.hookType)
@@ -358,14 +356,12 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `multiple after handlers for same event`() {
-        Files.writeString(tempDir.resolve("a.script"),
-            """after("E") { event -> val x = event.x }
-"""
-        )
-        Files.writeString(tempDir.resolve("b.script"),
-            """after("E") { event -> val y = event.y }
-"""
-        )
+        Files.writeString(tempDir.resolve("a.script"), script("""
+            after("E") { event -> val x = event.x }
+        """))
+        Files.writeString(tempDir.resolve("b.script"), script("""
+            after("E") { event -> val y = event.y }
+        """))
         engine.init(tempDir)
         assertEquals(2, engine.getStats().totalHandlers)
         assertEquals(2, ScriptEventBus.getHandlersForType("E").size)
@@ -376,11 +372,11 @@ after("C") { event -> val z = event.z }
 
     @Test
     fun `before on after hooks for same event in one script`() {
-        val script = """before("E") { event -> val x = event.x }
-on("E") { event -> val y = event.y }
-after("E") { event -> val z = event.z }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            before("E") { event -> val x = event.x }
+            on("E") { event -> val y = event.y }
+            after("E") { event -> val z = event.z }
+        """))
         engine.init(tempDir)
         assertEquals(3, engine.getStats().totalHandlers)
         assertEquals(setOf("E"), engine.getStats().registeredEventTypes)
@@ -394,11 +390,11 @@ after("E") { event -> val z = event.z }
 
     @Test
     fun `before on after dispatch does not throw`() {
-        val script = """before("E") { event -> }
-on("E") { event -> }
-after("E") { event -> }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            before("E") { event -> }
+            on("E") { event -> }
+            after("E") { event -> }
+        """))
         engine.init(tempDir)
         assertDoesNotThrow {
             ScriptEventBus.dispatchEvent("E", emptyMap<String, Any>())
@@ -407,18 +403,15 @@ after("E") { event -> }
 
     @Test
     fun `multiple scripts with different hook types`() {
-        Files.writeString(tempDir.resolve("a.script"),
-            """before("E") { event -> }
-"""
-        )
-        Files.writeString(tempDir.resolve("b.script"),
-            """on("E") { event -> }
-"""
-        )
-        Files.writeString(tempDir.resolve("c.script"),
-            """after("E") { event -> }
-"""
-        )
+        Files.writeString(tempDir.resolve("a.script"), script("""
+            before("E") { event -> }
+        """))
+        Files.writeString(tempDir.resolve("b.script"), script("""
+            on("E") { event -> }
+        """))
+        Files.writeString(tempDir.resolve("c.script"), script("""
+            after("E") { event -> }
+        """))
         engine.init(tempDir)
         assertEquals(3, engine.getStats().loadedScripts)
         assertEquals(3, engine.getStats().totalHandlers)
@@ -429,10 +422,10 @@ after("E") { event -> }
 
     @Test
     fun `handlers for different event types`() {
-        val script = """on("A") { event -> val x = event.x }
-on("B") { event -> val y = event.y }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("A") { event -> val x = event.x }
+            on("B") { event -> val y = event.y }
+        """))
         engine.init(tempDir)
         assertEquals(2, engine.getStats().totalHandlers)
         assertEquals(setOf("A", "B"), engine.getStats().registeredEventTypes)
@@ -440,10 +433,10 @@ on("B") { event -> val y = event.y }
 
     @Test
     fun `before and after for different events`() {
-        val script = """before("A") { event -> val x = event.x }
-after("B") { event -> val y = event.y }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            before("A") { event -> val x = event.x }
+            after("B") { event -> val y = event.y }
+        """))
         engine.init(tempDir)
         assertEquals(2, engine.getStats().totalHandlers)
         assertEquals(setOf("A", "B"), engine.getStats().registeredEventTypes)
@@ -451,14 +444,12 @@ after("B") { event -> val y = event.y }
 
     @Test
     fun `dispatch to different event types`() {
-        Files.writeString(tempDir.resolve("a.script"),
-            """on("A") { event -> val x = event.x }
-"""
-        )
-        Files.writeString(tempDir.resolve("b.script"),
-            """on("B") { event -> val y = event.y }
-"""
-        )
+        Files.writeString(tempDir.resolve("a.script"), script("""
+            on("A") { event -> val x = event.x }
+        """))
+        Files.writeString(tempDir.resolve("b.script"), script("""
+            on("B") { event -> val y = event.y }
+        """))
         engine.init(tempDir)
         assertDoesNotThrow {
             ScriptEventBus.dispatchEvent("A", mapOf("x" to 1))
@@ -470,10 +461,10 @@ after("B") { event -> val y = event.y }
 
     @Test
     fun `script with mixed declarations and handlers`() {
-        val script = """val x = 1
-on("E") { event -> val y = event.y }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            val x = 1
+            on("E") { event -> val y = event.y }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().loadedScripts)
         assertEquals(1, engine.getStats().totalHandlers)
@@ -484,9 +475,9 @@ on("E") { event -> val y = event.y }
 
     @Test
     fun `handler with special characters in event type`() {
-        val script = """on("my-event!") { event -> val x = event.x }
-"""
-        Files.writeString(tempDir.resolve("h.script"), script)
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("my-event!") { event -> val x = event.x }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertTrue(engine.getStats().registeredEventTypes.contains("my-event!"))
@@ -500,10 +491,9 @@ on("E") { event -> val y = event.y }
 
     @Test
     fun `unload script removes handlers`() {
-        Files.writeString(tempDir.resolve("h.script"),
-            """on("E") { event -> }
-"""
-        )
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("E") { event -> }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertTrue(ScriptManager.unloadScript("h"))
@@ -520,14 +510,16 @@ on("E") { event -> val y = event.y }
     @Test
     fun `reload after file change`() {
         val path = tempDir.resolve("h.script")
-        Files.writeString(path, """on("E1") { event -> }
-""")
+        Files.writeString(path, script("""
+            on("E1") { event -> }
+        """))
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertEquals(setOf("E1"), engine.getStats().registeredEventTypes)
 
-        Files.writeString(path, """on("E2") { event -> }
-""")
+        Files.writeString(path, script("""
+            on("E2") { event -> }
+        """))
         assertTrue(ScriptManager.reloadScript(path))
         assertEquals(1, engine.getStats().totalHandlers)
         assertEquals(setOf("E2"), engine.getStats().registeredEventTypes)
@@ -540,5 +532,83 @@ on("E") { event -> val y = event.y }
         engine.init(tempDir)
         val service = engine.getLanguageService()
         assertTrue(service.getCachedResult("nonexistent") == null)
+    }
+
+    // ── typed event wrapper (declareEvent) ────────────────────────
+
+    @Test
+    fun `declare event with typed wrapper dispatches without error`() {
+        engine.declareEvent("TestEvent") {
+            string("name")
+            int("count")
+        }
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("TestEvent") { event ->
+                val n = event.name
+                val c = event.count
+            }
+        """))
+        engine.init(tempDir)
+        assertEquals(1, engine.getStats().totalHandlers)
+        assertDoesNotThrow {
+            engine.dispatchEvent("TestEvent", mapOf("name" to "hello", "count" to 42))
+        }
+    }
+
+    @Test
+    fun `typed wrapper with multiple event types`() {
+        engine.declareEvent("A") { any("x") }
+        engine.declareEvent("B") { any("y") }
+        Files.writeString(tempDir.resolve("a.script"), script("""
+            on("A") { event -> val x = event.x }
+            on("B") { event -> val y = event.y }
+        """))
+        engine.init(tempDir)
+        assertEquals(2, engine.getStats().totalHandlers)
+        assertDoesNotThrow {
+            engine.dispatchEvent("A", mapOf("x" to 1))
+            engine.dispatchEvent("B", mapOf("y" to 2))
+        }
+    }
+
+    @Test
+    fun `declare event with mixed hooks dispatched through engine`() {
+        engine.declareEvent("E") { string("msg") }
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            before("E") { event -> }
+            on("E") { event -> val m = event.msg }
+            after("E") { event -> }
+        """))
+        engine.init(tempDir)
+        assertEquals(3, engine.getStats().totalHandlers)
+        assertDoesNotThrow {
+            engine.dispatchEvent("E", mapOf("msg" to "hello"))
+        }
+    }
+
+    @Test
+    fun `undeclared event still works via map get`() {
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("Legacy") { event -> val x = event.x }
+        """))
+        engine.init(tempDir)
+        assertEquals(1, engine.getStats().totalHandlers)
+        val entry = ScriptEventBus.getHandlersForType("Legacy").first()
+        assertDoesNotThrow {
+            entry.handler.invokeHandler("Legacy", mapOf("x" to 1))
+        }
+    }
+
+    @Test
+    fun `declare event with special chars in event type`() {
+        engine.declareEvent("my-event!") { any("x") }
+        Files.writeString(tempDir.resolve("h.script"), script("""
+            on("my-event!") { event -> val x = event.x }
+        """))
+        engine.init(tempDir)
+        assertEquals(1, engine.getStats().totalHandlers)
+        assertDoesNotThrow {
+            engine.dispatchEvent("my-event!", mapOf("x" to 1))
+        }
     }
 }

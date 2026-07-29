@@ -10,6 +10,7 @@ object ScriptEventBus {
     private val onHandlers = ConcurrentHashMap<String, EventHandlerEntry>()
     private val afterHandlers = ConcurrentHashMap<String, MutableList<EventHandlerEntry>>()
     private val eventClassMap = ConcurrentHashMap<String, Class<*>>()
+    private val eventClassBytecodes = ConcurrentHashMap<String, ByteArray>()
     private val eventLogger: ScriptLogger = createLogger()
 
     data class EventHandlerEntry(
@@ -58,26 +59,47 @@ object ScriptEventBus {
         beforeHandlers.clear()
         onHandlers.clear()
         afterHandlers.clear()
+        eventClassMap.clear()
         eventLogger.debug("Cleared all script event handlers")
     }
 
+    fun resetAll() {
+        clearAll()
+        eventClassBytecodes.clear()
+        eventLogger.debug("Reset all script event state")
+    }
+
     fun dispatchEvent(eventType: String, event: Any?) {
+        val wrappedEvent = wrapEvent(eventType, event)
+
         // BEFORE handlers
         beforeHandlers[eventType]?.forEach { entry ->
-            dispatchEntry(entry, event)
+            dispatchEntry(entry, wrappedEvent)
         }
 
         // ON handler (with callPrev support)
         val onEntry = onHandlers[eventType]
         if (onEntry != null) {
             ScriptHandlerBase.clearPrevHandler()
-            dispatchEntry(onEntry, event)
+            dispatchEntry(onEntry, wrappedEvent)
             ScriptHandlerBase.clearPrevHandler()
         }
 
         // AFTER handlers
         afterHandlers[eventType]?.forEach { entry ->
-            dispatchEntry(entry, event)
+            dispatchEntry(entry, wrappedEvent)
+        }
+    }
+
+    private fun wrapEvent(eventType: String, event: Any?): Any? {
+        if (event == null) return null
+        val clazz = getEventClass(eventType) ?: return event
+        if (clazz.isInstance(event)) return event
+        return try {
+            val ctor = clazz.getDeclaredConstructor(Map::class.java)
+            ctor.newInstance(event)
+        } catch (_: Exception) {
+            event
         }
     }
 
@@ -129,4 +151,14 @@ object ScriptEventBus {
     }
 
     fun getEventClass(eventType: String): Class<*>? = eventClassMap[eventType]
+
+    fun getRegisteredEventClassTypes(): Set<String> = eventClassMap.keys.toSet()
+
+    fun storeEventClassBytecode(eventType: String, bytecode: ByteArray) {
+        eventClassBytecodes[eventType] = bytecode
+    }
+
+    fun getEventClassBytecodes(): Map<String, ByteArray> = eventClassBytecodes.toMap()
+
+    fun getEventClassBytecode(eventType: String): ByteArray? = eventClassBytecodes[eventType]
 }
