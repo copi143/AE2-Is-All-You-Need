@@ -20,12 +20,17 @@ data class ImportDecl(
 
 data class EventHandler(
     val eventType: String,
+    val hookType: HookType,
     val paramName: String?,
     val body: List<Statement>,
     val costLimit: Int = 1000,
     override val line: Int = 0,
     override val col: Int = 0
 ) : AstNode
+
+enum class HookType {
+    ON, BEFORE, AFTER
+}
 
 sealed interface Statement : AstNode
 

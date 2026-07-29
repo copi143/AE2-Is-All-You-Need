@@ -18,6 +18,86 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
         )
     }
 
+    override fun visitScript(ctx: KotlinParser.ScriptContext): ScriptFile {
+        val imports = ctx.importList().importHeader().map { parseImportHeader(it) }
+        val handlers = mutableListOf<EventHandler>()
+
+        for (stmt in ctx.statement()) {
+            val handler = tryParseEventRegistration(stmt)
+            if (handler != null) {
+                handlers.add(handler)
+            }
+        }
+
+        return ScriptFile(
+            imports = imports,
+            handlers = handlers,
+            line = ctx.start.line,
+            col = ctx.start.charPositionInLine
+        )
+    }
+
+    private fun tryParseEventRegistration(stmt: KotlinParser.StatementContext): EventHandler? {
+        val expr = stmt.expression() ?: return null
+        val postfixExpr = findPostfixUnaryExpression(expr) ?: return null
+        val primary = postfixExpr.primaryExpression() ?: return null
+        val funcName = primary.simpleIdentifier()?.text ?: return null
+        val hookType = when (funcName) {
+            "on" -> HookType.ON
+            "before" -> HookType.BEFORE
+            "after" -> HookType.AFTER
+            else -> return null
+        }
+
+        val suffixes = postfixExpr.postfixUnarySuffix()
+        if (suffixes.isEmpty()) return null
+
+        val cs = suffixes[0].callSuffix() ?: return null
+        val valueArgs = cs.valueArguments() ?: return null
+        val firstArg = valueArgs.valueArgument().firstOrNull() ?: return null
+
+        val exprText = firstArg.expression()?.text?.trim()
+        val eventType = exprText?.removeSurrounding("\"") ?: return null
+        if (eventType.isEmpty()) return null
+
+        val annLambda = cs.annotatedLambda() ?: return null
+        val lambdaLit = annLambda.lambdaLiteral() ?: return null
+
+        val params = if (lambdaLit.lambdaParameters() != null) {
+            lambdaLit.lambdaParameters().lambdaParameter().mapNotNull {
+                it.variableDeclaration()?.simpleIdentifier()?.text
+            }
+        } else emptyList()
+
+        val body = lambdaLit.statements()?.let { parseStatements(it) } ?: emptyList()
+
+        return EventHandler(
+            eventType = eventType,
+            hookType = hookType,
+            paramName = params.firstOrNull(),
+            body = body,
+            line = stmt.start.line,
+            col = stmt.start.charPositionInLine
+        )
+    }
+
+    private fun findPostfixUnaryExpression(expr: KotlinParser.ExpressionContext): KotlinParser.PostfixUnaryExpressionContext? {
+        val disj = expr.disjunction() ?: return null
+        val conj = disj.conjunction(0) ?: return null
+        val eq = conj.equality(0) ?: return null
+        val cmp = eq.comparison(0) ?: return null
+        val gcc = cmp.genericCallLikeComparison(0) ?: return null
+        val infixOp = gcc.infixOperation() ?: return null
+        val elvis = infixOp.elvisExpression(0) ?: return null
+        val infixFn = elvis.infixFunctionCall(0) ?: return null
+        val range = infixFn.rangeExpression(0) ?: return null
+        val additive = range.additiveExpression(0) ?: return null
+        val mult = additive.multiplicativeExpression(0) ?: return null
+        val asExpr = mult.asExpression(0) ?: return null
+        val prefix = asExpr.prefixUnaryExpression() ?: return null
+        return prefix.postfixUnaryExpression()
+    }
+
     private fun parseTopLevelObject(ctx: KotlinParser.TopLevelObjectContext): AstNode? {
         val decl = ctx.declaration()
         return when {

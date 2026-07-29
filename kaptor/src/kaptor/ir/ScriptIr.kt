@@ -1,6 +1,7 @@
 package kaptor.ir
 
 import kaptor.ast.BinaryOperator
+import kaptor.ast.HookType
 import kaptor.ast.UnaryOperator
 
 sealed interface IrNode {
@@ -15,6 +16,7 @@ data class IrScriptFile(
 
 data class IrHandler(
     val eventType: String,
+    val hookType: HookType,
     val paramName: String?,
     val body: List<IrInstruction>,
     val costLimit: Int

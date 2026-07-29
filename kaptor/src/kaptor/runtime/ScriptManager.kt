@@ -1,5 +1,6 @@
 package kaptor.runtime
 
+import kaptor.compiler.CompiledHandler
 import kaptor.compiler.CompiledScript
 import kaptor.compiler.ScriptCompiler
 import kaptor.compiler.ScriptCompileError
@@ -72,12 +73,19 @@ object ScriptManager {
 
             unregisterScript(name)
 
+            val classFile = scriptDir!!.resolve("${compiled.className.replace('.', '/')}.class")
+            Files.createDirectories(classFile.parent)
+            Files.write(classFile, compiled.bytecode)
+            classLoader = URLClassLoader(
+                arrayOf(scriptDir!!.toUri().toURL()),
+                ScriptManager::class.java.classLoader
+            )
+
             val clazz = classLoader!!.loadClass(compiled.className)
             val handler = clazz.getDeclaredConstructor().newInstance() as ScriptHandlerBase
 
-            for (eventType in compiled.eventTypes) {
-                val costLimit = compiled.costLimits[eventType] ?: 1000
-                ScriptEventBus.registerHandler(handler, eventType, costLimit, name)
+            for (ch in compiled.handlers) {
+                ScriptEventBus.registerHandler(handler, ch.eventType, ch.hookType, ch.costLimit, name)
             }
 
             compiledScripts[name] = compiled
@@ -132,7 +140,7 @@ object ScriptManager {
             }
         })
 
-        val parseTree = parser.kotlinFile()
+        val parseTree = parser.script()
 
         if (errors.isNotEmpty()) {
             throw ScriptParseError(errors.joinToString("\n"), 1, 0)
@@ -240,6 +248,16 @@ object ScriptManager {
     }
 
     fun getLanguageService(): ScriptLanguageService = languageService
+
+    fun reset() {
+        stopHotReload()
+        ScriptEventBus.clearAll()
+        compiledScripts.clear()
+        loadedHandlers.clear()
+        scriptDir = null
+        classLoader = null
+        compiler.resetCounter()
+    }
 }
 
 data class ScriptStats(

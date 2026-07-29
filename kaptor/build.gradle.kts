@@ -28,6 +28,10 @@ dependencies {
     compileOnly("org.slf4j:slf4j-api:2.0.9")
 
     antlr("org.antlr:antlr4:4.13.2")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
 }
 
 repositories {
@@ -74,6 +78,10 @@ tasks.named("compileJava") {
 
 tasks.named("compileKotlin") {
     dependsOn(generateLexerGrammarSource, generateParserGrammarSource)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 tasks.named<Jar>("sourcesJar") {

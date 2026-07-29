@@ -12,6 +12,7 @@ class ScriptLowering {
         val body = handler.body.map { lowerStatement(it) }
         return IrHandler(
             eventType = handler.eventType,
+            hookType = handler.hookType,
             paramName = handler.paramName,
             body = mergeInstructions(body),
             costLimit = handler.costLimit

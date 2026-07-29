@@ -2,6 +2,7 @@ package kaptor.compiler
 
 import kaptor.ir.*
 import kaptor.ast.BinaryOperator
+import kaptor.ast.HookType
 import kaptor.ast.UnaryOperator
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
@@ -11,8 +12,12 @@ import java.io.PrintStream
 class ScriptCompiler {
     private var classCounter = 0
 
+    fun resetCounter() {
+        classCounter = 0
+    }
+
     fun compile(ir: IrScriptFile, scriptName: String): CompiledScript {
-        val className = "script/${scriptName.replace('.', '/')}_${classCounter++}"
+        val className = "script.${scriptName.replace('.', '_')}_${classCounter++}"
         val internalName = className.replace('.', '/')
 
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
@@ -42,8 +47,8 @@ class ScriptCompiler {
         return CompiledScript(
             className = className,
             bytecode = cw.toByteArray(),
-            eventTypes = ir.handlers.map { it.eventType },
-            costLimits = ir.handlers.associate { it.eventType to it.costLimit }
+            eventTypes = ir.handlers.map { it.eventType }.distinct(),
+            handlers = ir.handlers.map { CompiledHandler(it.eventType, it.hookType, it.costLimit) }
         )
     }
 
@@ -58,7 +63,12 @@ class ScriptCompiler {
     }
 
     private fun generateHandler(cw: ClassVisitor, internalName: String, handler: IrHandler) {
-        val methodName = "handle_${sanitizeName(handler.eventType)}"
+        val prefix = when (handler.hookType) {
+            HookType.ON -> "handle"
+            HookType.BEFORE -> "before"
+            HookType.AFTER -> "after"
+        }
+        val methodName = "${prefix}_${sanitizeName(handler.eventType)}"
         val methodDesc = "(Ljava/lang/Object;)V"
 
         val mv = cw.visitMethod(ACC_PUBLIC, methodName, methodDesc, null, null)
@@ -136,9 +146,7 @@ class ScriptCompiler {
         ctx.consumeCost(instr.cost, "expr_stmt")
         checkCostLimit(ctx, "Cost exceeded in expression statement")
         compileExpression(ctx, instr.expr)
-        if (instr.expr !is IrMethodCall && instr.expr !is IrFunctionCall) {
-            ctx.mv.visitInsn(POP)
-        }
+        ctx.mv.visitInsn(POP)
     }
 
     private fun compileIf(ctx: MethodContext, instr: IrIfStatement) {
@@ -267,15 +275,9 @@ class ScriptCompiler {
                 when (expr.value) {
                     0L -> ctx.mv.visitInsn(LCONST_0)
                     1L -> ctx.mv.visitInsn(LCONST_1)
-                    in -128..127 -> {
-                        ctx.mv.visitLdcInsn(expr.value.toInt())
-                        ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false)
-                    }
-                    else -> {
-                        ctx.mv.visitLdcInsn(expr.value)
-                        ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false)
-                    }
+                    else -> ctx.mv.visitLdcInsn(expr.value)
                 }
+                ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false)
             }
             is IrFloatLiteral -> {
                 ctx.mv.visitLdcInsn(expr.value)
@@ -627,11 +629,17 @@ class MethodContext(
     }
 }
 
+data class CompiledHandler(
+    val eventType: String,
+    val hookType: HookType,
+    val costLimit: Int
+)
+
 data class CompiledScript(
     val className: String,
     val bytecode: ByteArray,
     val eventTypes: List<String>,
-    val costLimits: Map<String, Int>
+    val handlers: List<CompiledHandler>
 )
 
 class ScriptCompileError(message: String) : RuntimeException(message)
