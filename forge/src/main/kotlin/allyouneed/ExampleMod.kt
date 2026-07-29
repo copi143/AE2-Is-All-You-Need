@@ -35,5 +35,14 @@ class ExampleMod {
         ForgeMenus.register(MOD_BUS)
         ForgeCreativeTab.register(MOD_BUS)
         CommonObject.init()
+
+        // Initialize the scripting system
+        try {
+            val configDir = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get()
+            allyouneed.script.ScriptDsl.init(configDir)
+            logger.info("Script system initialized")
+        } catch (e: Exception) {
+            logger.error("Failed to initialize script system", e)
+        }
     }
 }

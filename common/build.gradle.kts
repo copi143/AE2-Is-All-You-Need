@@ -20,6 +20,7 @@ neoForge {
 dependencies {
     compileOnly(libs.mixin)
     compileOnly(libs.compose.runtime)
+    api(project(":kaptor"))
 
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")
@@ -93,8 +94,8 @@ sourceSets.create("resgen") {
 }
 
 artifacts {
-    add("commonJava", sourceSets.main.get().java.sourceDirectories.singleFile)
-    add("commonKotlin", sourceSets.main.get().kotlin.sourceDirectories.filter { !it.name.endsWith("java") }.singleFile)
+    add("commonJava", sourceSets.main.get().java.sourceDirectories.first())
+    add("commonKotlin", sourceSets.main.get().kotlin.sourceDirectories.filter { !it.name.endsWith("java") }.first())
     sourceSets.main.get().resources.sourceDirectories.forEach { resourceDir ->
         add("commonResources", resourceDir)
     }

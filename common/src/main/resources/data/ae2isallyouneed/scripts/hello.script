@@ -1,0 +1,32 @@
+// Example script: hello.script
+// This demonstrates the basic DSL syntax
+
+on PlayerInteractEvent.RightClickBlock {
+    val pos = event.blockPos
+    val world = event.player.level
+    val playerName = event.player.name
+
+    println("Player ${playerName} right-clicked at ${pos}")
+}
+
+on PlayerChatEvent {
+    val message = event.message
+
+    if (message == "hello") {
+        event.player.sendMessage("Hello, ${event.player.name}!")
+        event.setCanceled(true)
+    }
+
+    if (message == "test") {
+        var count = 0
+        for (i in 0..9) {
+            count = count + 1
+        }
+        event.player.sendMessage("Count: ${count}")
+    }
+}
+
+on ServerTickEvent {
+    // This handler runs every tick, keep it lightweight
+    println("Server tick!")
+}

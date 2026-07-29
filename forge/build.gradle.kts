@@ -55,6 +55,7 @@ neoForge {
 sourceSets.main.get().resources { srcDir("src/generated/resources") }
 
 dependencies {
+    implementation(project(":kaptor"))
     modImplementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
     implementation(libs.compose.runtime)
