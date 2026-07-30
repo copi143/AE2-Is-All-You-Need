@@ -13,13 +13,25 @@ class Color(r: Int, g: Int, b: Int) {
 
 val AE2_COLORS = run {
     val array = arrayListOf<Color>()
-    val baseColor = JzCzHz(0.01f, 0.01f, 240f)
-    for (i in 0..9) {
-        val newColor = gamutMap(baseColor.copy(h = baseColor.h - i * 36)).toSRGB()
+    for (i in 0..19) {
+        val newColor = gamutMap(
+            JzCzHz(
+                j = if (i < 10) 0.01f else 0.006f,
+                c = 0.01f,
+                h = 240f - i * 36,
+            )
+        ).toSRGB()
         val r = (newColor.r * 255).roundToInt()
         val g = (newColor.g * 255).roundToInt()
         val b = (newColor.b * 255).roundToInt()
         array.add(Color(r, g, b))
     }
     array
+}
+
+fun main() {
+    println("AE2 Colors:")
+    for ((index, color) in AE2_COLORS.withIndex()) {
+        println("Color $index: ${color.hex} ${color.termFg}Sample Text\u001b[m ${color.termBg}Sample Background\u001b[m")
+    }
 }

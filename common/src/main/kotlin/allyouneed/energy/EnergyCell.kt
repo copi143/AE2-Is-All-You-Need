@@ -1,11 +1,7 @@
 package allyouneed.energy
 
 import allyouneed.rl
-import allyouneed.util.Gi
-import allyouneed.util.Ki
-import allyouneed.util.Mi
-import allyouneed.util.floatingExp
-import allyouneed.util.formatScaledUnit
+import allyouneed.util.*
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
 import appeng.block.AEBaseEntityBlock
@@ -42,6 +38,11 @@ enum class EnergyCell(name: String, size: Double = -1.0) {
     Quantum("Quantum Energy Cell", 16.0.Gi), //
     Stellar("Stellar Energy Cell", 64.0.Gi), //
     Cosmic("Cosmic Energy Cell", 256.0.Gi), //
+    T1("1T Energy Cell", 1.0.Ti), //
+    T4("4T Energy Cell", 4.0.Ti), //
+    T16("16T Energy Cell", 16.0.Ti), //
+    T64("64T Energy Cell", 64.0.Ti), //
+    T256("256T Energy Cell", 256.0.Ti), //
     Creative("Creative Energy Cell"); //
 
     val blockName: String = name

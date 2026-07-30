@@ -42,6 +42,7 @@ class TextureGen(private val output: Path) {
 
             val hueShift = targetHz.h - srcHz.h
             val chromaScale = (if (srcHz.c > 0.001f) targetHz.c / srcHz.c else 1f)
+            val lightnessScale = (if (srcHz.j > 0.001f) targetHz.j / srcHz.j else 1f)
 
             val srcFile = if (entry.levels != null) {
                 entry.levels.map { srcDir.resolve("${entry.sourceTemplate}_$it.png") }
@@ -72,8 +73,9 @@ class TextureGen(private val output: Path) {
                         val pixelHz = RGB(r, g, b).toJzCzHz()
 
                         val cNew = pixelHz.c * chromaScale
+                        val jNew = pixelHz.j * lightnessScale
                         val hNew = pixelHz.h + hueShift
-                        val mapped = gamutMap(JzCzHz(pixelHz.j, cNew, hNew))
+                        val mapped = gamutMap(JzCzHz(jNew, cNew, hNew))
 
                         dstImage.setRGB(x, y, mapped.toSRGB().toRGBInt().argb.toInt())
                     }
