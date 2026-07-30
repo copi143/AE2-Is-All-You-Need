@@ -19,7 +19,7 @@ kotlin {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.antlr:antlr4-runtime:4.13.2")
+    implementation("org.antlr:antlr4-runtime:4.9.1")
     implementation("org.ow2.asm:asm:9.8")
     implementation("org.ow2.asm:asm-commons:9.8")
     implementation("org.ow2.asm:asm-util:9.8")
@@ -27,7 +27,7 @@ dependencies {
 
     compileOnly("org.slf4j:slf4j-api:2.0.9")
 
-    antlr("org.antlr:antlr4:4.13.2")
+    antlr("org.antlr:antlr4:4.9.1") // 由于 forge 依赖，从 4.13.2 调整为 4.9.1
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
