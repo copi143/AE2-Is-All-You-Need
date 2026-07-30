@@ -33,30 +33,6 @@ class TextureGen(private val output: Path) {
         entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), null)
     }
 
-    private fun JzCzHz.isInSRGBGamut(): Boolean {
-        val rgb = toSRGB()
-        return rgb.r in 0f..1f && rgb.g in 0f..1f && rgb.b in 0f..1f
-    }
-
-    private fun gamutMap(color: JzCzHz): JzCzHz {
-        if (color.isInSRGBGamut()) return color
-        if (color.c <= 0.001f) return color
-        var lo = 0f
-        var hi = color.c
-        var best = JzCzHz(color.j, 0f, color.h)
-        for (i in 0 until 16) {
-            val mid = (lo + hi) / 2f
-            val candidate = JzCzHz(color.j, mid, color.h)
-            if (candidate.isInSRGBGamut()) {
-                best = candidate
-                lo = mid
-            } else {
-                hi = mid
-            }
-        }
-        return best
-    }
-
     fun generate() {
         val srcDir = sourceDir ?: error("Call source() first")
         val srcHz = sourceColorHz ?: error("Call source() first")
@@ -113,4 +89,28 @@ class TextureGen(private val output: Path) {
 
 fun retexture(output: Path, init: TextureGen.() -> Unit) {
     TextureGen(output).apply(init).generate()
+}
+
+fun gamutMap(color: JzCzHz): JzCzHz {
+    if (color.isInSRGBGamut()) return color
+    if (color.c <= 0.001f) return color
+    var lo = 0f
+    var hi = color.c
+    var best = JzCzHz(color.j, 0f, color.h)
+    for (i in 0 until 16) {
+        val mid = (lo + hi) / 2f
+        val candidate = JzCzHz(color.j, mid, color.h)
+        if (candidate.isInSRGBGamut()) {
+            best = candidate
+            lo = mid
+        } else {
+            hi = mid
+        }
+    }
+    return best
+}
+
+private fun JzCzHz.isInSRGBGamut(): Boolean {
+    val rgb = toSRGB()
+    return rgb.r in 0f..1f && rgb.g in 0f..1f && rgb.b in 0f..1f
 }

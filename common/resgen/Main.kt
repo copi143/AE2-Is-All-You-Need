@@ -13,16 +13,16 @@ data class CellEntry(
 )
 
 private val cells = listOf(
-    CellEntry("1k_energy_cell", "Micro Energy Cell", "#B0BEC5"),
-    CellEntry("4k_energy_cell", "Simple Energy Cell", "#00A2E8"),
-    CellEntry("16k_energy_cell", "Basic Energy Cell", "#40C4FF"),
-    CellEntry("64k_energy_cell", "Normal Energy Cell", "#39FF14"),
-    CellEntry("256k_energy_cell", "Enhanced Energy Cell", "#76FF03"),
-    CellEntry("1m_energy_cell", "Advanced Energy Cell", "#FF1744"),
-    CellEntry("4m_energy_cell", "Reinforced Energy Cell", "#FF9100"),
-    CellEntry("16m_energy_cell", "Dense Energy Cell", "#FFD600"),
-    CellEntry("64m_energy_cell", "Hyper Energy Cell", "#FFEA00"),
-    CellEntry("256m_energy_cell", "Ultra Energy Cell", "#FF6D00"),
+    CellEntry("1k_energy_cell", "Micro Energy Cell", AE2_COLORS[0].hex),
+    CellEntry("4k_energy_cell", "Simple Energy Cell", AE2_COLORS[1].hex),
+    CellEntry("16k_energy_cell", "Basic Energy Cell", AE2_COLORS[2].hex),
+    CellEntry("64k_energy_cell", "Normal Energy Cell", AE2_COLORS[3].hex),
+    CellEntry("256k_energy_cell", "Enhanced Energy Cell", AE2_COLORS[4].hex),
+    CellEntry("1m_energy_cell", "Advanced Energy Cell", AE2_COLORS[5].hex),
+    CellEntry("4m_energy_cell", "Reinforced Energy Cell", AE2_COLORS[6].hex),
+    CellEntry("16m_energy_cell", "Dense Energy Cell", AE2_COLORS[7].hex),
+    CellEntry("64m_energy_cell", "Hyper Energy Cell", AE2_COLORS[8].hex),
+    CellEntry("256m_energy_cell", "Ultra Energy Cell", AE2_COLORS[9].hex),
     CellEntry("1g_energy_cell", "Ultimate Energy Cell", "#FF3D00"),
     CellEntry("4g_energy_cell", "Singular Energy Cell", "#D500F9"),
     CellEntry("16g_energy_cell", "Quantum Energy Cell", "#AA00FF"),
@@ -64,13 +64,14 @@ fun main(args: Array<String>) {
         item("adaptive_pattern", "Adaptive Pattern")
 
         translation("item.$modId.creative_me_cell", "Creative ME Storage Cell")
+        translation("item.$modId.dimensional_cell", "Dimensional Storage Cell")
 
         // Adaptive Pattern Terminal block
         simpleBlock("adaptive_pattern_terminal", "Adaptive Pattern Terminal")
     }
 
     retexture(output) {
-        source(sourceTextures, "#00A2E8")
+        source(sourceTextures, "#9fc3e4")
 
         val levelCells = cells.filter { !it.isCreative }
         for (cell in levelCells) {
