@@ -1,5 +1,6 @@
 package allyouneed
 
+import allyouneed.cell.EnergyCell
 import allyouneed.client.ForgeCreativeTab
 import allyouneed.forge.init.ForgeBlocks
 import allyouneed.forge.init.ForgeItems
@@ -14,14 +15,14 @@ class ExampleMod {
     init {
         logger.info("Hello Forge world from Kotlin!")
 
-        allyouneed.energy.EnergyCell.entries.forEach { it.registerBEType() }
+        EnergyCell.entries.forEach { it.registerBEType() }
 
         AllRegistries.blocks.forEach { entry ->
             ForgeBlocks.BLOCKS.register(entry.id().path) { entry.block() }
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
         }
 
-        allyouneed.energy.EnergyCell.entries.forEach { cell ->
+        EnergyCell.entries.forEach { cell ->
             ForgeBlocks.BLOCK_ENTITIES.register(cell.blockId.path) { cell.blockEntityType }
         }
 

@@ -1,7 +1,12 @@
-package allyouneed.energy
+package allyouneed.cell
 
 import allyouneed.rl
-import allyouneed.util.*
+import allyouneed.util.Gi
+import allyouneed.util.Ki
+import allyouneed.util.Mi
+import allyouneed.util.Ti
+import allyouneed.util.floatingExp
+import allyouneed.util.formatScaledUnit
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
 import appeng.block.AEBaseEntityBlock
@@ -13,6 +18,7 @@ import appeng.blockentity.networking.CreativeEnergyCellBlockEntity
 import appeng.blockentity.networking.EnergyCellBlockEntity
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
+import com.mojang.datafixers.types.Type
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
@@ -94,7 +100,7 @@ enum class EnergyCell(name: String, size: Double = -1.0) {
                 CreativeEnergyCellBlockEntity(
                     typeRef.get() as BlockEntityType<CreativeEnergyCellBlockEntity>, pos, state
                 )
-            }, block).build(null as com.mojang.datafixers.types.Type<*>?))
+            }, block).build(null as Type<*>?))
             blockEntityType = typeRef.get()
             (block as AEBaseEntityBlock<CreativeEnergyCellBlockEntity>).setBlockEntity(
                 CreativeEnergyCellBlockEntity::class.java,
@@ -105,7 +111,7 @@ enum class EnergyCell(name: String, size: Double = -1.0) {
         } else {
             typeRef.set(BlockEntityType.Builder.of({ pos, state ->
                 EnergyCellBlockEntity(typeRef.get() as BlockEntityType<EnergyCellBlockEntity>, pos, state)
-            }, block).build(null as com.mojang.datafixers.types.Type<*>?))
+            }, block).build(null as Type<*>?))
             blockEntityType = typeRef.get()
             (block as AEBaseEntityBlock<EnergyCellBlockEntity>).setBlockEntity(
                 EnergyCellBlockEntity::class.java,

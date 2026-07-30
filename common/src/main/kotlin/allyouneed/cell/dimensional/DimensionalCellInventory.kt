@@ -16,7 +16,6 @@ import appeng.api.storage.cells.ISaveProvider
 import appeng.api.storage.cells.StorageCell
 import appeng.api.upgrades.IUpgradeInventory
 import appeng.core.definitions.AEItems
-import appeng.items.contents.CellConfig
 import appeng.util.ConfigInventory
 import appeng.util.prioritylist.FuzzyPriorityList
 import appeng.util.prioritylist.IPartitionList
@@ -49,7 +48,21 @@ class DimensionalCellInventory(
         partitionList = builder.build()
     }
 
-    private fun ensureData(): DimensionalCellData? {
+    /**
+     * Read-only access: never allocates a new cell id or mutates item NBT.
+     */
+    private fun peekData(): DimensionalCellData? {
+        data?.let { return it }
+        if (cellId == 0 || !DimensionalCellStore.isAttached()) return null
+        val loaded = DimensionalCellStore.getOrLoad(cellId) ?: return null
+        data = loaded
+        return loaded
+    }
+
+    /**
+     * Write path: allocate a fresh id on first real mutation.
+     */
+    private fun ensureDataForWrite(): DimensionalCellData? {
         data?.let { return it }
         if (!DimensionalCellStore.isAttached()) return null
         if (cellId == 0) {
@@ -73,17 +86,27 @@ class DimensionalCellInventory(
             if (nested != null && !nested.canFitInsideCell()) return 0
         }
 
-        val store = ensureData() ?: return 0
-        if (mode == Actionable.MODULATE) {
-            store.add(what, BigInteger.valueOf(amount))
-            saveChanges()
+        // Infinite capacity: simulate always succeeds without binding an id
+        if (mode == Actionable.SIMULATE) {
+            if (!DimensionalCellStore.isAttached() && cellId == 0) {
+                // Client / unbound: still report that insertion would work
+                return amount
+            }
+            // Server: ensure we could allocate if needed
+            if (cellId == 0 && !DimensionalCellStore.isAttached()) return 0
+            return amount
         }
+
+        val store = ensureDataForWrite() ?: return 0
+        store.add(what, BigInteger.valueOf(amount))
+        saveChanges()
         return amount
     }
 
     override fun extract(what: AEKey, amount: Long, mode: Actionable, source: IActionSource): Long {
         if (amount <= 0) return 0
-        val store = ensureData() ?: return 0
+        val store = if (mode == Actionable.MODULATE) ensureDataForWrite() else peekData()
+        store ?: return 0
         val available = store.get(what)
         if (available.signum() <= 0) return 0
 
@@ -97,33 +120,33 @@ class DimensionalCellInventory(
     }
 
     override fun getAvailableStacks(out: KeyCounter) {
-        val store = ensureData() ?: return
+        val store = peekData() ?: return
         for ((key, amount) in store.amounts) {
             out.add(key, SiAmountFormat.saturateToLong(amount))
         }
     }
 
     override fun getBigAvailableStacks(out: BigKeyCounter) {
-        val store = ensureData() ?: return
+        val store = peekData() ?: return
         for ((key, amount) in store.amounts) {
             out.add(key, amount)
         }
     }
 
     override fun isPreferredStorageFor(input: AEKey, source: IActionSource): Boolean {
-        val store = data ?: ensureData() ?: return false
+        val store = peekData() ?: return false
         return store.get(input).signum() > 0
     }
 
     override fun getStatus(): CellState {
-        val store = data ?: ensureData()
+        val store = peekData()
         return if (store == null || store.isEmpty()) CellState.EMPTY else CellState.NOT_EMPTY
     }
 
     override fun getIdleDrain(): Double = 1.0
 
     override fun canFitInsideCell(): Boolean {
-        val store = data ?: ensureData()
+        val store = peekData()
         return store == null || store.isEmpty()
     }
 
@@ -156,5 +179,5 @@ class DimensionalCellInventory(
 
     fun isFuzzy(): Boolean = partitionList is FuzzyPriorityList
 
-    fun getTypeCount(): Int = (data ?: ensureData())?.amounts?.size ?: 0
+    fun getTypeCount(): Int = peekData()?.amounts?.size ?: 0
 }

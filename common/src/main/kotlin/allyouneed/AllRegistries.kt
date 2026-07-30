@@ -1,8 +1,7 @@
 package allyouneed
 
-import allyouneed.energy.EnergyCell
+import allyouneed.cell.EnergyCell
 import allyouneed.pattern.ModItems
-import allyouneed.rl
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import appeng.core.definitions.ItemDefinition

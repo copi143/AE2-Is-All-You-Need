@@ -1,5 +1,6 @@
 package allyouneed
 
+import allyouneed.cell.EnergyCell
 import allyouneed.cell.dimensional.DimensionalCellStore
 import allyouneed.fabric.init.FabricBlocks
 import allyouneed.fabric.init.FabricItems
@@ -18,9 +19,9 @@ fun init() {
     FabricItems.register()
     FabricBlocks.register()
 
-    allyouneed.energy.EnergyCell.entries.forEach { it.registerBEType() }
+    EnergyCell.entries.forEach { it.registerBEType() }
 
-    allyouneed.energy.EnergyCell.entries.forEach { cell ->
+    EnergyCell.entries.forEach { cell ->
         val block = cell.define.block()
         val id = ResourceLocation(MODID, cell.blockId.path)
         Registry.register(BuiltInRegistries.BLOCK, id, block)
