@@ -46,12 +46,14 @@ object FabricItems {
             entries.accept(ADAPTIVE_PATTERN)
             entries.accept(ENTITY_P2P_TUNNEL)
             entries.accept(AllRegistries.CREATIVE_ME_CELL)
+            entries.accept(AllRegistries.DIMENSIONAL_CELL)
             entries.accept(WIRELESS_PSEUDO_PATTERN_TERMINAL)
         }
 
         // AE2 main creative tab (Fabric does not use MainCreativeTab.initExternal)
         ItemGroupEvents.modifyEntriesEvent(AECreativeTabIds.MAIN).register { entries ->
             entries.accept(AllRegistries.CREATIVE_ME_CELL)
+            entries.accept(AllRegistries.DIMENSIONAL_CELL)
         }
     }
 }

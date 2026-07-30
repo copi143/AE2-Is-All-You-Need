@@ -21,6 +21,12 @@ object AllRegistries {
         ModItems.CREATIVE_ME_CELL,
     )
 
+    val DIMENSIONAL_CELL: ItemDefinition<Item> = ItemDefinition(
+        "Dimensional Storage Cell",
+        "dimensional_cell".rl,
+        ModItems.DIMENSIONAL_CELL,
+    )
+
     init {
         EnergyCell.entries.forEach {
             blocks += it.define
@@ -28,6 +34,8 @@ object AllRegistries {
 
         // Appear in AE2's main creative tab (same path as EnergyCell)
         MainCreativeTab.add(CREATIVE_ME_CELL)
+        MainCreativeTab.add(DIMENSIONAL_CELL)
         items += CREATIVE_ME_CELL
+        items += DIMENSIONAL_CELL
     }
 }

@@ -14,7 +14,8 @@
     "MEStorageMenuMixin",
     "MEInventoryUpdatePacketMixin",
     "MEInventoryUpdatePacketBuilderMixin",
-    "GridInventoryEntryMixin"
+    "GridInventoryEntryMixin",
+    "DelegatingMEInventoryAccessor"
   ],
   "client": [
     "CreativeScreenSidebarMixin",

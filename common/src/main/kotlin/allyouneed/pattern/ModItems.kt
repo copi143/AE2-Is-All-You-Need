@@ -1,6 +1,7 @@
 package allyouneed.pattern
 
 import allyouneed.cell.CreativeMeCellItem
+import allyouneed.cell.dimensional.DimensionalCellItem
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
@@ -29,6 +30,10 @@ object ModItems {
 
     val CREATIVE_ME_CELL: CreativeMeCellItem by lazy {
         CreativeMeCellItem.create()
+    }
+
+    val DIMENSIONAL_CELL: DimensionalCellItem by lazy {
+        DimensionalCellItem.create()
     }
 
     fun registerItems(register: (String, Item) -> Item): Pair<MachinePatternItem, PseudoPatternItem> {

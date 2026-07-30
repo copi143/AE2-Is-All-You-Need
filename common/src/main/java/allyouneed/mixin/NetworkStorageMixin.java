@@ -35,8 +35,13 @@ public abstract class NetworkStorageMixin implements BigStackSource {
     private BigKeyCounter allyouneed$lastBigStacks = new BigKeyCounter();
 
     @Override
-    public @Nullable BigKeyCounter allyouneed$getLastBigStacks() {
+    public @Nullable BigKeyCounter getLastBigStacks() {
         return this.allyouneed$lastBigStacks;
+    }
+
+    @Override
+    public void getBigAvailableStacks(BigKeyCounter out) {
+        out.addAll(this.allyouneed$lastBigStacks);
     }
 
     @Inject(method = "getAvailableStacks", at = @At("HEAD"), cancellable = true)
@@ -51,9 +56,11 @@ public abstract class NetworkStorageMixin implements BigStackSource {
             BigKeyCounter big = new BigKeyCounter();
             for (var invList : this.priorityInventory.values()) {
                 for (var inv : invList) {
-                    KeyCounter tmp = new KeyCounter();
-                    inv.getAvailableStacks(tmp);
-                    big.addAll(tmp);
+                    if (!BigStackSource.collectBigStacks(inv, big)) {
+                        KeyCounter tmp = new KeyCounter();
+                        inv.getAvailableStacks(tmp);
+                        big.addAll(tmp);
+                    }
                 }
             }
             this.allyouneed$lastBigStacks = big;

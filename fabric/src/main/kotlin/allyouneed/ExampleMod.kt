@@ -1,11 +1,13 @@
 package allyouneed
 
+import allyouneed.cell.dimensional.DimensionalCellStore
 import allyouneed.fabric.init.FabricBlocks
 import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
 import allyouneed.util.MODID
 import allyouneed.util.logger
 import appeng.api.features.P2PTunnelAttunement
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
@@ -30,4 +32,11 @@ fun init() {
     CommonObject.commonSetup()
 
     P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)
+
+    ServerLifecycleEvents.SERVER_STARTING.register { server ->
+        DimensionalCellStore.attach(server)
+    }
+    ServerLifecycleEvents.SERVER_STOPPING.register {
+        DimensionalCellStore.detach()
+    }
 }

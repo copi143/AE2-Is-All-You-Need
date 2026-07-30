@@ -2,6 +2,7 @@ package allyouneed
 
 import allyouneed.api.machine.BuiltinMachineTypes
 import allyouneed.cell.CreativeMeCellHandler
+import allyouneed.cell.dimensional.DimensionalCellHandler
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
@@ -10,6 +11,9 @@ import allyouneed.util.logger
 import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
 import appeng.api.storage.StorageCells
+import appeng.api.upgrades.Upgrades
+import appeng.core.definitions.AEItems
+import appeng.core.localization.GuiText
 import appeng.items.parts.PartModelsHelper
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
@@ -51,10 +55,18 @@ object CommonObject {
      */
     fun commonSetup() {
         StorageCells.addCellHandler(CreativeMeCellHandler)
+        StorageCells.addCellHandler(DimensionalCellHandler)
         StorageCellModels.registerModel(
             ModItems.CREATIVE_ME_CELL,
             ResourceLocation("ae2", "block/drive/cells/creative_cell"),
         )
+        StorageCellModels.registerModel(
+            ModItems.DIMENSIONAL_CELL,
+            ResourceLocation("ae2", "block/drive/cells/creative_cell"),
+        )
+        val cellGroup = GuiText.StorageCells.translationKey
+        Upgrades.add(AEItems.INVERTER_CARD, ModItems.DIMENSIONAL_CELL, 1, cellGroup)
+        Upgrades.add(AEItems.FUZZY_CARD, ModItems.DIMENSIONAL_CELL, 1, cellGroup)
     }
 
     fun registerParts() {
