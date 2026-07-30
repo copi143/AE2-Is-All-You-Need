@@ -27,6 +27,7 @@ fun init() {
     }
 
     CommonObject.init()
+    CommonObject.commonSetup()
 
     P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)
 }

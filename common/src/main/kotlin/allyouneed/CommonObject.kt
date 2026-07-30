@@ -1,13 +1,18 @@
 package allyouneed
 
 import allyouneed.api.machine.BuiltinMachineTypes
+import allyouneed.cell.CreativeMeCellHandler
 import allyouneed.parts.p2p.EntityP2PTunnelPart
+import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.util.Services
 import allyouneed.util.logger
+import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
+import appeng.api.storage.StorageCells
 import appeng.items.parts.PartModelsHelper
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Items
 
 // This class is part of the common project meaning it is shared between all supported loaders. Code written here can only
@@ -39,6 +44,17 @@ object CommonObject {
         BuiltinMachineTypes.registerAll()
         ModPatternDecoders.register()
         registerParts()
+    }
+
+    /**
+     * Must run during common setup (after AE2 init). Registers cell handlers etc.
+     */
+    fun commonSetup() {
+        StorageCells.addCellHandler(CreativeMeCellHandler)
+        StorageCellModels.registerModel(
+            ModItems.CREATIVE_ME_CELL,
+            ResourceLocation("ae2", "block/drive/cells/creative_cell"),
+        )
     }
 
     fun registerParts() {

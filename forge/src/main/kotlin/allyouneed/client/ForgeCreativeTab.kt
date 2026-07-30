@@ -17,6 +17,7 @@ object ForgeCreativeTab {
             output.accept(ForgeItems.MACHINE_PATTERN.get())
             output.accept(ForgeItems.PSEUDO_PATTERN.get())
             output.accept(ForgeItems.ENTITY_P2P_TUNNEL.get())
+            output.accept(allyouneed.AllRegistries.CREATIVE_ME_CELL)
             output.accept(ForgeBlocks.WIRELESS_PSEUDO_PATTERN_TERMINAL.get())
             output.accept(ForgeBlocks.PSEUDO_PATTERN_TERMINAL.get().asItem())
         }.build()

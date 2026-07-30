@@ -1,6 +1,9 @@
 package allyouneed
 
 import allyouneed.energy.EnergyCell
+import allyouneed.pattern.ModItems
+import allyouneed.rl
+import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import appeng.core.definitions.ItemDefinition
 import net.minecraft.world.item.Item
@@ -12,9 +15,19 @@ object AllRegistries {
     var items: Array<ItemDefinition<Item>> = arrayOf()
     var blockEntityTypes: Array<BlockEntityType<*>> = arrayOf()
 
+    val CREATIVE_ME_CELL: ItemDefinition<Item> = ItemDefinition(
+        "Creative ME Storage Cell",
+        "creative_me_cell".rl,
+        ModItems.CREATIVE_ME_CELL,
+    )
+
     init {
         EnergyCell.entries.forEach {
             blocks += it.define
         }
+
+        // Appear in AE2's main creative tab (same path as EnergyCell)
+        MainCreativeTab.add(CREATIVE_ME_CELL)
+        items += CREATIVE_ME_CELL
     }
 }

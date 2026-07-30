@@ -1,8 +1,10 @@
 package allyouneed.fabric.init
 
+import allyouneed.AllRegistries
 import allyouneed.pattern.ModItems
 import allyouneed.rl
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
+import appeng.api.ids.AECreativeTabIds
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
@@ -31,6 +33,9 @@ object FabricItems {
         Registry.register(
             BuiltInRegistries.ITEM, "entity_p2p_tunnel".rl, ENTITY_P2P_TUNNEL
         )
+        AllRegistries.items.forEach { entry ->
+            Registry.register(BuiltInRegistries.ITEM, entry.id(), entry.asItem())
+        }
         Registry.register(
             BuiltInRegistries.ITEM, "wireless_pseudo_pattern_terminal".rl, WIRELESS_PSEUDO_PATTERN_TERMINAL
         )
@@ -40,7 +45,13 @@ object FabricItems {
             entries.accept(PSEUDO_PATTERN)
             entries.accept(ADAPTIVE_PATTERN)
             entries.accept(ENTITY_P2P_TUNNEL)
+            entries.accept(AllRegistries.CREATIVE_ME_CELL)
             entries.accept(WIRELESS_PSEUDO_PATTERN_TERMINAL)
+        }
+
+        // AE2 main creative tab (Fabric does not use MainCreativeTab.initExternal)
+        ItemGroupEvents.modifyEntriesEvent(AECreativeTabIds.MAIN).register { entries ->
+            entries.accept(AllRegistries.CREATIVE_ME_CELL)
         }
     }
 }

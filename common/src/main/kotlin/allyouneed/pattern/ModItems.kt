@@ -1,16 +1,12 @@
 package allyouneed.pattern
 
-import allyouneed.api.machine.BuiltinMachineTypes
+import allyouneed.cell.CreativeMeCellItem
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
-import appeng.api.crafting.PatternDetailsHelper
-import appeng.api.stacks.GenericStack
-import appeng.core.definitions.AEItems
 import appeng.items.parts.PartItem
 import net.minecraft.world.item.Item
-import net.minecraft.world.item.ItemStack
 
 object ModItems {
     // We keep Processing pattern as the vanilla one.
@@ -29,6 +25,10 @@ object ModItems {
 
     val ENTITY_P2P_TUNNEL: PartItem<EntityP2PTunnelPart> by lazy {
         PartItem(Item.Properties().stacksTo(64), EntityP2PTunnelPart::class.java) { EntityP2PTunnelPart(it) }
+    }
+
+    val CREATIVE_ME_CELL: CreativeMeCellItem by lazy {
+        CreativeMeCellItem.create()
     }
 
     fun registerItems(register: (String, Item) -> Item): Pair<MachinePatternItem, PseudoPatternItem> {

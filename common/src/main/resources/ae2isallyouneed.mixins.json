@@ -9,11 +9,19 @@
     "MolecularAssemblerMenuMixin",
     "PatternEncodingTermMenuMixin",
     "PatternProviderLogicMixin",
-    "CraftingServiceMixin"
+    "CraftingServiceMixin",
+    "NetworkStorageMixin",
+    "MEStorageMenuMixin",
+    "MEInventoryUpdatePacketMixin",
+    "MEInventoryUpdatePacketBuilderMixin",
+    "GridInventoryEntryMixin"
   ],
   "client": [
     "CreativeScreenSidebarMixin",
-    "FacadeCreativeTabMixin"
+    "FacadeCreativeTabMixin",
+    "client.ReadableNumberConverterMixin",
+    "client.MEStorageScreenMixin",
+    "client.RepoMixin"
   ],
   "server": [],
   "injectors": {

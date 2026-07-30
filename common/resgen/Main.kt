@@ -63,6 +63,8 @@ fun main(args: Array<String>) {
         // Adaptive Pattern item (just an item model, no block)
         item("adaptive_pattern", "Adaptive Pattern")
 
+        translation("item.$modId.creative_me_cell", "Creative ME Storage Cell")
+
         // Adaptive Pattern Terminal block
         simpleBlock("adaptive_pattern_terminal", "Adaptive Pattern Terminal")
     }
