@@ -1,16 +1,10 @@
 package kaptor.ir
 
-import kaptor.ast.BinaryOperator
-import kaptor.ast.HookType
-import kaptor.ast.UnaryOperator
-
 sealed interface IrNode {
     val cost: Int
 }
 
-data class IrScriptFile(
-    val handlers: List<IrHandler>
-) : IrNode {
+data class IrScriptFile( val handlers: List<IrHandler> ) : IrNode {
     override val cost: Int get() = handlers.sumOf { it.cost }
 }
 
@@ -19,7 +13,9 @@ data class IrHandler(
     val hookType: HookType,
     val paramName: String?,
     val body: List<IrInstruction>,
-    val costLimit: Int
+    val costLimit: Int,
+    val line: Int = 0,
+    val col: Int = 0
 ) : IrNode {
     override val cost: Int get() = body.sumOf { it.cost }
 }
@@ -31,19 +27,19 @@ sealed interface IrInstruction : IrNode {
 data class IrValDecl(
     val name: String,
     val initializer: IrExpression,
-    override val cost: Int = 1
+    override val cost: Int = 1,
 ) : IrInstruction
 
 data class IrVarDecl(
     val name: String,
     val initializer: IrExpression?,
-    override val cost: Int = 1
+    override val cost: Int = 1,
 ) : IrInstruction
 
 data class IrAssignment(
     val target: IrExpression,
     val value: IrExpression,
-    override val cost: Int = 1
+    override val cost: Int = 1,
 ) : IrInstruction {
     override fun mergeWith(other: IrInstruction): IrInstruction? {
         if (other is IrAssignment && other.target == target) {
@@ -55,7 +51,7 @@ data class IrAssignment(
 
 data class IrExpressionStatement(
     val expr: IrExpression,
-    override val cost: Int = expr.cost
+    override val cost: Int = expr.cost,
 ) : IrInstruction {
     override fun mergeWith(other: IrInstruction): IrInstruction? {
         if (other is IrExpressionStatement && expr.canMergeWith(other.expr)) {
@@ -108,12 +104,18 @@ data class IrStringLiteral(
 ) : IrExpression
 
 data class IrIntLiteral(
+    val value: Int,
+    override val cost: Int = 1
+) : IrExpression
+
+data class IrLongLiteral(
     val value: Long,
     override val cost: Int = 1
 ) : IrExpression
 
 data class IrFloatLiteral(
     val value: Double,
+    val numericType: IrType = IrDoubleType,
     override val cost: Int = 1
 ) : IrExpression
 
@@ -128,6 +130,7 @@ data class IrNullLiteral(
 
 data class IrIdentifier(
     val name: String,
+    val type: IrType = IrObjectType,
     override val cost: Int = 1
 ) : IrExpression {
     override fun canMergeWith(other: IrExpression): Boolean = other is IrIdentifier && other.name == name
@@ -149,6 +152,7 @@ data class IrExpressionPart(val expr: IrExpression) : IrInterpolationPart {
 data class IrFieldAccess(
     val receiver: IrExpression,
     val fieldName: String,
+    val fieldType: IrType = IrObjectType,
     override val cost: Int = 2 + receiver.cost
 ) : IrExpression {
     override fun canMergeWith(other: IrExpression): Boolean =
@@ -172,6 +176,7 @@ data class IrBinaryExpression(
     val left: IrExpression,
     val operator: BinaryOperator,
     val right: IrExpression,
+    val resultType: IrType = IrObjectType,
     override val cost: Int = 1 + left.cost + right.cost
 ) : IrExpression {
     override fun canMergeWith(other: IrExpression): Boolean = false
@@ -180,6 +185,7 @@ data class IrBinaryExpression(
 data class IrUnaryExpression(
     val operator: UnaryOperator,
     val operand: IrExpression,
+    val resultType: IrType = IrObjectType,
     override val cost: Int = 1 + operand.cost
 ) : IrExpression
 
@@ -196,21 +202,18 @@ data class IrMergedExpression(
     override fun canMergeWith(other: IrExpression): Boolean = true
 }
 
-object IrCostModel {
-    const val VAR_ACCESS = 1
-    const val VAR_ASSIGN = 1
-    const val FIELD_ACCESS = 2
-    const val METHOD_CALL = 3
-    const val FUNCTION_CALL = 3
-    const val IF = 3
-    const val WHILE = 5
-    const val FOR = 5
-    const val RETURN = 2
-    const val BREAK = 1
-    const val CONTINUE = 1
-    const val BINARY_OP = 1
-    const val UNARY_OP = 1
-    const val STRING_INTERPOLATION = 2
-    const val INDEX_ACCESS = 2
-    const val LITERAL = 1
+enum class HookType {
+    ON, BEFORE, AFTER
+}
+
+enum class BinaryOperator {
+    PLUS, MINUS, MULTIPLY, DIVIDE, MODULO,
+    EQUALS, NOT_EQUALS, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL,
+    AND, OR,
+    BIT_AND, BIT_OR, BIT_XOR,
+    SHL, SHR
+}
+
+enum class UnaryOperator {
+    MINUS, NOT, BIT_NOT
 }

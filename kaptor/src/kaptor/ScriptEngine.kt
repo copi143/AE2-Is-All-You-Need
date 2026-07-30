@@ -15,6 +15,7 @@ class ScriptEngine(private val config: ScriptEngineConfig = ScriptEngineConfig()
         val schema = SchemaBuilder().apply(builder).build()
         val bytecode = EventClassGenerator.generate(eventType, schema)
         ScriptEventBus.storeEventClassBytecode(eventType, bytecode)
+        ScriptEventBus.storeEventSchema(eventType, schema)
     }
 
     fun init(scriptsDir: Path) {

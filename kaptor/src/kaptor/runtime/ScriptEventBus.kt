@@ -1,6 +1,15 @@
 package kaptor.runtime
 
-import kaptor.ast.HookType
+import kaptor.compiler.EventSchema
+import kaptor.ir.HookType
+import kaptor.ir.IrType
+import kaptor.ir.IrIntType
+import kaptor.ir.IrLongType
+import kaptor.ir.IrFloatType
+import kaptor.ir.IrDoubleType
+import kaptor.ir.IrBoolType
+import kaptor.ir.IrStringType
+import kaptor.ir.IrObjectType
 import kaptor.ScriptLogger
 import kaptor.createLogger
 import java.util.concurrent.ConcurrentHashMap
@@ -11,6 +20,7 @@ object ScriptEventBus {
     private val afterHandlers = ConcurrentHashMap<String, MutableList<EventHandlerEntry>>()
     private val eventClassMap = ConcurrentHashMap<String, Class<*>>()
     private val eventClassBytecodes = ConcurrentHashMap<String, ByteArray>()
+    private val eventSchemas = ConcurrentHashMap<String, EventSchema>()
     private val eventLogger: ScriptLogger = createLogger()
 
     data class EventHandlerEntry(
@@ -161,4 +171,28 @@ object ScriptEventBus {
     fun getEventClassBytecodes(): Map<String, ByteArray> = eventClassBytecodes.toMap()
 
     fun getEventClassBytecode(eventType: String): ByteArray? = eventClassBytecodes[eventType]
+
+    fun storeEventSchema(eventType: String, schema: EventSchema) {
+        eventSchemas[eventType] = schema
+    }
+
+    fun getEventSchema(eventType: String): EventSchema? = eventSchemas[eventType]
+
+    fun buildDeclaredEventsMap(): Map<String, Map<String, IrType>> {
+        return eventSchemas.entries.associate { (eventType, schema) ->
+            eventType to schema.parameters.associate { param ->
+                param.name to classToIrType(param.type)
+            }
+        }
+    }
+
+    private fun classToIrType(clazz: Class<*>): IrType = when (clazz) {
+        Int::class.java -> IrIntType
+        Long::class.java -> IrLongType
+        Float::class.java -> IrFloatType
+        Double::class.java -> IrDoubleType
+        Boolean::class.java -> IrBoolType
+        String::class.java -> IrStringType
+        else -> IrObjectType
+    }
 }

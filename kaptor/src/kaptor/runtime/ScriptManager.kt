@@ -4,7 +4,6 @@ import kaptor.compiler.CompiledHandler
 import kaptor.compiler.CompiledScript
 import kaptor.compiler.ScriptCompiler
 import kaptor.compiler.ScriptCompileError
-import kaptor.ir.ScriptLowering
 import kaptor.parser.antlr.KotlinLexer
 import kaptor.parser.antlr.KotlinParser
 import kaptor.parser.antlr.KotlinSubsetVisitor
@@ -22,7 +21,6 @@ object ScriptManager {
     private val compiledScripts = ConcurrentHashMap<String, CompiledScript>()
     private val loadedHandlers = ConcurrentHashMap<String, ScriptHandlerBase>()
     private val compiler = ScriptCompiler()
-    private val lowering = ScriptLowering()
     private val languageService = ScriptLanguageService()
     private var scriptDir: Path? = null
     private var fileWatcher: WatchService? = null
@@ -80,7 +78,7 @@ object ScriptManager {
         managerLogger.info("Loading all scripts from $dir")
 
         Files.list(dir).use { stream ->
-            stream.filter { it.toString().endsWith(".script") || it.toString().endsWith(".kts") }.forEach { path ->
+            stream.filter { it.toString().endsWith(".kts") || it.toString().endsWith(".kt") }.forEach { path ->
                 try {
                     loadScript(path)
                 } catch (e: Exception) {
@@ -94,16 +92,19 @@ object ScriptManager {
 
     fun loadScript(path: Path): Boolean {
         val fileName = path.fileName.toString()
-        val name = if (fileName.endsWith(".kts")) fileName.removeSuffix(".kts") else fileName.removeSuffix(".script")
+        val name = when {
+            fileName.endsWith(".kts") -> fileName.removeSuffix(".kts")
+            fileName.endsWith(".kt") -> fileName.removeSuffix(".kt")
+            else -> return false
+        }
+        val isKt = fileName.endsWith(".kt")
         val source = Files.readString(path)
 
         return try {
-            val ast = parseWithAntlr(source, name)
-
-            val ir = lowering.lower(ast)
+            val ir = parseWithAntlr(source, name, isKt)
 
             val eventClassMap = buildEventClassMap()
-            val compiled = compiler.compile(ir, name, eventClassMap)
+            val compiled = compiler.compile(ir, name, eventClassMap, isKt)
 
             unregisterScript(name)
 
@@ -139,7 +140,7 @@ object ScriptManager {
         }
     }
 
-    private fun parseWithAntlr(source: String, name: String): kaptor.ast.ScriptFile {
+    private fun parseWithAntlr(source: String, name: String, isKt: Boolean = false): kaptor.ir.IrScriptFile {
         val charStream = CharStreams.fromString(source)
         val lexer = KotlinLexer(charStream)
         val tokenStream = CommonTokenStream(lexer)
@@ -174,17 +175,18 @@ object ScriptManager {
             }
         })
 
-        val parseTree = parser.script()
+        val parseTree = if (isKt) parser.kotlinFile() else parser.script()
 
         if (errors.isNotEmpty()) {
             throw ScriptParseError(errors.joinToString("\n"), 1, 0)
         }
 
-        val visitor = KotlinSubsetVisitor()
-        val ast = visitor.visit(parseTree) as? kaptor.ast.ScriptFile
-            ?: throw ScriptParseError("Failed to convert ANTLR tree to AST for script: $name", 1, 0)
+        val declaredEvents = ScriptEventBus.buildDeclaredEventsMap()
+        val visitor = KotlinSubsetVisitor(declaredEvents)
+        val ir = visitor.visit(parseTree) as? kaptor.ir.IrScriptFile
+            ?: throw ScriptParseError("Failed to convert ANTLR tree to script: $name", 1, 0)
 
-        return ast
+        return ir
     }
 
     fun unloadScript(name: String): Boolean {
@@ -198,12 +200,16 @@ object ScriptManager {
         return removed != null
     }
 
-    fun reloadScript(name: Path): Boolean {
-        val fileName = name.fileName.toString()
-        val scriptName = if (fileName.endsWith(".kts")) fileName.removeSuffix(".kts") else fileName.removeSuffix(".script")
+    fun reloadScript(path: Path): Boolean {
+        val fileName = path.fileName.toString()
+        val scriptName = when {
+            fileName.endsWith(".kts") -> fileName.removeSuffix(".kts")
+            fileName.endsWith(".kt") -> fileName.removeSuffix(".kt")
+            else -> return false
+        }
         managerLogger.info("Reloading script: $scriptName")
         unregisterScript(scriptName)
-        return loadScript(name)
+        return loadScript(path)
     }
 
     fun startHotReload() {
@@ -234,15 +240,15 @@ object ScriptManager {
                             StandardWatchEventKinds.ENTRY_CREATE,
                             StandardWatchEventKinds.ENTRY_MODIFY -> {
                                 val f = filePath.toString()
-                                if (f.endsWith(".script") || f.endsWith(".kts")) {
+                                if (f.endsWith(".kts") || f.endsWith(".kt")) {
                                     Thread.sleep(100)
                                     reloadScript(fullPath)
                                 }
                             }
                             StandardWatchEventKinds.ENTRY_DELETE -> {
                                 val f = filePath.toString()
-                                if (f.endsWith(".script") || f.endsWith(".kts")) {
-                                    val name = if (f.endsWith(".kts")) f.removeSuffix(".kts") else f.removeSuffix(".script")
+                                if (f.endsWith(".kts") || f.endsWith(".kt")) {
+                                    val name = if (f.endsWith(".kts")) f.removeSuffix(".kts") else f.removeSuffix(".kt")
                                     unregisterScript(name)
                                     managerLogger.info("Script deleted: $name")
                                 }

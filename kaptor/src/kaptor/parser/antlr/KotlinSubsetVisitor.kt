@@ -1,43 +1,57 @@
 package kaptor.parser.antlr
 
-import kaptor.ast.*
-import org.antlr.v4.runtime.Token
-import org.antlr.v4.runtime.tree.TerminalNode
+import kaptor.ir.*
+import kaptor.compiler.ParamDef
 
-class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
+class KotlinSubsetVisitor(
+    private val declaredEvents: Map<String, Map<String, IrType>> = emptyMap()
+) : KotlinParserBaseVisitor<IrNode>() {
 
-    override fun visitKotlinFile(ctx: KotlinParser.KotlinFileContext): ScriptFile {
-        val imports = ctx.importList().importHeader().map { parseImportHeader(it) }
-        val topLevelDecls = ctx.topLevelObject().mapNotNull { parseTopLevelObject(it) }
+    private val variableTypes = mutableMapOf<String, IrType>()
+    private var currentEventFields: Map<String, IrType>? = null
 
-        return ScriptFile(
-            imports = imports,
-            handlers = topLevelDecls.filterIsInstance<EventHandler>(),
-            line = ctx.start.line,
-            col = ctx.start.charPositionInLine
-        )
-    }
+    // ── top level ─────────────────────────────────────────────────
 
-    override fun visitScript(ctx: KotlinParser.ScriptContext): ScriptFile {
-        val imports = ctx.importList().importHeader().map { parseImportHeader(it) }
-        val handlers = mutableListOf<EventHandler>()
-
-        for (stmt in ctx.statement()) {
-            val handler = tryParseEventRegistration(stmt)
-            if (handler != null) {
-                handlers.add(handler)
+    override fun visitKotlinFile(ctx: KotlinParser.KotlinFileContext): IrScriptFile {
+        val handlers = mutableListOf<IrHandler>()
+        for (topLevelObj in ctx.topLevelObject()) {
+            val decl = topLevelObj.declaration() ?: continue
+            if (decl.classDeclaration() != null) {
+                handlers.addAll(parseClassDeclarationForHandlers(decl.classDeclaration()))
             }
         }
-
-        return ScriptFile(
-            imports = imports,
-            handlers = handlers,
-            line = ctx.start.line,
-            col = ctx.start.charPositionInLine
-        )
+        return IrScriptFile(handlers)
     }
 
-    private fun tryParseEventRegistration(stmt: KotlinParser.StatementContext): EventHandler? {
+    private fun parseClassDeclarationForHandlers(ctx: KotlinParser.ClassDeclarationContext): List<IrHandler> {
+        val handlers = mutableListOf<IrHandler>()
+        val classBody = ctx.classBody() ?: return handlers
+        for (member in classBody.classMemberDeclarations().classMemberDeclaration()) {
+            val init = member.anonymousInitializer() ?: continue
+            val block = init.block() ?: continue
+            val statements = block.statements()
+            if (statements != null) {
+                for (stmt in statements.statement()) {
+                    val handler = tryParseEventRegistration(stmt)
+                    if (handler != null) handlers.add(handler)
+                }
+            }
+        }
+        return handlers
+    }
+
+    override fun visitScript(ctx: KotlinParser.ScriptContext): IrScriptFile {
+        val handlers = mutableListOf<IrHandler>()
+        for (stmt in ctx.statement()) {
+            val handler = tryParseEventRegistration(stmt)
+            if (handler != null) handlers.add(handler)
+        }
+        return IrScriptFile(handlers)
+    }
+
+    // ── event registration ───────────────────────────────────────
+
+    private fun tryParseEventRegistration(stmt: KotlinParser.StatementContext): IrHandler? {
         val expr = stmt.expression() ?: return null
         val postfixExpr = findPostfixUnaryExpression(expr) ?: return null
         val primary = postfixExpr.primaryExpression() ?: return null
@@ -48,34 +62,37 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
             "after" -> HookType.AFTER
             else -> return null
         }
-
         val suffixes = postfixExpr.postfixUnarySuffix()
         if (suffixes.isEmpty()) return null
-
         val cs = suffixes[0].callSuffix() ?: return null
         val valueArgs = cs.valueArguments() ?: return null
         val firstArg = valueArgs.valueArgument().firstOrNull() ?: return null
-
         val exprText = firstArg.expression()?.text?.trim()
         val eventType = exprText?.removeSurrounding("\"") ?: return null
         if (eventType.isEmpty()) return null
-
         val annLambda = cs.annotatedLambda() ?: return null
         val lambdaLit = annLambda.lambdaLiteral() ?: return null
-
         val params = if (lambdaLit.lambdaParameters() != null) {
             lambdaLit.lambdaParameters().lambdaParameter().mapNotNull {
                 it.variableDeclaration()?.simpleIdentifier()?.text
             }
         } else emptyList()
+        val paramName = params.firstOrNull()
+
+        currentEventFields = declaredEvents[eventType]
+        variableTypes.clear()
+        if (paramName != null) {
+            variableTypes[paramName] = IrObjectType
+        }
 
         val body = lambdaLit.statements()?.let { parseStatements(it) } ?: emptyList()
 
-        return EventHandler(
+        return IrHandler(
             eventType = eventType,
             hookType = hookType,
-            paramName = params.firstOrNull(),
+            paramName = paramName,
             body = body,
+            costLimit = 1000,
             line = stmt.start.line,
             col = stmt.start.charPositionInLine
         )
@@ -98,24 +115,13 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
         return prefix.postfixUnaryExpression()
     }
 
-    private fun parseTopLevelObject(ctx: KotlinParser.TopLevelObjectContext): AstNode? {
-        val decl = ctx.declaration()
-        return when {
-            decl?.propertyDeclaration() != null -> parsePropertyDeclaration(decl.propertyDeclaration())
-            decl?.functionDeclaration() != null -> parseFunctionDeclaration(decl.functionDeclaration())
-            else -> null
-        }
-    }
+    // ── statements ───────────────────────────────────────────────
 
-    private fun parseImportHeader(ctx: KotlinParser.ImportHeaderContext): ImportDecl {
-        return ImportDecl(ctx.identifier().text, ctx.start.line, ctx.start.charPositionInLine)
-    }
-
-    private fun parseStatements(ctx: KotlinParser.StatementsContext): List<Statement> {
+    private fun parseStatements(ctx: KotlinParser.StatementsContext): List<IrInstruction> {
         return ctx.statement().mapNotNull { parseStatement(it) }
     }
 
-    private fun parseStatement(ctx: KotlinParser.StatementContext): Statement? {
+    private fun parseStatement(ctx: KotlinParser.StatementContext): IrInstruction? {
         if (ctx.declaration() != null) {
             val decl = ctx.declaration()
             if (decl.propertyDeclaration() != null) return parsePropertyDeclaration(decl.propertyDeclaration())
@@ -126,106 +132,100 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
         if (ctx.loopStatement() != null) return parseLoopStatement(ctx.loopStatement())
         if (ctx.expression() != null) {
             val expr = parseExpression(ctx.expression())
-            if (expr is Expression) return ExpressionStatement(expr, ctx.start.line, ctx.start.charPositionInLine)
+            if (expr is IrExpression) return IrExpressionStatement(expr, expr.cost)
         }
         return null
     }
 
-    private fun parsePropertyDeclaration(ctx: KotlinParser.PropertyDeclarationContext): Statement {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parsePropertyDeclaration(ctx: KotlinParser.PropertyDeclarationContext): IrInstruction {
         val isVar = ctx.VAR() != null
         val varDecl = ctx.variableDeclaration()
-        val name = varDecl?.simpleIdentifier()?.text ?: return ExpressionStatement(NullLiteral(line, col), line, col)
-        val type = varDecl?.type()?.let { parseType(it) }
-        val value = ctx.expression()?.let { parseExpression(it) as? Expression }
-
+        val name = varDecl?.simpleIdentifier()?.text ?: return IrExpressionStatement(IrNullLiteral(), 1)
+        val value = ctx.expression()?.let { parseExpression(it) as? IrExpression }
+        val resolved = value ?: IrNullLiteral()
+        variableTypes[name] = inferType(resolved)
         return if (isVar) {
-            VarDecl(name, type, value, line, col)
+            IrVarDecl(name, resolved, 1)
         } else {
-            ValDecl(name, type, value ?: NullLiteral(line, col), line, col)
+            IrValDecl(name, resolved, 1)
         }
     }
 
-    private fun parseFunctionDeclaration(ctx: KotlinParser.FunctionDeclarationContext): Statement {
-        return ExpressionStatement(NullLiteral(ctx.start.line, ctx.start.charPositionInLine), ctx.start.line, ctx.start.charPositionInLine)
+    private fun parseFunctionDeclaration(ctx: KotlinParser.FunctionDeclarationContext): IrInstruction {
+        return IrExpressionStatement(IrNullLiteral(), 1)
     }
 
-    private fun parseAssignment(ctx: KotlinParser.AssignmentContext): Assignment {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parseAssignment(ctx: KotlinParser.AssignmentContext): IrAssignment {
         val target = when {
             ctx.directlyAssignableExpression() != null -> parseDirectlyAssignableExpression(ctx.directlyAssignableExpression())
             ctx.assignableExpression() != null -> parseAssignableExpression(ctx.assignableExpression())
-            else -> NullLiteral(line, col)
+            else -> IrNullLiteral()
         }
         val value = parseExpression(ctx.expression())
-        return Assignment(target as Expression, value as Expression, line, col)
+        val valueExpr = value as IrExpression
+        if (target is IrIdentifier) {
+            variableTypes[target.name] = inferType(valueExpr)
+        }
+        return IrAssignment(target as IrExpression, valueExpr, 1)
     }
 
-    private fun parseDirectlyAssignableExpression(ctx: KotlinParser.DirectlyAssignableExpressionContext): AstNode {
+    private fun parseDirectlyAssignableExpression(ctx: KotlinParser.DirectlyAssignableExpressionContext): IrNode {
         return when {
-            ctx.simpleIdentifier() != null -> Identifier(ctx.simpleIdentifier().text, ctx.start.line, ctx.start.charPositionInLine)
+            ctx.simpleIdentifier() != null -> {
+                val name = ctx.simpleIdentifier().text
+                IrIdentifier(name, variableTypes[name] ?: IrObjectType)
+            }
             ctx.postfixUnaryExpression() != null -> parsePostfixUnaryExpression(ctx.postfixUnaryExpression())
-            else -> NullLiteral(ctx.start.line, ctx.start.charPositionInLine)
+            else -> IrNullLiteral()
         }
     }
 
-    private fun parseAssignableExpression(ctx: KotlinParser.AssignableExpressionContext): AstNode {
+    private fun parseAssignableExpression(ctx: KotlinParser.AssignableExpressionContext): IrNode {
         return when {
             ctx.prefixUnaryExpression() != null -> parsePrefixUnaryExpression(ctx.prefixUnaryExpression())
-            else -> NullLiteral(ctx.start.line, ctx.start.charPositionInLine)
+            else -> IrNullLiteral()
         }
     }
 
-    private fun parseLoopStatement(ctx: KotlinParser.LoopStatementContext): Statement {
+    private fun parseLoopStatement(ctx: KotlinParser.LoopStatementContext): IrInstruction {
         return when {
             ctx.forStatement() != null -> parseForStatement(ctx.forStatement())
             ctx.whileStatement() != null -> parseWhileStatement(ctx.whileStatement())
             ctx.doWhileStatement() != null -> {
                 val dw = ctx.doWhileStatement()
                 val body = dw.controlStructureBody()?.let { parseControlStructureBody(it) } ?: emptyList()
-                val cond = parseExpression(dw.expression()) as Expression
-                val line = dw.start.line
-                val col = dw.start.charPositionInLine
-                val stmts = mutableListOf<Statement>()
-                stmts.addAll(body)
-                stmts.add(WhileStatement(cond, body, line, col))
-                ExpressionStatement(FunctionCall("_block", stmts.map { NullLiteral(it.line, it.col) }, line, col), line, col)
+                val cond = parseExpression(dw.expression()) as IrExpression
+                IrWhileStatement(cond, body, 5)
             }
-            else -> ExpressionStatement(NullLiteral(ctx.start.line, ctx.start.charPositionInLine), ctx.start.line, ctx.start.charPositionInLine)
+            else -> IrExpressionStatement(IrNullLiteral(), 1)
         }
     }
 
-    private fun parseForStatement(ctx: KotlinParser.ForStatementContext): ForStatement {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parseForStatement(ctx: KotlinParser.ForStatementContext): IrForStatement {
         val variable = ctx.variableDeclaration().simpleIdentifier().text
-        val iterable = parseExpression(ctx.expression()) as Expression
+        val iterable = parseExpression(ctx.expression()) as IrExpression
         val body = ctx.controlStructureBody()?.let { parseControlStructureBody(it) } ?: emptyList()
-        return ForStatement(variable, iterable, body, line, col)
+        variableTypes[variable] = IrObjectType
+        return IrForStatement(variable, iterable, body, 5)
     }
 
-    private fun parseWhileStatement(ctx: KotlinParser.WhileStatementContext): WhileStatement {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
-        val condition = parseExpression(ctx.expression()) as Expression
+    private fun parseWhileStatement(ctx: KotlinParser.WhileStatementContext): IrWhileStatement {
+        val condition = parseExpression(ctx.expression()) as IrExpression
         val body = ctx.controlStructureBody()?.let { parseControlStructureBody(it) } ?: emptyList()
-        return WhileStatement(condition, body, line, col)
+        return IrWhileStatement(condition, body, 5)
     }
 
-    override fun visitIfExpression(ctx: KotlinParser.IfExpressionContext): AstNode {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
-        val condition = parseExpression(ctx.expression()) as Expression
+    override fun visitIfExpression(ctx: KotlinParser.IfExpressionContext): IrNode {
+        val condition = parseExpression(ctx.expression()) as IrExpression
         val thenBlock = ctx.controlStructureBody(0)?.let { parseControlStructureBody(it) } ?: emptyList()
         val elseBlock = if (ctx.controlStructureBody().size > 1) {
             parseControlStructureBody(ctx.controlStructureBody(1))
         } else null
-        return IfStatement(condition, thenBlock, elseBlock, line, col)
+        return IrIfStatement(condition, thenBlock, elseBlock,
+            3 + thenBlock.sumOf { it.cost } + (elseBlock?.sumOf { it.cost } ?: 0))
     }
 
-    private fun parseControlStructureBody(ctx: KotlinParser.ControlStructureBodyContext): List<Statement> {
+    private fun parseControlStructureBody(ctx: KotlinParser.ControlStructureBodyContext): List<IrInstruction> {
         return if (ctx.block() != null) {
             parseStatements(ctx.block().statements())
         } else if (ctx.statement() != null) {
@@ -233,65 +233,54 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
         } else emptyList()
     }
 
-    override fun visitWhenExpression(ctx: KotlinParser.WhenExpressionContext): AstNode {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    override fun visitWhenExpression(ctx: KotlinParser.WhenExpressionContext): IrNode {
         val branches = ctx.whenEntry().mapNotNull { parseWhenEntry(it) }
-        if (branches.isEmpty()) return ExpressionStatement(NullLiteral(line, col), line, col)
-        var result: Statement = branches.last()
+        if (branches.isEmpty()) return IrExpressionStatement(IrNullLiteral(), 1)
+        var result: IrInstruction = branches.last()
         for (i in branches.size - 2 downTo 0) {
-            val ifStmt = branches[i] as IfStatement
-            result = IfStatement(ifStmt.condition, ifStmt.thenBranch, listOf(result), ifStmt.line, ifStmt.col)
+            val ifStmt = branches[i] as IrIfStatement
+            result = IrIfStatement(ifStmt.condition, ifStmt.thenBranch, listOf(result),
+                3 + ifStmt.thenBranch.sumOf { it.cost } + result.cost)
         }
         return result
     }
 
-    private fun parseWhenEntry(ctx: KotlinParser.WhenEntryContext): Statement? {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parseWhenEntry(ctx: KotlinParser.WhenEntryContext): IrInstruction? {
         val body = if (ctx.controlStructureBody() != null) {
             parseControlStructureBody(ctx.controlStructureBody())
         } else emptyList()
         val conditions = ctx.whenCondition()?.map { parseWhenCondition(it) } ?: return null
         val condExpr = if (conditions.size == 1) conditions[0]
-        else conditions.reduce { a, b -> BinaryExpression(a, BinaryOperator.OR, b, a.line, a.col) }
-        return IfStatement(condExpr, body, null, line, col)
+        else conditions.reduce { a, b -> IrBinaryExpression(a, BinaryOperator.OR, b, IrBoolType, 1) }
+        return IrIfStatement(condExpr, body, null, 3 + body.sumOf { it.cost })
     }
 
-    private fun parseWhenCondition(ctx: KotlinParser.WhenConditionContext): Expression {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parseWhenCondition(ctx: KotlinParser.WhenConditionContext): IrExpression {
         return when {
-            ctx.expression() != null -> parseExpression(ctx.expression()) as Expression
+            ctx.expression() != null -> parseExpression(ctx.expression()) as IrExpression
             ctx.typeTest() != null -> {
                 val tt = ctx.typeTest()
                 val isNegated = tt.isOperator().NOT_IS() != null
                 val typeName = parseType(tt.type())
-                val call = FunctionCall("_isType", listOf(
-                    Identifier("it", line, col), StringLiteral(typeName, line, col)
-                ), line, col)
-                if (isNegated) UnaryExpression(UnaryOperator.NOT, call, line, col) else call
+                val call = IrFunctionCall("_isType", listOf(IrIdentifier("it"), IrStringLiteral(typeName)))
+                if (isNegated) IrUnaryExpression(UnaryOperator.NOT, call, IrBoolType, 1) else call
             }
             ctx.rangeTest() != null -> {
                 val rt = ctx.rangeTest()
                 val isNegated = rt.inOperator().NOT_IN() != null
-                val expr = parseExpression(rt.expression()) as Expression
-                val call = FunctionCall("_contains", listOf(
-                    Identifier("it", line, col), expr
-                ), line, col)
-                if (isNegated) UnaryExpression(UnaryOperator.NOT, call, line, col) else call
+                val expr = parseExpression(rt.expression()) as IrExpression
+                val call = IrFunctionCall("_contains", listOf(IrIdentifier("it"), expr))
+                if (isNegated) IrUnaryExpression(UnaryOperator.NOT, call, IrBoolType, 1) else call
             }
-            else -> BoolLiteral(true, line, col)
+            else -> IrBoolLiteral(true)
         }
     }
 
-    private fun parseJumpExpression(ctx: KotlinParser.JumpExpressionContext): Statement? {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parseJumpExpression(ctx: KotlinParser.JumpExpressionContext): IrInstruction? {
         return when {
             ctx.RETURN() != null || ctx.RETURN_AT() != null -> {
-                val value = ctx.expression()?.let { parseExpression(it) as? Expression }
-                ReturnStatement(value, line, col)
+                val value = ctx.expression()?.let { parseExpression(it) as? IrExpression }
+                IrReturnStatement(value, 2)
             }
             ctx.BREAK() != null || ctx.BREAK_AT() != null -> null
             ctx.CONTINUE() != null || ctx.CONTINUE_AT() != null -> null
@@ -300,51 +289,56 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
         }
     }
 
-    // ---------- expression hierarchy ----------
+    // ── expressions ──────────────────────────────────────────────
 
-    private fun parseExpression(ctx: KotlinParser.ExpressionContext): AstNode {
+    private fun parseExpression(ctx: KotlinParser.ExpressionContext): IrNode {
         return parseDisjunction(ctx.disjunction())
     }
 
-    private fun parseDisjunction(ctx: KotlinParser.DisjunctionContext): AstNode {
+    private fun parseDisjunction(ctx: KotlinParser.DisjunctionContext): IrNode {
         var left = parseConjunction(ctx.conjunction(0))
         for (i in 1 until ctx.conjunction().size) {
             val right = parseConjunction(ctx.conjunction(i))
-            left = BinaryExpression(left as Expression, BinaryOperator.OR, right as Expression, left.line, left.col)
+            left = IrBinaryExpression(left as IrExpression, BinaryOperator.OR, right as IrExpression, IrBoolType, 1)
         }
         return left
     }
 
-    private fun parseConjunction(ctx: KotlinParser.ConjunctionContext): AstNode {
+    private fun parseConjunction(ctx: KotlinParser.ConjunctionContext): IrNode {
         var left = parseEquality(ctx.equality(0))
         for (i in 1 until ctx.equality().size) {
             val right = parseEquality(ctx.equality(i))
-            left = BinaryExpression(left as Expression, BinaryOperator.AND, right as Expression, left.line, left.col)
+            left = IrBinaryExpression(left as IrExpression, BinaryOperator.AND, right as IrExpression, IrBoolType, 1)
         }
         return left
     }
 
-    private fun parseEquality(ctx: KotlinParser.EqualityContext): AstNode {
+    private fun parseEquality(ctx: KotlinParser.EqualityContext): IrNode {
         var left = parseComparison(ctx.comparison(0))
         var i = 1
         for (op in ctx.equalityOperator()) {
             val right = parseComparison(ctx.comparison(i))
+            val lt = inferType(left as IrExpression)
+            val rt = inferType(right as IrExpression)
             val binOp = when {
                 op.EQEQ() != null -> BinaryOperator.EQUALS
                 op.EXCL_EQEQ() != null || op.EXCL_EQ() != null -> BinaryOperator.NOT_EQUALS
                 else -> BinaryOperator.EQUALS
             }
-            left = BinaryExpression(left as Expression, binOp, right as Expression, left.line, left.col)
+            val resultType = resolveEqualityType(lt, rt)
+            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, resultType, 1)
             i++
         }
         return left
     }
 
-    private fun parseComparison(ctx: KotlinParser.ComparisonContext): AstNode {
+    private fun parseComparison(ctx: KotlinParser.ComparisonContext): IrNode {
         var left = parseGenericCallLikeComparison(ctx.genericCallLikeComparison(0))
         var i = 1
         for (op in ctx.comparisonOperator()) {
             val right = parseGenericCallLikeComparison(ctx.genericCallLikeComparison(i))
+            val lt = inferType(left as IrExpression)
+            val rt = inferType(right as IrExpression)
             val binOp = when {
                 op.LANGLE() != null -> BinaryOperator.LESS
                 op.RANGLE() != null -> BinaryOperator.GREATER
@@ -352,120 +346,118 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
                 op.GE() != null -> BinaryOperator.GREATER_EQUAL
                 else -> BinaryOperator.LESS
             }
-            left = BinaryExpression(left as Expression, binOp, right as Expression, left.line, left.col)
+            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, IrBoolType, 1)
             i++
         }
         return left
     }
 
-    private fun parseGenericCallLikeComparison(ctx: KotlinParser.GenericCallLikeComparisonContext): AstNode {
+    private fun parseGenericCallLikeComparison(ctx: KotlinParser.GenericCallLikeComparisonContext): IrNode {
         var expr = parseInfixOperation(ctx.infixOperation())
         for (cs in ctx.callSuffix()) {
             val args = parseCallSuffix(cs)
             expr = when (expr) {
-                is Identifier -> FunctionCall(expr.name, args, expr.line, expr.col)
-                is FieldAccess -> MethodCall(expr.receiver, expr.fieldName, args, expr.line, expr.col)
-                else -> MethodCall(expr as Expression, "_call", args, ctx.start.line, ctx.start.charPositionInLine)
+                is IrIdentifier -> IrFunctionCall(expr.name, args)
+                is IrFieldAccess -> IrMethodCall(expr.receiver, expr.fieldName, args)
+                else -> IrMethodCall(expr as IrExpression, "_call", args)
             }
         }
         return expr
     }
 
-    private fun parseCallSuffix(ctx: KotlinParser.CallSuffixContext): List<Expression> {
+    private fun parseCallSuffix(ctx: KotlinParser.CallSuffixContext): List<IrExpression> {
         val valueArgs = ctx.valueArguments()
         return if (valueArgs != null) {
             valueArgs.valueArgument().mapNotNull { arg ->
-                parseExpression(arg.expression()) as? Expression
+                parseExpression(arg.expression()) as? IrExpression
             }
         } else emptyList()
     }
 
-    private fun parseInfixOperation(ctx: KotlinParser.InfixOperationContext): AstNode {
+    private fun parseInfixOperation(ctx: KotlinParser.InfixOperationContext): IrNode {
         var left = parseElvisExpression(ctx.elvisExpression(0))
         if (ctx.inOperator().isNotEmpty() && ctx.elvisExpression().size > 1) {
             val right = parseElvisExpression(ctx.elvisExpression(1))
-            left = FunctionCall("_contains", listOf(right as Expression, left as Expression),
-                ctx.start.line, ctx.start.charPositionInLine)
+            left = IrFunctionCall("_contains", listOf(right as IrExpression, left as IrExpression))
         } else if (!ctx.isOperator().isEmpty() && ctx.type().isNotEmpty()) {
             val typeName = parseType(ctx.type(0))
-            left = FunctionCall("_isType", listOf(left as Expression,
-                StringLiteral(typeName, ctx.start.line, ctx.start.charPositionInLine)),
-                ctx.start.line, ctx.start.charPositionInLine)
+            left = IrFunctionCall("_isType", listOf(left as IrExpression, IrStringLiteral(typeName)))
         }
         return left
     }
 
-    private fun parseElvisExpression(ctx: KotlinParser.ElvisExpressionContext): AstNode {
+    private fun parseElvisExpression(ctx: KotlinParser.ElvisExpressionContext): IrNode {
         var left = parseInfixFunctionCall(ctx.infixFunctionCall(0))
         for (i in 1 until ctx.infixFunctionCall().size) {
             val right = parseInfixFunctionCall(ctx.infixFunctionCall(i))
-            left = FunctionCall("_elvis", listOf(left as Expression, right as Expression),
-                ctx.start.line, ctx.start.charPositionInLine)
+            left = IrFunctionCall("_elvis", listOf(left as IrExpression, right as IrExpression))
         }
         return left
     }
 
-    private fun parseInfixFunctionCall(ctx: KotlinParser.InfixFunctionCallContext): AstNode {
+    private fun parseInfixFunctionCall(ctx: KotlinParser.InfixFunctionCallContext): IrNode {
         var left = parseRangeExpression(ctx.rangeExpression(0))
         for (i in 0 until ctx.simpleIdentifier().size) {
             val name = ctx.simpleIdentifier(i).text
             val right = parseRangeExpression(ctx.rangeExpression(i + 1))
-            left = MethodCall(left as Expression, name, listOf(right as Expression),
-                ctx.start.line, ctx.start.charPositionInLine)
+            left = IrMethodCall(left as IrExpression, name, listOf(right as IrExpression))
         }
         return left
     }
 
-    private fun parseRangeExpression(ctx: KotlinParser.RangeExpressionContext): AstNode {
+    private fun parseRangeExpression(ctx: KotlinParser.RangeExpressionContext): IrNode {
         var left = parseAdditiveExpression(ctx.additiveExpression(0))
         for (i in 1 until ctx.additiveExpression().size) {
             val right = parseAdditiveExpression(ctx.additiveExpression(i))
-            left = FunctionCall("_rangeTo", listOf(left as Expression, right as Expression),
-                ctx.start.line, ctx.start.charPositionInLine)
+            left = IrFunctionCall("_rangeTo", listOf(left as IrExpression, right as IrExpression))
         }
         return left
     }
 
-    private fun parseAdditiveExpression(ctx: KotlinParser.AdditiveExpressionContext): AstNode {
+    private fun parseAdditiveExpression(ctx: KotlinParser.AdditiveExpressionContext): IrNode {
         var left = parseMultiplicativeExpression(ctx.multiplicativeExpression(0))
         var i = 1
         for (op in ctx.additiveOperator()) {
             val right = parseMultiplicativeExpression(ctx.multiplicativeExpression(i))
+            val lt = inferType(left as IrExpression)
+            val rt = inferType(right as IrExpression)
             val binOp = if (op.ADD() != null) BinaryOperator.PLUS else BinaryOperator.MINUS
-            left = BinaryExpression(left as Expression, binOp, right as Expression, left.line, left.col)
+            val resultType = resolveBinaryOpType(lt, rt, binOp)
+            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, resultType, 1)
             i++
         }
         return left
     }
 
-    private fun parseMultiplicativeExpression(ctx: KotlinParser.MultiplicativeExpressionContext): AstNode {
+    private fun parseMultiplicativeExpression(ctx: KotlinParser.MultiplicativeExpressionContext): IrNode {
         var left = parseAsExpression(ctx.asExpression(0))
         var i = 1
         for (op in ctx.multiplicativeOperator()) {
             val right = parseAsExpression(ctx.asExpression(i))
+            val lt = inferType(left as IrExpression)
+            val rt = inferType(right as IrExpression)
             val binOp = when {
                 op.MULT() != null -> BinaryOperator.MULTIPLY
                 op.DIV() != null -> BinaryOperator.DIVIDE
                 op.MOD() != null -> BinaryOperator.MODULO
                 else -> BinaryOperator.MULTIPLY
             }
-            left = BinaryExpression(left as Expression, binOp, right as Expression, left.line, left.col)
+            val resultType = resolveBinaryOpType(lt, rt, binOp)
+            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, resultType, 1)
             i++
         }
         return left
     }
 
-    private fun parseAsExpression(ctx: KotlinParser.AsExpressionContext): AstNode {
+    private fun parseAsExpression(ctx: KotlinParser.AsExpressionContext): IrNode {
         var expr = parsePrefixUnaryExpression(ctx.prefixUnaryExpression())
         if (ctx.asOperator().isNotEmpty() && ctx.type().isNotEmpty()) {
-            expr = FunctionCall("_as", listOf(expr as Expression,
-                StringLiteral(parseType(ctx.type(0)), ctx.start.line, ctx.start.charPositionInLine)),
-                ctx.start.line, ctx.start.charPositionInLine)
+            expr = IrFunctionCall("_as", listOf(expr as IrExpression, IrStringLiteral(parseType(ctx.type(0)))))
         }
         return expr
     }
 
-    private fun parsePrefixUnaryExpression(ctx: KotlinParser.PrefixUnaryExpressionContext): AstNode {
+    private fun parsePrefixUnaryExpression(ctx: KotlinParser.PrefixUnaryExpressionContext): IrNode {
         var expr = parsePostfixUnaryExpression(ctx.postfixUnaryExpression())
         for (prefix in ctx.unaryPrefix()) {
             val opCtx = prefix.prefixUnaryOperator()
@@ -476,13 +468,15 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
                 else -> null
             }
             if (unaryOp != null) {
-                expr = UnaryExpression(unaryOp, expr as Expression, ctx.start.line, ctx.start.charPositionInLine)
+                val operandType = inferType(expr as IrExpression)
+                val resultType = resolveUnaryOpType(operandType, unaryOp)
+                expr = IrUnaryExpression(unaryOp, expr, resultType, 1)
             }
         }
         return expr
     }
 
-    private fun parsePostfixUnaryExpression(ctx: KotlinParser.PostfixUnaryExpressionContext): AstNode {
+    private fun parsePostfixUnaryExpression(ctx: KotlinParser.PostfixUnaryExpressionContext): IrNode {
         var expr = parsePrimaryExpression(ctx.primaryExpression())
 
         for (suffix in ctx.postfixUnarySuffix()) {
@@ -490,41 +484,47 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
                 suffix.callSuffix() != null -> {
                     val args = parseCallSuffix(suffix.callSuffix())
                     when (expr) {
-                        is Identifier -> FunctionCall(expr.name, args, expr.line, expr.col)
-                        is FieldAccess -> MethodCall(expr.receiver, expr.fieldName, args, expr.line, expr.col)
-                        else -> MethodCall(expr as Expression, "_call", args, ctx.start.line, ctx.start.charPositionInLine)
+                        is IrIdentifier -> IrFunctionCall(expr.name, args)
+                        is IrFieldAccess -> IrMethodCall(expr.receiver, expr.fieldName, args)
+                        else -> IrMethodCall(expr as IrExpression, "_call", args)
                     }
                 }
                 suffix.indexingSuffix() != null -> {
-                    val index = parseExpression(suffix.indexingSuffix().expression(0)) as Expression
-                    IndexAccess(expr as Expression, index, ctx.start.line, ctx.start.charPositionInLine)
+                    val index = parseExpression(suffix.indexingSuffix().expression(0)) as IrExpression
+                    IrIndexAccess(expr as IrExpression, index, 2)
                 }
                 suffix.navigationSuffix() != null -> {
                     val nav = suffix.navigationSuffix()
                     val member = when {
                         nav.simpleIdentifier() != null ->
-                            Identifier(nav.simpleIdentifier().text, nav.simpleIdentifier().start.line, nav.simpleIdentifier().start.charPositionInLine)
+                            IrIdentifier(nav.simpleIdentifier().text)
                         nav.parenthesizedExpression() != null -> parseExpression(nav.parenthesizedExpression().expression())
                         else -> null
                     }
                     if (member != null) {
                         when (member) {
-                            is Identifier -> FieldAccess(expr as Expression, member.name, member.line, member.col)
-                            else -> MethodCall(expr as Expression, "_member", listOf(member as Expression), ctx.start.line, ctx.start.charPositionInLine)
+                            is IrIdentifier -> {
+                                val fieldType = currentEventFields?.get(member.name) ?: IrObjectType
+                                IrFieldAccess(expr as IrExpression, member.name, fieldType, 2)
+                            }
+                            else -> IrMethodCall(expr as IrExpression, "_member", listOf(member as IrExpression))
                         }
                     } else expr
                 }
                 suffix.postfixUnaryOperator() != null -> {
                     val op = suffix.postfixUnaryOperator()
                     when {
-                        op.INCR() != null -> Assignment(expr as Expression, BinaryExpression(expr as Expression, BinaryOperator.PLUS,
-                            IntLiteral(1, ctx.start.line, ctx.start.charPositionInLine), ctx.start.line, ctx.start.charPositionInLine),
-                            ctx.start.line, ctx.start.charPositionInLine)
-                        op.DECR() != null -> Assignment(expr as Expression, BinaryExpression(expr as Expression, BinaryOperator.MINUS,
-                            IntLiteral(1, ctx.start.line, ctx.start.charPositionInLine), ctx.start.line, ctx.start.charPositionInLine),
-                            ctx.start.line, ctx.start.charPositionInLine)
-                        op.excl() != null -> FunctionCall("_assertNotNull", listOf(expr as Expression),
-                            ctx.start.line, ctx.start.charPositionInLine)
+                        op.INCR() != null -> {
+                            val operandType = inferType(expr as IrExpression)
+                            val one = literalForType(operandType)
+                            IrAssignment(expr, IrBinaryExpression(expr, BinaryOperator.PLUS, one, operandType, 1), 1)
+                        }
+                        op.DECR() != null -> {
+                            val operandType = inferType(expr as IrExpression)
+                            val one = literalForType(operandType)
+                            IrAssignment(expr, IrBinaryExpression(expr, BinaryOperator.MINUS, one, operandType, 1), 1)
+                        }
+                        op.excl() != null -> IrFunctionCall("_assertNotNull", listOf(expr as IrExpression))
                         else -> expr
                     }
                 }
@@ -534,18 +534,27 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
         return expr
     }
 
-    private fun parsePrimaryExpression(ctx: KotlinParser.PrimaryExpressionContext): AstNode {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun literalForType(type: IrType): IrExpression = when (type) {
+        IrIntType -> IrIntLiteral(1)
+        IrLongType -> IrLongLiteral(1L)
+        IrFloatType -> IrFloatLiteral(1.0)
+        IrDoubleType -> IrFloatLiteral(1.0)
+        else -> IrIntLiteral(1)
+    }
+
+    private fun parsePrimaryExpression(ctx: KotlinParser.PrimaryExpressionContext): IrNode {
         return when {
             ctx.parenthesizedExpression() != null -> parseExpression(ctx.parenthesizedExpression().expression())
-            ctx.simpleIdentifier() != null -> Identifier(ctx.simpleIdentifier().text, line, col)
+            ctx.simpleIdentifier() != null -> {
+                val name = ctx.simpleIdentifier().text
+                IrIdentifier(name, variableTypes[name] ?: IrObjectType)
+            }
             ctx.literalConstant() != null -> parseLiteralConstant(ctx.literalConstant())
             ctx.stringLiteral() != null -> parseStringLiteral(ctx.stringLiteral())
             ctx.thisExpression() != null -> {
                 if (ctx.thisExpression().THIS_AT() != null)
-                    Identifier("this@" + ctx.thisExpression().THIS_AT().text.removePrefix("this@"), line, col)
-                else Identifier("this", line, col)
+                    IrIdentifier("this@" + ctx.thisExpression().THIS_AT().text.removePrefix("this@"))
+                else IrIdentifier("this")
             }
             ctx.ifExpression() != null -> visitIfExpression(ctx.ifExpression())
             ctx.whenExpression() != null -> visitWhenExpression(ctx.whenExpression())
@@ -556,103 +565,164 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
                     val params = if (ll.lambdaParameters() != null)
                         ll.lambdaParameters().lambdaParameter().map { it.variableDeclaration().simpleIdentifier().text }
                     else emptyList()
-                    FunctionCall("_lambda", listOf(StringLiteral(params.joinToString(","), line, col)), line, col)
+                    IrFunctionCall("_lambda", listOf(IrStringLiteral(params.joinToString(","))))
                 } else {
-                    FunctionCall("_lambda", listOf(StringLiteral("", line, col)), line, col)
+                    IrFunctionCall("_lambda", listOf(IrStringLiteral("")))
                 }
             }
             ctx.jumpExpression() != null -> {
-                parseJumpExpression(ctx.jumpExpression()) ?: NullLiteral(line, col)
+                parseJumpExpression(ctx.jumpExpression()) ?: IrNullLiteral()
             }
             ctx.collectionLiteral() != null -> {
-                val exprs = ctx.collectionLiteral().expression().map { parseExpression(it) as Expression }
-                FunctionCall("listOf", exprs, line, col)
+                val exprs = ctx.collectionLiteral().expression().map { parseExpression(it) as IrExpression }
+                IrFunctionCall("listOf", exprs)
             }
-            else -> NullLiteral(line, col)
+            else -> IrNullLiteral()
         }
     }
 
-    private fun parseLiteralConstant(ctx: KotlinParser.LiteralConstantContext): AstNode {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parseLiteralConstant(ctx: KotlinParser.LiteralConstantContext): IrNode {
         return when {
-            ctx.IntegerLiteral() != null -> IntLiteral(ctx.IntegerLiteral().text.toLong(), line, col)
-            ctx.LongLiteral() != null -> IntLiteral(ctx.LongLiteral().text.dropLast(1).toLong(), line, col)
-            ctx.HexLiteral() != null -> IntLiteral(ctx.HexLiteral().text.removePrefix("0x").removePrefix("0X").toLong(16), line, col)
-            ctx.BinLiteral() != null -> IntLiteral(ctx.BinLiteral().text.removePrefix("0b").removePrefix("0B").toLong(2), line, col)
-            ctx.UnsignedLiteral() != null -> IntLiteral(ctx.UnsignedLiteral().text.dropLast(1).toLong(), line, col)
+            ctx.IntegerLiteral() != null -> IrIntLiteral(ctx.IntegerLiteral().text.toInt())
+            ctx.LongLiteral() != null -> IrLongLiteral(ctx.LongLiteral().text.dropLast(1).toLong())
+            ctx.HexLiteral() != null -> {
+                val v = ctx.HexLiteral().text.removePrefix("0x").removePrefix("0X").toLong(16)
+                if (v in Int.MIN_VALUE..Int.MAX_VALUE) IrIntLiteral(v.toInt())
+                else IrLongLiteral(v)
+            }
+            ctx.BinLiteral() != null -> {
+                val v = ctx.BinLiteral().text.removePrefix("0b").removePrefix("0B").toLong(2)
+                if (v in Int.MIN_VALUE..Int.MAX_VALUE) IrIntLiteral(v.toInt())
+                else IrLongLiteral(v)
+            }
+            ctx.UnsignedLiteral() != null -> IrLongLiteral(ctx.UnsignedLiteral().text.dropLast(1).toLong())
             ctx.RealLiteral() != null -> {
                 val text = ctx.RealLiteral().text
-                if (text.endsWith("f") || text.endsWith("F")) FloatLiteral(text.dropLast(1).toDouble(), line, col)
-                else FloatLiteral(text.toDouble(), line, col)
+                if (text.endsWith("f") || text.endsWith("F")) IrFloatLiteral(text.dropLast(1).toDouble(), IrFloatType)
+                else IrFloatLiteral(text.toDouble(), IrDoubleType)
             }
-            ctx.BooleanLiteral() != null -> BoolLiteral(ctx.BooleanLiteral().text == "true", line, col)
-            ctx.CharacterLiteral() != null -> IntLiteral(ctx.CharacterLiteral().text[1].code.toLong(), line, col)
-            ctx.NullLiteral() != null -> NullLiteral(line, col)
-            else -> NullLiteral(line, col)
+            ctx.BooleanLiteral() != null -> IrBoolLiteral(ctx.BooleanLiteral().text == "true")
+            ctx.CharacterLiteral() != null -> IrIntLiteral(ctx.CharacterLiteral().text[1].code)
+            ctx.NullLiteral() != null -> IrNullLiteral()
+            else -> IrNullLiteral()
         }
     }
 
-    private fun parseStringLiteral(ctx: KotlinParser.StringLiteralContext): AstNode {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
+    private fun parseStringLiteral(ctx: KotlinParser.StringLiteralContext): IrNode {
         return when {
             ctx.lineStringLiteral() != null -> parseLineStringLiteral(ctx.lineStringLiteral())
             ctx.multiLineStringLiteral() != null -> parseMultiLineStringLiteral(ctx.multiLineStringLiteral())
-            else -> StringLiteral("", line, col)
+            else -> IrStringLiteral("")
         }
     }
 
-    private fun parseLineStringLiteral(ctx: KotlinParser.LineStringLiteralContext): AstNode {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
-        val parts = mutableListOf<InterpolationPart>()
-
+    private fun parseLineStringLiteral(ctx: KotlinParser.LineStringLiteralContext): IrNode {
+        val parts = mutableListOf<IrInterpolationPart>()
         for (content in ctx.lineStringContent()) {
             when {
-                content.LineStrText() != null -> parts.add(LiteralPart(content.LineStrText().text))
-                content.LineStrEscapedChar() != null -> parts.add(LiteralPart(unescape(content.LineStrEscapedChar().text)))
+                content.LineStrText() != null -> parts.add(IrLiteralPart(content.LineStrText().text))
+                content.LineStrEscapedChar() != null -> parts.add(IrLiteralPart(unescape(content.LineStrEscapedChar().text)))
                 content.LineStrRef() != null -> {
                     val name = content.LineStrRef().text.removePrefix("$")
-                    parts.add(ExpressionPart(Identifier(name, line, col)))
+                    parts.add(IrExpressionPart(IrIdentifier(name)))
                 }
             }
         }
         for (expr in ctx.lineStringExpression()) {
             val e = parseExpression(expr.expression())
-            if (e is Expression) parts.add(ExpressionPart(e))
+            if (e is IrExpression) parts.add(IrExpressionPart(e))
         }
-
-        if (parts.size == 1 && parts[0] is LiteralPart) {
-            return StringLiteral((parts[0] as LiteralPart).text, line, col)
+        if (parts.size == 1 && parts[0] is IrLiteralPart) {
+            return IrStringLiteral((parts[0] as IrLiteralPart).text)
         }
-        return StringInterpolation(parts, line, col)
+        return IrStringInterpolation(parts)
     }
 
-    private fun parseMultiLineStringLiteral(ctx: KotlinParser.MultiLineStringLiteralContext): AstNode {
-        val line = ctx.start.line
-        val col = ctx.start.charPositionInLine
-        val parts = mutableListOf<InterpolationPart>()
-
+    private fun parseMultiLineStringLiteral(ctx: KotlinParser.MultiLineStringLiteralContext): IrNode {
+        val parts = mutableListOf<IrInterpolationPart>()
         for (content in ctx.multiLineStringContent()) {
             when {
-                content.MultiLineStrText() != null -> parts.add(LiteralPart(content.MultiLineStrText().text))
-                content.MultiLineStringQuote() != null -> parts.add(LiteralPart("\""))
+                content.MultiLineStrText() != null -> parts.add(IrLiteralPart(content.MultiLineStrText().text))
+                content.MultiLineStringQuote() != null -> parts.add(IrLiteralPart("\""))
                 content.MultiLineStrRef() != null -> {
                     val name = content.MultiLineStrRef().text.removePrefix("$")
-                    parts.add(ExpressionPart(Identifier(name, line, col)))
+                    parts.add(IrExpressionPart(IrIdentifier(name)))
                 }
             }
         }
         for (expr in ctx.multiLineStringExpression()) {
             val e = parseExpression(expr.expression())
-            if (e is Expression) parts.add(ExpressionPart(e))
+            if (e is IrExpression) parts.add(IrExpressionPart(e))
         }
+        if (parts.size == 1 && parts[0] is IrLiteralPart) {
+            return IrStringLiteral((parts[0] as IrLiteralPart).text)
+        }
+        return IrStringInterpolation(parts)
+    }
 
-        if (parts.size == 1 && parts[0] is LiteralPart) {
-            return StringLiteral((parts[0] as LiteralPart).text, line, col)
+    // ── type helpers ─────────────────────────────────────────────
+
+    private fun inferType(expr: IrExpression): IrType {
+        return when (expr) {
+            is IrIntLiteral -> IrIntType
+            is IrLongLiteral -> IrLongType
+            is IrFloatLiteral -> expr.numericType
+            is IrBoolLiteral -> IrBoolType
+            is IrStringLiteral -> IrStringType
+            is IrNullLiteral -> IrObjectType
+            is IrIdentifier -> expr.type
+            is IrFieldAccess -> expr.fieldType
+            is IrBinaryExpression -> expr.resultType
+            is IrUnaryExpression -> expr.resultType
+            is IrStringInterpolation -> IrStringType
+            is IrFunctionCall -> IrObjectType
+            is IrMethodCall -> IrObjectType
+            is IrIndexAccess -> IrObjectType
+            is IrMergedExpression -> IrObjectType
         }
-        return StringInterpolation(parts, line, col)
+    }
+
+    private fun resolveBinaryOpType(left: IrType, right: IrType, op: BinaryOperator): IrType {
+        if (left == IrStringType || right == IrStringType) {
+            return if (op == BinaryOperator.PLUS) IrStringType else IrBoolType
+        }
+        if (op == BinaryOperator.PLUS || op == BinaryOperator.MINUS ||
+            op == BinaryOperator.MULTIPLY || op == BinaryOperator.DIVIDE ||
+            op == BinaryOperator.MODULO) {
+            return promoteType(left, right)
+        }
+        if (op == BinaryOperator.EQUALS || op == BinaryOperator.NOT_EQUALS ||
+            op == BinaryOperator.LESS || op == BinaryOperator.LESS_EQUAL ||
+            op == BinaryOperator.GREATER || op == BinaryOperator.GREATER_EQUAL) {
+            return IrBoolType
+        }
+        if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
+            return IrBoolType
+        }
+        return promoteType(left, right)
+    }
+
+    private fun resolveEqualityType(left: IrType, right: IrType): IrType {
+        if (left == IrStringType || right == IrStringType) return IrBoolType
+        return IrBoolType
+    }
+
+    private fun resolveUnaryOpType(operand: IrType, op: UnaryOperator): IrType {
+        return when (op) {
+            UnaryOperator.MINUS -> operand
+            UnaryOperator.NOT -> IrBoolType
+            UnaryOperator.BIT_NOT -> operand
+        }
+    }
+
+    private fun promoteType(a: IrType, b: IrType): IrType {
+        val order = listOf(IrIntType, IrLongType, IrFloatType, IrDoubleType)
+        val ai = order.indexOf(a)
+        val bi = order.indexOf(b)
+        if (ai == -1 && bi == -1) return IrObjectType
+        if (ai == -1) return b
+        if (bi == -1) return a
+        return if (ai >= bi) a else b
     }
 
     private fun parseType(ctx: KotlinParser.TypeContext): String {
@@ -680,7 +750,7 @@ class KotlinSubsetVisitor : KotlinParserBaseVisitor<AstNode>() {
         }
     }
 
-    override fun visit(tree: org.antlr.v4.runtime.tree.ParseTree?): AstNode? {
+    override fun visit(tree: org.antlr.v4.runtime.tree.ParseTree?): IrNode? {
         return super.visit(tree)
     }
 }

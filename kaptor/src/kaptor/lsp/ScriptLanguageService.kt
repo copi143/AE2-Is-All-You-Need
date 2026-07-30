@@ -3,9 +3,9 @@ package kaptor.lsp
 import kaptor.parser.antlr.KotlinLexer
 import kaptor.parser.antlr.KotlinParser
 import kaptor.parser.antlr.KotlinSubsetVisitor
-import kaptor.ast.ScriptFile
-import kaptor.ast.AstNode
-import kaptor.ast.EventHandler
+import kaptor.ir.IrScriptFile
+import kaptor.ir.IrNode
+import kaptor.ir.IrHandler
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.tree.ParseTree
 import java.util.concurrent.ConcurrentHashMap
@@ -46,7 +46,7 @@ data class TokenInfo(
 )
 
 data class ScriptAnalysisResult(
-    val ast: ScriptFile?,
+    val ast: IrScriptFile?,
     val parseTree: ParseTree?,
     val diagnostics: List<Diagnostic>,
     val tokens: List<TokenInfo>
@@ -142,15 +142,15 @@ class ScriptLanguageService {
             null
         }
 
-        var ast: ScriptFile? = null
+        var ast: IrScriptFile? = null
         if (parseTree != null) {
             try {
                 val visitor = KotlinSubsetVisitor()
-                ast = visitor.visit(parseTree) as? ScriptFile
+                ast = visitor.visit(parseTree) as? IrScriptFile
             } catch (e: Exception) {
                 diagnostics.add(Diagnostic(
                     line = 1, column = 0, endLine = 1, endColumn = 1,
-                    message = "AST conversion error: ${e.message}",
+                    message = "Script conversion error: ${e.message}",
                     severity = DiagnosticSeverity.ERROR
                 ))
             }
@@ -165,7 +165,7 @@ class ScriptLanguageService {
         return result
     }
 
-    private fun semanticAnalysis(ast: ScriptFile): List<Diagnostic> {
+    private fun semanticAnalysis(ast: IrScriptFile): List<Diagnostic> {
         val diagnostics = mutableListOf<Diagnostic>()
 
         val eventTypes = mutableMapOf<String, Int>()

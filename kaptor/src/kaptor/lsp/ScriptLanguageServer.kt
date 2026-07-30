@@ -1,7 +1,7 @@
 package kaptor.lsp
 
-import kaptor.ast.ScriptFile
-import kaptor.ast.EventHandler
+import kaptor.ir.IrScriptFile
+import kaptor.ir.IrHandler
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
