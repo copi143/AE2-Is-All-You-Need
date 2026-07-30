@@ -26,7 +26,16 @@ dependencies {
     modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modImplementation("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")
 
+    val compose = libs.versions.compose.get()
+    implementation(project(":kaptor"))
     implementation(libs.compose.runtime)
+    include(project(":kaptor"))
+    listOf(
+        "org.jetbrains.compose.runtime:runtime-desktop:$compose",
+        "androidx.collection:collection-jvm:1.4.0",
+        "org.jetbrains.kotlinx:atomicfu-jvm:0.23.2",
+        "org.antlr:antlr4-runtime:4.9.1",
+    ).forEach { include(it) }
 }
 
 repositories {

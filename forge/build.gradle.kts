@@ -1,4 +1,7 @@
 import org.gradle.internal.extensions.stdlib.capitalized
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
 
 plugins {
     id("multiloader-loader")
@@ -7,6 +10,7 @@ plugins {
 }
 
 val modId: String by project
+val compose = libs.versions.compose.get()
 
 mixin {
     add(sourceSets.main.get(), "${modId}.refmap.json")
@@ -17,6 +21,7 @@ tasks.jar {
     manifest {
         attributes["MixinConfigs"] = "${modId}.mixins.json,${modId}.forge.mixins.json"
     }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 neoForge {
@@ -55,10 +60,17 @@ neoForge {
 sourceSets.main.get().resources { srcDir("src/generated/resources") }
 
 dependencies {
-    implementation(project(":kaptor"))
+    implementation(libs.compose.runtime)
     modImplementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
-    implementation(libs.compose.runtime)
+
+    // JiJ onto mod classloader. Non-transitive; skip kotlin-stdlib/coroutines (KFF) and antlr (Forge CP).
+    jarJar(project(":kaptor"))
+    listOf(
+        "org.jetbrains.compose.runtime:runtime-desktop:$compose",
+        "androidx.collection:collection-jvm:1.4.0",
+        "org.jetbrains.kotlinx:atomicfu-jvm:0.23.2",
+    ).forEach { jarJar(it) }
 
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modRuntimeOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
@@ -77,6 +89,36 @@ dependencies {
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:additions")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:generators")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:tools")
+}
+
+// Drop module-info so atomicfu does not require a separate kotlin.stdlib module (KFF provides Kotlin).
+tasks.named("jarJar") {
+    doLast {
+        layout.buildDirectory.dir("generated/jarJar").get().asFile
+            .walkTopDown()
+            .filter { it.extension == "jar" }
+            .forEach { jar ->
+                val tmp = jar.resolveSibling("${jar.name}.tmp")
+                JarFile(jar).use { input ->
+                    JarOutputStream(tmp.outputStream()).use { output ->
+                        input.entries().asSequence()
+                            .filterNot { it.name.endsWith("module-info.class") }
+                            .forEach { entry ->
+                                output.putNextEntry(JarEntry(entry.name).apply { time = entry.time })
+                                if (!entry.isDirectory) input.getInputStream(entry).use { it.copyTo(output) }
+                                output.closeEntry()
+                            }
+                    }
+                }
+                jar.delete()
+                tmp.renameTo(jar)
+            }
+    }
+}
+
+// runClient uses exploded sourceSet resources, not the built jar
+tasks.named<ProcessResources>("processResources") {
+    from(tasks.named("jarJar"))
 }
 
 repositories {
