@@ -3,44 +3,41 @@ package allyouneed.util.bigint
 import appeng.api.stacks.AEKey
 import appeng.menu.me.common.GridInventoryEntry
 import java.math.BigInteger
-import java.util.Collections
-import java.util.WeakHashMap
 
 /**
- * Holds BigInteger stored amounts for [GridInventoryEntry] and a thread-local
- * snapshot used while building ME inventory update packets.
+ * Helpers for [BigAmountHolder] amounts on [GridInventoryEntry].
+ *
+ * Entry amounts live on the entry instance (mixin field). The only process-wide state is a
+ * [ThreadLocal] build context while an ME inventory packet is being assembled.
  */
 object BigAmounts {
-    private val ENTRY_AMOUNTS: MutableMap<GridInventoryEntry, BigInteger> =
-        Collections.synchronizedMap(WeakHashMap())
-
     private val CURRENT = ThreadLocal<BigKeyCounter>()
 
     @JvmStatic
     fun setEntryAmount(entry: GridInventoryEntry?, amount: BigInteger?) {
-        if (entry == null) return
-        if (amount == null) {
-            ENTRY_AMOUNTS.remove(entry)
-        } else {
-            ENTRY_AMOUNTS[entry] = amount
+        if (entry is BigAmountHolder) {
+            entry.setBigAmount(amount)
         }
     }
 
     @JvmStatic
     fun getEntryAmount(entry: GridInventoryEntry?): BigInteger {
+        if (entry is BigAmountHolder) {
+            return entry.getBigAmount()
+                ?: BigInteger.valueOf(maxOf(0L, entry.storedAmount))
+        }
         if (entry == null) return BigInteger.ZERO
-        return ENTRY_AMOUNTS[entry] ?: BigInteger.valueOf(maxOf(0L, entry.storedAmount))
+        return BigInteger.valueOf(maxOf(0L, entry.storedAmount))
     }
 
     @JvmStatic
     fun hasEntryAmount(entry: GridInventoryEntry?): Boolean =
-        entry != null && ENTRY_AMOUNTS.containsKey(entry)
+        entry is BigAmountHolder && entry.getBigAmount() != null
 
     @JvmStatic
     fun copyEntryAmount(from: GridInventoryEntry?, to: GridInventoryEntry?) {
-        if (from == null || to == null) return
-        val big = ENTRY_AMOUNTS[from] ?: return
-        ENTRY_AMOUNTS[to] = big
+        if (from !is BigAmountHolder || to !is BigAmountHolder) return
+        to.setBigAmount(from.getBigAmount())
     }
 
     @JvmStatic
@@ -48,11 +45,7 @@ object BigAmounts {
 
     @JvmStatic
     fun setCurrent(counter: BigKeyCounter?) {
-        if (counter == null) {
-            CURRENT.remove()
-        } else {
-            CURRENT.set(counter)
-        }
+        if (counter == null) CURRENT.remove() else CURRENT.set(counter)
     }
 
     @JvmStatic
@@ -60,7 +53,6 @@ object BigAmounts {
         CURRENT.remove()
     }
 
-    /** Amount from the current snapshot, or null if no snapshot is active. */
     @JvmStatic
     fun getCurrentAmount(key: AEKey?): BigInteger? {
         val current = CURRENT.get()

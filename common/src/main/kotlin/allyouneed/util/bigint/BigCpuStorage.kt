@@ -5,52 +5,51 @@ import allyouneed.util.saturateToLong
 import appeng.api.networking.crafting.ICraftingCPU
 import appeng.me.cluster.implementations.CraftingCPUCluster
 import java.math.BigInteger
-import java.util.*
 
-/** Side-channel BigInteger (and unbounded) capacity for crafting CPU clusters and UI list entries. */
+/**
+ * Helpers for [BigCpuCapacity] on [CraftingCPUCluster].
+ * Capacity lives on the cluster instance (mixin fields), not a global map.
+ */
 object BigCpuStorage {
-    private val CLUSTER_STORAGE: MutableMap<CraftingCPUCluster, BigInteger> = Collections.synchronizedMap(WeakHashMap())
-    private val CLUSTER_UNBOUNDED: MutableMap<CraftingCPUCluster, Boolean> = Collections.synchronizedMap(WeakHashMap())
-
-    /** UI / packet entries keyed by serial or entry identity. */
-    private val ENTRY_STORAGE: MutableMap<Any, BigInteger> = Collections.synchronizedMap(WeakHashMap())
-    private val ENTRY_UNBOUNDED: MutableMap<Any, Boolean> = Collections.synchronizedMap(WeakHashMap())
-
     @JvmStatic
     fun clearCluster(cluster: CraftingCPUCluster?) {
-        if (cluster == null) return
-        CLUSTER_STORAGE.remove(cluster)
-        CLUSTER_UNBOUNDED.remove(cluster)
+        if (cluster is BigCpuCapacity) {
+            cluster.setBigStorage(BigInteger.ZERO)
+            cluster.setUnboundedCapacity(false)
+        }
     }
 
     @JvmStatic
-    fun hasClusterEntry(cluster: CraftingCPUCluster?): Boolean =
-        cluster != null && (CLUSTER_STORAGE.containsKey(cluster) || CLUSTER_UNBOUNDED.containsKey(cluster))
+    fun hasClusterEntry(cluster: CraftingCPUCluster?): Boolean {
+        if (cluster !is BigCpuCapacity) return false
+        return cluster.isUnboundedCapacity() || cluster.getBigStorage().signum() > 0
+    }
 
     @JvmStatic
     fun addClusterBytes(cluster: CraftingCPUCluster?, bytes: BigInteger?, unbounded: Boolean) {
-        if (cluster == null) return
+        if (cluster !is BigCpuCapacity) return
         if (unbounded) {
-            CLUSTER_UNBOUNDED[cluster] = true
-            CLUSTER_STORAGE[cluster] = BigInteger.valueOf(Long.MAX_VALUE)
+            cluster.setUnboundedCapacity(true)
+            cluster.setBigStorage(BigInteger.valueOf(Long.MAX_VALUE))
             return
         }
-        if (isUnbounded(cluster)) return
-        if (bytes == null || bytes.signum() <= 0) return
-        CLUSTER_STORAGE.merge(cluster, bytes, BigInteger::add)
+        if (bytes == null || bytes.signum() <= 0 || cluster.isUnboundedCapacity()) return
+        cluster.setBigStorage(cluster.getBigStorage().add(bytes))
     }
 
     @JvmStatic
-    fun isUnbounded(cluster: CraftingCPUCluster?): Boolean = cluster != null && CLUSTER_UNBOUNDED[cluster] == true
+    fun isUnbounded(cluster: CraftingCPUCluster?): Boolean =
+        cluster is BigCpuCapacity && cluster.isUnboundedCapacity()
 
     @JvmStatic
-    fun isUnbounded(cpu: ICraftingCPU?): Boolean = cpu is CraftingCPUCluster && isUnbounded(cpu)
+    fun isUnbounded(cpu: ICraftingCPU?): Boolean =
+        cpu is CraftingCPUCluster && isUnbounded(cpu)
 
     @JvmStatic
     fun getClusterStorage(cluster: CraftingCPUCluster?): BigInteger {
-        if (cluster == null) return BigInteger.ZERO
-        if (isUnbounded(cluster)) return BigInteger.valueOf(Long.MAX_VALUE)
-        return CLUSTER_STORAGE[cluster] ?: BigInteger.ZERO
+        if (cluster !is BigCpuCapacity) return BigInteger.ZERO
+        if (cluster.isUnboundedCapacity()) return BigInteger.valueOf(Long.MAX_VALUE)
+        return cluster.getBigStorage()
     }
 
     @JvmStatic
@@ -59,7 +58,6 @@ object BigCpuStorage {
         return getClusterStorage(cluster).saturateToLong()
     }
 
-    /** Whether [cluster] can hold a job of [jobBytes] bytes. */
     @JvmStatic
     fun canHold(cluster: CraftingCPUCluster?, jobBytes: Long): Boolean {
         if (cluster == null) return false
@@ -87,43 +85,6 @@ object BigCpuStorage {
         val sb = if (hasClusterEntry(b)) getClusterStorage(b)
         else BigInteger.valueOf(maxOf(0L, b?.availableStorage ?: 0L))
         return sa.compareTo(sb)
-    }
-
-    @JvmStatic
-    fun setEntryStorage(entry: Any?, amount: BigInteger?, unbounded: Boolean) {
-        if (entry == null) return
-        if (unbounded) {
-            ENTRY_UNBOUNDED[entry] = true
-            ENTRY_STORAGE[entry] = BigInteger.valueOf(Long.MAX_VALUE)
-            return
-        }
-        ENTRY_UNBOUNDED.remove(entry)
-        if (amount == null) {
-            ENTRY_STORAGE.remove(entry)
-        } else {
-            ENTRY_STORAGE[entry] = amount
-        }
-    }
-
-    @JvmStatic
-    fun isEntryUnbounded(entry: Any?): Boolean = entry != null && ENTRY_UNBOUNDED[entry] == true
-
-    @JvmStatic
-    fun getEntryStorage(entry: Any?, fallbackLong: Long): BigInteger {
-        if (entry == null) return BigInteger.valueOf(maxOf(0L, fallbackLong))
-        if (isEntryUnbounded(entry)) return BigInteger.valueOf(Long.MAX_VALUE)
-        return ENTRY_STORAGE[entry] ?: BigInteger.valueOf(maxOf(0L, fallbackLong))
-    }
-
-    @JvmStatic
-    fun hasEntryStorage(entry: Any?): Boolean =
-        entry != null && (ENTRY_STORAGE.containsKey(entry) || ENTRY_UNBOUNDED.containsKey(entry))
-
-    /** Binary-unit short label for CPU UI or ∞ when unbounded. */
-    @JvmStatic
-    fun formatStorageLabel(entry: Any?, fallbackLong: Long): String {
-        if (isEntryUnbounded(entry)) return "∞"
-        return formatBinaryBytes(getEntryStorage(entry, fallbackLong))
     }
 
     @JvmStatic
