@@ -1,8 +1,8 @@
 package allyouneed.mixin;
 
 import allyouneed.api.BigStackSource;
-import allyouneed.util.BigAmounts;
-import allyouneed.util.BigKeyCounter;
+import allyouneed.util.bigint.BigAmounts;
+import allyouneed.util.bigint.BigKeyCounter;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.menu.me.common.IncrementalUpdateHelper;

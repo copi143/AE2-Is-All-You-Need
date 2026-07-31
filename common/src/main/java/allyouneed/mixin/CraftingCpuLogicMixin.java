@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.BigCpuStorage;
+import allyouneed.util.bigint.BigCpuStorage;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.ICraftingPlan;
 import appeng.api.networking.crafting.ICraftingRequester;

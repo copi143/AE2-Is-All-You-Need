@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.BigCpuStorage;
+import allyouneed.util.bigint.BigCpuStorage;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import appeng.me.service.CraftingService;
 import org.spongepowered.asm.mixin.Final;

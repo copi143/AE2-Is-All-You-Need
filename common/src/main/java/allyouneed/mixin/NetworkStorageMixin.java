@@ -1,7 +1,7 @@
 package allyouneed.mixin;
 
 import allyouneed.api.BigStackSource;
-import allyouneed.util.BigKeyCounter;
+import allyouneed.util.bigint.BigKeyCounter;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.me.storage.NetworkStorage;

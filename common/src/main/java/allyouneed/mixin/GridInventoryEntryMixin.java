@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.BigAmounts;
+import allyouneed.util.bigint.BigAmounts;
 import appeng.menu.me.common.GridInventoryEntry;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

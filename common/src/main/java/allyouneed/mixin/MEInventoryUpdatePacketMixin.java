@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.BigAmounts;
+import allyouneed.util.bigint.BigAmounts;
 import appeng.core.sync.packets.MEInventoryUpdatePacket;
 import appeng.menu.me.common.GridInventoryEntry;
 import net.minecraft.network.FriendlyByteBuf;

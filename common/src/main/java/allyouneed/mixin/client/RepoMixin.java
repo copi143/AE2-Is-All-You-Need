@@ -1,6 +1,6 @@
 package allyouneed.mixin.client;
 
-import allyouneed.util.BigAmounts;
+import allyouneed.util.bigint.BigAmounts;
 import appeng.api.stacks.AEKey;
 import appeng.client.gui.me.common.Repo;
 import appeng.menu.me.common.GridInventoryEntry;

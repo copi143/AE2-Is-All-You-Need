@@ -1,7 +1,7 @@
 package allyouneed.cell.dimensional
 
 import allyouneed.api.BigStackSource
-import allyouneed.util.BigKeyCounter
+import allyouneed.util.bigint.BigKeyCounter
 import allyouneed.util.saturateToLong
 import appeng.api.config.Actionable
 import appeng.api.config.FuzzyMode

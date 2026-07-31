@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.BigAmounts;
+import allyouneed.util.bigint.BigAmounts;
 import allyouneed.util.CommonKt;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;

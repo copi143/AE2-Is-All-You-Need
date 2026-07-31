@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.BigCpuStorage;
+import allyouneed.util.bigint.BigCpuStorage;
 import appeng.api.networking.crafting.ICraftingCPU;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
 import appeng.menu.me.crafting.CraftingStatusMenu;

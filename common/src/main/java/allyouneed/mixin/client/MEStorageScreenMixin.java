@@ -1,6 +1,6 @@
 package allyouneed.mixin.client;
 
-import allyouneed.util.BigAmounts;
+import allyouneed.util.bigint.BigAmounts;
 import allyouneed.util.CommonKt;
 import allyouneed.util.SiFormat;
 import appeng.api.stacks.AEKey;
