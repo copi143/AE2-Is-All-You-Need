@@ -23,18 +23,21 @@ val Double.Yi get() = this * (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.
 val Double.Ri get() = this * (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0)
 val Double.Qi get() = this * (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0)
 
-fun formatScaledUnit(exp: Int, name: String) = when {
-    exp >= 100 -> "${1 shl (exp - 100)}q_$name"
-    exp >= 90 -> "${1 shl (exp - 90)}r_$name"
-    exp >= 80 -> "${1 shl (exp - 80)}y_$name"
-    exp >= 70 -> "${1 shl (exp - 70)}z_$name"
-    exp >= 60 -> "${1 shl (exp - 60)}e_$name"
-    exp >= 50 -> "${1 shl (exp - 50)}p_$name"
-    exp >= 40 -> "${1 shl (exp - 40)}t_$name"
-    exp >= 30 -> "${1 shl (exp - 30)}g_$name"
-    exp >= 20 -> "${1 shl (exp - 20)}m_$name"
-    exp >= 10 -> "${1 shl (exp - 10)}k_$name"
-    else -> "${1 shl exp}b_$name"
+fun formatScaledUnit(exp: Int, name: String? = null) = run {
+    val prefix = when {
+        exp >= 100 -> "${1 shl (exp - 100)}q"
+        exp >= 90 -> "${1 shl (exp - 90)}r"
+        exp >= 80 -> "${1 shl (exp - 80)}y"
+        exp >= 70 -> "${1 shl (exp - 70)}z"
+        exp >= 60 -> "${1 shl (exp - 60)}e"
+        exp >= 50 -> "${1 shl (exp - 50)}p"
+        exp >= 40 -> "${1 shl (exp - 40)}t"
+        exp >= 30 -> "${1 shl (exp - 30)}g"
+        exp >= 20 -> "${1 shl (exp - 20)}m"
+        exp >= 10 -> "${1 shl (exp - 10)}k"
+        else -> "${1 shl exp}b"
+    }
+    if (name == null) prefix else "${prefix}_${name}"
 }
 
 val Float.floatingExp get() = (this.toBits() shr 23) - 127

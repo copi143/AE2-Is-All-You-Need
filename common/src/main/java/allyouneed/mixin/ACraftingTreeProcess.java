@@ -1,21 +1,16 @@
 package allyouneed.mixin;
 
+import allyouneed.pattern.adaptive.AdaptiveStatisticalPattern;
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.crafting.ICraftingService;
 import appeng.api.stacks.AEKey;
-import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
 import appeng.crafting.CraftBranchFailure;
 import appeng.crafting.inv.CraftingSimulationState;
-import allyouneed.pattern.adaptive.AdaptiveStatisticalPattern;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Custom CraftingTreeProcess that intercepts adaptive statistical patterns
@@ -23,17 +18,15 @@ import java.util.stream.Collectors;
  */
 public class ACraftingTreeProcess {
 
-    private final ACraftingTreeNode parent;
     final IPatternDetails details;
+    private final ACraftingTreeNode parent;
     private final ACraftingCalculation job;
     private final Map<ACraftingTreeNode, Long> nodes = new LinkedHashMap<>();
     boolean possible = true;
     private boolean containerItems;
     private boolean limitQty;
 
-    public ACraftingTreeProcess(ICraftingService cc, ACraftingCalculation job,
-                                IPatternDetails details,
-                                ACraftingTreeNode craftingTreeNode) {
+    public ACraftingTreeProcess(ICraftingService cc, ACraftingCalculation job, IPatternDetails details, ACraftingTreeNode craftingTreeNode) {
         this.parent = craftingTreeNode;
         this.details = details;
         this.job = job;
@@ -44,8 +37,7 @@ public class ACraftingTreeProcess {
         for (int x = 0; x < inputs.length; ++x) {
             var input = inputs[x];
             var firstInput = input.getPossibleInputs()[0];
-            this.nodes.put(new ACraftingTreeNode(cc, job, firstInput.what(), firstInput.amount(), this, x),
-                    input.getMultiplier());
+            this.nodes.put(new ACraftingTreeNode(cc, job, firstInput.what(), firstInput.amount(), this, x), input.getMultiplier());
         }
     }
 
@@ -79,8 +71,7 @@ public class ACraftingTreeProcess {
         return this.limitQty;
     }
 
-    void request(CraftingSimulationState inv, long times)
-            throws CraftBranchFailure, InterruptedException {
+    void request(CraftingSimulationState inv, long times) throws CraftBranchFailure, InterruptedException {
         this.job.handlePausing();
 
         var containerItems = this.containerItems ? new KeyCounter() : null;

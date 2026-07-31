@@ -87,7 +87,7 @@ public abstract class MEStorageScreenMixin {
                     .divide(BigDecimal.valueOf(perUnit), 3, RoundingMode.DOWN);
             result.append(NumberFormat.getNumberInstance().format(units));
         } else {
-            result.append(SiFormat.formatFull(amount));
+            result.append(NumberFormat.getNumberInstance().format(amount));
         }
         String unit = what.getUnitSymbol();
         if (unit != null) {

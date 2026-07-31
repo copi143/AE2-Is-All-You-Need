@@ -27,6 +27,15 @@ dependencies {
 
     modCompileOnly("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modCompileOnly("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation(libs.compose.runtime) // required by compose compiler plugin on test source set
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 repositories {

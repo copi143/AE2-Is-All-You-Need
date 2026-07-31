@@ -1,5 +1,6 @@
 package allyouneed.mixin;
 
+import allyouneed.pattern.adaptive.AdaptiveStatisticalPattern;
 import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.networking.crafting.ICraftingService;
@@ -12,7 +13,6 @@ import appeng.crafting.execution.InputTemplate;
 import appeng.crafting.inv.ChildCraftingSimulationState;
 import appeng.crafting.inv.CraftingSimulationState;
 import appeng.crafting.inv.ICraftingInventory;
-import allyouneed.pattern.adaptive.AdaptiveStatisticalPattern;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,12 +35,11 @@ public class ACraftingTreeNode {
     private final Level level;
     private final AEKey what;
     private final long amount;
-    private ArrayList<ACraftingTreeProcess> nodes = null;
     private final boolean canEmit;
+    private ArrayList<ACraftingTreeProcess> nodes = null;
     private long adaptiveTotalRequested;
 
-    public ACraftingTreeNode(ICraftingService cc, ACraftingCalculation job, AEKey what, long amount,
-                             ACraftingTreeProcess par, int slot) {
+    public ACraftingTreeNode(ICraftingService cc, ACraftingCalculation job, AEKey what, long amount, ACraftingTreeProcess par, int slot) {
         this.parent = par;
         this.parentInput = slot == -1 ? null : par.details.getInputs()[slot];
         this.level = job.getLevel();
@@ -65,8 +64,7 @@ public class ACraftingTreeNode {
                     continue;
                 }
 
-                var fuzzy = cc.getFuzzyCraftable(possibleInput.what(), fuzzyCandidate ->
-                        this.parentInput.isValid(fuzzyCandidate, level));
+                var fuzzy = cc.getFuzzyCraftable(possibleInput.what(), fuzzyCandidate -> this.parentInput.isValid(fuzzyCandidate, level));
 
                 if (fuzzy != null) {
                     return fuzzy;
@@ -189,13 +187,11 @@ public class ACraftingTreeNode {
                     }
                 } else {
                     var pattern = pro.details.getDefinition();
-                    String outputs = Arrays.stream(pro.details.getOutputs())
-                            .map(GenericStack::toString)
-                            .collect(Collectors.joining(", "));
+                    String outputs = Arrays.stream(pro.details.getOutputs()).map(GenericStack::toString).collect(Collectors.joining(", "));
                     String errorMessage = """
                             Unexpected error in the crafting calculation: can't find created items.
                             This is an AE2 bug, please report it, with the following important information:
-
+                            
                             - Found none of %s. Remaining request: %d of %d*%d.
                             - Tried crafting %d times the pattern %s.
                             - Pattern outputs: %s.
@@ -247,8 +243,7 @@ public class ACraftingTreeNode {
     }
 
     private Iterable<InputTemplate> getValidItemTemplates(ICraftingInventory inv) {
-        if (this.parentInput == null)
-            return List.of(new InputTemplate(what, 1));
+        if (this.parentInput == null) return List.of(new InputTemplate(what, 1));
         return CraftingCpuHelper.getValidItemTemplates(inv, this.parentInput, level);
     }
 

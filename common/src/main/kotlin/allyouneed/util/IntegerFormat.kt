@@ -1,6 +1,9 @@
 package allyouneed.util
 
+import java.math.BigDecimal
 import java.math.BigInteger
+import kotlin.math.roundToInt
+import java.math.RoundingMode as JavaRounding
 
 data class IntegerFormat(
     // 每个单位的基数，一般是 1000 或 1024
@@ -49,10 +52,30 @@ data class IntegerFormat(
     val rounding: Rounding = Rounding.HalfUp,
 ) {
     enum class Rounding {
-        Up, Down, HalfUp, HalfDown, HalfEven
+        Up, Down, HalfUp, HalfDown, HalfEven;
+
+        fun toJava(): JavaRounding = when (this) {
+            Up -> JavaRounding.UP
+            Down -> JavaRounding.DOWN
+            HalfUp -> JavaRounding.HALF_UP
+            HalfDown -> JavaRounding.HALF_DOWN
+            HalfEven -> JavaRounding.HALF_EVEN
+        }
+    }
+
+    private val biBase: BigInteger = BigInteger.valueOf(base.toLong())
+    private val promoteThreshold: BigInteger = BigInteger.valueOf((if (threshold <= 0) base else threshold).toLong())
+    private val defaultDecimalPlaces: Int = if (maxDecimalPlaces >= 0) {
+        maxDecimalPlaces
+    } else {
+        kotlin.math.log10(base.toDouble()).roundToInt().coerceAtLeast(0)
     }
 
     init {
+        require(base >= 2) { "base must be >= 2" }
+        require(postfixes.isNotEmpty()) { "postfixes must not be empty" }
+        require(width >= 0) { "width must be >= 0" }
+        require(threshold >= 0) { "threshold must be >= 0" }
         if (width > 0) {
             if (min != null && minDisplay.length > width) {
                 throw IllegalArgumentException("minDisplay length exceeds width")
@@ -66,15 +89,246 @@ data class IntegerFormat(
         }
     }
 
+    fun format(value: Int): String = format(BigInteger.valueOf(value.toLong()))
+
+    fun format(value: Long): String = format(BigInteger.valueOf(value))
+
     fun format(value: BigInteger): String {
-        TODO()
+        if (min != null && value < min) return minDisplay
+        if (max != null && value > max) return maxDisplay
+        val abs = value.abs()
+        return when (value.signum()) {
+            -1 -> {
+                if (!allowNegative) return errDisplay
+                formatSigned('-', abs)
+            }
+
+            1 -> {
+                if (showPositiveSign) {
+                    formatSigned('+', abs)
+                } else {
+                    formatAbsolute(value, width) ?: errDisplay
+                }
+            }
+
+            else -> {
+                formatAbsolute(value, width) ?: errDisplay
+            }
+        }
     }
 
-    fun format(value: Long): String {
-        TODO()
+    private fun formatSigned(sign: Char, abs: BigInteger): String {
+        val bodyW = when {
+            width <= 0 -> 0
+            width == 1 -> return errDisplay
+            else -> width - 1
+        }
+        val body = formatAbsolute(abs, bodyW) ?: return errDisplay
+        val result = sign + body
+        if (width > 0 && result.length > width) return errDisplay
+        return result
     }
 
-    fun format(value: Int): String {
-        TODO()
+    /**
+     * @param bodyWidth 0 = unlimited
+     */
+    private fun formatAbsolute(abs: BigInteger, bodyWidth: Int): String? {
+        // Natural promotion by threshold
+        var level = 0
+        var scaled = abs
+        while (shouldPromote(scaled, level)) {
+            scaled = scaled.divide(biBase)
+            level++
+        }
+
+        // Try rendering; if too long under width, promote further then reduce decimals
+        var attemptLevel = level
+        val maxExtraPromotes = if (bodyWidth > 0) 64 else 0
+        for (extra in 0..maxExtraPromotes) {
+            if (extra > 0) {
+                if (!canPromoteLevel(attemptLevel)) break
+                attemptLevel++
+            }
+            val rendered = renderAtLevel(abs, attemptLevel, bodyWidth) ?: continue
+            if (bodyWidth <= 0 || rendered.length <= bodyWidth) {
+                return rendered
+            }
+        }
+
+        // Last resort: force more promotions while possible
+        while (canPromoteLevel(attemptLevel)) {
+            attemptLevel++
+            val rendered = renderAtLevel(abs, attemptLevel, bodyWidth) ?: continue
+            if (bodyWidth <= 0 || rendered.length <= bodyWidth) {
+                return rendered
+            }
+        }
+
+        return null
+    }
+
+    private fun shouldPromote(scaledAtLevel: BigInteger, level: Int): Boolean {
+        if (scaledAtLevel < promoteThreshold) return false
+        return canPromoteLevel(level)
+    }
+
+    private fun canPromoteLevel(level: Int): Boolean {
+        // level is current index; promoting goes to level+1
+        if (allowPlus) return true
+        return level + 1 <= postfixes.lastIndex
+    }
+
+    private fun unitString(level: Int): String {
+        if (level <= postfixes.lastIndex) {
+            return postfixes[level]
+        }
+        // allowPlus overflow: lastUnit + "+" + k
+        val k = level - postfixes.lastIndex
+        return postfixes.last() + "+" + k
+    }
+
+    /**
+     * value = abs / base^level, with fractional part from remainder.
+     * After rounding carry, may re-promote (e.g. 999.999k → 1M).
+     */
+    private fun renderAtLevel(abs: BigInteger, level: Int, bodyWidth: Int): String? {
+        if (level < 0) return null
+
+        val divisor = biBase.pow(level)
+        val intPart = abs.divide(divisor)
+        val remainder = abs.remainder(divisor)
+
+        val maxFrac = defaultDecimalPlaces
+        val fracStart = if (maxFrac <= 0 || remainder.signum() == 0) 0 else maxFrac
+
+        for (fracDigits in fracStart downTo 0) {
+            val parts = computeParts(intPart, remainder, divisor, fracDigits)
+            var outInt = parts.first
+            var outFrac = parts.second // digits string, may be empty
+            var outLevel = level
+
+            // Rounding carry may reach threshold (e.g. 999.9k → 1000k → 1M)
+            while (outFrac.isEmpty() && outInt >= promoteThreshold && canPromoteLevel(outLevel)) {
+                val divRem = outInt.divideAndRemainder(biBase)
+                outInt = divRem[0]
+                outLevel++
+                if (divRem[1].signum() != 0) {
+                    // 1500 → 1.5 at next unit
+                    val remDigits = defaultDecimalPlaces.coerceAtLeast(1)
+                    val scale = BigInteger.TEN.pow(remDigits)
+                    val fracScaled = divRem[1].multiply(scale).divide(biBase)
+                    outFrac = fracScaled.toString().padStart(remDigits, '0')
+                    if (allowOmitDecimal) {
+                        outFrac = outFrac.trimEnd('0')
+                    }
+                    break
+                }
+            }
+
+            val unit = unitString(outLevel)
+            val mantissa = formatMantissa(outInt, outFrac)
+            val text = mantissa + unit
+            if (bodyWidth <= 0 || text.length <= bodyWidth) {
+                return text
+            }
+        }
+
+        val intOnly = intPart.toString() + unitString(level)
+        if (bodyWidth <= 0 || intOnly.length <= bodyWidth) {
+            return intOnly
+        }
+        return null
+    }
+
+    /** @return (integer part, fractional digit string without trailing zeros if omit) */
+    private fun computeParts(
+        intPart: BigInteger,
+        remainder: BigInteger,
+        divisor: BigInteger,
+        fracDigits: Int,
+    ): Pair<BigInteger, String> {
+        if (remainder.signum() == 0 || divisor == BigInteger.ONE) {
+            return intPart to ""
+        }
+
+        // Round remainder / divisor to fracDigits (0 = round into integer only)
+        val scale = if (fracDigits <= 0) BigInteger.ONE else BigInteger.TEN.pow(fracDigits)
+        val numer = remainder.multiply(scale)
+        val bd = BigDecimal(numer).divide(BigDecimal(divisor), (fracDigits + 2).coerceAtLeast(2), rounding.toJava())
+        var fracScaled = bd.setScale(0, rounding.toJava()).toBigInteger()
+
+        var intOut = intPart
+        if (fracScaled >= scale) {
+            intOut = intOut.add(BigInteger.ONE)
+            fracScaled = BigInteger.ZERO
+        }
+
+        if (fracDigits <= 0 || fracScaled.signum() == 0) {
+            return intOut to ""
+        }
+
+        var fracStr = fracScaled.toString().padStart(fracDigits, '0')
+        if (allowOmitDecimal) {
+            fracStr = fracStr.trimEnd('0')
+        }
+        return intOut to fracStr
+    }
+
+    private fun formatMantissa(intOut: BigInteger, fracStr: String): String {
+        if (fracStr.isEmpty()) {
+            return intOut.toString()
+        }
+        return if (intOut.signum() == 0 && allowOmitLeadingZero) {
+            ".$fracStr"
+        } else {
+            "$intOut.$fracStr"
+        }
+    }
+
+    companion object {
+        @JvmField
+        val SIPostfixes = listOf("", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q")
+
+        @JvmField
+        val IecPostfixes = listOf("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi", "Ri", "Qi")
+
+        /** SI decimal prefixes, base 1000. */
+        @JvmField
+        val SI = IntegerFormat(
+            base = 1000,
+            postfixes = SIPostfixes,
+            allowOmitDecimal = true,
+        )
+
+        /** IEC 80000-13 binary prefixes, base 1024. */
+        @JvmField
+        val IEC = IntegerFormat(
+            base = 1024,
+            postfixes = IecPostfixes,
+            allowOmitDecimal = true,
+        )
+
+        /** SI with a fixed slot width (AE2 readable-number style). */
+        @JvmStatic
+        fun si(width: Int): IntegerFormat = SI.copy(
+            width = width,
+            allowOmitDecimal = true,
+            allowOmitLeadingZero = width in 1..4,
+        )
+
+        /** IEC with a fixed slot width. */
+        @JvmStatic
+        fun iec(width: Int): IntegerFormat = IEC.copy(
+            width = width,
+            allowOmitDecimal = true,
+            allowOmitLeadingZero = width in 1..4,
+        )
+
+        @JvmStatic
+        fun saturateToLong(amount: BigInteger): Long {
+            if (amount.signum() < 0) return 0L
+            if (amount.bitLength() > 63) return Long.MAX_VALUE
+            return amount.toLong()
+        }
     }
 }

@@ -1,12 +1,7 @@
 package allyouneed.cell
 
 import allyouneed.rl
-import allyouneed.util.Gi
-import allyouneed.util.Ki
-import allyouneed.util.Mi
-import allyouneed.util.Ti
-import allyouneed.util.floatingExp
-import allyouneed.util.formatScaledUnit
+import allyouneed.util.*
 import appeng.block.AEBaseBlockItem
 import appeng.block.AEBaseEntityBlock
 import appeng.block.crafting.CraftingUnitBlock
@@ -25,42 +20,43 @@ import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
 
-enum class CraftingStorage(name: String, size: Double = -1.0) : ICraftingUnitType {
-    Micro("Micro Crafting Storage", 1.0.Ki),
-    Simple("Simple Crafting Storage", 4.0.Ki),
-    Basic("Basic Crafting Storage", 16.0.Ki),
-    Normal("Normal Crafting Storage", 64.0.Ki),
-    Enhanced("Enhanced Crafting Storage", 256.0.Ki),
-    Advanced("Advanced Crafting Storage", 1.0.Mi),
-    Reinforced("Reinforced Crafting Storage", 4.0.Mi),
-    Dense("Dense Crafting Storage", 16.0.Mi),
-    Hyper("Hyper Crafting Storage", 64.0.Mi),
-    Ultra("Ultra Crafting Storage", 256.0.Mi),
-    Ultimate("Ultimate Crafting Storage", 1.0.Gi),
-    Singular("Singular Crafting Storage", 4.0.Gi),
-    Quantum("Quantum Crafting Storage", 16.0.Gi),
-    Stellar("Stellar Crafting Storage", 64.0.Gi),
-    Cosmic("Cosmic Crafting Storage", 256.0.Gi),
-    T1("1T Crafting Storage", 1.0.Ti),
-    T4("4T Crafting Storage", 4.0.Ti),
-    T16("16T Crafting Storage", 16.0.Ti),
-    T64("64T Crafting Storage", 64.0.Ti),
-    T256("256T Crafting Storage", 256.0.Ti),
-    Creative("Creative Crafting Storage");
+enum class CraftingStorage(size: Double = -1.0) : ICraftingUnitType {
+    Micro(1.0.Ki), //
+    Simple(4.0.Ki), //
+    Basic(16.0.Ki), //
+    Normal(64.0.Ki), //
+    Enhanced(256.0.Ki), //
+    Advanced(1.0.Mi), //
+    Reinforced(4.0.Mi), //
+    Dense(16.0.Mi), //
+    Hyper(64.0.Mi), //
+    Ultra(256.0.Mi), //
+    Ultimate(1.0.Gi), //
+    Singular(4.0.Gi), //
+    Quantum(16.0.Gi), //
+    Stellar(64.0.Gi), //
+    Cosmic(256.0.Gi), //
+    T1(1.0.Ti), //
+    T4(4.0.Ti), //
+    T16(16.0.Ti), //
+    T64(64.0.Ti), //
+    T256(256.0.Ti), //
+    Creative; //
 
-    val blockName: String = name
+    private val prefix = if (size < 0) {
+        null
+    } else {
+        assert(size.toBits() and 0x00fffff_ffffffff == 0L)
+        formatScaledUnit(size.floatingExp)
+    }
+
+    val blockName: String = (prefix?.uppercase() ?: "Creative") + " Crafting Storage"
     val isCreative: Boolean = size < 0
 
     /** Capacity in bytes for non-creative tiers (exact power-of-two). */
     private val sizeBytes: Long = if (size > 0) size.toLong() else -1L
 
-    val blockId: ResourceLocation = run {
-        if (isCreative) {
-            return@run name.lowercase().replace(" ", "_").rl
-        }
-        assert(size.toBits() and 0x00fffff_ffffffff == 0L)
-        formatScaledUnit(size.floatingExp, "crafting_storage").rl
-    }
+    val blockId: ResourceLocation = ((prefix ?: "creative") + "_crafting_storage").rl
 
     val blockSupplier = Supplier<Block> { CraftingUnitBlock(this) }
 
@@ -76,8 +72,7 @@ enum class CraftingStorage(name: String, size: Double = -1.0) : ICraftingUnitTyp
         }
     }
 
-    override fun getStorageBytes(): Long =
-        if (isCreative) Long.MAX_VALUE else sizeBytes
+    override fun getStorageBytes(): Long = if (isCreative) Long.MAX_VALUE else sizeBytes
 
     /**
      * Full capacity for BigInteger CPU accounting.

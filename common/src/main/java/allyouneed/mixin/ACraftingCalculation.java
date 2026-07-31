@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
  * for adaptive probability patterns (ceil(N/p) scaling).
  */
 public class ACraftingCalculation extends CraftingCalculation {
+    final ICraftingSimulationRequester simRequester;
     private final NetworkCraftingSimulationState networkInv;
     private final Level level;
     private final KeyCounter missing = new KeyCounter();
@@ -38,17 +39,15 @@ public class ACraftingCalculation extends CraftingCalculation {
     private final AEKey output;
     private final long requestedAmount;
     private final CalculationStrategy strategy;
+    private final List<CraftAttempt> attempts = AELog.isCraftingLogEnabled() ? new ArrayList<>() : null;
     private boolean simulate = false;
-    final ICraftingSimulationRequester simRequester;
     private boolean running = false;
     private boolean done = false;
     private int time = 5;
     private int incTime = Integer.MAX_VALUE;
-    private final List<CraftAttempt> attempts = AELog.isCraftingLogEnabled() ? new ArrayList<>() : null;
     private double overallSuccessProbability = 1.0;
 
-    public ACraftingCalculation(Level level, IGrid grid, ICraftingSimulationRequester simRequester,
-            GenericStack output, CalculationStrategy strategy) {
+    public ACraftingCalculation(Level level, IGrid grid, ICraftingSimulationRequester simRequester, GenericStack output, CalculationStrategy strategy) {
         super(level, grid, simRequester, output, strategy);
         this.level = level;
         this.output = output.what();
@@ -239,11 +238,9 @@ public class ACraftingCalculation extends CraftingCalculation {
             }
 
             StringBuilder message = new StringBuilder();
-            message.append("AdaptiveCraftingCalculation issued by %s requesting [%dx%s] breakdown:\n".formatted(
-                    actionSourceName, this.requestedAmount, this.output));
+            message.append("AdaptiveCraftingCalculation issued by %s requesting [%dx%s] breakdown:\n".formatted(actionSourceName, this.requestedAmount, this.output));
             for (var attempt : this.attempts) {
-                message.append(" - %s in %d ms\n".formatted(
-                        attempt.description, attempt.stopwatch.elapsed(TimeUnit.MILLISECONDS)));
+                message.append(" - %s in %d ms\n".formatted(attempt.description, attempt.stopwatch.elapsed(TimeUnit.MILLISECONDS)));
             }
             message.append(" - final plan: %d (%d bytes)".formatted(plan.finalOutput().amount(), plan.bytes()));
             message.append("\n - overall success probability: %.4f".formatted(this.overallSuccessProbability));
