@@ -2,6 +2,8 @@ package allyouneed
 
 import allyouneed.api.machine.BuiltinMachineTypes
 import allyouneed.cell.CreativeMeCellHandler
+import allyouneed.cell.ItemStorageCell
+import allyouneed.cell.ItemStorageCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModItems
@@ -56,6 +58,7 @@ object CommonObject {
     fun commonSetup() {
         StorageCells.addCellHandler(CreativeMeCellHandler)
         StorageCells.addCellHandler(DimensionalCellHandler)
+        StorageCells.addCellHandler(ItemStorageCellHandler)
         StorageCellModels.registerModel(
             ModItems.CREATIVE_ME_CELL,
             ResourceLocation("ae2", "block/drive/cells/creative_cell"),
@@ -64,9 +67,22 @@ object CommonObject {
             ModItems.DIMENSIONAL_CELL,
             ResourceLocation("ae2", "block/drive/cells/creative_cell"),
         )
+        for (cell in ItemStorageCell.entries) {
+            StorageCellModels.registerModel(
+                cell.item,
+                ResourceLocation("ae2isallyouneed", "block/drive/cells/" + cell.driveCellId.path),
+            )
+        }
         val cellGroup = GuiText.StorageCells.translationKey
         Upgrades.add(AEItems.INVERTER_CARD, ModItems.DIMENSIONAL_CELL, 1, cellGroup)
         Upgrades.add(AEItems.FUZZY_CARD, ModItems.DIMENSIONAL_CELL, 1, cellGroup)
+        for (cell in ItemStorageCell.entries) {
+            val cellItem = cell.item.asItem()
+            Upgrades.add(AEItems.FUZZY_CARD, cellItem, 1, cellGroup)
+            Upgrades.add(AEItems.INVERTER_CARD, cellItem, 1, cellGroup)
+            Upgrades.add(AEItems.EQUAL_DISTRIBUTION_CARD, cellItem, 1, cellGroup)
+            Upgrades.add(AEItems.VOID_CARD, cellItem, 1, cellGroup)
+        }
     }
 
     fun registerParts() {

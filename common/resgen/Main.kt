@@ -83,6 +83,19 @@ private val craftingStorages = listOf(
     CellEntry("creative_crafting_storage", "Creative Crafting Storage", "#E040FB", isCreative = true),
 )
 
+// Item storage cell tiers, colored per AE2_COLORS like the other storage tiers.
+private val itemStorageCells = run {
+    val tiers = listOf(
+        "1k", "4k", "16k", "64k", "256k",
+        "1m", "4m", "16m", "64m", "256m",
+        "1g", "4g", "16g", "64g", "256g",
+        "1t", "4t", "16t", "64t", "256t",
+    )
+    tiers.mapIndexed { i, tier ->
+        CellEntry("${tier}_item_storage_cell", "${tier.uppercase()} Item Storage Cell", AE2_COLORS[i].hex)
+    }
+}
+
 fun main(args: Array<String>) {
     if (args.isNotEmpty()) {
         println("Arguments: ${args.joinToString()}")
@@ -118,6 +131,12 @@ fun main(args: Array<String>) {
 
         // Adaptive Pattern item (just an item model, no block)
         item("adaptive_pattern", "Adaptive Pattern")
+
+        // Item storage cells: LED item model + drive-cell block model
+        for (cell in itemStorageCells) {
+            cellItem(cell.id, cell.displayName)
+            driveCellModel(cell.id.removeSuffix("_item_storage_cell") + "_item_cell")
+        }
 
         translation("item.$modId.creative_me_cell", "Creative ME Storage Cell")
         translation("item.$modId.dimensional_cell", "Dimensional Storage Cell")
@@ -158,6 +177,36 @@ fun main(args: Array<String>) {
             }
         }
 
+        // Item storage cell FG base hue (dominant opaque ≈ rgb 154,130,255)
+        source(sourceTextures, "#9A82FF")
+
+        // Item storage cells: bg (no tint) + fg (tint per tier), output to textures/item
+        for (cell in itemStorageCells) {
+            layeredTarget(
+                bg = "item_storage_cell_bg",
+                mid = "item_storage_cell_fg",
+                top = null,
+                outputPrefix = cell.id,
+                color = cell.color,
+                levels = null,
+                dir = "item",
+            )
+        }
+
+        // Drive cell faces: bg (opaque plate) + fg (tint per tier). The drive_cell model
+        // samples only rows 0-6 / cols 0-6, so these templates are designed for that region.
+        for (cell in itemStorageCells) {
+            val driveId = cell.id.removeSuffix("_item_storage_cell") + "_item_cell"
+            layeredTarget(
+                bg = "drive_item_cell_bg",
+                mid = "drive_item_cell_fg",
+                top = null,
+                outputPrefix = "drive/cells/$driveId",
+                color = cell.color,
+                levels = null,
+            )
+        }
+
         // Crafting storage FG base hue (dominant opaque ≈ rgb 235,142,75)
         source(sourceTextures, "#EB8E4B")
 
@@ -192,6 +241,12 @@ fun main(args: Array<String>) {
 
     val craftingTexOut = texOut.resolve("crafting")
     craftingTexOut.createDirectories()
+
+    // Status-LED item layer: single-pixel dot, tinted at runtime by ItemStorageCellItem.getColor.
+    val itemTexOut = output.resolve("textures/item")
+    itemTexOut.createDirectories()
+    sourceTextures.resolve("item_storage_cell_light.png")
+        .copyTo(itemTexOut.resolve("item_storage_cell_light.png"), overwrite = true)
 
     // Light overlays live under block/crafting/; ensure atlas + dummy model stitch them
     // (vanilla already scans textures/block/, but keep explicit for clarity).
@@ -236,8 +291,6 @@ fun main(args: Array<String>) {
     }
 
     // Adaptive pattern item texture (placeholder)
-    val itemTexOut = output.resolve("textures/item")
-    itemTexOut.createDirectories()
     val apTex = sourceTextures.resolve("me_io_drive.png")
     if (apTex.exists()) {
         apTex.copyTo(itemTexOut.resolve("adaptive_pattern.png"), overwrite = true)

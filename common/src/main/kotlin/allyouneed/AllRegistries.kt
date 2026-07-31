@@ -2,6 +2,7 @@ package allyouneed
 
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
+import allyouneed.cell.ItemStorageCell
 import allyouneed.pattern.ModItems
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
@@ -33,6 +34,9 @@ object AllRegistries {
         }
         CraftingStorage.entries.forEach {
             blocks += it.define
+        }
+        ItemStorageCell.entries.forEach {
+            items += it.item as ItemDefinition<Item>
         }
 
         // Appear in AE2's main creative tab (same path as EnergyCell)

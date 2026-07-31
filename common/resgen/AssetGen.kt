@@ -47,6 +47,37 @@ class AssetGen(private val modId: String, private val output: Path, private val 
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
     }
 
+    /**
+     * Storage cell item: generated model with a tintable status-LED layer on top
+     * (layer1 tinted via ItemColors, like vanilla item_storage_cell).
+     */
+    fun cellItem(name: String, displayName: String, texture: String = "item/$name") {
+        translations["item.$modId.$name"] = displayName
+
+        val itemJson = JsonObject().apply {
+            addProperty("parent", "minecraft:item/generated")
+            add("textures", JsonObject().apply {
+                addProperty("layer0", "$modId:$texture")
+                addProperty("layer1", "$modId:item/item_storage_cell_light")
+            })
+        }
+        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
+    /**
+     * Drive-cell block model (rendered inside ME drives via StorageCellModels),
+     * mirroring vanilla `ae2:block/drive/cells/1k_item_cell`.
+     */
+    fun driveCellModel(name: String) {
+        val modelJson = JsonObject().apply {
+            addProperty("parent", "ae2:block/drive/drive_cell")
+            add("textures", JsonObject().apply {
+                addProperty("cell", "$modId:block/drive/cells/$name")
+            })
+        }
+        blockModels += GeneratedFile("models/block/drive/cells/$name.json", modelJson)
+    }
+
     fun cubeAllWithFullness(
         name: String,
         displayName: String,

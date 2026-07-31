@@ -29,6 +29,7 @@ class TextureGen(private val output: Path) {
         val targetColor: RGB?,
         val levels: IntRange?,
         val overlays: List<String> = emptyList(),
+        val dir: String = "block",
         val sourceHz: JzCzHz,
     )
 
@@ -84,9 +85,10 @@ class TextureGen(private val output: Path) {
         color: String?,
         levels: IntRange? = 0..4,
         overlays: List<String> = emptyList(),
+        dir: String = "block",
     ) {
         layered += LayeredEntry(
-            bg, mid, top, outputPrefix, color?.let { RGB(it) }, levels, overlays, currentSourceHz(),
+            bg, mid, top, outputPrefix, color?.let { RGB(it) }, levels, overlays, dir, currentSourceHz(),
         )
     }
 
@@ -212,7 +214,7 @@ class TextureGen(private val output: Path) {
                 addAll(overlayImages)
             }
             val composed = composite(*layers.toTypedArray())
-            writePng(composed, entry.outputPrefix, suffix)
+            writePng(composed, entry.outputPrefix, suffix, entry.dir)
         }
     }
 
@@ -383,11 +385,11 @@ $frames
         return out
     }
 
-    private fun writePng(image: BufferedImage, outputPrefix: String, suffix: String) {
+    private fun writePng(image: BufferedImage, outputPrefix: String, suffix: String, dir: String = "block") {
         val outRelative = if (outputPrefix.contains('/')) {
-            "textures/block/${outputPrefix.substringBeforeLast('/')}"
+            "textures/$dir/${outputPrefix.substringBeforeLast('/')}"
         } else {
-            "textures/block"
+            "textures/$dir"
         }
         val outName = if (outputPrefix.contains('/')) {
             outputPrefix.substringAfterLast('/') + suffix

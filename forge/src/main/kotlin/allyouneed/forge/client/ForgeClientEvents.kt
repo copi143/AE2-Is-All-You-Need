@@ -1,6 +1,8 @@
 package allyouneed.forge.client
 
 import allyouneed.cell.CraftingStorage
+import allyouneed.cell.ItemStorageCell
+import allyouneed.cell.ItemStorageCellItem
 import allyouneed.client.CraftingStorageModels
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
@@ -19,6 +21,7 @@ import net.minecraft.client.renderer.RenderType
 import net.minecraft.resources.ResourceLocation
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.client.event.ModelEvent
+import net.minecraftforge.client.event.RegisterColorHandlersEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
@@ -33,6 +36,14 @@ object ForgeClientEvents {
                 CraftingStorageModels.createFormedModel(storage),
             )
         }
+    }
+
+    @SubscribeEvent
+    fun onRegisterItemColors(event: RegisterColorHandlersEvent.Item) {
+        event.register(
+            { stack, tintIndex -> ItemStorageCellItem.getColor(stack, tintIndex) },
+            *ItemStorageCell.entries.map { it.item.asItem() }.toTypedArray(),
+        )
     }
 
     /** Pull light overlays into the blocks atlas (built-in formed models skip JSON deps). */

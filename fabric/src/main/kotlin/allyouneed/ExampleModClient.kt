@@ -1,6 +1,8 @@
 package allyouneed
 
 import allyouneed.cell.CraftingStorage
+import allyouneed.cell.ItemStorageCell
+import allyouneed.cell.ItemStorageCellItem
 import allyouneed.client.CraftingStorageModels
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
@@ -15,11 +17,16 @@ import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
 import net.fabricmc.fabric.api.client.model.ModelLoadingRegistry
+import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry
 import net.minecraft.client.gui.screens.MenuScreens
 import net.minecraft.client.renderer.RenderType
 import net.minecraft.resources.ResourceLocation
 
 fun initClient() {
+    ColorProviderRegistry.ITEM.register(
+        { stack, tintIndex -> ItemStorageCellItem.getColor(stack, tintIndex) },
+        *ItemStorageCell.entries.map { it.item.asItem() }.toTypedArray(),
+    )
     for (storage in CraftingStorage.entries) {
         val id = CraftingStorageModels.formedModelId(storage)
         ModelLoadingRegistry.INSTANCE.registerResourceProvider { _ ->
