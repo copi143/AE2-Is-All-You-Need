@@ -72,11 +72,17 @@ dependencies {
         "org.jetbrains.kotlinx:atomicfu-jvm:0.23.2",
     ).forEach { jarJar(it) }
 
+    jarJar("icyllis.modernui:ModernUI-Core:3.12.0")
+    modRuntimeOnly("icyllis.modernui:ModernUI-Forge:1.20.1-3.12.0.1")
+
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modRuntimeOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
 
     modCompileOnly("dev.emi:emi-forge:${libs.versions.emi.get()}:api")
     modRuntimeOnly("dev.emi:emi-forge:${libs.versions.emi.get()}")
+
+    modCompileOnly("maven.modrinth:jade:11.13.3+forge")
+    modRuntimeOnly("maven.modrinth:jade:11.13.3+forge")
 
     modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modImplementation("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
@@ -94,15 +100,12 @@ dependencies {
 // Drop module-info so atomicfu does not require a separate kotlin.stdlib module (KFF provides Kotlin).
 tasks.named("jarJar") {
     doLast {
-        layout.buildDirectory.dir("generated/jarJar").get().asFile
-            .walkTopDown()
-            .filter { it.extension == "jar" }
+        layout.buildDirectory.dir("generated/jarJar").get().asFile.walkTopDown().filter { it.extension == "jar" }
             .forEach { jar ->
                 val tmp = jar.resolveSibling("${jar.name}.tmp")
                 JarFile(jar).use { input ->
                     JarOutputStream(tmp.outputStream()).use { output ->
-                        input.entries().asSequence()
-                            .filterNot { it.name.endsWith("module-info.class") }
+                        input.entries().asSequence().filterNot { it.name.endsWith("module-info.class") }
                             .forEach { entry ->
                                 output.putNextEntry(JarEntry(entry.name).apply { time = entry.time })
                                 if (!entry.isDirectory) input.getInputStream(entry).use { it.copyTo(output) }
@@ -123,6 +126,10 @@ tasks.named<ProcessResources>("processResources") {
 
 repositories {
     maven {
+        name = "Modrinth"
+        url = uri("https://api.modrinth.com/maven")
+    }
+    maven {
         name = "TerraformersMC"
         url = uri("https://maven.terraformersmc.com/")
     }
@@ -141,6 +148,10 @@ repositories {
     maven {
         name = "Google Android"
         url = uri("https://dl.google.com/dl/android/maven2/")
+    }
+    maven {
+        name = "IzzelAliz Maven"
+        url = uri("https://maven.izzel.io/releases/")
     }
     mavenCentral()
 }

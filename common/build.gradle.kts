@@ -40,6 +40,10 @@ tasks.withType<Test> {
 
 repositories {
     maven {
+        name = "Modrinth"
+        url = uri("https://api.modrinth.com/maven")
+    }
+    maven {
         name = "TerraformersMC"
         url = uri("https://maven.terraformersmc.com/")
     }
@@ -58,6 +62,10 @@ repositories {
     maven {
         name = "Google Android"
         url = uri("https://dl.google.com/dl/android/maven2/")
+    }
+    maven {
+        name = "IzzelAliz Maven"
+        url = uri("https://maven.izzel.io/releases/")
     }
     mavenCentral()
 }

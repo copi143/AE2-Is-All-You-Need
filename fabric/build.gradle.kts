@@ -23,6 +23,8 @@ dependencies {
     modCompileOnly("dev.emi:emi-fabric:${libs.versions.emi.get()}:api")
     modRuntimeOnly("dev.emi:emi-fabric:${libs.versions.emi.get()}")
 
+    modCompileOnly("maven.modrinth:jade:11.13.3+fabric")
+
     modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modImplementation("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")
 
@@ -39,6 +41,10 @@ dependencies {
 }
 
 repositories {
+    maven {
+        name = "Modrinth"
+        url = uri("https://api.modrinth.com/maven")
+    }
     maven {
         name = "TerraformersMC"
         url = uri("https://maven.terraformersmc.com/")
@@ -58,6 +64,10 @@ repositories {
     maven {
         name = "Google Android"
         url = uri("https://dl.google.com/dl/android/maven2/")
+    }
+    maven {
+        name = "IzzelAliz Maven"
+        url = uri("https://maven.izzel.io/releases/")
     }
     mavenCentral()
 }
