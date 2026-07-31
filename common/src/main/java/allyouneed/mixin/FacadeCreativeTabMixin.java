@@ -1,8 +1,6 @@
 package allyouneed.mixin;
 
 import appeng.core.FacadeCreativeTab;
-import net.minecraft.core.Registry;
-import net.minecraft.world.item.CreativeModeTab;
 import org.spongepowered.asm.mixin.Mixin;
 
 /**

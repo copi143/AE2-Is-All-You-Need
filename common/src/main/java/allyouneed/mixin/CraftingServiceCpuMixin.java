@@ -32,12 +32,7 @@ public class CraftingServiceCpuMixin {
 
     @Inject(method = "<clinit>", at = @At("RETURN"))
     private static void allyouneed$bigComparators(CallbackInfo ci) {
-        FAST_FIRST_COMPARATOR = Comparator
-                .comparingInt(CraftingCPUCluster::getCoProcessors)
-                .reversed()
-                .thenComparing(BigCpuStorage::compareStorage);
-        FAST_LAST_COMPARATOR = Comparator
-                .comparingInt(CraftingCPUCluster::getCoProcessors)
-                .thenComparing(BigCpuStorage::compareStorage);
+        FAST_FIRST_COMPARATOR = Comparator.comparingInt(CraftingCPUCluster::getCoProcessors).reversed().thenComparing(BigCpuStorage::compareStorage);
+        FAST_LAST_COMPARATOR = Comparator.comparingInt(CraftingCPUCluster::getCoProcessors).thenComparing(BigCpuStorage::compareStorage);
     }
 }

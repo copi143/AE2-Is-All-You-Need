@@ -21,7 +21,7 @@ public class CraftingCpuLogicMixin {
 
     @Final
     @Shadow
-    private CraftingCPUCluster cluster;
+    CraftingCPUCluster cluster;
 
     /**
      * Before the vanilla bytes check, reject too-small CPUs using BigInteger capacity.
@@ -30,13 +30,7 @@ public class CraftingCpuLogicMixin {
      * instead replace the comparison via forcing getAvailableStorage (separate redirect).
      */
     @Inject(method = "trySubmitJob", at = @At("HEAD"), cancellable = true)
-    private void allyouneed$rejectTooSmall(
-            IGrid grid,
-            ICraftingPlan plan,
-            IActionSource src,
-            ICraftingRequester requester,
-            CallbackInfoReturnable<ICraftingSubmitResult> cir
-    ) {
+    private void allyouneed$rejectTooSmall(IGrid grid, ICraftingPlan plan, IActionSource src, ICraftingRequester requester, CallbackInfoReturnable<ICraftingSubmitResult> cir) {
         // Only handle the size dimension here when unbounded / big path differs from long.
         // Busy/offline still handled by vanilla after we don't cancel.
         if (BigCpuStorage.hasClusterEntry(cluster) || BigCpuStorage.isUnbounded(cluster)) {

@@ -323,12 +323,5 @@ data class IntegerFormat(
             allowOmitDecimal = true,
             allowOmitLeadingZero = width in 1..4,
         )
-
-        @JvmStatic
-        fun saturateToLong(amount: BigInteger): Long {
-            if (amount.signum() < 0) return 0L
-            if (amount.bitLength() > 63) return Long.MAX_VALUE
-            return amount.toLong()
-        }
     }
 }

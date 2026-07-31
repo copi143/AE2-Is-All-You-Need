@@ -12,10 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class CPUSelectionListMixin {
 
     @Inject(method = "formatStorage", at = @At("HEAD"), cancellable = true)
-    private void allyouneed$formatStorage(
-            CraftingStatusMenu.CraftingCpuListEntry cpu,
-            CallbackInfoReturnable<String> cir
-    ) {
+    private void allyouneed$formatStorage(CraftingStatusMenu.CraftingCpuListEntry cpu, CallbackInfoReturnable<String> cir) {
         long storage = cpu.storage();
         if (storage == Long.MAX_VALUE || storage < 0) {
             cir.setReturnValue("\u221E");

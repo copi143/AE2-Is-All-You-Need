@@ -1,7 +1,7 @@
 package allyouneed.mixin;
 
 import allyouneed.util.BigAmounts;
-import allyouneed.util.SiFormat;
+import allyouneed.util.CommonKt;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.core.sync.packets.MEInventoryUpdatePacket;
@@ -23,43 +23,18 @@ public abstract class MEInventoryUpdatePacketBuilderMixin {
     @Unique
     private BigInteger allyouneed$pendingBig;
 
-    @Redirect(
-            method = "addChanges",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lappeng/api/stacks/KeyCounter;get(Lappeng/api/stacks/AEKey;)J",
-                    ordinal = 0
-            )
-    )
+    @Redirect(method = "addChanges", at = @At(value = "INVOKE", target = "Lappeng/api/stacks/KeyCounter;get(Lappeng/api/stacks/AEKey;)J", ordinal = 0))
     private long allyouneed$storedFromBigChanges(KeyCounter counter, AEKey key) {
         return allyouneed$resolveStored(counter, key);
     }
 
-    @Redirect(
-            method = "addFull",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lappeng/api/stacks/KeyCounter;get(Lappeng/api/stacks/AEKey;)J",
-                    ordinal = 0
-            )
-    )
+    @Redirect(method = "addFull", at = @At(value = "INVOKE", target = "Lappeng/api/stacks/KeyCounter;get(Lappeng/api/stacks/AEKey;)J", ordinal = 0))
     private long allyouneed$storedFromBigFull(KeyCounter counter, AEKey key) {
         return allyouneed$resolveStored(counter, key);
     }
 
-    @Redirect(
-            method = {"addChanges", "addFull"},
-            at = @At(
-                    value = "NEW",
-                    target = "(JLappeng/api/stacks/AEKey;JJZ)Lappeng/menu/me/common/GridInventoryEntry;"
-            )
-    )
-    private GridInventoryEntry allyouneed$createEntryWithBig(
-            long serial,
-            AEKey what,
-            long storedAmount,
-            long requestableAmount,
-            boolean craftable) {
+    @Redirect(method = {"addChanges", "addFull"}, at = @At(value = "NEW", target = "(JLappeng/api/stacks/AEKey;JJZ)Lappeng/menu/me/common/GridInventoryEntry;"))
+    private GridInventoryEntry allyouneed$createEntryWithBig(long serial, AEKey what, long storedAmount, long requestableAmount, boolean craftable) {
         GridInventoryEntry entry = new GridInventoryEntry(serial, what, storedAmount, requestableAmount, craftable);
         if (this.allyouneed$pendingBig != null) {
             BigAmounts.setEntryAmount(entry, this.allyouneed$pendingBig);
@@ -73,7 +48,7 @@ public abstract class MEInventoryUpdatePacketBuilderMixin {
         BigInteger big = BigAmounts.getCurrentAmount(key);
         if (big != null) {
             this.allyouneed$pendingBig = big;
-            return SiFormat.saturateToLong(big);
+            return CommonKt.saturateToLong(big);
         }
         this.allyouneed$pendingBig = null;
         return counter.get(key);

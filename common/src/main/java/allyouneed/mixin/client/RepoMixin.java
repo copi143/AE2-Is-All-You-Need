@@ -20,20 +20,8 @@ public class RepoMixin {
      * When an incremental update rebuilds a GridInventoryEntry without AEKey,
      * copy BigInteger amount from the packet entry onto the newly constructed one.
      */
-    @Redirect(
-            method = "handleUpdate(Lappeng/menu/me/common/GridInventoryEntry;)V",
-            at = @At(
-                    value = "NEW",
-                    target = "(JLappeng/api/stacks/AEKey;JJZ)Lappeng/menu/me/common/GridInventoryEntry;"
-            )
-    )
-    private GridInventoryEntry allyouneed$newEntryWithBig(
-            long serial,
-            AEKey what,
-            long storedAmount,
-            long requestableAmount,
-            boolean craftable,
-            GridInventoryEntry serverEntry) {
+    @Redirect(method = "handleUpdate(Lappeng/menu/me/common/GridInventoryEntry;)V", at = @At(value = "NEW", target = "(JLappeng/api/stacks/AEKey;JJZ)Lappeng/menu/me/common/GridInventoryEntry;"))
+    private GridInventoryEntry allyouneed$newEntryWithBig(long serial, AEKey what, long storedAmount, long requestableAmount, boolean craftable, GridInventoryEntry serverEntry) {
         GridInventoryEntry created = new GridInventoryEntry(serial, what, storedAmount, requestableAmount, craftable);
         if (BigAmounts.hasEntryAmount(serverEntry)) {
             BigAmounts.setEntryAmount(created, BigAmounts.getEntryAmount(serverEntry));

@@ -14,13 +14,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(value = CraftingStatusMenu.class, remap = false)
 public class CraftingStatusMenuMixin {
 
-    @Redirect(
-            method = "createCpuList",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lappeng/api/networking/crafting/ICraftingCPU;getAvailableStorage()J"
-            )
-    )
+    @Redirect(method = "createCpuList", at = @At(value = "INVOKE", target = "Lappeng/api/networking/crafting/ICraftingCPU;getAvailableStorage()J"))
     private long allyouneed$cpuStorage(ICraftingCPU cpu) {
         if (cpu instanceof CraftingCPUCluster cluster) {
             return BigCpuStorage.getClusterStorageLong(cluster);

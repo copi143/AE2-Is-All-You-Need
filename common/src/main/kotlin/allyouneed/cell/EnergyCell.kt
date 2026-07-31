@@ -1,12 +1,7 @@
 package allyouneed.cell
 
 import allyouneed.rl
-import allyouneed.util.Gi
-import allyouneed.util.Ki
-import allyouneed.util.Mi
-import allyouneed.util.Ti
-import allyouneed.util.floatingExp
-import allyouneed.util.formatScaledUnit
+import allyouneed.util.*
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
 import appeng.block.AEBaseEntityBlock
@@ -33,51 +28,49 @@ enum class EnergyCell(
     size: Double = -1.0,
     val selfPowered: Boolean = false,
 ) {
-    // ── Normal tiers ─────────────────────────────────────────────
-    Micro("Micro Energy Cell", 1.0.Ki),
-    Simple("Simple Energy Cell", 4.0.Ki),
-    Basic("Basic Energy Cell", 16.0.Ki),
-    Normal("Normal Energy Cell", 64.0.Ki),
-    Enhanced("Enhanced Energy Cell", 256.0.Ki),
-    Advanced("Advanced Energy Cell", 1.0.Mi),
-    Reinforced("Reinforced Energy Cell", 4.0.Mi),
-    Dense("Dense Energy Cell", 16.0.Mi),
-    Hyper("Hyper Energy Cell", 64.0.Mi),
-    Ultra("Ultra Energy Cell", 256.0.Mi),
-    Ultimate("Ultimate Energy Cell", 1.0.Gi),
-    Singular("Singular Energy Cell", 4.0.Gi),
-    Quantum("Quantum Energy Cell", 16.0.Gi),
-    Stellar("Stellar Energy Cell", 64.0.Gi),
-    Cosmic("Cosmic Energy Cell", 256.0.Gi),
-    T1("1T Energy Cell", 1.0.Ti),
-    T4("4T Energy Cell", 4.0.Ti),
-    T16("16T Energy Cell", 16.0.Ti),
-    T64("64T Energy Cell", 64.0.Ti),
-    T256("256T Energy Cell", 256.0.Ti),
+    Micro("Micro Energy Cell", 1.0.Ki), //
+    Simple("Simple Energy Cell", 4.0.Ki), //
+    Basic("Basic Energy Cell", 16.0.Ki), //
+    Normal("Normal Energy Cell", 64.0.Ki), //
+    Enhanced("Enhanced Energy Cell", 256.0.Ki), //
+    Advanced("Advanced Energy Cell", 1.0.Mi), //
+    Reinforced("Reinforced Energy Cell", 4.0.Mi), //
+    Dense("Dense Energy Cell", 16.0.Mi), //
+    Hyper("Hyper Energy Cell", 64.0.Mi), //
+    Ultra("Ultra Energy Cell", 256.0.Mi), //
+    Ultimate("Ultimate Energy Cell", 1.0.Gi), //
+    Singular("Singular Energy Cell", 4.0.Gi), //
+    Quantum("Quantum Energy Cell", 16.0.Gi), //
+    Stellar("Stellar Energy Cell", 64.0.Gi), //
+    Cosmic("Cosmic Energy Cell", 256.0.Gi), //
+    T1("1T Energy Cell", 1.0.Ti), //
+    T4("4T Energy Cell", 4.0.Ti), //
+    T16("16T Energy Cell", 16.0.Ti), //
+    T64("64T Energy Cell", 64.0.Ti), //
+    T256("256T Energy Cell", 256.0.Ti), //
 
-    // ── Self-powered tiers (same capacities; regenerate max/1024 AE per tick) ──
-    SpMicro("1K Self-Powered Energy Cell", 1.0.Ki, selfPowered = true),
-    SpSimple("4K Self-Powered Energy Cell", 4.0.Ki, selfPowered = true),
-    SpBasic("16K Self-Powered Energy Cell", 16.0.Ki, selfPowered = true),
-    SpNormal("64K Self-Powered Energy Cell", 64.0.Ki, selfPowered = true),
-    SpEnhanced("256K Self-Powered Energy Cell", 256.0.Ki, selfPowered = true),
-    SpAdvanced("1M Self-Powered Energy Cell", 1.0.Mi, selfPowered = true),
-    SpReinforced("4M Self-Powered Energy Cell", 4.0.Mi, selfPowered = true),
-    SpDense("16M Self-Powered Energy Cell", 16.0.Mi, selfPowered = true),
-    SpHyper("64M Self-Powered Energy Cell", 64.0.Mi, selfPowered = true),
-    SpUltra("256M Self-Powered Energy Cell", 256.0.Mi, selfPowered = true),
-    SpUltimate("1G Self-Powered Energy Cell", 1.0.Gi, selfPowered = true),
-    SpSingular("4G Self-Powered Energy Cell", 4.0.Gi, selfPowered = true),
-    SpQuantum("16G Self-Powered Energy Cell", 16.0.Gi, selfPowered = true),
-    SpStellar("64G Self-Powered Energy Cell", 64.0.Gi, selfPowered = true),
-    SpCosmic("256G Self-Powered Energy Cell", 256.0.Gi, selfPowered = true),
-    SpT1("1T Self-Powered Energy Cell", 1.0.Ti, selfPowered = true),
-    SpT4("4T Self-Powered Energy Cell", 4.0.Ti, selfPowered = true),
-    SpT16("16T Self-Powered Energy Cell", 16.0.Ti, selfPowered = true),
-    SpT64("64T Self-Powered Energy Cell", 64.0.Ti, selfPowered = true),
-    SpT256("256T Self-Powered Energy Cell", 256.0.Ti, selfPowered = true),
+    SpMicro("1K Self-Powered Energy Cell", 1.0.Ki, selfPowered = true), //
+    SpSimple("4K Self-Powered Energy Cell", 4.0.Ki, selfPowered = true), //
+    SpBasic("16K Self-Powered Energy Cell", 16.0.Ki, selfPowered = true), //
+    SpNormal("64K Self-Powered Energy Cell", 64.0.Ki, selfPowered = true), //
+    SpEnhanced("256K Self-Powered Energy Cell", 256.0.Ki, selfPowered = true), //
+    SpAdvanced("1M Self-Powered Energy Cell", 1.0.Mi, selfPowered = true), //
+    SpReinforced("4M Self-Powered Energy Cell", 4.0.Mi, selfPowered = true), //
+    SpDense("16M Self-Powered Energy Cell", 16.0.Mi, selfPowered = true), //
+    SpHyper("64M Self-Powered Energy Cell", 64.0.Mi, selfPowered = true), //
+    SpUltra("256M Self-Powered Energy Cell", 256.0.Mi, selfPowered = true), //
+    SpUltimate("1G Self-Powered Energy Cell", 1.0.Gi, selfPowered = true), //
+    SpSingular("4G Self-Powered Energy Cell", 4.0.Gi, selfPowered = true), //
+    SpQuantum("16G Self-Powered Energy Cell", 16.0.Gi, selfPowered = true), //
+    SpStellar("64G Self-Powered Energy Cell", 64.0.Gi, selfPowered = true), //
+    SpCosmic("256G Self-Powered Energy Cell", 256.0.Gi, selfPowered = true), //
+    SpT1("1T Self-Powered Energy Cell", 1.0.Ti, selfPowered = true), //
+    SpT4("4T Self-Powered Energy Cell", 4.0.Ti, selfPowered = true), //
+    SpT16("16T Self-Powered Energy Cell", 16.0.Ti, selfPowered = true), //
+    SpT64("64T Self-Powered Energy Cell", 64.0.Ti, selfPowered = true), //
+    SpT256("256T Self-Powered Energy Cell", 256.0.Ti, selfPowered = true), //
 
-    Creative("Creative Energy Cell");
+    Creative("Creative Energy Cell"); //
 
     val blockName: String = name
 
@@ -141,6 +134,7 @@ enum class EnergyCell(
                 )
                 AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
             }
+
             selfPowered -> {
                 // Shared BE type registered once via registerSelfPoweredBEType()
                 blockEntityType = selfPoweredBlockEntityType
@@ -152,6 +146,7 @@ enum class EnergyCell(
                 )
                 AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
             }
+
             else -> {
                 val typeRef = AtomicReference<BlockEntityType<*>>()
                 typeRef.set(BlockEntityType.Builder.of({ pos, state ->

@@ -2,6 +2,7 @@ package allyouneed.util
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigInteger
 
 @Suppress("SpellCheckingInspection")
 const val MODID = "ae2isallyouneed"
@@ -43,3 +44,9 @@ fun formatScaledUnit(exp: Int, name: String? = null) = run {
 val Float.floatingExp get() = (this.toBits() shr 23) - 127
 
 val Double.floatingExp get() = (this.toBits() shr 52).toInt() - 1023
+
+fun BigInteger.saturateToLong(): Long {
+    if (this.signum() < 0) return 0L
+    if (this.bitLength() > 63) return Long.MAX_VALUE
+    return this.toLong()
+}

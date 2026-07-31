@@ -30,12 +30,12 @@ public class TooltipsMixin {
     @Inject(method = "ofBytes", at = @At("HEAD"), cancellable = true)
     private static void allyouneed$ofBytes(long number, CallbackInfoReturnable<MutableComponent> cir) {
         if (number == Long.MAX_VALUE || number < 0) {
-            cir.setReturnValue(Component.literal("\u221E").withStyle(NUMBER_TEXT));
+            cir.setReturnValue(Component.literal("∞").withStyle(NUMBER_TEXT));
             return;
         }
         // AE2 BYTE_NUMS length is 4; values needing index >= 4 crash (roughly >= 1 TiB * 1000)
         long gib = 1024L * 1024L * 1024L;
-        if (number >= gib * 1000L || number / Math.max(1L, gib) >= 1000L) {
+        if (number >= gib * 1000L) {
             cir.setReturnValue(formatLabel(IecFormat.formatBytes(number)));
         }
     }
@@ -49,7 +49,6 @@ public class TooltipsMixin {
         if (split <= 0 || split >= label.length()) {
             return Component.literal(label).withStyle(NUMBER_TEXT);
         }
-        return Component.literal(label.substring(0, split)).withStyle(NUMBER_TEXT)
-                .append(Component.literal(label.substring(split)).withStyle(UNIT_TEXT));
+        return Component.literal(label.substring(0, split)).withStyle(NUMBER_TEXT).append(Component.literal(label.substring(split)).withStyle(UNIT_TEXT));
     }
 }

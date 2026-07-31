@@ -25,11 +25,9 @@ import net.minecraft.world.level.Level
  */
 class DimensionalCellItem(properties: Properties) : AEBaseItem(properties), ICellWorkbenchItem {
 
-    override fun getConfigInventory(stack: ItemStack): ConfigInventory =
-        CellConfig.create(stack)
+    override fun getConfigInventory(stack: ItemStack): ConfigInventory = CellConfig.create(stack)
 
-    override fun getUpgrades(stack: ItemStack): IUpgradeInventory =
-        UpgradeInventories.forItem(stack, 2)
+    override fun getUpgrades(stack: ItemStack): IUpgradeInventory = UpgradeInventories.forItem(stack, 2)
 
     override fun getFuzzyMode(stack: ItemStack): FuzzyMode {
         val fz = stack.orCreateTag.getString(TAG_FUZZY)
@@ -86,8 +84,7 @@ class DimensionalCellItem(properties: Properties) : AEBaseItem(properties), ICel
         private const val TAG_CELL_ID = "cid"
         private const val TAG_FUZZY = "FuzzyMode"
 
-        fun create(): DimensionalCellItem =
-            DimensionalCellItem(Item.Properties().stacksTo(1))
+        fun create(): DimensionalCellItem = DimensionalCellItem(Properties().stacksTo(1))
 
         fun getCellId(stack: ItemStack): Int {
             if (!stack.hasTag()) return 0

@@ -87,7 +87,7 @@ public final class BigCpuStorage {
         if (isUnbounded(cluster)) {
             return Long.MAX_VALUE;
         }
-        return SiFormat.saturateToLong(getClusterStorage(cluster));
+        return CommonKt.saturateToLong(getClusterStorage(cluster));
     }
 
     /**

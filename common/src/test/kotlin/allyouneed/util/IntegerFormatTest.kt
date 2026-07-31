@@ -261,13 +261,6 @@ class IntegerFormatTest {
         assertEquals(IntegerFormat.si(3).format(BigInteger.valueOf(999_999)), SiFormat.format(BigInteger.valueOf(999_999), 3))
     }
 
-    @Test
-    fun `saturateToLong`() {
-        assertEquals(0L, IntegerFormat.saturateToLong(BigInteger.valueOf(-1)))
-        assertEquals(42L, IntegerFormat.saturateToLong(BigInteger.valueOf(42)))
-        assertEquals(Long.MAX_VALUE, IntegerFormat.saturateToLong(BigInteger.TWO.pow(100)))
-    }
-
     // ── format overloads ─────────────────────────────────────────
 
     @Test

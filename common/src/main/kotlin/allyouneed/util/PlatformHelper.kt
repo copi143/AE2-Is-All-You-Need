@@ -2,11 +2,9 @@ package allyouneed.util
 
 interface PlatformHelper {
     /**
-     * Gets the name of the current platform
-     *
-     * @return The name of the current platform.
+     * Gets the name of the current platform.
      */
-    fun getPlatformName(): String
+    val name: String
 
     /**
      * Checks if a mod with the given id is loaded.

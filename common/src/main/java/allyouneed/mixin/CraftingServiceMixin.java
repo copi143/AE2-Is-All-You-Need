@@ -24,24 +24,22 @@ import java.util.concurrent.Future;
 public abstract class CraftingServiceMixin {
     @Final
     @Shadow
-    private IGrid grid;
+    private static ExecutorService CRAFTING_POOL;
     @Final
     @Shadow
-    private static ExecutorService CRAFTING_POOL;
+    private IGrid grid;
 
     /**
      * @author AE2 Is All You Need
      * @reason Replace CraftingCalculation with ACraftingCalculation for adaptive probability patterns
      */
     @Overwrite
-    public Future<ICraftingPlan> beginCraftingCalculation(Level level, ICraftingSimulationRequester simRequester,
-            AEKey what, long amount, CalculationStrategy strategy) {
+    public Future<ICraftingPlan> beginCraftingCalculation(Level level, ICraftingSimulationRequester simRequester, AEKey what, long amount, CalculationStrategy strategy) {
         if (level == null || simRequester == null) {
             throw new IllegalArgumentException("Invalid Crafting Job Request");
         }
 
-        final ACraftingCalculation job = new ACraftingCalculation(level, this.grid, simRequester,
-                new GenericStack(what, amount), strategy);
+        final ACraftingCalculation job = new ACraftingCalculation(level, this.grid, simRequester, new GenericStack(what, amount), strategy);
 
         return CRAFTING_POOL.submit(job::run);
     }

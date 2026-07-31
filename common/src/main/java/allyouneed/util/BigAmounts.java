@@ -14,8 +14,7 @@ import java.util.WeakHashMap;
  * snapshot used while building ME inventory update packets.
  */
 public final class BigAmounts {
-    private static final Map<GridInventoryEntry, BigInteger> ENTRY_AMOUNTS =
-            Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<GridInventoryEntry, BigInteger> ENTRY_AMOUNTS = Collections.synchronizedMap(new WeakHashMap<>());
 
     private static final ThreadLocal<BigKeyCounter> CURRENT = new ThreadLocal<>();
 
@@ -58,17 +57,17 @@ public final class BigAmounts {
         }
     }
 
+    @Nullable
+    public static BigKeyCounter getCurrent() {
+        return CURRENT.get();
+    }
+
     public static void setCurrent(@Nullable BigKeyCounter counter) {
         if (counter == null) {
             CURRENT.remove();
         } else {
             CURRENT.set(counter);
         }
-    }
-
-    @Nullable
-    public static BigKeyCounter getCurrent() {
-        return CURRENT.get();
     }
 
     public static void clearCurrent() {

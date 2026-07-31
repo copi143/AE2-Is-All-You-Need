@@ -36,10 +36,7 @@ object DimensionalCellStore {
 
     fun attach(server: MinecraftServer) {
         this.server = server
-        val dir = server.getWorldPath(LevelResource.ROOT)
-            .resolve("data")
-            .resolve(MODID)
-            .resolve("dimensional")
+        val dir = server.getWorldPath(LevelResource.ROOT).resolve("data").resolve(MODID).resolve("dimensional")
         Files.createDirectories(dir)
         rootDir = dir
         loadMeta(dir)
@@ -103,8 +100,7 @@ object DimensionalCellStore {
         saveMeta()
     }
 
-    private fun cellPath(cellId: Int): Path =
-        rootDir!!.resolve("%06x.dat".format(cellId))
+    private fun cellPath(cellId: Int): Path = rootDir!!.resolve("%06x.dat".format(cellId))
 
     private fun metaPath(): Path = rootDir!!.resolve(META_FILE)
 
@@ -161,7 +157,12 @@ object DimensionalCellStore {
             val path = cellPath(data.cellId)
             val tmp = path.resolveSibling(path.fileName.toString() + ".tmp")
             NbtIo.writeCompressed(tag, Files.newOutputStream(tmp))
-            Files.move(tmp, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+            Files.move(
+                tmp,
+                path,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE
+            )
         } catch (e: Exception) {
             // ATOMIC_MOVE may fail on some FS; fallback
             try {

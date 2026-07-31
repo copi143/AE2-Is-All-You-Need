@@ -26,7 +26,4 @@ object SiFormat {
         // Non-integer doubles: fall back to long truncation path for UI slots
         return format(number.toLong(), width)
     }
-
-    @JvmStatic
-    fun saturateToLong(amount: BigInteger): Long = IntegerFormat.saturateToLong(amount)
 }

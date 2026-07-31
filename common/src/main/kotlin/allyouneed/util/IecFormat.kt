@@ -32,7 +32,4 @@ object IecFormat {
         if (bytes.signum() < 0) return "∞"
         return IntegerFormat.IEC.format(bytes)
     }
-
-    @JvmStatic
-    fun saturateToLong(amount: BigInteger): Long = IntegerFormat.saturateToLong(amount)
 }

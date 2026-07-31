@@ -30,7 +30,7 @@ object CommonObject {
     fun init() {
         logger.info(
             "Hello from Common init on {}! we are currently in a {} environment!",
-            Services.platform.getPlatformName(),
+            Services.platform.name,
             Services.platform.getEnvironmentName()
         )
         logger.info("The ID for diamonds is {}", BuiltInRegistries.ITEM.getKey(Items.DIAMOND))
