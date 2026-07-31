@@ -92,8 +92,10 @@ enum class EnergyCell(
 
     val blockSupplier = if (size < 0) {
         Supplier<Block> { CreativeEnergyCellBlock() }
+    } else if (selfPowered) {
+        Supplier<Block> { EnergyCellBlock(size * 64.0, size * 4.0, size.floatingExp * 10 + 1000) }
     } else {
-        Supplier<Block> { EnergyCellBlock(size * 64.0, size * 4.0, (size / 1024.0).toInt() * 100) }
+        Supplier<Block> { EnergyCellBlock(size * 64.0, size * 4.0, size.floatingExp * 10) }
     }
 
     val itemFactory = if (size < 0) null else BiFunction<Block, Item.Properties, BlockItem> { block, props ->

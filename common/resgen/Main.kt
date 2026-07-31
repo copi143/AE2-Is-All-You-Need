@@ -10,6 +10,7 @@ data class CellEntry(
     val displayName: String,
     val color: String,
     val isCreative: Boolean = false,
+    val isSelfPowered: Boolean = false,
 )
 
 private val cells = listOf(
@@ -33,27 +34,27 @@ private val cells = listOf(
     CellEntry("16t_energy_cell", "16T Energy Cell", AE2_COLORS[17].hex),
     CellEntry("64t_energy_cell", "64T Energy Cell", AE2_COLORS[18].hex),
     CellEntry("256t_energy_cell", "256T Energy Cell", AE2_COLORS[19].hex),
-    // Self-powered (same palette, greener tint via dedicated color)
-    CellEntry("1k_self_powered_energy_cell", "1K Self-Powered Energy Cell", "#69F0AE"),
-    CellEntry("4k_self_powered_energy_cell", "4K Self-Powered Energy Cell", "#00E676"),
-    CellEntry("16k_self_powered_energy_cell", "16K Self-Powered Energy Cell", "#00C853"),
-    CellEntry("64k_self_powered_energy_cell", "64K Self-Powered Energy Cell", "#00BFA5"),
-    CellEntry("256k_self_powered_energy_cell", "256K Self-Powered Energy Cell", "#1DE9B6"),
-    CellEntry("1m_self_powered_energy_cell", "1M Self-Powered Energy Cell", "#64FFDA"),
-    CellEntry("4m_self_powered_energy_cell", "4M Self-Powered Energy Cell", "#A7FFEB"),
-    CellEntry("16m_self_powered_energy_cell", "16M Self-Powered Energy Cell", "#B2FF59"),
-    CellEntry("64m_self_powered_energy_cell", "64M Self-Powered Energy Cell", "#76FF03"),
-    CellEntry("256m_self_powered_energy_cell", "256M Self-Powered Energy Cell", "#C6FF00"),
-    CellEntry("1g_self_powered_energy_cell", "1G Self-Powered Energy Cell", "#EEFF41"),
-    CellEntry("4g_self_powered_energy_cell", "4G Self-Powered Energy Cell", "#F4FF81"),
-    CellEntry("16g_self_powered_energy_cell", "16G Self-Powered Energy Cell", "#FFFF8D"),
-    CellEntry("64g_self_powered_energy_cell", "64G Self-Powered Energy Cell", "#FFD740"),
-    CellEntry("256g_self_powered_energy_cell", "256G Self-Powered Energy Cell", "#FFAB40"),
-    CellEntry("1t_self_powered_energy_cell", "1T Self-Powered Energy Cell", "#FF6E40"),
-    CellEntry("4t_self_powered_energy_cell", "4T Self-Powered Energy Cell", "#FF5252"),
-    CellEntry("16t_self_powered_energy_cell", "16T Self-Powered Energy Cell", "#FF4081"),
-    CellEntry("64t_self_powered_energy_cell", "64T Self-Powered Energy Cell", "#E040FB"),
-    CellEntry("256t_self_powered_energy_cell", "256T Self-Powered Energy Cell", "#7C4DFF"),
+    // Self-powered: same tier colors + energy_cell_self_powered overlay
+    CellEntry("1k_self_powered_energy_cell", "1K Self-Powered Energy Cell", AE2_COLORS[0].hex, isSelfPowered = true),
+    CellEntry("4k_self_powered_energy_cell", "4K Self-Powered Energy Cell", AE2_COLORS[1].hex, isSelfPowered = true),
+    CellEntry("16k_self_powered_energy_cell", "16K Self-Powered Energy Cell", AE2_COLORS[2].hex, isSelfPowered = true),
+    CellEntry("64k_self_powered_energy_cell", "64K Self-Powered Energy Cell", AE2_COLORS[3].hex, isSelfPowered = true),
+    CellEntry("256k_self_powered_energy_cell", "256K Self-Powered Energy Cell", AE2_COLORS[4].hex, isSelfPowered = true),
+    CellEntry("1m_self_powered_energy_cell", "1M Self-Powered Energy Cell", AE2_COLORS[5].hex, isSelfPowered = true),
+    CellEntry("4m_self_powered_energy_cell", "4M Self-Powered Energy Cell", AE2_COLORS[6].hex, isSelfPowered = true),
+    CellEntry("16m_self_powered_energy_cell", "16M Self-Powered Energy Cell", AE2_COLORS[7].hex, isSelfPowered = true),
+    CellEntry("64m_self_powered_energy_cell", "64M Self-Powered Energy Cell", AE2_COLORS[8].hex, isSelfPowered = true),
+    CellEntry("256m_self_powered_energy_cell", "256M Self-Powered Energy Cell", AE2_COLORS[9].hex, isSelfPowered = true),
+    CellEntry("1g_self_powered_energy_cell", "1G Self-Powered Energy Cell", AE2_COLORS[10].hex, isSelfPowered = true),
+    CellEntry("4g_self_powered_energy_cell", "4G Self-Powered Energy Cell", AE2_COLORS[11].hex, isSelfPowered = true),
+    CellEntry("16g_self_powered_energy_cell", "16G Self-Powered Energy Cell", AE2_COLORS[12].hex, isSelfPowered = true),
+    CellEntry("64g_self_powered_energy_cell", "64G Self-Powered Energy Cell", AE2_COLORS[13].hex, isSelfPowered = true),
+    CellEntry("256g_self_powered_energy_cell", "256G Self-Powered Energy Cell", AE2_COLORS[14].hex, isSelfPowered = true),
+    CellEntry("1t_self_powered_energy_cell", "1T Self-Powered Energy Cell", AE2_COLORS[15].hex, isSelfPowered = true),
+    CellEntry("4t_self_powered_energy_cell", "4T Self-Powered Energy Cell", AE2_COLORS[16].hex, isSelfPowered = true),
+    CellEntry("16t_self_powered_energy_cell", "16T Self-Powered Energy Cell", AE2_COLORS[17].hex, isSelfPowered = true),
+    CellEntry("64t_self_powered_energy_cell", "64T Self-Powered Energy Cell", AE2_COLORS[18].hex, isSelfPowered = true),
+    CellEntry("256t_self_powered_energy_cell", "256T Self-Powered Energy Cell", AE2_COLORS[19].hex, isSelfPowered = true),
     CellEntry("creative_energy_cell", "Creative Energy Cell", "#E040FB", isCreative = true),
 )
 
@@ -125,17 +126,38 @@ fun main(args: Array<String>) {
     }
 
     retexture(output) {
-        source(sourceTextures, "#9fc3e4")
+        // FG template base hue (dominant opaque pixel of energy_cell_fg.png ≈ rgb 152,194,231)
+        source(sourceTextures, "#98C2E7")
 
-        val levelCells = cells.filter { !it.isCreative }
-        for (cell in levelCells) {
-            target("energy_cell", cell.id, cell.color)
+        // Energy cells: bg + fg(tint) + fullness/creative + optional self-powered badge
+        for (cell in cells) {
+            val badge = if (cell.isSelfPowered) listOf("energy_cell_self_powered") else emptyList()
+            if (cell.isCreative) {
+                // AE2-style vertical strip: fg cycles through AE2_GRADIENT with interpolation
+                layeredAnimated(
+                    bg = "energy_cell_bg",
+                    mid = "energy_cell_fg",
+                    top = "energy_cell_creative",
+                    outputPrefix = cell.id,
+                    midColors = AE2_GRADIENT.map { it.hex },
+                    frameTime = 4,
+                    interpolate = true,
+                    overlays = badge,
+                )
+            } else {
+                layeredTarget(
+                    bg = "energy_cell_bg",
+                    mid = "energy_cell_fg",
+                    top = "energy_cell",
+                    outputPrefix = cell.id,
+                    color = cell.color,
+                    levels = 0..4,
+                    overlays = badge,
+                )
+            }
         }
 
-        val creative = cells.first { it.isCreative }
-        targetSingle("creative_energy_cell", creative.id, creative.color)
-
-        // Crafting storage unformed + light (same base hue as energy cells)
+        // Crafting storage unformed + light (flat recolor templates)
         for (storage in craftingStorages) {
             targetSingle("crafting_storage", storage.id, storage.color)
             targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
