@@ -16,6 +16,7 @@ class ExampleMod {
     init {
         logger.info("Hello Forge world from Kotlin!")
 
+        EnergyCell.registerSelfPoweredBEType()
         EnergyCell.entries.forEach { it.registerBEType() }
         CraftingStorage.registerBEType()
 
@@ -24,9 +25,10 @@ class ExampleMod {
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
         }
 
-        EnergyCell.entries.forEach { cell ->
+        EnergyCell.entries.filter { !it.selfPowered }.forEach { cell ->
             ForgeBlocks.BLOCK_ENTITIES.register(cell.blockId.path) { cell.blockEntityType }
         }
+        ForgeBlocks.BLOCK_ENTITIES.register("self_powered_energy_cell") { EnergyCell.selfPoweredBlockEntityType }
         ForgeBlocks.BLOCK_ENTITIES.register("crafting_storage") { CraftingStorage.blockEntityType }
 
         AllRegistries.items.forEach { entry ->

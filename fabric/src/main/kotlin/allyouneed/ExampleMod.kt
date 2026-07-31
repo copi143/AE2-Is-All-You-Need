@@ -20,6 +20,7 @@ fun init() {
     FabricItems.register()
     FabricBlocks.register()
 
+    EnergyCell.registerSelfPoweredBEType()
     EnergyCell.entries.forEach { it.registerBEType() }
     CraftingStorage.registerBEType()
 
@@ -28,8 +29,15 @@ fun init() {
         val id = ResourceLocation(MODID, cell.blockId.path)
         Registry.register(BuiltInRegistries.BLOCK, id, block)
         Registry.register(BuiltInRegistries.ITEM, id, cell.define.asItem())
-        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, cell.blockEntityType)
+        if (!cell.selfPowered) {
+            Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, cell.blockEntityType)
+        }
     }
+    Registry.register(
+        BuiltInRegistries.BLOCK_ENTITY_TYPE,
+        ResourceLocation(MODID, "self_powered_energy_cell"),
+        EnergyCell.selfPoweredBlockEntityType,
+    )
 
     CraftingStorage.entries.forEach { storage ->
         val block = storage.define.block()
