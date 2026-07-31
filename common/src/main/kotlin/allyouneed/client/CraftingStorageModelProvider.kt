@@ -1,7 +1,7 @@
 package allyouneed.client
 
 import allyouneed.cell.CraftingStorage
-import allyouneed.rl
+import allyouneed.util.MODID
 import appeng.client.render.crafting.AbstractCraftingUnitModelProvider
 import appeng.client.render.crafting.LightBakedModel
 import appeng.core.AppEng
@@ -15,10 +15,9 @@ import java.util.function.Function
 class CraftingStorageModelProvider(type: CraftingStorage) :
     AbstractCraftingUnitModelProvider<CraftingStorage>(type) {
 
-    override fun getMaterials(): List<Material> = MATERIALS
+    override fun getMaterials(): List<Material> = emptyList()
 
     override fun getBakedModel(spriteGetter: Function<Material, TextureAtlasSprite>): BakedModel {
-        // LightBakedModel's parent is package-private; cast for Kotlin BakedModel return.
         @Suppress("UNCHECKED_CAST", "USELESS_CAST")
         return LightBakedModel(
             spriteGetter.apply(RING_CORNER),
@@ -30,8 +29,6 @@ class CraftingStorageModelProvider(type: CraftingStorage) :
     }
 
     companion object {
-        private val MATERIALS = ArrayList<Material>()
-
         private val RING_CORNER = ae2Tex("ring_corner")
         private val RING_SIDE_HOR = ae2Tex("ring_side_hor")
         private val RING_SIDE_VER = ae2Tex("ring_side_ver")
@@ -39,25 +36,16 @@ class CraftingStorageModelProvider(type: CraftingStorage) :
 
         private val LIGHTS: Map<CraftingStorage, Material> =
             CraftingStorage.entries.associateWith { storage ->
-                modTex("block/crafting/${storage.blockId.path}_light")
+                Material(
+                    TextureAtlas.LOCATION_BLOCKS,
+                    ResourceLocation(MODID, "block/crafting/${storage.blockId.path}_light"),
+                )
             }
 
-        fun lightMaterial(type: CraftingStorage): Material =
+        private fun lightMaterial(type: CraftingStorage): Material =
             LIGHTS[type] ?: error("Missing light material for $type")
 
-        private fun ae2Tex(name: String): Material {
-            val mat = Material(
-                TextureAtlas.LOCATION_BLOCKS,
-                ResourceLocation(AppEng.MOD_ID, "block/crafting/$name"),
-            )
-            MATERIALS.add(mat)
-            return mat
-        }
-
-        private fun modTex(path: String): Material {
-            val mat = Material(TextureAtlas.LOCATION_BLOCKS, path.rl)
-            MATERIALS.add(mat)
-            return mat
-        }
+        private fun ae2Tex(name: String): Material =
+            Material(TextureAtlas.LOCATION_BLOCKS, ResourceLocation(AppEng.MOD_ID, "block/crafting/$name"))
     }
 }

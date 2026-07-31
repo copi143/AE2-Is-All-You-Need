@@ -14,20 +14,22 @@ class TextureGen(private val output: Path) {
         val outputPrefix: String,
         val targetColor: RGB,
         val levels: IntRange?,
+        val sourceHz: JzCzHz,
     )
 
     /**
-     * bg (no recolor) + mid (recolor) + top (no recolor, per level or single)
+     * bg (no recolor) + mid (recolor) + optional top (no recolor, per level or single)
      * + optional [overlays] (no recolor, always on top, single file each).
      */
     private data class LayeredEntry(
         val bgTemplate: String,
         val midTemplate: String,
-        val topTemplate: String,
+        val topTemplate: String?,
         val outputPrefix: String,
         val targetColor: RGB?,
         val levels: IntRange?,
         val overlays: List<String> = emptyList(),
+        val sourceHz: JzCzHz,
     )
 
     /**
@@ -43,6 +45,7 @@ class TextureGen(private val output: Path) {
         val frameTime: Int,
         val interpolate: Boolean,
         val overlays: List<String> = emptyList(),
+        val sourceHz: JzCzHz,
     )
 
     private val entries = mutableListOf<RecolorEntry>()
@@ -56,30 +59,35 @@ class TextureGen(private val output: Path) {
         sourceColorHz = RGB(color).toJzCzHz()
     }
 
+    private fun currentSourceHz(): JzCzHz =
+        sourceColorHz ?: error("Call source() before registering texture targets")
+
     fun target(sourceTemplate: String, outputPrefix: String, color: String, levels: IntRange = 0..4) {
-        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), levels)
+        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), levels, currentSourceHz())
     }
 
     fun targetSingle(sourceTemplate: String, outputPrefix: String, color: String) {
-        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), null)
+        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), null, currentSourceHz())
     }
 
     /**
-     * Composite: [bg] (bottom, no recolor) + [mid] (recolored if [color] set) + [top] (no recolor)
+     * Composite: [bg] (bottom, no recolor) + [mid] (recolored if [color] set) + optional [top] (no recolor)
      * + optional [overlays] (no recolor, stacked last).
      * With [levels], top is `{topTemplate}_{level}.png` and outputs `{outputPrefix}_{level}.png`.
-     * Without levels, top is `{topTemplate}.png` and output is `{outputPrefix}.png`.
+     * Without levels / without top: single output `{outputPrefix}.png` (bg+mid[+overlays]).
      */
     fun layeredTarget(
         bg: String,
         mid: String,
-        top: String,
+        top: String? = null,
         outputPrefix: String,
         color: String?,
         levels: IntRange? = 0..4,
         overlays: List<String> = emptyList(),
     ) {
-        layered += LayeredEntry(bg, mid, top, outputPrefix, color?.let { RGB(it) }, levels, overlays)
+        layered += LayeredEntry(
+            bg, mid, top, outputPrefix, color?.let { RGB(it) }, levels, overlays, currentSourceHz(),
+        )
     }
 
     /**
@@ -101,25 +109,26 @@ class TextureGen(private val output: Path) {
             bg, mid, top, outputPrefix,
             midColors.map { RGB(it) },
             frameTime, interpolate, overlays,
+            currentSourceHz(),
         )
     }
 
     fun generate() {
         val srcDir = sourceDir ?: error("Call source() first")
-        val srcHz = sourceColorHz ?: error("Call source() first")
 
         for (entry in entries) {
-            generateRecolor(srcDir, srcHz, entry)
+            generateRecolor(srcDir, entry)
         }
         for (entry in layered) {
-            generateLayered(srcDir, srcHz, entry)
+            generateLayered(srcDir, entry)
         }
         for (entry in animatedLayered) {
-            generateAnimatedLayered(srcDir, srcHz, entry)
+            generateAnimatedLayered(srcDir, entry)
         }
     }
 
-    private fun generateRecolor(srcDir: Path, srcHz: JzCzHz, entry: RecolorEntry) {
+    private fun generateRecolor(srcDir: Path, entry: RecolorEntry) {
+        val srcHz = entry.sourceHz
         val targetHz = entry.targetColor.toJzCzHz()
         val hueShift = targetHz.h - srcHz.h
         val chromaScale = if (srcHz.c > 0.001f) targetHz.c / srcHz.c else 1f
@@ -140,7 +149,8 @@ class TextureGen(private val output: Path) {
         }
     }
 
-    private fun generateLayered(srcDir: Path, srcHz: JzCzHz, entry: LayeredEntry) {
+    private fun generateLayered(srcDir: Path, entry: LayeredEntry) {
+        val srcHz = entry.sourceHz
         val bgFile = srcDir.resolve("${entry.bgTemplate}.png")
         val midFile = srcDir.resolve("${entry.midTemplate}.png")
         if (!bgFile.exists() || !midFile.exists()) {
@@ -171,24 +181,34 @@ class TextureGen(private val output: Path) {
             }
         }
 
-        val tops: List<Pair<String, Path>> = if (entry.levels != null) {
-            entry.levels.map { level ->
-                "_$level" to srcDir.resolve("${entry.topTemplate}_$level.png")
+        val tops: List<Pair<String, BufferedImage?>> = when {
+            entry.topTemplate == null -> listOf("" to null)
+            entry.levels != null -> entry.levels.map { level ->
+                val file = srcDir.resolve("${entry.topTemplate}_$level.png")
+                if (!file.exists()) {
+                    println("[texture] missing top $file")
+                    "_$level" to null
+                } else {
+                    "_$level" to ensureArgb(ImageIO.read(file.toFile()))
+                }
             }
-        } else {
-            listOf("" to srcDir.resolve("${entry.topTemplate}.png"))
+            else -> {
+                val file = srcDir.resolve("${entry.topTemplate}.png")
+                if (!file.exists()) {
+                    println("[texture] missing top $file")
+                    emptyList()
+                } else {
+                    listOf("" to ensureArgb(ImageIO.read(file.toFile())))
+                }
+            }
         }
 
-        for ((suffix, topFile) in tops) {
-            if (!topFile.exists()) {
-                println("[texture] missing top $topFile")
-                continue
-            }
-            val top = ensureArgb(ImageIO.read(topFile.toFile()))
+        for ((suffix, top) in tops) {
+            if (entry.topTemplate != null && top == null) continue
             val layers = buildList {
                 add(bg)
                 add(mid)
-                add(top)
+                if (top != null) add(top)
                 addAll(overlayImages)
             }
             val composed = composite(*layers.toTypedArray())
@@ -196,7 +216,8 @@ class TextureGen(private val output: Path) {
         }
     }
 
-    private fun generateAnimatedLayered(srcDir: Path, srcHz: JzCzHz, entry: AnimatedLayeredEntry) {
+    private fun generateAnimatedLayered(srcDir: Path, entry: AnimatedLayeredEntry) {
+        val srcHz = entry.sourceHz
         val bgFile = srcDir.resolve("${entry.bgTemplate}.png")
         val midFile = srcDir.resolve("${entry.midTemplate}.png")
         val topFile = srcDir.resolve("${entry.topTemplate}.png")

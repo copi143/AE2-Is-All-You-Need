@@ -4,6 +4,7 @@ import java.nio.file.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
+import kotlin.io.path.writeText
 
 data class CellEntry(
     val id: String,
@@ -157,9 +158,30 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Crafting storage unformed + light (flat recolor templates)
+        // Crafting storage FG base hue (dominant opaque ≈ rgb 235,142,75)
+        source(sourceTextures, "#EB8E4B")
+
+        // Crafting storage unformed: bg (no tint) + fg (tint); light still flat recolor
         for (storage in craftingStorages) {
-            targetSingle("crafting_storage", storage.id, storage.color)
+            if (storage.isCreative) {
+                layeredTarget(
+                    bg = "crafting_storage_bg",
+                    mid = "crafting_storage_fg",
+                    top = null,
+                    outputPrefix = storage.id,
+                    color = null,
+                    levels = null,
+                )
+            } else {
+                layeredTarget(
+                    bg = "crafting_storage_bg",
+                    mid = "crafting_storage_fg",
+                    top = null,
+                    outputPrefix = storage.id,
+                    color = storage.color,
+                    levels = null,
+                )
+            }
             targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
         }
     }
@@ -168,11 +190,40 @@ fun main(args: Array<String>) {
     texOut.createDirectories()
     sourceTextures.resolve("me_io_drive.png").copyTo(texOut.resolve("me_io_drive.png"), overwrite = true)
 
-    // Copy light animation mcmeta for each crafting storage light texture
+    val craftingTexOut = texOut.resolve("crafting")
+    craftingTexOut.createDirectories()
+
+    // Light overlays live under block/crafting/; ensure atlas + dummy model stitch them
+    // (vanilla already scans textures/block/, but keep explicit for clarity).
+    val atlasDir = Path.of("common/res").resolve("assets/minecraft/atlases")
+    atlasDir.createDirectories()
+    atlasDir.resolve("blocks.json").writeText(
+        """
+        {
+          "sources": [
+            {
+              "type": "directory",
+              "source": "block/crafting",
+              "prefix": "block/crafting/"
+            }
+          ]
+        }
+        """.trimIndent() + "\n",
+    )
+
+    val modelsCrafting = output.resolve("models/block/crafting")
+    modelsCrafting.createDirectories()
+    val texEntries = linkedMapOf("particle" to "$modId:block/crafting/${craftingStorages.first().id}_light")
+    for (s in craftingStorages) {
+        texEntries["light_${s.id}"] = "$modId:block/crafting/${s.id}_light"
+    }
+    val texJson = texEntries.entries.joinToString(",\n") { (k, v) -> """    "$k": "$v"""" }
+    modelsCrafting.resolve("atlas_materials.json").writeText(
+        "{\n  \"parent\": \"minecraft:block/block\",\n  \"textures\": {\n$texJson\n  }\n}\n",
+    )
+
     val lightMcmeta = sourceTextures.resolve("crafting_storage_light.png.mcmeta")
     if (lightMcmeta.exists()) {
-        val craftingTexOut = texOut.resolve("crafting")
-        craftingTexOut.createDirectories()
         for (storage in craftingStorages) {
             lightMcmeta.copyTo(craftingTexOut.resolve("${storage.id}_light.png.mcmeta"), overwrite = true)
         }

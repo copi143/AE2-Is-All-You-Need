@@ -10,10 +10,14 @@ import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalScreen
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalScreen
+import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
 import net.fabricmc.fabric.api.client.model.ModelLoadingRegistry
 import net.minecraft.client.gui.screens.MenuScreens
+import net.minecraft.client.renderer.RenderType
+import net.minecraft.resources.ResourceLocation
 
 fun initClient() {
     for (storage in CraftingStorage.entries) {
@@ -21,6 +25,12 @@ fun initClient() {
         ModelLoadingRegistry.INSTANCE.registerResourceProvider { _ ->
             SimpleModelLoader(id) { CraftingStorageModels.createFormedModel(storage) }
         }
+        // Same as AE2 crafting storage: cutout so light_base alpha is not solid black
+        BlockRenderLayerMap.INSTANCE.putBlock(storage.define.block(), RenderType.cutout())
+    }
+    // Force atlas stitch of light overlays (built-in formed models skip JSON deps)
+    ModelLoadingRegistry.INSTANCE.registerModelProvider { _, out ->
+        out.accept(ResourceLocation(MODID, "block/crafting/atlas_materials"))
     }
 
     MenuScreens.register(PseudoPatternTerminalMenu.TYPE) { menu, inv, title ->

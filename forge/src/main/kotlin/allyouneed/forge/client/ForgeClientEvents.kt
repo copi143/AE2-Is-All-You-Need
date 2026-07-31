@@ -14,7 +14,11 @@ import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
 import appeng.hooks.BuiltInModelHooks
 import net.minecraft.client.gui.screens.MenuScreens
+import net.minecraft.client.renderer.ItemBlockRenderTypes
+import net.minecraft.client.renderer.RenderType
+import net.minecraft.resources.ResourceLocation
 import net.minecraftforge.api.distmarker.Dist
+import net.minecraftforge.client.event.ModelEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
@@ -31,9 +35,20 @@ object ForgeClientEvents {
         }
     }
 
+    /** Pull light overlays into the blocks atlas (built-in formed models skip JSON deps). */
+    @SubscribeEvent
+    fun onRegisterAdditionalModels(event: ModelEvent.RegisterAdditional) {
+        event.register(ResourceLocation(MODID, "block/crafting/atlas_materials"))
+    }
+
     @SubscribeEvent
     fun onClientSetup(event: FMLClientSetupEvent) {
         event.enqueueWork {
+            // AE2 crafting storage uses cutout so light_base transparency is not solid black
+            for (storage in CraftingStorage.entries) {
+                ItemBlockRenderTypes.setRenderLayer(storage.define.block(), RenderType.cutout())
+            }
+
             MenuScreens.register(PseudoPatternTerminalMenu.TYPE) { menu, inv, title ->
                 val style = StyleManager.loadStyleDoc("/screens/terminals/wireless_terminal.json")
                 PseudoPatternTerminalScreen(menu, inv, title, style)

@@ -132,7 +132,7 @@ class AssetGen(private val modId: String, private val output: Path, private val 
         }
         blockModels += GeneratedFile("models/block/$name.json", unformedModel)
 
-        // Empty model file; actual geometry comes from BuiltInModelHooks + ModelBakeryMixin
+        // Empty stub; geometry from BuiltInModelHooks (same as AE2 formed models)
         blockModels += GeneratedFile("models/block/crafting/${name}_formed.json", JsonObject())
 
         val stateJson = JsonObject().apply {
