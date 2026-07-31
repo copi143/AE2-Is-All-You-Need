@@ -1,5 +1,6 @@
 package allyouneed
 
+import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.client.ForgeCreativeTab
 import allyouneed.forge.init.ForgeBlocks
@@ -16,6 +17,7 @@ class ExampleMod {
         logger.info("Hello Forge world from Kotlin!")
 
         EnergyCell.entries.forEach { it.registerBEType() }
+        CraftingStorage.registerBEType()
 
         AllRegistries.blocks.forEach { entry ->
             ForgeBlocks.BLOCKS.register(entry.id().path) { entry.block() }
@@ -25,6 +27,7 @@ class ExampleMod {
         EnergyCell.entries.forEach { cell ->
             ForgeBlocks.BLOCK_ENTITIES.register(cell.blockId.path) { cell.blockEntityType }
         }
+        ForgeBlocks.BLOCK_ENTITIES.register("crafting_storage") { CraftingStorage.blockEntityType }
 
         AllRegistries.items.forEach { entry ->
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }

@@ -1,5 +1,7 @@
 package allyouneed.forge.client
 
+import allyouneed.cell.CraftingStorage
+import allyouneed.client.CraftingStorageModels
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
@@ -10,6 +12,7 @@ import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalScreen
 import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
+import appeng.hooks.BuiltInModelHooks
 import net.minecraft.client.gui.screens.MenuScreens
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.eventbus.api.SubscribeEvent
@@ -18,6 +21,16 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
 
 @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = [Dist.CLIENT])
 object ForgeClientEvents {
+    init {
+        // Must run before model baking (same timing as AdvancedAE).
+        for (storage in CraftingStorage.entries) {
+            BuiltInModelHooks.addBuiltInModel(
+                CraftingStorageModels.formedModelId(storage),
+                CraftingStorageModels.createFormedModel(storage),
+            )
+        }
+    }
+
     @SubscribeEvent
     fun onClientSetup(event: FMLClientSetupEvent) {
         event.enqueueWork {

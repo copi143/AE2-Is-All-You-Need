@@ -1,7 +1,7 @@
 package allyouneed.mixin.client;
 
 import allyouneed.util.BigAmounts;
-import allyouneed.util.SiAmountFormat;
+import allyouneed.util.SiFormat;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
 import appeng.client.gui.me.common.MEStorageScreen;
@@ -40,9 +40,9 @@ public abstract class MEStorageScreenMixin {
                 int width = format == AmountFormat.SLOT_LARGE_FONT ? 3 : 4;
                 if (key.getAmountPerUnit() > 1) {
                     BigInteger units = big.divide(BigInteger.valueOf(key.getAmountPerUnit()));
-                    return SiAmountFormat.format(units, width);
+                    return SiFormat.format(units, width);
                 }
-                return SiAmountFormat.format(big, width);
+                return SiFormat.format(big, width);
             }
         }
         return key.formatAmount(amount, format);
@@ -61,7 +61,7 @@ public abstract class MEStorageScreenMixin {
         if (big.bitLength() > 14) { // > ~16384 always show
             return true;
         }
-        return Tooltips.shouldShowAmountTooltip(what, SiAmountFormat.saturateToLong(big));
+        return Tooltips.shouldShowAmountTooltip(what, SiFormat.saturateToLong(big));
     }
 
     @Redirect(
@@ -87,7 +87,7 @@ public abstract class MEStorageScreenMixin {
                     .divide(BigDecimal.valueOf(perUnit), 3, RoundingMode.DOWN);
             result.append(NumberFormat.getNumberInstance().format(units));
         } else {
-            result.append(SiAmountFormat.formatFull(amount));
+            result.append(SiFormat.formatFull(amount));
         }
         String unit = what.getUnitSymbol();
         if (unit != null) {

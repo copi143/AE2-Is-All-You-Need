@@ -1,5 +1,6 @@
 package allyouneed
 
+import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.dimensional.DimensionalCellStore
 import allyouneed.fabric.init.FabricBlocks
@@ -20,6 +21,7 @@ fun init() {
     FabricBlocks.register()
 
     EnergyCell.entries.forEach { it.registerBEType() }
+    CraftingStorage.registerBEType()
 
     EnergyCell.entries.forEach { cell ->
         val block = cell.define.block()
@@ -28,6 +30,18 @@ fun init() {
         Registry.register(BuiltInRegistries.ITEM, id, cell.define.asItem())
         Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, cell.blockEntityType)
     }
+
+    CraftingStorage.entries.forEach { storage ->
+        val block = storage.define.block()
+        val id = ResourceLocation(MODID, storage.blockId.path)
+        Registry.register(BuiltInRegistries.BLOCK, id, block)
+        Registry.register(BuiltInRegistries.ITEM, id, storage.define.asItem())
+    }
+    Registry.register(
+        BuiltInRegistries.BLOCK_ENTITY_TYPE,
+        ResourceLocation(MODID, "crafting_storage"),
+        CraftingStorage.blockEntityType,
+    )
 
     CommonObject.init()
     CommonObject.commonSetup()

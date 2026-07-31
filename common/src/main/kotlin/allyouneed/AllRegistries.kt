@@ -1,5 +1,6 @@
 package allyouneed
 
+import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.pattern.ModItems
 import appeng.core.MainCreativeTab
@@ -28,6 +29,9 @@ object AllRegistries {
 
     init {
         EnergyCell.entries.forEach {
+            blocks += it.define
+        }
+        CraftingStorage.entries.forEach {
             blocks += it.define
         }
 

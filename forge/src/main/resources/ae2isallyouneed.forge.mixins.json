@@ -10,7 +10,11 @@
     "PatternEncodingTermMenuMixin",
     "PatternProviderLogicMixin"
   ],
-  "client": ["MixinTitleScreen"],
+  "client": [
+    "MixinTitleScreen",
+    "client.BuiltInModelHooksAccessor",
+    "client.ModelBakeryMixin"
+  ],
   "server": [],
   "injectors": {
     "defaultRequire": 1

@@ -2,7 +2,7 @@ package allyouneed.cell.dimensional
 
 import allyouneed.api.BigStackSource
 import allyouneed.util.BigKeyCounter
-import allyouneed.util.SiAmountFormat
+import allyouneed.util.SiFormat
 import appeng.api.config.Actionable
 import appeng.api.config.FuzzyMode
 import appeng.api.config.IncludeExclude
@@ -116,13 +116,13 @@ class DimensionalCellInventory(
             store.set(what, available.subtract(taken))
             saveChanges()
         }
-        return SiAmountFormat.saturateToLong(taken)
+        return SiFormat.saturateToLong(taken)
     }
 
     override fun getAvailableStacks(out: KeyCounter) {
         val store = peekData() ?: return
         for ((key, amount) in store.amounts) {
-            out.add(key, SiAmountFormat.saturateToLong(amount))
+            out.add(key, SiFormat.saturateToLong(amount))
         }
     }
 

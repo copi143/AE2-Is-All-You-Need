@@ -118,6 +118,41 @@ class AssetGen(private val modId: String, private val output: Path, private val 
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
     }
 
+    /**
+     * Crafting storage: unformed cube_all + formed built-in model stub (empty JSON loader id).
+     */
+    fun craftingStorageBlock(name: String, displayName: String) {
+        translations["block.$modId.$name"] = displayName
+
+        val unformedModel = JsonObject().apply {
+            addProperty("parent", "minecraft:block/cube_all")
+            add("textures", JsonObject().apply {
+                addProperty("all", "$modId:block/$name")
+            })
+        }
+        blockModels += GeneratedFile("models/block/$name.json", unformedModel)
+
+        // Empty model file; actual geometry comes from BuiltInModelHooks + ModelBakeryMixin
+        blockModels += GeneratedFile("models/block/crafting/${name}_formed.json", JsonObject())
+
+        val stateJson = JsonObject().apply {
+            add("variants", JsonObject().apply {
+                add("formed=false", JsonObject().apply {
+                    addProperty("model", "$modId:block/$name")
+                })
+                add("formed=true", JsonObject().apply {
+                    addProperty("model", "$modId:block/crafting/${name}_formed")
+                })
+            })
+        }
+        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
+
+        val itemJson = JsonObject().apply {
+            addProperty("parent", "$modId:block/$name")
+        }
+        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
     fun generate() {
         val all = blockStates + blockModels + itemModels
         for (file in all) {

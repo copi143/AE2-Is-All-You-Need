@@ -64,7 +64,7 @@ public final class BigKeyCounter {
     }
 
     public long getSaturatedLong(AEKey key) {
-        return SiAmountFormat.saturateToLong(get(key));
+        return SiFormat.saturateToLong(get(key));
     }
 
     public boolean isEmpty() {
@@ -114,7 +114,7 @@ public final class BigKeyCounter {
      */
     public void copySaturatedTo(KeyCounter out) {
         for (var entry : amounts.object2ObjectEntrySet()) {
-            out.add(entry.getKey(), SiAmountFormat.saturateToLong(entry.getValue()));
+            out.add(entry.getKey(), SiFormat.saturateToLong(entry.getValue()));
         }
     }
 

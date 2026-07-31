@@ -10,6 +10,11 @@
     "PatternEncodingTermMenuMixin",
     "PatternProviderLogicMixin",
     "CraftingServiceMixin",
+    "CraftingServiceCpuMixin",
+    "CraftingCPUClusterMixin",
+    "CraftingCpuLogicMixin",
+    "CraftConfirmMenuMixin",
+    "CraftingStatusMenuMixin",
     "NetworkStorageMixin",
     "MEStorageMenuMixin",
     "MEInventoryUpdatePacketMixin",
@@ -22,7 +27,9 @@
     "FacadeCreativeTabMixin",
     "client.ReadableNumberConverterMixin",
     "client.MEStorageScreenMixin",
-    "client.RepoMixin"
+    "client.RepoMixin",
+    "client.CPUSelectionListMixin",
+    "client.TooltipsMixin"
   ],
   "server": [],
   "injectors": {

@@ -1,6 +1,6 @@
 package allyouneed.mixin.client;
 
-import allyouneed.util.SiAmountFormat;
+import allyouneed.util.SiFormat;
 import appeng.util.ReadableNumberConverter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -17,7 +17,7 @@ public class ReadableNumberConverterMixin {
      */
     @Overwrite
     public static String format(long number, int width) {
-        return SiAmountFormat.format(number, width);
+        return SiFormat.format(number, width);
     }
 
     /**
@@ -26,6 +26,6 @@ public class ReadableNumberConverterMixin {
      */
     @Overwrite
     public static String format(double number, int width) {
-        return SiAmountFormat.format(number, width);
+        return SiFormat.format(number, width);
     }
 }

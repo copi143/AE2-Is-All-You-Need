@@ -81,9 +81,20 @@ class TextureGen(private val output: Path) {
                     }
                 }
 
-                val outDir = output.resolve("textures/block")
+                // outputPrefix may be "name" or "subdir/name" under textures/block/
+                val outRelative = if (entry.outputPrefix.contains('/')) {
+                    "textures/block/${entry.outputPrefix.substringBeforeLast('/')}"
+                } else {
+                    "textures/block"
+                }
+                val outName = if (entry.outputPrefix.contains('/')) {
+                    entry.outputPrefix.substringAfterLast('/') + suffix
+                } else {
+                    entry.outputPrefix + suffix
+                }
+                val outDir = output.resolve(outRelative)
                 outDir.toFile().mkdirs()
-                ImageIO.write(dstImage, "png", outDir.resolve("${entry.outputPrefix}$suffix.png").toFile())
+                ImageIO.write(dstImage, "png", outDir.resolve("$outName.png").toFile())
             }
         }
     }

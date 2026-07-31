@@ -36,6 +36,30 @@ private val cells = listOf(
     CellEntry("creative_energy_cell", "Creative Energy Cell", "#E040FB", isCreative = true),
 )
 
+private val craftingStorages = listOf(
+    CellEntry("1k_crafting_storage", "Micro Crafting Storage", AE2_COLORS[0].hex),
+    CellEntry("4k_crafting_storage", "Simple Crafting Storage", AE2_COLORS[1].hex),
+    CellEntry("16k_crafting_storage", "Basic Crafting Storage", AE2_COLORS[2].hex),
+    CellEntry("64k_crafting_storage", "Normal Crafting Storage", AE2_COLORS[3].hex),
+    CellEntry("256k_crafting_storage", "Enhanced Crafting Storage", AE2_COLORS[4].hex),
+    CellEntry("1m_crafting_storage", "Advanced Crafting Storage", AE2_COLORS[5].hex),
+    CellEntry("4m_crafting_storage", "Reinforced Crafting Storage", AE2_COLORS[6].hex),
+    CellEntry("16m_crafting_storage", "Dense Crafting Storage", AE2_COLORS[7].hex),
+    CellEntry("64m_crafting_storage", "Hyper Crafting Storage", AE2_COLORS[8].hex),
+    CellEntry("256m_crafting_storage", "Ultra Crafting Storage", AE2_COLORS[9].hex),
+    CellEntry("1g_crafting_storage", "Ultimate Crafting Storage", AE2_COLORS[10].hex),
+    CellEntry("4g_crafting_storage", "Singular Crafting Storage", AE2_COLORS[11].hex),
+    CellEntry("16g_crafting_storage", "Quantum Crafting Storage", AE2_COLORS[12].hex),
+    CellEntry("64g_crafting_storage", "Stellar Crafting Storage", AE2_COLORS[13].hex),
+    CellEntry("256g_crafting_storage", "Cosmic Crafting Storage", AE2_COLORS[14].hex),
+    CellEntry("1t_crafting_storage", "1T Crafting Storage", AE2_COLORS[15].hex),
+    CellEntry("4t_crafting_storage", "4T Crafting Storage", AE2_COLORS[16].hex),
+    CellEntry("16t_crafting_storage", "16T Crafting Storage", AE2_COLORS[17].hex),
+    CellEntry("64t_crafting_storage", "64T Crafting Storage", AE2_COLORS[18].hex),
+    CellEntry("256t_crafting_storage", "256T Crafting Storage", AE2_COLORS[19].hex),
+    CellEntry("creative_crafting_storage", "Creative Crafting Storage", "#E040FB", isCreative = true),
+)
+
 fun main(args: Array<String>) {
     if (args.isNotEmpty()) {
         println("Arguments: ${args.joinToString()}")
@@ -63,6 +87,10 @@ fun main(args: Array<String>) {
             }
         }
 
+        for (storage in craftingStorages) {
+            craftingStorageBlock(storage.id, storage.displayName)
+        }
+
         simpleBlock("me_io_drive", "ME IO Drive")
 
         // Adaptive Pattern item (just an item model, no block)
@@ -85,11 +113,27 @@ fun main(args: Array<String>) {
 
         val creative = cells.first { it.isCreative }
         targetSingle("creative_energy_cell", creative.id, creative.color)
+
+        // Crafting storage unformed + light (same base hue as energy cells)
+        for (storage in craftingStorages) {
+            targetSingle("crafting_storage", storage.id, storage.color)
+            targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
+        }
     }
 
     val texOut = output.resolve("textures/block")
     texOut.createDirectories()
     sourceTextures.resolve("me_io_drive.png").copyTo(texOut.resolve("me_io_drive.png"), overwrite = true)
+
+    // Copy light animation mcmeta for each crafting storage light texture
+    val lightMcmeta = sourceTextures.resolve("crafting_storage_light.png.mcmeta")
+    if (lightMcmeta.exists()) {
+        val craftingTexOut = texOut.resolve("crafting")
+        craftingTexOut.createDirectories()
+        for (storage in craftingStorages) {
+            lightMcmeta.copyTo(craftingTexOut.resolve("${storage.id}_light.png.mcmeta"), overwrite = true)
+        }
+    }
 
     // Adaptive pattern terminal texture (placeholder - copy from pattern provider if available)
     val ptTex = sourceTextures.resolve("me_io_drive.png")
