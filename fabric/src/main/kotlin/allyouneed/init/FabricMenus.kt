@@ -1,7 +1,9 @@
 package allyouneed.fabric.init
 
 import allyouneed.iodrive.MEIODriveMenu
+import allyouneed.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
+import allyouneed.pattern.machine.MachinePatternTerminalMenu
 import allyouneed.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
@@ -19,6 +21,10 @@ object FabricMenus {
         val _w: MenuType<*> = WirelessPseudoPatternTerminalMenu.TYPE
         @Suppress("UNUSED_VARIABLE")
         val _a: MenuType<*> = AdaptivePatternTerminalMenu.TYPE
+        @Suppress("UNUSED_VARIABLE")
+        val _ma: MenuType<*> = MachineAssemblerMenu.TYPE
+        @Suppress("UNUSED_VARIABLE")
+        val _mt: MenuType<*> = MachinePatternTerminalMenu.TYPE
         @Suppress("UNUSED_VARIABLE")
         val _io: MenuType<*> = MEIODriveMenu.TYPE
     }

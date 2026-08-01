@@ -6,8 +6,12 @@ import allyouneed.cell.ItemStorageCellItem
 import allyouneed.client.CraftingStorageModels
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
+import allyouneed.machineassembler.MachineAssemblerMenu
+import allyouneed.machineassembler.MachineAssemblerScreen
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalScreen
+import allyouneed.pattern.machine.MachinePatternTerminalMenu
+import allyouneed.pattern.machine.MachinePatternTerminalScreen
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalScreen
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
@@ -55,5 +59,13 @@ fun initClient() {
     MenuScreens.register(AdaptivePatternTerminalMenu.TYPE) { menu, inv, title ->
         val style = StyleManager.loadStyleDoc("/screens/terminals/adaptive_pattern_encoding_terminal.json")
         AdaptivePatternTerminalScreen(menu, inv, title, style)
+    }
+    MenuScreens.register(MachineAssemblerMenu.TYPE) { menu, inv, title ->
+        val style = StyleManager.loadStyleDoc("/screens/machine_assembler.json")
+        MachineAssemblerScreen(menu, inv, title, style)
+    }
+    MenuScreens.register(MachinePatternTerminalMenu.TYPE) { menu, inv, title ->
+        val style = StyleManager.loadStyleDoc("/screens/terminals/machine_pattern_encoding_terminal.json")
+        MachinePatternTerminalScreen(menu, inv, title, style)
     }
 }

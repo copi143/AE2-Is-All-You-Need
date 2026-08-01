@@ -150,6 +150,33 @@ class AssetGen(private val modId: String, private val output: Path, private val 
     }
 
     /**
+     * Block whose model simply inherits another (already existing) model, e.g. reusing
+     * AE2's molecular assembler shell via `ae2:block/molecular_assembler`.
+     */
+    fun parentedBlock(name: String, displayName: String, parent: String) {
+        translations["block.$modId.$name"] = displayName
+
+        val modelJson = JsonObject().apply {
+            addProperty("parent", parent)
+        }
+        blockModels += GeneratedFile("models/block/$name.json", modelJson)
+
+        val stateJson = JsonObject().apply {
+            add("variants", JsonObject().apply {
+                add("", JsonObject().apply {
+                    addProperty("model", "$modId:block/$name")
+                })
+            })
+        }
+        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
+
+        val itemJson = JsonObject().apply {
+            addProperty("parent", "$modId:block/$name")
+        }
+        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
+    /**
      * Crafting storage: unformed cube_all + formed built-in model stub (empty JSON loader id).
      */
     fun craftingStorageBlock(name: String, displayName: String) {

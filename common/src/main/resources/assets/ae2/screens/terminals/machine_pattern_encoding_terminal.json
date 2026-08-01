@@ -1,0 +1,123 @@
+{
+  "$schema": "../schema.json",
+  "includes": [
+    "terminal.json",
+    "encoding/crafting.json",
+    "encoding/processing.json",
+    "encoding/smithing_table.json",
+    "encoding/stonecutting.json"
+  ],
+  "helpTopic": "items-blocks-machines/terminals.md#pattern-encoding-terminal-ui",
+  "slots": {
+    "BLANK_PATTERN": {
+      "left": 147,
+      "bottom": 161
+    },
+    "ENCODED_PATTERN": {
+      "left": 147,
+      "bottom": 118
+    }
+  },
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "gui.ae2isallyouneed.machine_pattern_terminal"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    },
+    "machine_slot_label": {
+      "text": {
+        "translate": "gui.ae2isallyouneed.machine_slot"
+      },
+      "position": {
+        "left": 118,
+        "bottom": 53
+      }
+    }
+  },
+  "terminalStyle": {
+    "header": {
+      "texture": "guis/pattern.png",
+      "srcRect": [0, 0, 195, 17]
+    },
+    "firstRow": {
+      "texture": "guis/pattern.png",
+      "srcRect": [0, 17, 195, 18]
+    },
+    "row": {
+      "texture": "guis/pattern.png",
+      "srcRect": [0, 35, 195, 18]
+    },
+    "lastRow": {
+      "texture": "guis/pattern.png",
+      "srcRect": [0, 53, 195, 18]
+    },
+    "bottom": {
+      "texture": "guis/pattern.png",
+      "srcRect": [0, 71, 195, 178]
+    }
+  },
+  "widgets": {
+    "modeTabButton0": {
+      "left": 173,
+      "bottom": 170,
+      "width": 20,
+      "height": 20
+    },
+    "modeTabButton1": {
+      "left": 173,
+      "bottom": 150,
+      "width": 20,
+      "height": 20
+    },
+    "modeTabButton2": {
+      "left": 173,
+      "bottom": 130,
+      "width": 20,
+      "height": 20
+    },
+    "modeTabButton3": {
+      "left": 173,
+      "bottom": 110,
+      "width": 20,
+      "height": 22
+    },
+    "modePanel0": {
+      "left": 9,
+      "bottom": 164
+    },
+    "modePanel1": {
+      "left": 9,
+      "bottom": 164
+    },
+    "modePanel2": {
+      "left": 9,
+      "bottom": 164
+    },
+    "modePanel3": {
+      "left": 9,
+      "bottom": 164
+    },
+    "modePanel4": {
+      "left": 9,
+      "bottom": 164
+    },
+    "modePanel5": {
+      "left": 9,
+      "bottom": 164
+    },
+    "encodePattern": {
+      "left": 147,
+      "bottom": 142
+    },
+    "machineSlot": {
+      "left": 147,
+      "bottom": 40,
+      "width": 18,
+      "height": 18
+    }
+  }
+}

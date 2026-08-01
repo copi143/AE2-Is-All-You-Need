@@ -90,5 +90,13 @@
   "item.ae2isallyouneed.16t_item_storage_cell": "16T 物品存储元件",
   "item.ae2isallyouneed.64t_item_storage_cell": "64T 物品存储元件",
   "item.ae2isallyouneed.256t_item_storage_cell": "256T 物品存储元件",
-  "block.ae2isallyouneed.adaptive_pattern_terminal": "自适应模式终端"
+  "block.ae2isallyouneed.adaptive_pattern_terminal": "自适应模式终端",
+  "block.ae2isallyouneed.molecular_assembler": "分子装配室",
+  "block.ae2isallyouneed.machine_pattern_terminal": "机器模式终端",
+  "item.ae2isallyouneed.machine_pattern": "机器模式",
+  "gui.ae2isallyouneed.machine_assembler": "分子装配室",
+  "gui.ae2isallyouneed.machine_pattern_terminal": "机器模式终端",
+  "gui.ae2isallyouneed.machine_slot": "机器",
+  "gui.ae2isallyouneed.machine_slot_no_machine": "未选择机器",
+  "gui.ae2isallyouneed.machine_slot_hint": "点击更换机器"
 }

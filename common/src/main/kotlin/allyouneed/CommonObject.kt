@@ -4,6 +4,7 @@ import allyouneed.cell.CreativeMeCellHandler
 import allyouneed.cell.ItemStorageCell
 import allyouneed.cell.ItemStorageCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
+import allyouneed.machine.BuiltinMachineTypes
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
@@ -37,6 +38,7 @@ object CommonObject {
         )
         // Register our pattern decoders and part models
         ModPatternDecoders.register()
+        BuiltinMachineTypes.registerAll()
         registerParts()
     }
 

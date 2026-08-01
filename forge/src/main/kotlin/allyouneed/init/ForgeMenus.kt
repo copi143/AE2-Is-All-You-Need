@@ -1,7 +1,9 @@
 package allyouneed.forge.init
 
 import allyouneed.iodrive.MEIODriveMenu
+import allyouneed.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
+import allyouneed.pattern.machine.MachinePatternTerminalMenu
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
 import allyouneed.util.MODID
@@ -22,6 +24,12 @@ object ForgeMenus {
 
     val ADAPTIVE_PATTERN_TERMINAL: RegistryObject<MenuType<AdaptivePatternTerminalMenu>> =
         MENUS.register("adaptive_pattern_terminal") { AdaptivePatternTerminalMenu.TYPE }
+
+    val MACHINE_ASSEMBLER: RegistryObject<MenuType<MachineAssemblerMenu>> =
+        MENUS.register("machine_assembler") { MachineAssemblerMenu.TYPE }
+
+    val MACHINE_PATTERN_TERMINAL: RegistryObject<MenuType<MachinePatternTerminalMenu>> =
+        MENUS.register("machine_pattern_terminal") { MachinePatternTerminalMenu.TYPE }
 
     val ME_IO_DRIVE: RegistryObject<MenuType<MEIODriveMenu>> =
         MENUS.register("me_io_drive") { MEIODriveMenu.TYPE }

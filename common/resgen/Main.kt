@@ -114,6 +114,11 @@ fun main(args: Array<String>) {
         translation("gui.$modId.group.ae2", "AE2")
         translation("gui.$modId.adaptive_probability", "Probability (p)")
         translation("gui.$modId.adaptive_timeout", "Timeout (T)")
+        translation("gui.$modId.machine_assembler", "Molecular Assembler")
+        translation("gui.$modId.machine_pattern_terminal", "Machine Pattern Terminal")
+        translation("gui.$modId.machine_slot", "Machine")
+        translation("gui.$modId.machine_slot_no_machine", "No machine selected")
+        translation("gui.$modId.machine_slot_hint", "Click to change machine")
 
         for (cell in cells) {
             if (cell.isCreative) {
@@ -143,6 +148,15 @@ fun main(args: Array<String>) {
 
         // Adaptive Pattern Terminal block
         simpleBlock("adaptive_pattern_terminal", "Adaptive Pattern Terminal")
+
+        // Machine Assembler: reuse AE2's molecular assembler shell model/texture
+        parentedBlock("molecular_assembler", "Molecular Assembler", "ae2:block/molecular_assembler")
+
+        // Machine Pattern Terminal block
+        simpleBlock("machine_pattern_terminal", "Machine Pattern Terminal")
+
+        // Machine Pattern item (just an item model, no block)
+        item("machine_pattern", "Machine Pattern")
     }
 
     retexture(output) {
@@ -295,4 +309,18 @@ fun main(args: Array<String>) {
     if (apTex.exists()) {
         apTex.copyTo(itemTexOut.resolve("adaptive_pattern.png"), overwrite = true)
     }
+
+    // Machine pattern terminal + machine pattern textures (placeholder)
+    if (apTex.exists()) {
+        apTex.copyTo(texOut.resolve("machine_pattern_terminal.png"), overwrite = true)
+        apTex.copyTo(itemTexOut.resolve("machine_pattern.png"), overwrite = true)
+    }
+
+    // GUI textures (machine slot square + molecular_assembler GUI with a baked machine slot)
+    val guiTexOut = output.resolve("textures/guis")
+    guiTexOut.createDirectories()
+    val guiSrc = Path.of("common/resgen/textures/guis")
+    guiSrc.resolve("machine_slot.png").copyTo(guiTexOut.resolve("machine_slot.png"), overwrite = true)
+    guiSrc.resolve("molecular_assembler.png")
+        .copyTo(guiTexOut.resolve("molecular_assembler.png"), overwrite = true)
 }
