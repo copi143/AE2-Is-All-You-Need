@@ -42,8 +42,8 @@ class ItemStorageCellInventory(
     /** Total capacity in bytes (long, unlike vanilla's int). */
     private val totalBytes: Long = cellType.cellType.sizeBytes
 
-    /** Bytes reserved per distinct item type. */
-    private val bytesPerType: Long = BYTES_PER_TYPE.toLong()
+    /** Bytes reserved per distinct item type (scales with tier, like vanilla). */
+    private val bytesPerType: Long = cellType.cellType.bytesPerType
 
     private val maxItemTypes: Int = MAX_ITEM_TYPES
 
@@ -290,7 +290,6 @@ class ItemStorageCellInventory(
     companion object {
         private const val TAG_STACK_KEYS = "keys"
         private const val TAG_STACK_AMOUNTS = "amts"
-        private const val BYTES_PER_TYPE = 8
         private const val MAX_ITEM_TYPES = 63
     }
 }

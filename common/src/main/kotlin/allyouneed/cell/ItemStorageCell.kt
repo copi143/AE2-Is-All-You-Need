@@ -44,6 +44,9 @@ enum class ItemStorageCell(size: Double = -1.0) {
     /** Capacity in bytes for this tier (exact power-of-two, vanilla unit: KiB * 1024). */
     val sizeBytes: Long = size.toLong()
 
+    /** Bytes reserved per distinct item type. AE2 scales this with tier: 8 bytes per KB. */
+    val bytesPerType: Long = (sizeBytes / 1024) * 8
+
     /** Total item capacity: 8 items per byte. */
     val maxItems: Long = sizeBytes * 8
 
