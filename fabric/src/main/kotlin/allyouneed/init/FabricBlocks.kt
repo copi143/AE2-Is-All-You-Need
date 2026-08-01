@@ -1,5 +1,13 @@
 package allyouneed.fabric.init
 
+import allyouneed.async.AsyncCraftingBlock
+import allyouneed.async.AsyncCraftingBlockEntity
+import allyouneed.async.AsyncCraftingConnectorBlock
+import allyouneed.async.AsyncCraftingConnectorBlockEntity
+import allyouneed.async.AsyncCraftingOrientableBlock
+import allyouneed.async.AsyncCraftingRegistration
+import allyouneed.async.AsyncCraftingUnitRole
+import allyouneed.async.AsyncCraftingUnitType
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
 import allyouneed.iodrive.MEIODriveRegistration
@@ -22,6 +30,7 @@ import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
+import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.material.MapColor
 
@@ -55,6 +64,33 @@ object FabricBlocks {
     )
 
     lateinit var ME_IO_DRIVE_BE: net.minecraft.world.level.block.entity.BlockEntityType<MEIODriveBlockEntity>
+
+    val ASYNC_HOST: AsyncCraftingBlock = asyncBlock(AsyncCraftingUnitType.HOST)
+    val ASYNC_CONNECTOR: AsyncCraftingBlock = asyncBlock(AsyncCraftingUnitType.CONNECTOR)
+    val ASYNC_STORAGE: AsyncCraftingBlock = asyncBlock(AsyncCraftingUnitType.STORAGE)
+    val ASYNC_WALL: AsyncCraftingBlock = asyncBlock(AsyncCraftingUnitType.WALL)
+    val ASYNC_GLASS: AsyncCraftingBlock = asyncBlock(AsyncCraftingUnitType.GLASS)
+
+    lateinit var ASYNC_UNIT_BE: BlockEntityType<AsyncCraftingBlockEntity>
+    lateinit var ASYNC_CONNECTOR_BE: BlockEntityType<AsyncCraftingConnectorBlockEntity>
+
+    private fun asyncBlock(unitType: AsyncCraftingUnitType): AsyncCraftingBlock {
+        val props = BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
+        return when (unitType.role) {
+            AsyncCraftingUnitRole.CONNECTOR -> AsyncCraftingConnectorBlock(props, unitType)
+            AsyncCraftingUnitRole.HOST -> AsyncCraftingOrientableBlock(props, unitType)
+            AsyncCraftingUnitRole.STORAGE, AsyncCraftingUnitRole.WALL, AsyncCraftingUnitRole.GLASS ->
+                AsyncCraftingBlock(props, unitType)
+        }
+    }
+
+    private fun blockFor(role: AsyncCraftingUnitRole): AsyncCraftingBlock = when (role) {
+        AsyncCraftingUnitRole.HOST -> ASYNC_HOST
+        AsyncCraftingUnitRole.CONNECTOR -> ASYNC_CONNECTOR
+        AsyncCraftingUnitRole.STORAGE -> ASYNC_STORAGE
+        AsyncCraftingUnitRole.WALL -> ASYNC_WALL
+        AsyncCraftingUnitRole.GLASS -> ASYNC_GLASS
+    }
 
     fun register() {
         val blockId = "pseudo_pattern_terminal".rl
@@ -156,5 +192,52 @@ object FabricBlocks {
         BlockDefinition("ME IO Drive", ioDriveId, ME_IO_DRIVE, ioDriveItem).also {
             MainCreativeTab.add(it)
         }
+
+        // Async Processing Processor
+        ASYNC_UNIT_BE = FabricBlockEntityTypeBuilder.create(
+            { pos, state -> AsyncCraftingBlockEntity(ASYNC_UNIT_BE, pos, state) },
+            ASYNC_HOST, ASYNC_STORAGE, ASYNC_WALL, ASYNC_GLASS,
+        ).build()
+        ASYNC_CONNECTOR_BE = FabricBlockEntityTypeBuilder.create(
+            { pos, state -> AsyncCraftingConnectorBlockEntity(ASYNC_CONNECTOR_BE, pos, state) },
+            ASYNC_CONNECTOR,
+        ).build()
+        AsyncCraftingRegistration.setUnitBlockEntityType(ASYNC_UNIT_BE)
+        AsyncCraftingRegistration.setConnectorBlockEntityType(ASYNC_CONNECTOR_BE)
+
+        for (unit in AsyncCraftingUnitType.entries.filter {
+            it.role != AsyncCraftingUnitRole.CONNECTOR
+        }) {
+            blockFor(unit.role).setBlockEntity(AsyncCraftingBlockEntity::class.java, ASYNC_UNIT_BE, null, null)
+        }
+        @Suppress("UNCHECKED_CAST")
+        (ASYNC_CONNECTOR as appeng.block.AEBaseEntityBlock<AsyncCraftingBlockEntity>).setBlockEntity(
+            AsyncCraftingConnectorBlockEntity::class.java as Class<AsyncCraftingBlockEntity>,
+            ASYNC_CONNECTOR_BE as BlockEntityType<AsyncCraftingBlockEntity>,
+            null,
+            null,
+        )
+
+        for (unit in AsyncCraftingUnitType.entries) {
+            val block = blockFor(unit.role)
+            val id = unit.id.rl
+            Registry.register(BuiltInRegistries.BLOCK, id, block)
+            val item = BlockItem(block, Item.Properties())
+            Registry.register(BuiltInRegistries.ITEM, id, item)
+            BlockDefinition(unit.displayName, id, block, item).also {
+                MainCreativeTab.add(it)
+            }
+        }
+
+        Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            "async_processing_unit".rl,
+            ASYNC_UNIT_BE,
+        )
+        Registry.register(
+            BuiltInRegistries.BLOCK_ENTITY_TYPE,
+            "async_processing_connector".rl,
+            ASYNC_CONNECTOR_BE,
+        )
     }
 }

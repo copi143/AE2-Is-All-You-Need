@@ -105,6 +105,7 @@ sourceSets.create("resgen") {
         dependsOn(tasks.named("classes"))
         classpath = it.runtimeClasspath
         mainClass.set("allyouneed.resgen.MainKt")
+        javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
         workingDir = rootProject.layout.projectDirectory.asFile
     }
     tasks.jar {

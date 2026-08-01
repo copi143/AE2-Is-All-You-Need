@@ -1,0 +1,52 @@
+{
+  "$schema": "schema.json",
+  "includes": ["common/common.json"],
+  "background": {
+    "texture": "ae2isallyouneed:guis/async_crafting_status.png",
+    "srcRect": [0, 0, 176, 150]
+  },
+  "text": {
+    "status_title": {
+      "position": {
+        "left": 8,
+        "top": 5
+      }
+    },
+    "formed": {
+      "position": {
+        "left": 13,
+        "top": 22
+      }
+    },
+    "grid_connected": {
+      "position": {
+        "left": 13,
+        "top": 34
+      }
+    },
+    "swallowed": {
+      "position": {
+        "left": 13,
+        "top": 46
+      }
+    },
+    "storage": {
+      "position": {
+        "left": 13,
+        "top": 58
+      }
+    },
+    "block_count": {
+      "position": {
+        "left": 13,
+        "top": 70
+      }
+    },
+    "state": {
+      "position": {
+        "left": 13,
+        "top": 90
+      }
+    }
+  }
+}

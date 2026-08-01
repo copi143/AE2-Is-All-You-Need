@@ -1,5 +1,6 @@
 package allyouneed.forge.init
 
+import allyouneed.async.AsyncCraftingStatusMenu
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
@@ -33,6 +34,9 @@ object ForgeMenus {
 
     val ME_IO_DRIVE: RegistryObject<MenuType<MEIODriveMenu>> =
         MENUS.register("me_io_drive") { MEIODriveMenu.TYPE }
+
+    val ASYNC_CRAFTING_STATUS: RegistryObject<MenuType<AsyncCraftingStatusMenu>> =
+        MENUS.register("async_crafting_status") { AsyncCraftingStatusMenu.TYPE }
 
     fun register(bus: IEventBus) {
         MENUS.register(bus)

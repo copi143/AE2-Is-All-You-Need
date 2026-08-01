@@ -17,7 +17,9 @@
     "MEInventoryUpdatePacketMixin",
     "MEInventoryUpdatePacketBuilderMixin",
     "GridInventoryEntryMixin",
-    "DelegatingMEInventoryAccessor"
+    "DelegatingMEInventoryAccessor",
+    "GridNodeMixin",
+    "PathingCalculationMixin"
   ],
   "client": [
     "CreativeScreenSidebarMixin",

@@ -96,6 +96,23 @@ private val itemStorageCells = run {
     }
 }
 
+// Async crafting multiblock units, matching AsyncCraftingUnitType ids/colors.
+private data class AsyncBlockEntry(
+    val id: String,
+    val displayName: String,
+    val color: String,
+    val hasFacing: Boolean,
+    val hasPowered: Boolean,
+)
+
+private val asyncBlocks = listOf(
+    AsyncBlockEntry("async_processing_host", "Async Processing Host", "#3F8C52", hasFacing = true, hasPowered = false),
+    AsyncBlockEntry("async_processing_connector", "Async Processing Connector", "#8C6A3F", hasFacing = true, hasPowered = true),
+    AsyncBlockEntry("async_processing_storage", "Async Processing Storage", "#3F6E8C", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_processing_wall", "Async Processing Wall", "#6E6E6E", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_processing_glass", "Async Processing Glass", "#8FBF4F", hasFacing = false, hasPowered = false),
+)
+
 fun main(args: Array<String>) {
     if (args.isNotEmpty()) {
         println("Arguments: ${args.joinToString()}")
@@ -120,6 +137,19 @@ fun main(args: Array<String>) {
         translation("gui.$modId.machine_slot_no_machine", "No machine selected")
         translation("gui.$modId.machine_slot_hint", "Click to change machine")
 
+        // Async processing status GUI
+        translation("gui.$modId.async.status.title", "Async Processing Status")
+        translation("gui.$modId.async.status.formed", "Formed")
+        translation("gui.$modId.async.status.unformed", "Not formed")
+        translation("gui.$modId.async.status.connected", "Grid connected")
+        translation("gui.$modId.async.status.disconnected", "No grid connection")
+        translation("gui.$modId.async.status.swallowed", "Channels swallowed: %s")
+        translation("gui.$modId.async.status.swallowed_infinite", "Channels swallowed: Infinite")
+        translation("gui.$modId.async.status.storage", "Storage: %s MB")
+        translation("gui.$modId.async.status.block_count", "Blocks: %s")
+        translation("gui.$modId.async.status.working", "Working")
+        translation("gui.$modId.async.status.not_working", "Not working")
+
         for (cell in cells) {
             if (cell.isCreative) {
                 simpleBlock(cell.id, cell.displayName)
@@ -130,6 +160,10 @@ fun main(args: Array<String>) {
 
         for (storage in craftingStorages) {
             craftingStorageBlock(storage.id, storage.displayName)
+        }
+
+        for (async in asyncBlocks) {
+            asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
         }
 
         simpleBlock("me_io_drive", "ME IO Drive")
@@ -247,6 +281,28 @@ fun main(args: Array<String>) {
             }
             targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
         }
+
+        // Async processor: reuse crafting_storage template tinted per unit color.
+        // unformed = tinted base; formed = tinted base + light overlay.
+        for (async in asyncBlocks) {
+            layeredTarget(
+                bg = "crafting_storage_bg",
+                mid = "crafting_storage_fg",
+                top = null,
+                outputPrefix = "async/${async.id}",
+                color = async.color,
+                levels = null,
+            )
+            layeredTarget(
+                bg = "crafting_storage_bg",
+                mid = "crafting_storage_fg",
+                top = null,
+                outputPrefix = "async/${async.id}_formed",
+                color = async.color,
+                levels = null,
+                overlays = listOf("crafting_storage_light"),
+            )
+        }
     }
 
     val texOut = output.resolve("textures/block")
@@ -323,4 +379,6 @@ fun main(args: Array<String>) {
     guiSrc.resolve("machine_slot.png").copyTo(guiTexOut.resolve("machine_slot.png"), overwrite = true)
     guiSrc.resolve("molecular_assembler.png")
         .copyTo(guiTexOut.resolve("molecular_assembler.png"), overwrite = true)
+    guiSrc.resolve("async_crafting_status.png")
+        .copyTo(guiTexOut.resolve("async_crafting_status.png"), overwrite = true)
 }

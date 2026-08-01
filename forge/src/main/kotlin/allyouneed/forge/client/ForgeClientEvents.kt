@@ -1,9 +1,12 @@
 package allyouneed.forge.client
 
+import allyouneed.async.AsyncCraftingStatusMenu
+import allyouneed.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.ItemStorageCell
 import allyouneed.cell.ItemStorageCellItem
 import allyouneed.client.CraftingStorageModels
+import allyouneed.forge.init.ForgeBlocks
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
 import allyouneed.machineassembler.MachineAssemblerMenu
@@ -64,6 +67,8 @@ object ForgeClientEvents {
                 ItemBlockRenderTypes.setRenderLayer(storage.define.block(), RenderType.cutout())
             }
 
+            ItemBlockRenderTypes.setRenderLayer(ForgeBlocks.ASYNC_GLASS.get(), RenderType.cutout())
+
             MenuScreens.register(PseudoPatternTerminalMenu.TYPE) { menu, inv, title ->
                 val style = StyleManager.loadStyleDoc("/screens/terminals/wireless_terminal.json")
                 PseudoPatternTerminalScreen(menu, inv, title, style)
@@ -87,6 +92,10 @@ object ForgeClientEvents {
             MenuScreens.register(MachinePatternTerminalMenu.TYPE) { menu, inv, title ->
                 val style = StyleManager.loadStyleDoc("/screens/terminals/machine_pattern_encoding_terminal.json")
                 MachinePatternTerminalScreen(menu, inv, title, style)
+            }
+            MenuScreens.register(AsyncCraftingStatusMenu.TYPE) { menu, inv, title ->
+                val style = StyleManager.loadStyleDoc("/screens/async_crafting_status.json")
+                AsyncCraftingStatusScreen(menu, inv, title, style)
             }
         }
     }

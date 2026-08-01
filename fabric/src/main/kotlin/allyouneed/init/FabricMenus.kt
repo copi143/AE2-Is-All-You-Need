@@ -1,5 +1,6 @@
 package allyouneed.fabric.init
 
+import allyouneed.async.AsyncCraftingStatusMenu
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
@@ -27,5 +28,7 @@ object FabricMenus {
         val _mt: MenuType<*> = MachinePatternTerminalMenu.TYPE
         @Suppress("UNUSED_VARIABLE")
         val _io: MenuType<*> = MEIODriveMenu.TYPE
+        @Suppress("UNUSED_VARIABLE")
+        val _ac: MenuType<*> = AsyncCraftingStatusMenu.TYPE
     }
 }
