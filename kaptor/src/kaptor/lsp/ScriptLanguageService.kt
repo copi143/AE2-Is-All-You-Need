@@ -1,11 +1,9 @@
 package kaptor.lsp
 
+import kaptor.ir.IrScriptFile
 import kaptor.parser.antlr.KotlinLexer
 import kaptor.parser.antlr.KotlinParser
 import kaptor.parser.antlr.KotlinSubsetVisitor
-import kaptor.ir.IrScriptFile
-import kaptor.ir.IrNode
-import kaptor.ir.IrHandler
 import org.antlr.v4.runtime.*
 import org.antlr.v4.runtime.tree.ParseTree
 import java.util.concurrent.ConcurrentHashMap
@@ -37,33 +35,58 @@ enum class CompletionItemKind {
 }
 
 data class TokenInfo(
-    val type: String,
-    val text: String,
-    val line: Int,
-    val column: Int,
-    val stopLine: Int,
-    val stopColumn: Int
+    val type: String, val text: String, val line: Int, val column: Int, val stopLine: Int, val stopColumn: Int
 )
 
 data class ScriptAnalysisResult(
-    val ast: IrScriptFile?,
-    val parseTree: ParseTree?,
-    val diagnostics: List<Diagnostic>,
-    val tokens: List<TokenInfo>
+    val ast: IrScriptFile?, val parseTree: ParseTree?, val diagnostics: List<Diagnostic>, val tokens: List<TokenInfo>
 )
 
 class ScriptLanguageService {
     private val analysisCache = ConcurrentHashMap<String, ScriptAnalysisResult>()
     private val builtInKeywords = setOf(
-        "fun", "val", "var", "if", "else", "when", "for", "while", "do",
-        "return", "break", "continue", "throw", "import", "this", "super",
-        "true", "false", "null", "in", "is", "as", "out", "typeof"
+        "fun",
+        "val",
+        "var",
+        "if",
+        "else",
+        "when",
+        "for",
+        "while",
+        "do",
+        "return",
+        "break",
+        "continue",
+        "throw",
+        "import",
+        "this",
+        "super",
+        "true",
+        "false",
+        "null",
+        "in",
+        "is",
+        "as",
+        "out",
+        "typeof"
     )
 
     private val builtInFunctions = setOf(
-        "println", "print", "toString", "toInt", "toLong", "toDouble",
-        "len", "listOf", "mapOf", "setOf", "check", "require", "error",
-        "checkNotNull", "requireNotNull"
+        "println",
+        "print",
+        "toString",
+        "toInt",
+        "toLong",
+        "toDouble",
+        "len",
+        "listOf",
+        "mapOf",
+        "setOf",
+        "check",
+        "require",
+        "error",
+        "checkNotNull",
+        "requireNotNull"
     )
 
     fun analyze(source: String, fileName: String = "<input>"): ScriptAnalysisResult {
@@ -85,14 +108,16 @@ class ScriptLanguageService {
                 msg: String?,
                 e: RecognitionException?
             ) {
-                diagnostics.add(Diagnostic(
-                    line = line,
-                    column = charPositionInLine,
-                    endLine = line,
-                    endColumn = charPositionInLine + 1,
-                    message = msg ?: "Syntax error",
-                    severity = DiagnosticSeverity.ERROR
-                ))
+                diagnostics.add(
+                    Diagnostic(
+                        line = line,
+                        column = charPositionInLine,
+                        endLine = line,
+                        endColumn = charPositionInLine + 1,
+                        message = msg ?: "Syntax error",
+                        severity = DiagnosticSeverity.ERROR
+                    )
+                )
             }
         })
 
@@ -106,39 +131,48 @@ class ScriptLanguageService {
                 msg: String?,
                 e: RecognitionException?
             ) {
-                diagnostics.add(Diagnostic(
-                    line = line,
-                    column = charPositionInLine,
-                    endLine = line,
-                    endColumn = charPositionInLine + 1,
-                    message = msg ?: "Lexer error",
-                    severity = DiagnosticSeverity.ERROR
-                ))
+                diagnostics.add(
+                    Diagnostic(
+                        line = line,
+                        column = charPositionInLine,
+                        endLine = line,
+                        endColumn = charPositionInLine + 1,
+                        message = msg ?: "Lexer error",
+                        severity = DiagnosticSeverity.ERROR
+                    )
+                )
             }
         })
 
         tokenStream.fill()
         for (token in tokenStream.tokens) {
             if (token.type != Token.EOF) {
-                tokens.add(TokenInfo(
-                    type = parser.vocabulary.getSymbolicName(token.type),
-                    text = token.text,
-                    line = token.line,
-                    column = token.charPositionInLine,
-                    stopLine = token.line,
-                    stopColumn = token.charPositionInLine + token.text.length
-                ))
+                tokens.add(
+                    TokenInfo(
+                        type = parser.vocabulary.getSymbolicName(token.type),
+                        text = token.text,
+                        line = token.line,
+                        column = token.charPositionInLine,
+                        stopLine = token.line,
+                        stopColumn = token.charPositionInLine + token.text.length
+                    )
+                )
             }
         }
 
         val parseTree = try {
             parser.kotlinFile()
         } catch (e: Exception) {
-            diagnostics.add(Diagnostic(
-                line = 1, column = 0, endLine = 1, endColumn = 1,
-                message = "Parse error: ${e.message}",
-                severity = DiagnosticSeverity.ERROR
-            ))
+            diagnostics.add(
+                Diagnostic(
+                    line = 1,
+                    column = 0,
+                    endLine = 1,
+                    endColumn = 1,
+                    message = "Parse error: ${e.message}",
+                    severity = DiagnosticSeverity.ERROR
+                )
+            )
             null
         }
 
@@ -148,11 +182,16 @@ class ScriptLanguageService {
                 val visitor = KotlinSubsetVisitor()
                 ast = visitor.visit(parseTree) as? IrScriptFile
             } catch (e: Exception) {
-                diagnostics.add(Diagnostic(
-                    line = 1, column = 0, endLine = 1, endColumn = 1,
-                    message = "Script conversion error: ${e.message}",
-                    severity = DiagnosticSeverity.ERROR
-                ))
+                diagnostics.add(
+                    Diagnostic(
+                        line = 1,
+                        column = 0,
+                        endLine = 1,
+                        endColumn = 1,
+                        message = "Script conversion error: ${e.message}",
+                        severity = DiagnosticSeverity.ERROR
+                    )
+                )
             }
         }
 
@@ -173,14 +212,16 @@ class ScriptLanguageService {
             val count = eventTypes.getOrDefault(handler.eventType, 0) + 1
             eventTypes[handler.eventType] = count
             if (count > 1) {
-                diagnostics.add(Diagnostic(
-                    line = handler.line,
-                    column = handler.col,
-                    endLine = handler.line,
-                    endColumn = handler.col + handler.eventType.length,
-                    message = "Duplicate event handler for '${handler.eventType}'",
-                    severity = DiagnosticSeverity.WARNING
-                ))
+                diagnostics.add(
+                    Diagnostic(
+                        line = handler.line,
+                        column = handler.col,
+                        endLine = handler.line,
+                        endColumn = handler.col + handler.eventType.length,
+                        message = "Duplicate event handler for '${handler.eventType}'",
+                        severity = DiagnosticSeverity.WARNING
+                    )
+                )
             }
         }
 
@@ -191,19 +232,19 @@ class ScriptLanguageService {
         val items = mutableListOf<CompletionItem>()
 
         for (kw in builtInKeywords) {
-            items.add(CompletionItem(
-                label = kw,
-                kind = CompletionItemKind.KEYWORD,
-                detail = "Keyword"
-            ))
+            items.add(
+                CompletionItem(
+                    label = kw, kind = CompletionItemKind.KEYWORD, detail = "Keyword"
+                )
+            )
         }
 
         for (func in builtInFunctions) {
-            items.add(CompletionItem(
-                label = func,
-                kind = CompletionItemKind.FUNCTION,
-                detail = "Built-in function"
-            ))
+            items.add(
+                CompletionItem(
+                    label = func, kind = CompletionItemKind.FUNCTION, detail = "Built-in function"
+                )
+            )
         }
 
         val context = getContextAtOffset(source, offset)
@@ -238,6 +279,7 @@ class ScriptLanguageService {
                 CompletionItem("hashCode", CompletionItemKind.FUNCTION, "Get hash code"),
                 CompletionItem("equals", CompletionItemKind.FUNCTION, "Compare equality")
             )
+
             else -> emptyList()
         }
     }
@@ -247,14 +289,32 @@ class ScriptLanguageService {
         if (result.tokens.isEmpty()) return null
 
         val token = result.tokens.find {
-            offset >= getSourceOffset(source, it.line, it.column) &&
-            offset < getSourceOffset(source, it.stopLine, it.stopColumn)
+            offset >= getSourceOffset(source, it.line, it.column) && offset < getSourceOffset(
+                source,
+                it.stopLine,
+                it.stopColumn
+            )
         } ?: return null
 
         return when {
-            token.type in listOf("IF", "ELSE", "WHEN", "FOR", "WHILE", "FUN", "VAL", "VAR",
-                "RETURN", "BREAK", "CONTINUE", "TRUE", "FALSE", "NULL", "IMPORT") ->
-                HoverInfo("**${token.text}**", "Kotlin keyword")
+            token.type in listOf(
+                "IF",
+                "ELSE",
+                "WHEN",
+                "FOR",
+                "WHILE",
+                "FUN",
+                "VAL",
+                "VAR",
+                "RETURN",
+                "BREAK",
+                "CONTINUE",
+                "TRUE",
+                "FALSE",
+                "NULL",
+                "IMPORT"
+            ) -> HoverInfo("**${token.text}**", "Kotlin keyword")
+
             token.type == "Identifier" -> {
                 if (token.text in builtInFunctions) {
                     HoverInfo("**${token.text}()**", "Built-in function")
@@ -262,6 +322,7 @@ class ScriptLanguageService {
                     HoverInfo("**${token.text}**", "Identifier")
                 }
             }
+
             else -> null
         }
     }
@@ -286,8 +347,11 @@ class ScriptLanguageService {
         if (result.ast == null) return null
 
         val token = result.tokens.find {
-            offset >= getSourceOffset(source, it.line, it.column) &&
-            offset < getSourceOffset(source, it.stopLine, it.stopColumn)
+            offset >= getSourceOffset(source, it.line, it.column) && offset < getSourceOffset(
+                source,
+                it.stopLine,
+                it.stopColumn
+            )
         } ?: return null
 
         if (token.type != "Identifier") return null
@@ -295,9 +359,7 @@ class ScriptLanguageService {
         for (handler in result.ast.handlers) {
             if (handler.eventType == token.text) {
                 return DefinitionLocation(
-                    fileName = "<input>",
-                    line = handler.line,
-                    column = handler.col
+                    fileName = "<input>", line = handler.line, column = handler.col
                 )
             }
         }
@@ -307,9 +369,13 @@ class ScriptLanguageService {
 
     fun getCachedResult(fileName: String): ScriptAnalysisResult? = analysisCache[fileName]
 
-    fun clearCache(fileName: String) { analysisCache.remove(fileName) }
+    fun clearCache(fileName: String) {
+        analysisCache.remove(fileName)
+    }
 
-    fun clearAllCache() { analysisCache.clear() }
+    fun clearAllCache() {
+        analysisCache.clear()
+    }
 }
 
 data class HoverInfo(val contents: String, val kind: String)

@@ -1,10 +1,7 @@
 package kaptor.lsp
 
-import kaptor.ir.IrScriptFile
-import kaptor.ir.IrHandler
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import java.io.*
 import java.net.ServerSocket
 import java.net.Socket
@@ -143,26 +140,29 @@ class ScriptLanguageServer(private val port: Int = 0) {
                 stop()
                 null
             }
+
             METHOD_textDocument_didOpen -> {
                 handleDidOpen(message)
                 null
             }
+
             METHOD_textDocument_didChange -> {
                 handleDidChange(message)
                 null
             }
+
             METHOD_textDocument_didClose -> {
                 handleDidClose(message)
                 null
             }
+
             METHOD_textDocument_completion -> handleCompletion(message)
             METHOD_textDocument_hover -> handleHover(message)
             METHOD_textDocument_definition -> handleDefinition(message)
             else -> {
                 if (message.id != null) {
                     LspMessage(
-                        id = message.id,
-                        error = LspError(ERROR_METHOD_NOT_FOUND, "Method not found: ${message.method}")
+                        id = message.id, error = LspError(ERROR_METHOD_NOT_FOUND, "Method not found: ${message.method}")
                     )
                 } else null
             }
@@ -189,11 +189,9 @@ class ScriptLanguageServer(private val port: Int = 0) {
         }
 
         return LspMessage(
-            id = message.id,
-            result = JsonObject().apply {
+            id = message.id, result = JsonObject().apply {
                 add("capabilities", capabilities)
-            }
-        )
+            })
     }
 
     private fun handleShutdown(message: LspMessage): LspMessage {
@@ -234,15 +232,32 @@ class ScriptLanguageServer(private val port: Int = 0) {
     }
 
     private fun handleCompletion(message: LspMessage): LspMessage {
-        val params = message.params as? JsonObject ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Invalid params")
-        val textDocument = params.getAsJsonObject("textDocument") ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing textDocument")
-        val uri = textDocument.get("uri")?.asString ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing URI")
-        val position = params.getAsJsonObject("position") ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing position")
+        val params = message.params as? JsonObject ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Invalid params"
+        )
+        val textDocument = params.getAsJsonObject("textDocument") ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing textDocument"
+        )
+        val uri = textDocument.get("uri")?.asString ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing URI"
+        )
+        val position = params.getAsJsonObject("position") ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing position"
+        )
 
         val line = position.get("line")?.asInt ?: 0
         val character = position.get("character")?.asInt ?: 0
 
-        val document = documents[uri] ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Document not found")
+        val document =
+            documents[uri] ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Document not found")
 
         val offset = calculateOffset(document, line, character)
         val completions = languageService.getCompletions(document, offset)
@@ -266,49 +281,80 @@ class ScriptLanguageServer(private val port: Int = 0) {
     }
 
     private fun handleHover(message: LspMessage): LspMessage {
-        val params = message.params as? JsonObject ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Invalid params")
-        val textDocument = params.getAsJsonObject("textDocument") ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing textDocument")
-        val uri = textDocument.get("uri")?.asString ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing URI")
-        val position = params.getAsJsonObject("position") ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing position")
+        val params = message.params as? JsonObject ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Invalid params"
+        )
+        val textDocument = params.getAsJsonObject("textDocument") ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing textDocument"
+        )
+        val uri = textDocument.get("uri")?.asString ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing URI"
+        )
+        val position = params.getAsJsonObject("position") ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing position"
+        )
 
         val line = position.get("line")?.asInt ?: 0
         val character = position.get("character")?.asInt ?: 0
 
-        val document = documents[uri] ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Document not found")
+        val document =
+            documents[uri] ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Document not found")
 
         val offset = calculateOffset(document, line, character)
-        val hoverInfo = languageService.getHoverInfo(document, offset)
-            ?: return LspMessage(id = message.id, result = null)
+        val hoverInfo =
+            languageService.getHoverInfo(document, offset) ?: return LspMessage(id = message.id, result = null)
 
         return LspMessage(
-            id = message.id,
-            result = JsonObject().apply {
+            id = message.id, result = JsonObject().apply {
                 addProperty("contents", JsonObject().apply {
                     addProperty("kind", "markdown")
                     addProperty("value", hoverInfo.contents)
                 }.toString())
-            }
-        )
+            })
     }
 
     private fun handleDefinition(message: LspMessage): LspMessage {
-        val params = message.params as? JsonObject ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Invalid params")
-        val textDocument = params.getAsJsonObject("textDocument") ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing textDocument")
-        val uri = textDocument.get("uri")?.asString ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing URI")
-        val position = params.getAsJsonObject("position") ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Missing position")
+        val params = message.params as? JsonObject ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Invalid params"
+        )
+        val textDocument = params.getAsJsonObject("textDocument") ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing textDocument"
+        )
+        val uri = textDocument.get("uri")?.asString ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing URI"
+        )
+        val position = params.getAsJsonObject("position") ?: return createErrorResponse(
+            message.id,
+            ERROR_INVALID_REQUEST,
+            "Missing position"
+        )
 
         val line = position.get("line")?.asInt ?: 0
         val character = position.get("character")?.asInt ?: 0
 
-        val document = documents[uri] ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Document not found")
+        val document =
+            documents[uri] ?: return createErrorResponse(message.id, ERROR_INVALID_REQUEST, "Document not found")
 
         val offset = calculateOffset(document, line, character)
-        val definition = languageService.getDefinition(document, offset)
-            ?: return LspMessage(id = message.id, result = null)
+        val definition =
+            languageService.getDefinition(document, offset) ?: return LspMessage(id = message.id, result = null)
 
         return LspMessage(
-            id = message.id,
-            result = JsonObject().apply {
+            id = message.id, result = JsonObject().apply {
                 addProperty("uri", "file://${definition.fileName}")
                 add("range", JsonObject().apply {
                     add("start", JsonObject().apply {
@@ -320,8 +366,7 @@ class ScriptLanguageServer(private val port: Int = 0) {
                         addProperty("character", definition.column + 10)
                     })
                 })
-            }
-        )
+            })
     }
 
     private fun analyzeAndPublishDiagnostics(uri: String, text: String) {
@@ -347,12 +392,10 @@ class ScriptLanguageServer(private val port: Int = 0) {
         }
 
         val notification = LspMessage(
-            method = METHOD_textDocument_diagnostics,
-            params = JsonObject().apply {
+            method = METHOD_textDocument_diagnostics, params = JsonObject().apply {
                 addProperty("uri", uri)
                 add("diagnostics", diagnostics)
-            }
-        )
+            })
 
         clientSocket?.let { socket ->
             val writer = PrintWriter(BufferedWriter(OutputStreamWriter(socket.outputStream)), true)
@@ -377,8 +420,7 @@ class ScriptLanguageServer(private val port: Int = 0) {
 
     private fun createErrorResponse(id: Any?, code: Int, message: String): LspMessage {
         return LspMessage(
-            id = id,
-            error = LspError(code, message)
+            id = id, error = LspError(code, message)
         )
     }
 

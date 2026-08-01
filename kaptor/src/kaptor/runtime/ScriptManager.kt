@@ -1,6 +1,5 @@
 package kaptor.runtime
 
-import kaptor.compiler.CompiledHandler
 import kaptor.compiler.CompiledScript
 import kaptor.compiler.ScriptCompiler
 import kaptor.compiler.ScriptCompileError
@@ -10,9 +9,9 @@ import kaptor.parser.antlr.KotlinSubsetVisitor
 import kaptor.lsp.ScriptLanguageService
 import kaptor.parser.ScriptParseError
 import kaptor.ScriptLogger
+import kaptor.SrcType
 import kaptor.createLogger
 import org.antlr.v4.runtime.*
-import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.*
 import java.util.concurrent.ConcurrentHashMap
@@ -97,14 +96,14 @@ object ScriptManager {
             fileName.endsWith(".kt") -> fileName.removeSuffix(".kt")
             else -> return false
         }
-        val isKt = fileName.endsWith(".kt")
+        val srcType = SrcType.fromFileName(name)!!
         val source = Files.readString(path)
 
         return try {
-            val ir = parseWithAntlr(source, name, isKt)
+            val ir = parseWithAntlr(source, name, srcType)
 
             val eventClassMap = buildEventClassMap()
-            val compiled = compiler.compile(ir, name, eventClassMap, isKt)
+            val compiled = compiler.compile(ir, name, eventClassMap, srcType)
 
             unregisterScript(name)
 
@@ -140,7 +139,7 @@ object ScriptManager {
         }
     }
 
-    private fun parseWithAntlr(source: String, name: String, isKt: Boolean = false): kaptor.ir.IrScriptFile {
+    private fun parseWithAntlr(source: String, name: String, srcType: SrcType): kaptor.ir.IrScriptFile {
         val charStream = CharStreams.fromString(source)
         val lexer = KotlinLexer(charStream)
         val tokenStream = CommonTokenStream(lexer)
@@ -175,7 +174,7 @@ object ScriptManager {
             }
         })
 
-        val parseTree = if (isKt) parser.kotlinFile() else parser.script()
+        val parseTree = if (srcType == SrcType.Kt) parser.kotlinFile() else parser.script()
 
         if (errors.isNotEmpty()) {
             throw ScriptParseError(errors.joinToString("\n"), 1, 0)

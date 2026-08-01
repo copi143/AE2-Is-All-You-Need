@@ -1,7 +1,11 @@
 package kaptor.compiler
 
+import kaptor.SrcType
 import kaptor.ir.*
-import org.objectweb.asm.*
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 
 class ScriptCompiler {
@@ -11,7 +15,12 @@ class ScriptCompiler {
         classCounter = 0
     }
 
-    fun compile(ir: IrScriptFile, scriptName: String, eventClassMap: Map<String, String> = emptyMap(), isKt: Boolean = false): CompiledScript {
+    fun compile(
+        ir: IrScriptFile,
+        scriptName: String,
+        eventClassMap: Map<String, String> = emptyMap(),
+        srcType: SrcType,
+    ): CompiledScript {
         val className = "script.${scriptName.replace('.', '_')}_${classCounter++}"
         val internalName = className.replace('.', '/')
 
@@ -23,11 +32,10 @@ class ScriptCompiler {
             internalName,
             null,
             TYPE_HANDLER_BASE,
-            null
+            null,
         )
 
-        val sourceExtension = if (isKt) "kt" else "kts"
-        cw.visitSource("$scriptName.$sourceExtension", null)
+        cw.visitSource("$scriptName.${srcType.extension}", null)
 
         generateInit(cw, internalName)
 
@@ -45,8 +53,7 @@ class ScriptCompiler {
             className = className,
             bytecode = cw.toByteArray(),
             eventTypes = ir.handlers.map { it.eventType }.distinct(),
-            handlers = ir.handlers.map { CompiledHandler(it.eventType, it.hookType, it.costLimit) }
-        )
+            handlers = ir.handlers.map { CompiledHandler(it.eventType, it.hookType, it.costLimit) })
     }
 
     private fun generateInit(cw: ClassVisitor, internalName: String) {
@@ -59,7 +66,9 @@ class ScriptCompiler {
         mv.visitEnd()
     }
 
-    private fun generateHandler(cw: ClassVisitor, internalName: String, handler: IrHandler, eventClassName: String? = null) {
+    private fun generateHandler(
+        cw: ClassVisitor, internalName: String, handler: IrHandler, eventClassName: String? = null
+    ) {
         val prefix = when (handler.hookType) {
             HookType.ON -> "handle"
             HookType.BEFORE -> "before"
@@ -270,6 +279,7 @@ class ScriptCompiler {
             is IrStringLiteral -> {
                 ctx.mv.visitLdcInsn(expr.value)
             }
+
             is IrIntLiteral -> {
                 when (expr.value) {
                     0 -> ctx.mv.visitInsn(ICONST_0)
@@ -284,6 +294,7 @@ class ScriptCompiler {
                 }
                 ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
             }
+
             is IrLongLiteral -> {
                 when (expr.value) {
                     0L -> ctx.mv.visitInsn(LCONST_0)
@@ -292,6 +303,7 @@ class ScriptCompiler {
                 }
                 ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false)
             }
+
             is IrFloatLiteral -> {
                 if (expr.numericType == IrFloatType) {
                     ctx.mv.visitLdcInsn(expr.value.toFloat())
@@ -301,16 +313,20 @@ class ScriptCompiler {
                     ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false)
                 }
             }
+
             is IrBoolLiteral -> {
                 ctx.mv.visitInsn(if (expr.value) ICONST_1 else ICONST_0)
                 ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false)
             }
+
             is IrNullLiteral -> {
                 ctx.mv.visitInsn(ACONST_NULL)
             }
+
             is IrIdentifier -> {
                 ctx.mv.visitVarInsn(ALOAD, ctx.getLocal(expr.name))
             }
+
             is IrFieldAccess -> {
                 compileExpression(ctx, expr.receiver)
                 if (ctx.eventClassName != null && isEventVariable(ctx, expr.receiver)) {
@@ -320,9 +336,12 @@ class ScriptCompiler {
                 } else {
                     ctx.mv.visitTypeInsn(CHECKCAST, "java/util/Map")
                     ctx.mv.visitLdcInsn(expr.fieldName)
-                    ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true)
+                    ctx.mv.visitMethodInsn(
+                        INVOKEINTERFACE, "java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true
+                    )
                 }
             }
+
             is IrMethodCall -> {
                 compileExpression(ctx, expr.receiver)
                 for (arg in expr.arguments) {
@@ -330,13 +349,10 @@ class ScriptCompiler {
                 }
                 val argTypes = expr.arguments.map { "Ljava/lang/Object;" }.joinToString("")
                 ctx.mv.visitMethodInsn(
-                    INVOKEVIRTUAL,
-                    "java/lang/Object",
-                    expr.methodName,
-                    "(${argTypes})Ljava/lang/Object;",
-                    false
+                    INVOKEVIRTUAL, "java/lang/Object", expr.methodName, "(${argTypes})Ljava/lang/Object;", false
                 )
             }
+
             is IrFunctionCall -> {
                 when (expr.name) {
                     "println" -> {
@@ -346,32 +362,48 @@ class ScriptCompiler {
                         } else {
                             ctx.mv.visitLdcInsn("")
                         }
-                        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false)
+                        ctx.mv.visitMethodInsn(
+                            INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false
+                        )
                         ctx.mv.visitInsn(ACONST_NULL)
                     }
+
                     "toString" -> {
                         if (expr.arguments.isNotEmpty()) {
                             compileExpression(ctx, expr.arguments[0])
                         } else {
                             ctx.mv.visitInsn(ACONST_NULL)
                         }
-                        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;", false)
+                        ctx.mv.visitMethodInsn(
+                            INVOKEVIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;", false
+                        )
                     }
+
                     "toInt" -> {
                         if (expr.arguments.isNotEmpty()) {
                             compileExpression(ctx, expr.arguments[0])
                         }
-                        ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "parseInt", "(Ljava/lang/String;)I", false)
-                        ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+                        ctx.mv.visitMethodInsn(
+                            INVOKESTATIC, "java/lang/Integer", "parseInt", "(Ljava/lang/String;)I", false
+                        )
+                        ctx.mv.visitMethodInsn(
+                            INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false
+                        )
                     }
+
                     "len" -> {
                         if (expr.arguments.isNotEmpty()) {
                             compileExpression(ctx, expr.arguments[0])
                         }
-                        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;", false)
+                        ctx.mv.visitMethodInsn(
+                            INVOKEVIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;", false
+                        )
                         ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "length", "()I", false)
-                        ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+                        ctx.mv.visitMethodInsn(
+                            INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false
+                        )
                     }
+
                     "listOf" -> {
                         ctx.mv.visitTypeInsn(NEW, "java/util/ArrayList")
                         ctx.mv.visitInsn(DUP)
@@ -379,10 +411,13 @@ class ScriptCompiler {
                         for (arg in expr.arguments) {
                             ctx.mv.visitInsn(DUP)
                             compileExpression(ctx, arg)
-                            ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "add", "(Ljava/lang/Object;)Z", true)
+                            ctx.mv.visitMethodInsn(
+                                INVOKEINTERFACE, "java/util/List", "add", "(Ljava/lang/Object;)Z", true
+                            )
                             ctx.mv.visitInsn(POP)
                         }
                     }
+
                     else -> {
                         ctx.mv.visitVarInsn(ALOAD, 0)
                         for (arg in expr.arguments) {
@@ -390,32 +425,33 @@ class ScriptCompiler {
                         }
                         val argTypes = expr.arguments.map { "Ljava/lang/Object;" }.joinToString("")
                         ctx.mv.visitMethodInsn(
-                            INVOKEVIRTUAL,
-                            TYPE_HANDLER_BASE,
-                            expr.name,
-                            "(${argTypes})Ljava/lang/Object;",
-                            false
+                            INVOKEVIRTUAL, TYPE_HANDLER_BASE, expr.name, "(${argTypes})Ljava/lang/Object;", false
                         )
                     }
                 }
             }
+
             is IrBinaryExpression -> {
                 compileExpression(ctx, expr.left)
                 compileExpression(ctx, expr.right)
                 compileTypedBinaryOp(ctx, expr)
             }
+
             is IrUnaryExpression -> {
                 compileExpression(ctx, expr.operand)
                 compileTypedUnaryOp(ctx, expr)
             }
+
             is IrStringInterpolation -> {
                 compileStringInterpolation(ctx, expr)
             }
+
             is IrIndexAccess -> {
                 compileExpression(ctx, expr.receiver)
                 compileExpression(ctx, expr.index)
                 ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "get", "(I)Ljava/lang/Object;", true)
             }
+
             is IrMergedExpression -> {
                 for (e in expr.expressions) {
                     compileExpression(ctx, e)
@@ -442,13 +478,11 @@ class ScriptCompiler {
         }
 
         when (op) {
-            BinaryOperator.PLUS, BinaryOperator.MINUS, BinaryOperator.MULTIPLY,
-            BinaryOperator.DIVIDE, BinaryOperator.MODULO -> {
+            BinaryOperator.PLUS, BinaryOperator.MINUS, BinaryOperator.MULTIPLY, BinaryOperator.DIVIDE, BinaryOperator.MODULO -> {
                 compilePrimitiveArithmetic(ctx, op, leftType, rightType)
             }
-            BinaryOperator.EQUALS, BinaryOperator.NOT_EQUALS,
-            BinaryOperator.LESS, BinaryOperator.LESS_EQUAL,
-            BinaryOperator.GREATER, BinaryOperator.GREATER_EQUAL -> {
+
+            BinaryOperator.EQUALS, BinaryOperator.NOT_EQUALS, BinaryOperator.LESS, BinaryOperator.LESS_EQUAL, BinaryOperator.GREATER, BinaryOperator.GREATER_EQUAL -> {
                 if (leftType != IrObjectType && rightType != IrObjectType) {
                     compilePrimitiveComparison(ctx, op, leftType, rightType)
                 } else if (op == BinaryOperator.EQUALS || op == BinaryOperator.NOT_EQUALS) {
@@ -457,10 +491,11 @@ class ScriptCompiler {
                     compileBinaryOpFallback(ctx, op)
                 }
             }
-            BinaryOperator.BIT_AND, BinaryOperator.BIT_OR, BinaryOperator.BIT_XOR,
-            BinaryOperator.SHL, BinaryOperator.SHR -> {
+
+            BinaryOperator.BIT_AND, BinaryOperator.BIT_OR, BinaryOperator.BIT_XOR, BinaryOperator.SHL, BinaryOperator.SHR -> {
                 compilePrimitiveBitwise(ctx, op, leftType, rightType)
             }
+
             BinaryOperator.AND, BinaryOperator.OR -> {
                 compileLogicalOp(ctx, op)
             }
@@ -484,9 +519,16 @@ class ScriptCompiler {
                     }
                     boxTop(ctx, operandType)
                 } else {
-                    ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "neg", "(Ljava/lang/Object;)Ljava/lang/Object;", false)
+                    ctx.mv.visitMethodInsn(
+                        INVOKESTATIC,
+                        "kaptor/runtime/ScriptRuntime",
+                        "neg",
+                        "(Ljava/lang/Object;)Ljava/lang/Object;",
+                        false
+                    )
                 }
             }
+
             UnaryOperator.NOT -> {
                 if (operandType != IrObjectType) {
                     unboxTop(ctx, operandType)
@@ -506,26 +548,49 @@ class ScriptCompiler {
                     }
                     boxTop(ctx, IrBoolType)
                 } else {
-                    ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "not", "(Ljava/lang/Object;)Ljava/lang/Boolean;", false)
+                    ctx.mv.visitMethodInsn(
+                        INVOKESTATIC,
+                        "kaptor/runtime/ScriptRuntime",
+                        "not",
+                        "(Ljava/lang/Object;)Ljava/lang/Boolean;",
+                        false
+                    )
                 }
             }
+
             UnaryOperator.BIT_NOT -> {
                 if (operandType != IrObjectType) {
                     unboxTop(ctx, operandType)
                     when (operandType) {
-                        IrIntType -> { ctx.mv.visitInsn(ICONST_M1); ctx.mv.visitInsn(IXOR) }
-                        IrLongType -> { ctx.mv.visitLdcInsn(-1L); ctx.mv.visitInsn(LXOR) }
-                        else -> { ctx.mv.visitInsn(ICONST_M1); ctx.mv.visitInsn(IXOR) }
+                        IrIntType -> {
+                            ctx.mv.visitInsn(ICONST_M1); ctx.mv.visitInsn(IXOR)
+                        }
+
+                        IrLongType -> {
+                            ctx.mv.visitLdcInsn(-1L); ctx.mv.visitInsn(LXOR)
+                        }
+
+                        else -> {
+                            ctx.mv.visitInsn(ICONST_M1); ctx.mv.visitInsn(IXOR)
+                        }
                     }
                     boxTop(ctx, operandType)
                 } else {
-                    ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "bitNot", "(Ljava/lang/Object;)Ljava/lang/Object;", false)
+                    ctx.mv.visitMethodInsn(
+                        INVOKESTATIC,
+                        "kaptor/runtime/ScriptRuntime",
+                        "bitNot",
+                        "(Ljava/lang/Object;)Ljava/lang/Object;",
+                        false
+                    )
                 }
             }
         }
     }
 
-    private fun compilePrimitiveArithmetic(ctx: MethodContext, op: BinaryOperator, leftType: IrType, rightType: IrType) {
+    private fun compilePrimitiveArithmetic(
+        ctx: MethodContext, op: BinaryOperator, leftType: IrType, rightType: IrType
+    ) {
         val promotedType = promoteType(leftType, rightType)
         val rightLocal = ctx.declareLocal("__arith_right", "Ljava/lang/Object;")
         ctx.mv.visitVarInsn(ASTORE, rightLocal)
@@ -543,6 +608,7 @@ class ScriptCompiler {
                 BinaryOperator.MODULO -> ctx.mv.visitInsn(IREM)
                 else -> {}
             }
+
             IrLongType -> when (op) {
                 BinaryOperator.PLUS -> ctx.mv.visitInsn(LADD)
                 BinaryOperator.MINUS -> ctx.mv.visitInsn(LSUB)
@@ -551,6 +617,7 @@ class ScriptCompiler {
                 BinaryOperator.MODULO -> ctx.mv.visitInsn(LREM)
                 else -> {}
             }
+
             IrFloatType -> when (op) {
                 BinaryOperator.PLUS -> ctx.mv.visitInsn(FADD)
                 BinaryOperator.MINUS -> ctx.mv.visitInsn(FSUB)
@@ -559,6 +626,7 @@ class ScriptCompiler {
                 BinaryOperator.MODULO -> ctx.mv.visitInsn(FREM)
                 else -> {}
             }
+
             IrDoubleType -> when (op) {
                 BinaryOperator.PLUS -> ctx.mv.visitInsn(DADD)
                 BinaryOperator.MINUS -> ctx.mv.visitInsn(DSUB)
@@ -567,12 +635,15 @@ class ScriptCompiler {
                 BinaryOperator.MODULO -> ctx.mv.visitInsn(DREM)
                 else -> {}
             }
+
             else -> {}
         }
         boxTop(ctx, promotedType)
     }
 
-    private fun compilePrimitiveComparison(ctx: MethodContext, op: BinaryOperator, leftType: IrType, rightType: IrType) {
+    private fun compilePrimitiveComparison(
+        ctx: MethodContext, op: BinaryOperator, leftType: IrType, rightType: IrType
+    ) {
         val promotedType = promoteType(leftType, rightType)
         val rightLocal = ctx.declareLocal("__cmp_right", "Ljava/lang/Object;")
         ctx.mv.visitVarInsn(ASTORE, rightLocal)
@@ -602,6 +673,7 @@ class ScriptCompiler {
                 ctx.mv.visitLabel(trueLabel)
                 ctx.mv.visitInsn(ICONST_1)
             }
+
             IrLongType, IrFloatType, IrDoubleType -> {
                 val cmpInsn = when (promotedType) {
                     IrLongType -> LCMP
@@ -624,6 +696,7 @@ class ScriptCompiler {
                 ctx.mv.visitLabel(trueLabel)
                 ctx.mv.visitInsn(ICONST_1)
             }
+
             else -> {}
         }
 
@@ -632,7 +705,9 @@ class ScriptCompiler {
     }
 
     private fun compileObjectEquals(ctx: MethodContext, op: BinaryOperator) {
-        ctx.mv.visitMethodInsn(INVOKESTATIC, "java/util/Objects", "equals", "(Ljava/lang/Object;Ljava/lang/Object;)Z", false)
+        ctx.mv.visitMethodInsn(
+            INVOKESTATIC, "java/util/Objects", "equals", "(Ljava/lang/Object;Ljava/lang/Object;)Z", false
+        )
         if (op == BinaryOperator.NOT_EQUALS) {
             val trueLabel = Label()
             val endLabel = Label()
@@ -664,6 +739,7 @@ class ScriptCompiler {
                 BinaryOperator.SHR -> ctx.mv.visitInsn(ISHR)
                 else -> {}
             }
+
             IrLongType -> when (op) {
                 BinaryOperator.BIT_AND -> ctx.mv.visitInsn(LAND)
                 BinaryOperator.BIT_OR -> ctx.mv.visitInsn(LOR)
@@ -672,6 +748,7 @@ class ScriptCompiler {
                 BinaryOperator.SHR -> ctx.mv.visitInsn(LSHR)
                 else -> {}
             }
+
             else -> {}
         }
         boxTop(ctx, promotedType)
@@ -682,9 +759,13 @@ class ScriptCompiler {
         ctx.mv.visitInsn(DUP)
         ctx.mv.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false)
         ctx.mv.visitInsn(SWAP)
-        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false)
+        ctx.mv.visitMethodInsn(
+            INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false
+        )
         ctx.mv.visitInsn(SWAP)
-        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false)
+        ctx.mv.visitMethodInsn(
+            INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false
+        )
         ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false)
     }
 
@@ -718,22 +799,134 @@ class ScriptCompiler {
 
     private fun compileBinaryOpFallback(ctx: MethodContext, op: BinaryOperator) {
         when (op) {
-            BinaryOperator.PLUS -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "add", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.MINUS -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "sub", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.MULTIPLY -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "mul", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.DIVIDE -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "div", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.MODULO -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "mod", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.EQUALS -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "equals", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;", false)
-            BinaryOperator.NOT_EQUALS -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "notEquals", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;", false)
-            BinaryOperator.LESS -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "lessThan", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;", false)
-            BinaryOperator.LESS_EQUAL -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "lessEqual", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;", false)
-            BinaryOperator.GREATER -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "greaterThan", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;", false)
-            BinaryOperator.GREATER_EQUAL -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "greaterEqual", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;", false)
-            BinaryOperator.BIT_AND -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "bitAnd", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.BIT_OR -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "bitOr", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.BIT_XOR -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "bitXor", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.SHL -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "shl", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
-            BinaryOperator.SHR -> ctx.mv.visitMethodInsn(INVOKESTATIC, "kaptor/runtime/ScriptRuntime", "shr", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
+            BinaryOperator.PLUS -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "add",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.MINUS -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "sub",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.MULTIPLY -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "mul",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.DIVIDE -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "div",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.MODULO -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "mod",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.EQUALS -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "equals",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;",
+                false
+            )
+
+            BinaryOperator.NOT_EQUALS -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "notEquals",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;",
+                false
+            )
+
+            BinaryOperator.LESS -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "lessThan",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;",
+                false
+            )
+
+            BinaryOperator.LESS_EQUAL -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "lessEqual",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;",
+                false
+            )
+
+            BinaryOperator.GREATER -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "greaterThan",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;",
+                false
+            )
+
+            BinaryOperator.GREATER_EQUAL -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "greaterEqual",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Boolean;",
+                false
+            )
+
+            BinaryOperator.BIT_AND -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "bitAnd",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.BIT_OR -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "bitOr",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.BIT_XOR -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "bitXor",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.SHL -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "shl",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
+            BinaryOperator.SHR -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC,
+                "kaptor/runtime/ScriptRuntime",
+                "shr",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                false
+            )
+
             BinaryOperator.AND, BinaryOperator.OR -> {
                 compileLogicalOp(ctx, op)
             }
@@ -753,11 +946,26 @@ class ScriptCompiler {
 
     private fun boxTop(ctx: MethodContext, type: IrType) {
         when (type) {
-            IrIntType -> ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
-            IrLongType -> ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false)
-            IrFloatType -> ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", false)
-            IrDoubleType -> ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false)
-            IrBoolType -> ctx.mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false)
+            IrIntType -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false
+            )
+
+            IrLongType -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false
+            )
+
+            IrFloatType -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC, "java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", false
+            )
+
+            IrDoubleType -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false
+            )
+
+            IrBoolType -> ctx.mv.visitMethodInsn(
+                INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false
+            )
+
             else -> {}
         }
     }
@@ -771,24 +979,28 @@ class ScriptCompiler {
                 IrDoubleType -> ctx.mv.visitInsn(I2D)
                 else -> {}
             }
+
             IrLongType -> when (to) {
                 IrIntType -> ctx.mv.visitInsn(L2I)
                 IrFloatType -> ctx.mv.visitInsn(L2F)
                 IrDoubleType -> ctx.mv.visitInsn(L2D)
                 else -> {}
             }
+
             IrFloatType -> when (to) {
                 IrIntType -> ctx.mv.visitInsn(F2I)
                 IrLongType -> ctx.mv.visitInsn(F2L)
                 IrDoubleType -> ctx.mv.visitInsn(F2D)
                 else -> {}
             }
+
             IrDoubleType -> when (to) {
                 IrIntType -> ctx.mv.visitInsn(D2I)
                 IrLongType -> ctx.mv.visitInsn(D2L)
                 IrFloatType -> ctx.mv.visitInsn(D2F)
                 else -> {}
             }
+
             else -> {}
         }
     }
@@ -830,11 +1042,24 @@ class ScriptCompiler {
             when (part) {
                 is IrLiteralPart -> {
                     ctx.mv.visitLdcInsn(part.text)
-                    ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false)
+                    ctx.mv.visitMethodInsn(
+                        INVOKEVIRTUAL,
+                        "java/lang/StringBuilder",
+                        "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuilder;",
+                        false
+                    )
                 }
+
                 is IrExpressionPart -> {
                     compileExpression(ctx, part.expr)
-                    ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false)
+                    ctx.mv.visitMethodInsn(
+                        INVOKEVIRTUAL,
+                        "java/lang/StringBuilder",
+                        "append",
+                        "(Ljava/lang/Object;)Ljava/lang/StringBuilder;",
+                        false
+                    )
                 }
             }
         }
@@ -847,27 +1072,40 @@ class ScriptCompiler {
             is IrIdentifier -> {
                 ctx.mv.visitVarInsn(ASTORE, ctx.getLocal(target.name))
             }
+
             is IrFieldAccess -> {
                 compileExpression(ctx, target.receiver)
                 if (ctx.eventClassName != null && isEventVariable(ctx, target.receiver)) {
                     val setterName = "set${target.fieldName.replaceFirstChar { it.uppercase() }}"
                     ctx.mv.visitInsn(SWAP)
-                    ctx.mv.visitMethodInsn(INVOKEVIRTUAL, ctx.eventClassName, setterName, "(Ljava/lang/Object;)V", false)
+                    ctx.mv.visitMethodInsn(
+                        INVOKEVIRTUAL, ctx.eventClassName, setterName, "(Ljava/lang/Object;)V", false
+                    )
                 } else {
                     ctx.mv.visitTypeInsn(CHECKCAST, "java/util/Map")
                     ctx.mv.visitLdcInsn(target.fieldName)
                     ctx.mv.visitInsn(SWAP)
-                    ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true)
+                    ctx.mv.visitMethodInsn(
+                        INVOKEINTERFACE,
+                        "java/util/Map",
+                        "put",
+                        "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                        true
+                    )
                     ctx.mv.visitInsn(POP)
                 }
             }
+
             is IrIndexAccess -> {
                 compileExpression(ctx, target.receiver)
                 compileExpression(ctx, target.index)
                 ctx.mv.visitInsn(SWAP)
-                ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/List", "set", "(ILjava/lang/Object;)Ljava/lang/Object;", true)
+                ctx.mv.visitMethodInsn(
+                    INVOKEINTERFACE, "java/util/List", "set", "(ILjava/lang/Object;)Ljava/lang/Object;", true
+                )
                 ctx.mv.visitInsn(POP)
             }
+
             else -> throw ScriptCompileError("Invalid assignment target")
         }
     }
@@ -876,11 +1114,7 @@ class ScriptCompiler {
         if (ctx.currentCost > ctx.costLimit) {
             ctx.mv.visitLdcInsn(message)
             ctx.mv.visitMethodInsn(
-                INVOKESTATIC,
-                TYPE_SANDBOX,
-                "throwLimitExceeded",
-                "(Ljava/lang/String;)V",
-                false
+                INVOKESTATIC, TYPE_SANDBOX, "throwLimitExceeded", "(Ljava/lang/String;)V", false
             )
         }
     }
@@ -912,7 +1146,13 @@ class ScriptCompiler {
             mv.visitLdcInsn(handler.eventType)
             mv.visitLdcInsn(handler.costLimit)
             mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
-            mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true)
+            mv.visitMethodInsn(
+                INVOKEINTERFACE,
+                "java/util/Map",
+                "put",
+                "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                true
+            )
             mv.visitInsn(POP)
         }
         mv.visitInsn(ARETURN)
@@ -936,10 +1176,7 @@ class ScriptCompiler {
 }
 
 class MethodContext(
-    val mv: MethodVisitor,
-    val costLimit: Int,
-    val eventClassName: String? = null,
-    val eventParamName: String? = null
+    val mv: MethodVisitor, val costLimit: Int, val eventClassName: String? = null, val eventParamName: String? = null
 ) {
     var currentCost: Int = 0
     private val locals = mutableMapOf<String, Int>()
@@ -970,16 +1207,11 @@ class MethodContext(
 }
 
 data class CompiledHandler(
-    val eventType: String,
-    val hookType: HookType,
-    val costLimit: Int
+    val eventType: String, val hookType: HookType, val costLimit: Int
 )
 
 data class CompiledScript(
-    val className: String,
-    val bytecode: ByteArray,
-    val eventTypes: List<String>,
-    val handlers: List<CompiledHandler>
+    val className: String, val bytecode: ByteArray, val eventTypes: List<String>, val handlers: List<CompiledHandler>
 )
 
 class ScriptCompileError(message: String) : RuntimeException(message)

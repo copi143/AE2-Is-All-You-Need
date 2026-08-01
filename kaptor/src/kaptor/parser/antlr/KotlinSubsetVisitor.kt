@@ -1,7 +1,6 @@
 package kaptor.parser.antlr
 
 import kaptor.ir.*
-import kaptor.compiler.ParamDef
 
 class KotlinSubsetVisitor(
     private val declaredEvents: Map<String, Map<String, IrType>> = emptyMap()
@@ -175,6 +174,7 @@ class KotlinSubsetVisitor(
                 val name = ctx.simpleIdentifier().text
                 IrIdentifier(name, variableTypes[name] ?: IrObjectType)
             }
+
             ctx.postfixUnaryExpression() != null -> parsePostfixUnaryExpression(ctx.postfixUnaryExpression())
             else -> IrNullLiteral()
         }
@@ -197,6 +197,7 @@ class KotlinSubsetVisitor(
                 val cond = parseExpression(dw.expression()) as IrExpression
                 IrWhileStatement(cond, body, 5)
             }
+
             else -> IrExpressionStatement(IrNullLiteral(), 1)
         }
     }
@@ -221,7 +222,10 @@ class KotlinSubsetVisitor(
         val elseBlock = if (ctx.controlStructureBody().size > 1) {
             parseControlStructureBody(ctx.controlStructureBody(1))
         } else null
-        return IrIfStatement(condition, thenBlock, elseBlock,
+        return IrIfStatement(
+            condition,
+            thenBlock,
+            elseBlock,
             3 + thenBlock.sumOf { it.cost } + (elseBlock?.sumOf { it.cost } ?: 0))
     }
 
@@ -239,7 +243,10 @@ class KotlinSubsetVisitor(
         var result: IrInstruction = branches.last()
         for (i in branches.size - 2 downTo 0) {
             val ifStmt = branches[i] as IrIfStatement
-            result = IrIfStatement(ifStmt.condition, ifStmt.thenBranch, listOf(result),
+            result = IrIfStatement(
+                ifStmt.condition,
+                ifStmt.thenBranch,
+                listOf(result),
                 3 + ifStmt.thenBranch.sumOf { it.cost } + result.cost)
         }
         return result
@@ -265,6 +272,7 @@ class KotlinSubsetVisitor(
                 val call = IrFunctionCall("_isType", listOf(IrIdentifier("it"), IrStringLiteral(typeName)))
                 if (isNegated) IrUnaryExpression(UnaryOperator.NOT, call, IrBoolType, 1) else call
             }
+
             ctx.rangeTest() != null -> {
                 val rt = ctx.rangeTest()
                 val isNegated = rt.inOperator().NOT_IN() != null
@@ -272,6 +280,7 @@ class KotlinSubsetVisitor(
                 val call = IrFunctionCall("_contains", listOf(IrIdentifier("it"), expr))
                 if (isNegated) IrUnaryExpression(UnaryOperator.NOT, call, IrBoolType, 1) else call
             }
+
             else -> IrBoolLiteral(true)
         }
     }
@@ -282,6 +291,7 @@ class KotlinSubsetVisitor(
                 val value = ctx.expression()?.let { parseExpression(it) as? IrExpression }
                 IrReturnStatement(value, 2)
             }
+
             ctx.BREAK() != null || ctx.BREAK_AT() != null -> null
             ctx.CONTINUE() != null || ctx.CONTINUE_AT() != null -> null
             ctx.THROW() != null -> null
@@ -489,16 +499,20 @@ class KotlinSubsetVisitor(
                         else -> IrMethodCall(expr as IrExpression, "_call", args)
                     }
                 }
+
                 suffix.indexingSuffix() != null -> {
                     val index = parseExpression(suffix.indexingSuffix().expression(0)) as IrExpression
                     IrIndexAccess(expr as IrExpression, index, 2)
                 }
+
                 suffix.navigationSuffix() != null -> {
                     val nav = suffix.navigationSuffix()
                     val member = when {
-                        nav.simpleIdentifier() != null ->
-                            IrIdentifier(nav.simpleIdentifier().text)
-                        nav.parenthesizedExpression() != null -> parseExpression(nav.parenthesizedExpression().expression())
+                        nav.simpleIdentifier() != null -> IrIdentifier(nav.simpleIdentifier().text)
+                        nav.parenthesizedExpression() != null -> parseExpression(
+                            nav.parenthesizedExpression().expression()
+                        )
+
                         else -> null
                     }
                     if (member != null) {
@@ -507,10 +521,12 @@ class KotlinSubsetVisitor(
                                 val fieldType = currentEventFields?.get(member.name) ?: IrObjectType
                                 IrFieldAccess(expr as IrExpression, member.name, fieldType, 2)
                             }
+
                             else -> IrMethodCall(expr as IrExpression, "_member", listOf(member as IrExpression))
                         }
                     } else expr
                 }
+
                 suffix.postfixUnaryOperator() != null -> {
                     val op = suffix.postfixUnaryOperator()
                     when {
@@ -519,15 +535,18 @@ class KotlinSubsetVisitor(
                             val one = literalForType(operandType)
                             IrAssignment(expr, IrBinaryExpression(expr, BinaryOperator.PLUS, one, operandType, 1), 1)
                         }
+
                         op.DECR() != null -> {
                             val operandType = inferType(expr as IrExpression)
                             val one = literalForType(operandType)
                             IrAssignment(expr, IrBinaryExpression(expr, BinaryOperator.MINUS, one, operandType, 1), 1)
                         }
+
                         op.excl() != null -> IrFunctionCall("_assertNotNull", listOf(expr as IrExpression))
                         else -> expr
                     }
                 }
+
                 else -> expr
             }
         }
@@ -549,34 +568,40 @@ class KotlinSubsetVisitor(
                 val name = ctx.simpleIdentifier().text
                 IrIdentifier(name, variableTypes[name] ?: IrObjectType)
             }
+
             ctx.literalConstant() != null -> parseLiteralConstant(ctx.literalConstant())
             ctx.stringLiteral() != null -> parseStringLiteral(ctx.stringLiteral())
             ctx.thisExpression() != null -> {
-                if (ctx.thisExpression().THIS_AT() != null)
-                    IrIdentifier("this@" + ctx.thisExpression().THIS_AT().text.removePrefix("this@"))
+                if (ctx.thisExpression().THIS_AT() != null) IrIdentifier(
+                    "this@" + ctx.thisExpression().THIS_AT().text.removePrefix("this@")
+                )
                 else IrIdentifier("this")
             }
+
             ctx.ifExpression() != null -> visitIfExpression(ctx.ifExpression())
             ctx.whenExpression() != null -> visitWhenExpression(ctx.whenExpression())
             ctx.functionLiteral() != null -> {
                 val lit = ctx.functionLiteral()
                 if (lit.lambdaLiteral() != null) {
                     val ll = lit.lambdaLiteral()
-                    val params = if (ll.lambdaParameters() != null)
-                        ll.lambdaParameters().lambdaParameter().map { it.variableDeclaration().simpleIdentifier().text }
+                    val params = if (ll.lambdaParameters() != null) ll.lambdaParameters().lambdaParameter()
+                        .map { it.variableDeclaration().simpleIdentifier().text }
                     else emptyList()
                     IrFunctionCall("_lambda", listOf(IrStringLiteral(params.joinToString(","))))
                 } else {
                     IrFunctionCall("_lambda", listOf(IrStringLiteral("")))
                 }
             }
+
             ctx.jumpExpression() != null -> {
                 parseJumpExpression(ctx.jumpExpression()) ?: IrNullLiteral()
             }
+
             ctx.collectionLiteral() != null -> {
                 val exprs = ctx.collectionLiteral().expression().map { parseExpression(it) as IrExpression }
                 IrFunctionCall("listOf", exprs)
             }
+
             else -> IrNullLiteral()
         }
     }
@@ -590,17 +615,20 @@ class KotlinSubsetVisitor(
                 if (v in Int.MIN_VALUE..Int.MAX_VALUE) IrIntLiteral(v.toInt())
                 else IrLongLiteral(v)
             }
+
             ctx.BinLiteral() != null -> {
                 val v = ctx.BinLiteral().text.removePrefix("0b").removePrefix("0B").toLong(2)
                 if (v in Int.MIN_VALUE..Int.MAX_VALUE) IrIntLiteral(v.toInt())
                 else IrLongLiteral(v)
             }
+
             ctx.UnsignedLiteral() != null -> IrLongLiteral(ctx.UnsignedLiteral().text.dropLast(1).toLong())
             ctx.RealLiteral() != null -> {
                 val text = ctx.RealLiteral().text
                 if (text.endsWith("f") || text.endsWith("F")) IrFloatLiteral(text.dropLast(1).toDouble(), IrFloatType)
                 else IrFloatLiteral(text.toDouble(), IrDoubleType)
             }
+
             ctx.BooleanLiteral() != null -> IrBoolLiteral(ctx.BooleanLiteral().text == "true")
             ctx.CharacterLiteral() != null -> IrIntLiteral(ctx.CharacterLiteral().text[1].code)
             ctx.NullLiteral() != null -> IrNullLiteral()
@@ -686,14 +714,10 @@ class KotlinSubsetVisitor(
         if (left == IrStringType || right == IrStringType) {
             return if (op == BinaryOperator.PLUS) IrStringType else IrBoolType
         }
-        if (op == BinaryOperator.PLUS || op == BinaryOperator.MINUS ||
-            op == BinaryOperator.MULTIPLY || op == BinaryOperator.DIVIDE ||
-            op == BinaryOperator.MODULO) {
+        if (op == BinaryOperator.PLUS || op == BinaryOperator.MINUS || op == BinaryOperator.MULTIPLY || op == BinaryOperator.DIVIDE || op == BinaryOperator.MODULO) {
             return promoteType(left, right)
         }
-        if (op == BinaryOperator.EQUALS || op == BinaryOperator.NOT_EQUALS ||
-            op == BinaryOperator.LESS || op == BinaryOperator.LESS_EQUAL ||
-            op == BinaryOperator.GREATER || op == BinaryOperator.GREATER_EQUAL) {
+        if (op == BinaryOperator.EQUALS || op == BinaryOperator.NOT_EQUALS || op == BinaryOperator.LESS || op == BinaryOperator.LESS_EQUAL || op == BinaryOperator.GREATER || op == BinaryOperator.GREATER_EQUAL) {
             return IrBoolType
         }
         if (op == BinaryOperator.AND || op == BinaryOperator.OR) {
