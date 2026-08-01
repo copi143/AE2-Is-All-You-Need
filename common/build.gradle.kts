@@ -22,7 +22,7 @@ dependencies {
     compileOnly(libs.compose.runtime)
     api(project(":kaptor"))
 
-    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
+//    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
 
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")

@@ -17,7 +17,7 @@ dependencies {
 
     modImplementation(libs.flk)
 
-    modRuntimeOnly("dev.ftb.mods:ftb-quests-fabric:${libs.versions.ftb.get()}")
+//    modRuntimeOnly("dev.ftb.mods:ftb-quests-fabric:${libs.versions.ftb.get()}")
 
     modCompileOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
     modRuntimeOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
