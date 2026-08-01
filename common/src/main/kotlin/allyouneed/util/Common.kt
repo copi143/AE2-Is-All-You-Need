@@ -2,6 +2,7 @@ package allyouneed.util
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.helpers.NOPLogger
 import java.math.BigInteger
 
 @Suppress("SpellCheckingInspection")
@@ -10,8 +11,18 @@ const val MODID = "ae2isallyouneed"
 @Suppress("SpellCheckingInspection")
 const val MODNAME = "AE2 Is All You Need"
 
+@Suppress("SpellCheckingInspection")
+val LOGNAME = MODNAME.replace(" ", "")
+
 @JvmField
-val logger: Logger = LoggerFactory.getLogger(MODNAME)
+val logger: Logger = LoggerFactory.getLogger(LOGNAME)
+
+@JvmField
+val debugLogger: Logger = if (Services.platform.isDevelopmentEnvironment()) {
+    LoggerFactory.getLogger("$LOGNAME/Debug")
+} else {
+    NOPLogger.NOP_LOGGER
+}
 
 val Double.Ki get() = this * (1024.0)
 val Double.Mi get() = this * (1024.0 * 1024.0)
@@ -49,4 +60,10 @@ fun BigInteger.saturateToLong(): Long {
     if (this.signum() < 0) return 0L
     if (this.bitLength() > 63) return Long.MAX_VALUE
     return this.toLong()
+}
+
+fun BigInteger.saturateToInt(): Int {
+    if (this.signum() < 0) return 0
+    if (this.bitLength() > 31) return Int.MAX_VALUE
+    return this.toInt()
 }

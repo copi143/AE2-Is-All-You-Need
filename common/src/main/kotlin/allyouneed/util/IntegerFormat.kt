@@ -287,7 +287,7 @@ data class IntegerFormat(
 
     companion object {
         @JvmField
-        val SIPostfixes = listOf("", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q")
+        val SiPostfixes = listOf("", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q")
 
         @JvmField
         val IecPostfixes = listOf("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi", "Ri", "Qi")
@@ -296,7 +296,7 @@ data class IntegerFormat(
         @JvmField
         val SI = IntegerFormat(
             base = 1000,
-            postfixes = SIPostfixes,
+            postfixes = SiPostfixes,
             allowOmitDecimal = true,
         )
 
