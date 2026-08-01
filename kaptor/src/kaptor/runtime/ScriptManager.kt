@@ -96,7 +96,7 @@ object ScriptManager {
             fileName.endsWith(".kt") -> fileName.removeSuffix(".kt")
             else -> return false
         }
-        val srcType = SrcType.fromFileName(name)!!
+        val srcType = SrcType.fromFileName(fileName)!!
         val source = Files.readString(path)
 
         return try {
