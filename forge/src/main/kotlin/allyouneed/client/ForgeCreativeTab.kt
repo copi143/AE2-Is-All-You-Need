@@ -13,8 +13,8 @@ import net.minecraftforge.eventbus.api.IEventBus
 
 object ForgeCreativeTab {
     val CREATIVE_TAB: CreativeModeTab = CreativeModeTab.builder().title(Component.translatable("itemGroup.$MODID"))
-        .icon { ItemStack(ForgeItems.MACHINE_PATTERN.get()) }.displayItems { _, output ->
-            output.accept(ForgeItems.MACHINE_PATTERN.get())
+        .icon { ItemStack(ForgeItems.PSEUDO_PATTERN.get()) }.displayItems { _, output ->
+            output.accept(ForgeItems.PSEUDO_PATTERN.get())
             output.accept(ForgeItems.PSEUDO_PATTERN.get())
             output.accept(ForgeItems.ENTITY_P2P_TUNNEL.get())
             output.accept(allyouneed.AllRegistries.CREATIVE_ME_CELL)
@@ -34,7 +34,7 @@ object ForgeCreativeTab {
             CreativeTabGroup(
                 "ae2_addon".rl,
                 Component.translatable("itemGroup.$MODID"),
-                { ItemStack(ForgeItems.MACHINE_PATTERN.get()) }).addTab(MOD_TAB_ID)
+                { ItemStack(ForgeItems.PSEUDO_PATTERN.get()) }).addTab(MOD_TAB_ID)
         )
     }
 }

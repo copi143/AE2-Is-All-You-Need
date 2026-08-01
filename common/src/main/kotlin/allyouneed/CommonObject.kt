@@ -1,6 +1,5 @@
 package allyouneed
 
-import allyouneed.api.machine.BuiltinMachineTypes
 import allyouneed.cell.CreativeMeCellHandler
 import allyouneed.cell.ItemStorageCell
 import allyouneed.cell.ItemStorageCellHandler
@@ -36,8 +35,7 @@ object CommonObject {
             Services.platform.name,
             Services.platform.getEnvironmentName()
         )
-        // Register our machine types, pattern decoders, and part models
-        BuiltinMachineTypes.registerAll()
+        // Register our pattern decoders and part models
         ModPatternDecoders.register()
         registerParts()
     }

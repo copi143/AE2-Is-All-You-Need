@@ -12,7 +12,6 @@ import net.minecraft.world.item.CreativeModeTabs
 import net.minecraft.world.item.Item
 
 object FabricItems {
-    val MACHINE_PATTERN: allyouneed.pattern.machine.MachinePatternItem = ModItems.MACHINE_PATTERN
     val PSEUDO_PATTERN: allyouneed.pattern.pseudo.PseudoPatternItem = ModItems.PSEUDO_PATTERN
     val ADAPTIVE_PATTERN: allyouneed.pattern.adaptive.AdaptivePatternItem = ModItems.ADAPTIVE_PATTERN
     val ENTITY_P2P_TUNNEL: appeng.items.parts.PartItem<allyouneed.parts.p2p.EntityP2PTunnelPart> =
@@ -21,9 +20,6 @@ object FabricItems {
         WirelessPseudoPatternTerminalItem(Item.Properties().stacksTo(1))
 
     fun register() {
-        Registry.register(
-            BuiltInRegistries.ITEM, "machine_pattern".rl, MACHINE_PATTERN
-        )
         Registry.register(
             BuiltInRegistries.ITEM, "pseudo_pattern".rl, PSEUDO_PATTERN
         )
@@ -41,7 +37,6 @@ object FabricItems {
         )
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register { entries ->
-            entries.accept(MACHINE_PATTERN)
             entries.accept(PSEUDO_PATTERN)
             entries.accept(ADAPTIVE_PATTERN)
             entries.accept(ENTITY_P2P_TUNNEL)
