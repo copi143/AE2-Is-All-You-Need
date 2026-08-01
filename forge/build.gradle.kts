@@ -75,6 +75,8 @@ dependencies {
     jarJar("icyllis.modernui:ModernUI-Core:3.12.0")
     modRuntimeOnly("icyllis.modernui:ModernUI-Forge:1.20.1-3.12.0.1")
 
+    modRuntimeOnly("dev.ftb.mods:ftb-quests-forge:${libs.versions.ftb.get()}")
+
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modRuntimeOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
 
@@ -152,6 +154,14 @@ repositories {
     maven {
         name = "IzzelAliz Maven"
         url = uri("https://maven.izzel.io/releases/")
+    }
+    maven {
+        name = "Architectury Maven"
+        url = uri("https://maven.architectury.dev/")
+    }
+    maven {
+        name = "FTB Maven"
+        url = uri("https://maven.ftb.dev/releases/")
     }
     mavenCentral()
 }

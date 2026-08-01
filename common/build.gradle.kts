@@ -22,6 +22,8 @@ dependencies {
     compileOnly(libs.compose.runtime)
     api(project(":kaptor"))
 
+    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
+
     modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
     modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")
 
@@ -66,6 +68,14 @@ repositories {
     maven {
         name = "IzzelAliz Maven"
         url = uri("https://maven.izzel.io/releases/")
+    }
+    maven {
+        name = "Architectury Maven"
+        url = uri("https://maven.architectury.dev/")
+    }
+    maven {
+        name = "FTB Maven"
+        url = uri("https://maven.ftb.dev/releases/")
     }
     mavenCentral()
 }
