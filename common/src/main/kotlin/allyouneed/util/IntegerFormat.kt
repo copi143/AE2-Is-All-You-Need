@@ -43,6 +43,7 @@ data class IntegerFormat(
     // - 如果 format 后出现长度不符合 width 则再尝试提升一级，如果再次失败则直接输出 errDisplay
     val threshold: Int = 0,
     // 是否允许省略为 0 的小数，类似 1.00E -> 1E 或 2.30M -> 2.3M
+    // - 可能出现 1.999M -> 2.00M -> 2M 的情况，关闭后会显示为 2.00M
     val allowOmitDecimal: Boolean = false,
     // 是否允许小数无前缀 0，类似 0.3G -> .3G
     val allowOmitLeadingZero: Boolean = false,
@@ -65,7 +66,7 @@ data class IntegerFormat(
 
     private val biBase: BigInteger = BigInteger.valueOf(base.toLong())
     private val promoteThreshold: BigInteger = BigInteger.valueOf((if (threshold <= 0) base else threshold).toLong())
-    private val defaultDecimalPlaces: Int = if (maxDecimalPlaces >= 0) {
+    private val maxDecimal: Int = if (maxDecimalPlaces >= 0) {
         maxDecimalPlaces
     } else {
         kotlin.math.log10(base.toDouble()).roundToInt().coerceAtLeast(0)
@@ -198,8 +199,7 @@ data class IntegerFormat(
         val intPart = abs.divide(divisor)
         val remainder = abs.remainder(divisor)
 
-        val maxFrac = defaultDecimalPlaces
-        val fracStart = if (maxFrac <= 0 || remainder.signum() == 0) 0 else maxFrac
+        val fracStart = if (maxDecimal <= 0 || remainder.signum() == 0) 0 else maxDecimal
 
         for (fracDigits in fracStart downTo 0) {
             val parts = computeParts(intPart, remainder, divisor, fracDigits)
@@ -214,7 +214,7 @@ data class IntegerFormat(
                 outLevel++
                 if (divRem[1].signum() != 0) {
                     // 1500 → 1.5 at next unit
-                    val remDigits = defaultDecimalPlaces.coerceAtLeast(1)
+                    val remDigits = maxDecimal.coerceAtLeast(1)
                     val scale = BigInteger.TEN.pow(remDigits)
                     val fracScaled = divRem[1].multiply(scale).divide(biBase)
                     outFrac = fracScaled.toString().padStart(remDigits, '0')

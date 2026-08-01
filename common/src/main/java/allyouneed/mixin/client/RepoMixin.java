@@ -1,5 +1,6 @@
 package allyouneed.mixin.client;
 
+import allyouneed.util.bigint.BigAmountHolder;
 import allyouneed.util.bigint.BigAmounts;
 import appeng.api.stacks.AEKey;
 import appeng.client.gui.me.common.Repo;
@@ -24,9 +25,9 @@ public class RepoMixin {
     private GridInventoryEntry allyouneed$newEntryWithBig(long serial, AEKey what, long storedAmount, long requestableAmount, boolean craftable, GridInventoryEntry serverEntry) {
         GridInventoryEntry created = new GridInventoryEntry(serial, what, storedAmount, requestableAmount, craftable);
         if (BigAmounts.hasEntryAmount(serverEntry)) {
-            BigAmounts.setEntryAmount(created, BigAmounts.getEntryAmount(serverEntry));
+            ((BigAmountHolder) created).setBigAmount(BigAmounts.getEntryAmount(serverEntry));
         } else {
-            BigAmounts.setEntryAmount(created, BigInteger.valueOf(storedAmount));
+            ((BigAmountHolder) created).setBigAmount(BigInteger.valueOf(storedAmount));
         }
         return created;
     }

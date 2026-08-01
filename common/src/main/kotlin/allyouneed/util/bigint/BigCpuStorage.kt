@@ -13,21 +13,20 @@ import java.math.BigInteger
 object BigCpuStorage {
     @JvmStatic
     fun clearCluster(cluster: CraftingCPUCluster?) {
-        if (cluster is BigCpuCapacity) {
-            cluster.setBigStorage(BigInteger.ZERO)
-            cluster.setUnboundedCapacity(false)
-        }
+        cluster as BigCpuCapacity
+        cluster.setBigStorage(BigInteger.ZERO)
+        cluster.setUnboundedCapacity(false)
     }
 
     @JvmStatic
     fun hasClusterEntry(cluster: CraftingCPUCluster?): Boolean {
-        if (cluster !is BigCpuCapacity) return false
+        cluster as BigCpuCapacity
         return cluster.isUnboundedCapacity() || cluster.getBigStorage().signum() > 0
     }
 
     @JvmStatic
     fun addClusterBytes(cluster: CraftingCPUCluster?, bytes: BigInteger?, unbounded: Boolean) {
-        if (cluster !is BigCpuCapacity) return
+        cluster as BigCpuCapacity
         if (unbounded) {
             cluster.setUnboundedCapacity(true)
             cluster.setBigStorage(BigInteger.valueOf(Long.MAX_VALUE))
@@ -38,16 +37,14 @@ object BigCpuStorage {
     }
 
     @JvmStatic
-    fun isUnbounded(cluster: CraftingCPUCluster?): Boolean =
-        cluster is BigCpuCapacity && cluster.isUnboundedCapacity()
+    fun isUnbounded(cluster: CraftingCPUCluster?): Boolean = (cluster as BigCpuCapacity).isUnboundedCapacity()
 
     @JvmStatic
-    fun isUnbounded(cpu: ICraftingCPU?): Boolean =
-        cpu is CraftingCPUCluster && isUnbounded(cpu)
+    fun isUnbounded(cpu: ICraftingCPU?): Boolean = cpu is CraftingCPUCluster && isUnbounded(cpu)
 
     @JvmStatic
     fun getClusterStorage(cluster: CraftingCPUCluster?): BigInteger {
-        if (cluster !is BigCpuCapacity) return BigInteger.ZERO
+        cluster as BigCpuCapacity
         if (cluster.isUnboundedCapacity()) return BigInteger.valueOf(Long.MAX_VALUE)
         return cluster.getBigStorage()
     }

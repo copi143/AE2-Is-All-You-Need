@@ -11,7 +11,7 @@ class ForgePlatformHelper : PlatformHelper {
         return ModList.get().isLoaded(modId)
     }
 
-    override fun isDevelopmentEnvironment(): Boolean {
+    override fun isDev(): Boolean {
         return !FMLLoader.isProduction()
     }
 }

@@ -1,5 +1,6 @@
 package allyouneed.mixin;
 
+import allyouneed.util.bigint.BigAmountHolder;
 import allyouneed.util.bigint.BigAmounts;
 import allyouneed.util.CommonKt;
 import appeng.api.stacks.AEKey;
@@ -37,7 +38,7 @@ public abstract class MEInventoryUpdatePacketBuilderMixin {
     private GridInventoryEntry allyouneed$createEntryWithBig(long serial, AEKey what, long storedAmount, long requestableAmount, boolean craftable) {
         GridInventoryEntry entry = new GridInventoryEntry(serial, what, storedAmount, requestableAmount, craftable);
         if (this.allyouneed$pendingBig != null) {
-            BigAmounts.setEntryAmount(entry, this.allyouneed$pendingBig);
+            ((BigAmountHolder) entry).setBigAmount(this.allyouneed$pendingBig);
             this.allyouneed$pendingBig = null;
         }
         return entry;

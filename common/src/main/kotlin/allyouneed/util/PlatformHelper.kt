@@ -19,7 +19,7 @@ interface PlatformHelper {
      *
      * @return True if in a development environment, false otherwise.
      */
-    fun isDevelopmentEnvironment(): Boolean
+    fun isDev(): Boolean
 
     /**
      * Gets the name of the environment type as a string.
@@ -27,6 +27,6 @@ interface PlatformHelper {
      * @return The name of the environment type.
      */
     fun getEnvironmentName(): String {
-        return if (isDevelopmentEnvironment()) "development" else "production"
+        return if (isDev()) "development" else "production"
     }
 }

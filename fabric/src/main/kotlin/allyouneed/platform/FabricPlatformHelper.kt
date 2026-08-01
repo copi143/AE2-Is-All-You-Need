@@ -10,7 +10,7 @@ class FabricPlatformHelper : PlatformHelper {
         return FabricLoader.getInstance().isModLoaded(modId)
     }
 
-    override fun isDevelopmentEnvironment(): Boolean {
+    override fun isDev(): Boolean {
         return FabricLoader.getInstance().isDevelopmentEnvironment
     }
 }

@@ -33,13 +33,7 @@ public abstract class MEStorageMenuMixin {
     @Unique
     private BigKeyCounter allyouneed$previousBigStacks = new BigKeyCounter();
 
-    @Redirect(
-            method = "broadcastChanges",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lappeng/api/storage/MEStorage;getAvailableStacks()Lappeng/api/stacks/KeyCounter;"
-            )
-    )
+    @Redirect(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/api/storage/MEStorage;getAvailableStacks()Lappeng/api/stacks/KeyCounter;"))
     private KeyCounter allyouneed$captureBigStacks(MEStorage storage) {
         KeyCounter stacks = storage.getAvailableStacks();
         BigKeyCounter big;
@@ -55,13 +49,7 @@ public abstract class MEStorageMenuMixin {
         return stacks;
     }
 
-    @Inject(
-            method = "broadcastChanges",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lappeng/menu/me/common/IncrementalUpdateHelper;hasChanges()Z"
-            )
-    )
+    @Inject(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/menu/me/common/IncrementalUpdateHelper;hasChanges()Z"))
     private void allyouneed$detectBigChanges(CallbackInfo ci) {
         BigKeyCounter current = BigAmounts.getCurrent();
         if (current == null) {

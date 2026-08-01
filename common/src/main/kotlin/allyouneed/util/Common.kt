@@ -18,7 +18,7 @@ val LOGNAME = MODNAME.replace(" ", "")
 val logger: Logger = LoggerFactory.getLogger(LOGNAME)
 
 @JvmField
-val debugLogger: Logger = if (Services.platform.isDevelopmentEnvironment()) {
+val debugLogger: Logger = if (Services.platform.isDev()) {
     LoggerFactory.getLogger("$LOGNAME/Debug")
 } else {
     NOPLogger.NOP_LOGGER
@@ -34,6 +34,17 @@ val Double.Zi get() = this * (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.
 val Double.Yi get() = this * (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0)
 val Double.Ri get() = this * (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0)
 val Double.Qi get() = this * (1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0)
+
+val Int.Ki get() = this * (1024)
+val Int.Mi get() = this * (1024 * 1024)
+val Int.Gi get() = this * (1024 * 1024 * 1024)
+
+val Long.Ki get() = this * (1024L)
+val Long.Mi get() = this * (1024L * 1024L)
+val Long.Gi get() = this * (1024L * 1024L * 1024L)
+val Long.Ti get() = this * (1024L * 1024L * 1024L * 1024L)
+val Long.Pi get() = this * (1024L * 1024L * 1024L * 1024L * 1024L)
+val Long.Ei get() = this * (1024L * 1024L * 1024L * 1024L * 1024L * 1024L)
 
 fun formatScaledUnit(exp: Int, name: String? = null) = run {
     val prefix = when {

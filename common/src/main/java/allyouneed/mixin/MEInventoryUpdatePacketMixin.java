@@ -1,5 +1,6 @@
 package allyouneed.mixin;
 
+import allyouneed.util.bigint.BigAmountHolder;
 import allyouneed.util.bigint.BigAmounts;
 import appeng.core.sync.packets.MEInventoryUpdatePacket;
 import appeng.menu.me.common.GridInventoryEntry;
@@ -69,9 +70,9 @@ public abstract class MEInventoryUpdatePacketMixin {
             int len = buffer.readVarInt();
             byte[] bytes = new byte[len];
             buffer.readBytes(bytes);
-            BigAmounts.setEntryAmount(entry, new BigInteger(bytes));
+            ((BigAmountHolder) entry).setBigAmount(new BigInteger(bytes));
         } else {
-            BigAmounts.setEntryAmount(entry, BigInteger.valueOf(Long.MAX_VALUE));
+            ((BigAmountHolder) entry).setBigAmount(BigInteger.valueOf(Long.MAX_VALUE));
         }
     }
 }

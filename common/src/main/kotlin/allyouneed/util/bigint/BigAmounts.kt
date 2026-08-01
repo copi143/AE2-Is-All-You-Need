@@ -14,13 +14,6 @@ object BigAmounts {
     private val CURRENT = ThreadLocal<BigKeyCounter>()
 
     @JvmStatic
-    fun setEntryAmount(entry: GridInventoryEntry?, amount: BigInteger?) {
-        if (entry is BigAmountHolder) {
-            entry.setBigAmount(amount)
-        }
-    }
-
-    @JvmStatic
     fun getEntryAmount(entry: GridInventoryEntry?): BigInteger {
         if (entry is BigAmountHolder) {
             return entry.getBigAmount()
