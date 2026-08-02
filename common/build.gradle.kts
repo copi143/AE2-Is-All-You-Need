@@ -128,3 +128,16 @@ artifacts {
         add("commonResources", resourceDir)
     }
 }
+
+val generateAsyncPatternNbt by tasks.registering(JavaExec::class) {
+    group = "generation"
+    description = "Regenerates the default async crafting multiblock NBT pattern"
+    dependsOn(tasks.named("classes"))
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("allyouneed.tool.GenerateAsyncPatternNbt")
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    args = listOf(
+        layout.projectDirectory.file("src/main/resources/data/ae2isallyouneed/multiblock/async_crafting.nbt")
+            .asFile.absolutePath
+    )
+}

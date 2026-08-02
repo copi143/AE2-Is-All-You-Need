@@ -19,7 +19,9 @@
     "GridInventoryEntryMixin",
     "DelegatingMEInventoryAccessor",
     "GridNodeMixin",
-    "PathingCalculationMixin"
+    "PathingCalculationMixin",
+    "ServerChunkCacheAccessor",
+    "ChunkMapAccessor"
   ],
   "client": [
     "CreativeScreenSidebarMixin",

@@ -1,9 +1,15 @@
 package allyouneed.async
 
-import net.minecraft.core.Direction
+import allyouneed.multiblock.MultiblockPattern
+import allyouneed.rl
+import net.minecraft.core.BlockPos
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.Blocks
 
 /**
- * The fixed 3x3x4 arrangement of the async processing structure.
+ * Fallback definition of the async processing structure, used when the data-driven NBT pattern
+ * (`data/ae2isallyouneed/multiblock/async_crafting.nbt`) is missing or fails to load.
  *
  * Pattern coordinates: x = 0..2 (west to east), y = 0..2 (bottom to top), z = 0..3 (back to front).
  * The host block faces the +z direction (towards the glass window).
@@ -22,28 +28,32 @@ object AsyncCraftingStructure {
         arrayOf("FWF", "WGW", "FWF"), // z = 3: front face (glass window)
     )
 
-    /** Pattern coordinate of the host. */
-    private const val HOST_X = 1
-    private const val HOST_Y = 1
-    private const val HOST_Z = 2
+    private val charToUnit: Map<Char, AsyncCraftingUnitType> = mapOf(
+        'H' to AsyncCraftingUnitType.HOST,
+        'C' to AsyncCraftingUnitType.CONNECTOR,
+        'S' to AsyncCraftingUnitType.STORAGE,
+        'G' to AsyncCraftingUnitType.GLASS,
+        'F' to AsyncCraftingUnitType.WALL,
+        'W' to AsyncCraftingUnitType.WALL,
+    )
 
-    fun roleAt(x: Int, y: Int, z: Int): AsyncCraftingUnitRole = when (LAYERS[z][y][x]) {
-        'H' -> AsyncCraftingUnitRole.HOST
-        'C' -> AsyncCraftingUnitRole.CONNECTOR
-        'S' -> AsyncCraftingUnitRole.STORAGE
-        'G' -> AsyncCraftingUnitRole.GLASS
-        else -> AsyncCraftingUnitRole.WALL
+    fun defaultPattern(): MultiblockPattern {
+        val units = AsyncCraftingUnitType.entries
+        val indexByUnit = units.withIndex().associate { (i, u) -> u to i }
+        val blocks: List<Block> =
+            units.map { u -> BuiltInRegistries.BLOCK.getOptional(u.id.rl).orElse(Blocks.AIR) }
+        val layers = Array(DEPTH) { z ->
+            Array(HEIGHT) { y ->
+                ByteArray(WIDTH) { x ->
+                    val unit = charToUnit[LAYERS[z][y][x]]!!
+                    indexByUnit[unit]!!.toByte()
+                }
+            }
+        }
+        return MultiblockPattern(
+            offset = BlockPos(1, 1, 2),
+            blocks = blocks,
+            layers = layers,
+        )
     }
-
-    /** World offset of a pattern cell relative to the host block, for a given horizontal host facing. */
-    fun worldOffset(facing: Direction, x: Int, y: Int, z: Int): Triple<Int, Int, Int> {
-        val right = facing.getClockWise()
-        val dx = (x - HOST_X) * right.stepX + (z - HOST_Z) * facing.stepX
-        val dy = y - HOST_Y
-        val dz = (x - HOST_X) * right.stepZ + (z - HOST_Z) * facing.stepZ
-        return Triple(dx, dy, dz)
-    }
-
-    /** Whether the given direction is a valid horizontal host facing. */
-    fun isHorizontalFacing(facing: Direction): Boolean = facing.axis.isHorizontal
 }
