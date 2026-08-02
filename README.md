@@ -22,8 +22,8 @@
 
 ### 能源
 
-- [ ] `替换` 能源元件 $\rArr$ $4 \text{Ki}$ 能源元件
-- [ ] `替换` 致密能源元件 $\rArr$ $64 \text{Ki}$ 能源元件
+- [ ] `替换` 能源元件 $\Rightarrow$ $4 \text{Ki}$ 能源元件
+- [ ] `替换` 致密能源元件 $\Rightarrow$ $64 \text{Ki}$ 能源元件
 - [ ] `替换` 创造能源元件改为本模组物品
 - [x] `添加` 能源元件 $1 \text{Ki}$ ~ $256 \text{Ti}$
 - [x] `添加` 自供能能源元件 $1 \text{Ki}$ ~ $256 \text{Ti}$
@@ -45,17 +45,17 @@
 
 原版的 `物质球` 改为 `物质球 T2`，`奇点` 改为 `奇点 T0`。
 
-$$ 1 \space \text{物品} \rArr 1 \space \text{物质球}_{\text{T0}} $$
-$$ 64 \space \text{物质球}_{\text{T0}} \rArr 1 \space \text{物质球}_{\text{T1}} $$
-$$ 64 \space \text{物质球}_{\text{T1}} \rArr 1 \space \text{物质球}_{\text{T2}} $$
-$$ 64 \space \text{物质球}_{\text{T2}} \rArr 1 \space \text{物质球}_{\text{T3}} $$
-$$ 64 \space \text{物质球}_{\text{T3}} \rArr 1 \space \text{物质球}_{\text{T4}} $$
-$$ 1 \space \text{物质球}_{\text{T4}} \rArr 1 \space \text{奇点}_{\text{T0}} $$
-$$ 64 \space \text{奇点}_{\text{T0}} \rArr 1 \space \text{奇点}_{\text{T1}} $$
-$$ 64 \space \text{奇点}_{\text{T1}} \rArr 1 \space \text{奇点}_{\text{T2}} $$
-$$ 64 \space \text{奇点}_{\text{T2}} \rArr 1 \space \text{奇点}_{\text{T3}} $$
-$$ 64 \space \text{奇点}_{\text{T3}} \rArr 1 \space \text{奇点}_{\text{T4}} $$
-$$ 1 \space \text{奇点}_{\text{T4}} \rArr 1 \space \text{压缩奇点} $$
+$$ 1 \space \text{物品} \Rightarrow 1 \space \text{物质球}_{\text{T0}} $$
+$$ 64 \space \text{物质球}_{\text{T0}} \Rightarrow 1 \space \text{物质球}_{\text{T1}} $$
+$$ 64 \space \text{物质球}_{\text{T1}} \Rightarrow 1 \space \text{物质球}_{\text{T2}} $$
+$$ 64 \space \text{物质球}_{\text{T2}} \Rightarrow 1 \space \text{物质球}_{\text{T3}} $$
+$$ 64 \space \text{物质球}_{\text{T3}} \Rightarrow 1 \space \text{物质球}_{\text{T4}} $$
+$$ 1 \space \text{物质球}_{\text{T4}} \Rightarrow 1 \space \text{奇点}_{\text{T0}} $$
+$$ 64 \space \text{奇点}_{\text{T0}} \Rightarrow 1 \space \text{奇点}_{\text{T1}} $$
+$$ 64 \space \text{奇点}_{\text{T1}} \Rightarrow 1 \space \text{奇点}_{\text{T2}} $$
+$$ 64 \space \text{奇点}_{\text{T2}} \Rightarrow 1 \space \text{奇点}_{\text{T3}} $$
+$$ 64 \space \text{奇点}_{\text{T3}} \Rightarrow 1 \space \text{奇点}_{\text{T4}} $$
+$$ 1 \space \text{奇点}_{\text{T4}} \Rightarrow 1 \space \text{压缩奇点} $$
 
 | 物品     | 原版消耗 | 模组消耗        |
 |----------|----------|-----------------|
