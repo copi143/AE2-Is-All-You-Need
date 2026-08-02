@@ -60,7 +60,7 @@ neoForge {
 sourceSets.main.get().resources { srcDir("src/generated/resources") }
 
 dependencies {
-    implementation(libs.compose.runtime)
+    compileOnly(libs.compose.runtime)
     modImplementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
@@ -72,25 +72,20 @@ dependencies {
         "org.jetbrains.kotlinx:atomicfu-jvm:0.23.2",
     ).forEach { jarJar(it) }
 
+    // 这啥情况为啥必须 jarjar
     jarJar("icyllis.modernui:ModernUI-Core:3.12.0")
     modRuntimeOnly("icyllis.modernui:ModernUI-Forge:1.20.1-3.12.0.1")
 
 //    modRuntimeOnly("dev.ftb.mods:ftb-quests-forge:${libs.versions.ftb.get()}")
 
-    modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
-    modRuntimeOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
-
-    modCompileOnly("dev.emi:emi-forge:${libs.versions.emi.get()}:api")
-    modRuntimeOnly("dev.emi:emi-forge:${libs.versions.emi.get()}")
-
-    modCompileOnly("maven.modrinth:jade:11.13.3+forge")
-    modRuntimeOnly("maven.modrinth:jade:11.13.3+forge")
+    modImplementation("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
+    modImplementation("dev.emi:emi-forge:${libs.versions.emi.get()}")
+    modImplementation("maven.modrinth:jade:11.13.3+forge")
 
     modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modImplementation("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
 
-    modCompileOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
-    modRuntimeOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+    modImplementation("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
 
     modCompileOnly("mekanism:Mekanism:${libs.versions.mek.get()}:api")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}")

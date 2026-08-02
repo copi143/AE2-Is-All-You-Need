@@ -19,13 +19,9 @@ dependencies {
 
 //    modRuntimeOnly("dev.ftb.mods:ftb-quests-fabric:${libs.versions.ftb.get()}")
 
-    modCompileOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
-    modRuntimeOnly("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
-
-    modCompileOnly("dev.emi:emi-fabric:${libs.versions.emi.get()}:api")
-    modRuntimeOnly("dev.emi:emi-fabric:${libs.versions.emi.get()}")
-
-    modCompileOnly("maven.modrinth:jade:11.13.3+fabric")
+    modImplementation("mezz.jei:jei-1.20.1-fabric:${libs.versions.jei.get()}")
+    modImplementation("dev.emi:emi-fabric:${libs.versions.emi.get()}")
+    modImplementation("maven.modrinth:jade:11.13.3+fabric")
 
     modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modImplementation("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")

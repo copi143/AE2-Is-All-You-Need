@@ -30,6 +30,8 @@ dependencies {
     modCompileOnly("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modCompileOnly("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
 
+    modCompileOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation(libs.compose.runtime) // required by compose compiler plugin on test source set
@@ -137,7 +139,6 @@ val generateAsyncPatternNbt by tasks.registering(JavaExec::class) {
     mainClass.set("allyouneed.tool.GenerateAsyncPatternNbt")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     args = listOf(
-        layout.projectDirectory.file("src/main/resources/data/ae2isallyouneed/multiblock/async_crafting.nbt")
-            .asFile.absolutePath
+        layout.projectDirectory.file("src/main/resources/data/ae2isallyouneed/multiblock/async_crafting.nbt").asFile.absolutePath
     )
 }
