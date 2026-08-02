@@ -63,6 +63,8 @@
 - `异步合成 LAN 连接器`：安装在 `异步合成处理器` 或 `异步合成网络交换机` 上，多方块结构中可以存在 0 到 2 个。
 - `异步合成模块安装接口`：在 `异步合成网络交换机` 指定位置安装的接口，允许在其上建造 `异步合成模块`。
 
+`异步合成 ME 连接器`、`异步合成 WAN 连接器`、`异步合成 LAN 连接器` 注册为特殊的格雷仓室。
+
 #### 多方块结构
 
 - `F` = `异步合成机器框架`
@@ -73,8 +75,9 @@
 - `S` = `异步合成存储核心`
 - `P` = `异步合成计算核心` / `异步合成执行核心` (按照多方块类型选择)
 - `C` = `异步网络控制器` / `异步网络交换机` / `异步合成工厂` (按照多方块类型选择)
+- `Z` = `异步合成模块安装接口`
 
-异步合成模块 ($3 \text{宽} \times 7 \text{高} \times 5 \text{深}$)：
+**异步合成模块** ($3 \text{宽} \times 7 \text{高} \times 5 \text{深}$)：
 
 *正面* (一个 $3 \times 7$ 的矩形)：
 
@@ -100,7 +103,7 @@ FBBBF
 FFFFF
 ```
 
-*中间* (一个 $5 \times 7$ 的矩形)：
+*侧面内部* (一个 $5 \times 7$ 的矩形)：
 
 ```text
 FBBBF
@@ -113,3 +116,201 @@ FBBBF
 ```
 
 底面中间方块连接 `异步合成模块安装接口` 以安装！
+
+**异步合成网络交换机** ($19 \text{宽} \times 7 \text{高} \times 11 \text{深}$ 深度按照重复数量增加)：
+
+`核心结构` 中的 `异步合成机器方块` 可以替换为 `异步合成 WAN 连接器` 或 `异步合成 LAN 连接器`。
+
+*正面* (一个 $13 \times 5$ 的矩形 `核心结构` + 下方两层大地板)：
+
+```text
+FFFFFFFFFFFFF
+FBBBBBBBBBBBF
+FBBBBBCBBBBBF
+FBBBBBBBBBBBF
+FFFFFFFFFFFFF
+大地板 (下面说明)
+大地板 (下面说明)
+```
+
+*左/右侧面* (一个 $5 \times 5$ 的正方形 `核心结构` + 下方两层大地板)：
+
+```text
+FFFFF
+FBBBF
+FBBBF
+FBBBF
+FFFFF
+大地板 (下面说明)
+大地板 (下面说明)
+```
+
+*侧面内部* (一个 $5 \times 5$ 的正方形 `核心结构` + 下方两层大地板)：
+
+内部 11 片完全一样的结构。
+
+```text
+FBBBF
+BTETB
+BEPEB
+BTETB
+FBBBF
+大地板 (下面说明)
+大地板 (下面说明)
+```
+
+*大地板* (一个 $17 \times 9$ 的矩形和一个 $19 \times 11$ 的矩形)：
+
+`核心结构` 直接建在 `大地板` 上，`异步合成模块安装接口` 嵌入在 `大地板` 上。
+
+上层地板 (标 X 的地方是 `异步合成机器方块` 但是被 `核心结构` 盖住了)：
+
+```text
+FFFFFFFFFFFFFFFFF
+FBBBBBBBBBBBBBBBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBBBBBBBBBBBBBBBF
+FFFFFFFFFFFFFFFFF
+```
+
+下层地板比上层大一圈，完全由 `异步合成机器方块` 加一圈 `异步合成机器框架` 组成，过于简单不需要画图。
+
+*可重复模块* (大地板也要扩大，每次扩大 $6$ 格)：
+
+这边展示上层地板，下层永远比上层大一圈，并且全部都是 `异步合成机器方块` 填充中心。
+
+```text
+FFFFFFFFFFFFFFFFF
+FBBBBBBBFBBBBBBBF
+FBXXXXXBFBXXXXXBF
+FBXXZXXBFBXXZXXBF
+FBXXXXXBFBXXXXXBF
+FBBBBBBBFBBBBBBBF
+FTTTTTTTTTTTTTTTF
+FBBBBBBBBBBBBBBBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBBBBBBBBBBBBBBBF
+FFFFFFFFFFFFFFFFF
+```
+
+`核心结构` 的后方，一次扩展左右两个安装空间，可以继续扩展：
+
+```text
+FFFFFFFFFFFFFFFFF
+FBBBBBBBFBBBBBBBF
+FBXXXXXBFBXXXXXBF
+FBXXZXXBFBXXZXXBF
+FBXXXXXBFBXXXXXBF
+FBBBBBBBFBBBBBBBF
+FTTTTTTTTTTTTTTTF
+FBBBBBBBFBBBBBBBF
+FBXXXXXBFBXXXXXBF
+FBXXZXXBFBXXZXXBF
+FBXXXXXBFBXXXXXBF
+FBBBBBBBFBBBBBBBF
+FTTTTTTTTTTTTTTTF
+FBBBBBBBBBBBBBBBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBBBBBBBBBBBBBBBF
+FFFFFFFFFFFFFFFFF
+```
+
+**异步合成处理器** ($19 \text{宽} \times 17 \text{高} \times 19 \text{深}$ 深度按照重复数量增加)：
+
+类似 `异步合成网络交换机`，但核心结构是一个正方体，下方是两次扩展 (四个模块) 的样子。
+
+```text
+FFFFFFFFFFFFFFFFF
+FBBBBBBBFBBBBBBBF
+FBXXXXXBFBXXXXXBF
+FBXXZXXBFBXXZXXBF
+FBXXXXXBFBXXXXXBF
+FBBBBBBBFBBBBBBBF
+FTTTTTTTTTTTTTTTF
+FBBBBBBBFBBBBBBBF
+FBXXXXXBFBXXXXXBF
+FBXXZXXBFBXXZXXBF
+FBXXXXXBFBXXXXXBF
+FBBBBBBBFBBBBBBBF
+FTTTTTTTTTTTTTTTF
+FBBBBBBBBBBBBBBBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBXXXXXXXXXXXXXBF
+FBBBBBBBBBBBBBBBF
+FFFFFFFFFFFFFFFFF
+```
+
+*六个面* (一个 $13 \times 13$ 的正方形)：
+
+```text
+FFFFFFFFFFFFF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FBBBBBCBBBBBF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FBBBBBBBBBBBF
+FFFFFFFFFFFFF
+```
+
+这个 `C` 只在正面，其余面为 `B`。
+
+*内部一圈六个面* (一个 $11 \times 11$ 的正方形)：
+
+```text
+FTTTTTTTTTF
+TEEEEEEEEET
+TE       ET
+TE       ET
+TE       ET
+TE       ET
+TE       ET
+TE       ET
+TE       ET
+TEEEEEEEEET
+FTTTTTTTTTF
+```
+
+*再内部一圈六个面* (一个 $9 \times 9$ 的正方形)：
+
+```text
+FTTTTTTTF
+T       T
+T       T
+T       T
+T       T
+T       T
+T       T
+T       T
+FTTTTTTTF
+```
+
+*最内部* 一个 $5 \times 5$ 的正方体，表面使用 `异步合成计算核心` 填充，内部使用 `异步合成存储核心` 填充。
