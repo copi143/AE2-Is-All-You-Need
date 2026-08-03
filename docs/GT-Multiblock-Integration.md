@@ -160,7 +160,65 @@
 
 ---
 
-## 7. 验证清单
+## 7. 方块渲染 / blockstate 兼容（三种环境共用一份静态资源）
+
+> 结论：`common/res` 的静态 blockstate（`common/resgen` 生成，`common/res` 是 gitignored 产物）
+> 是**唯一**模型来源；GTCEu 的运行时机器模型生成只发生在 KubeJS 的
+> `GTRegistryInfo.ALL_BUILDERS` 路径（`GregTechKubeJSPlugin`），我们的 GTRegistrate 机器不走那条
+> 路，所以**静态 blockstate 就是权威**。因此 GT 方块必须让自己的 `StateDefinition` 属性与静态
+> blockstate 的 variant key **完全一致**，否则渲染失败。
+
+### 7.1 blockstate variant 解析规则（MC 1.20.1）
+
+- 放置方块时按 `StateDefinition` 的属性组合在 blockstate 的 `variants` 里找 key；
+- **key 与真实属性不一致 → 解析不到 variant → 模型缺失**（不显示/粉黑块），item 模型绕过 blockstate 所以正常；
+- **key 包含方块不存在的属性 → 加载 blockstate 时崩溃**（blockstate 在资源加载期整体解析）；
+- 无属性的方块（结构方块）→ key 为 `""`；
+- 属性顺序无关（按名字匹配）。
+
+### 7.2 根因：GT 多方块比 AE 方块多了 `upwards_facing`
+
+- `MultiblockMachineBuilder` 构造器默认 `allowExtendedFacing(true)`（GTCEu 源码 line 64）→
+  多方块额外获得 `GTBlockStateProperties.UPWARDS_FACING` 属性（`MetaMachineBlock.java` 83-86/149-151）；
+- `MachineBuilder` 默认旋转 `NON_Y_AXIS` → `BlockStateProperties.HORIZONTAL_FACING`（`facing`）；
+- 于是 GT 三方块的 `StateDefinition` 是 `facing` + `upwards_facing`（无 `formed`/`powered`），而静态
+  blockstate 只写了 AE 风格的 8 键 `facing=*,formed=false/true` → 放下的控制器解析不到 variant → 缺模型。
+- 连接器是普通 `MetaMachine`（非多方块），默认 `allowExtendedFacing=false`，但同样没有 `formed`/`powered`。
+
+### 7.3 简单方案：让 GT 方块属性 = AE 方块属性（三环境共用静态资源）
+
+- 控制器/连接器分两个具体方块类（镜像 AE 侧的 `AsyncStructureEntityBlock` / `AsyncStructureConnectorBlock`）：
+  - `AsyncStructureGtMachineBlock`（控制器）：`super`（GT 的 `facing`）+ `FORMED`；
+  - `AsyncStructureGtConnectorBlock`（连接器）：再追加 `POWERED`；
+  - **必须用具体子类而不是派生字段区分**：`createBlockStateDefinition` 在 `super()` 构造链里被
+    虚调用，此时任何实例字段都还没初始化 —— 若写 `connector = kind.role == ...` 的字段，那一刻读
+    到的是 JVM 默认值 `false`，POWERED 会被静默丢掉，随后 init 里 `setValue(POWERED, false)` 直接抛
+    `Cannot set property powered ... Block{minecraft:air}`（`Block{...}` 显示 air 只是因为方块还没注册，
+    无关 air 本身）。GTCEu 自己规避这个陷阱的方式是读静态 `MachineDefinition.getBuilt()`。
+  - 结果与 AE 侧完全一致：控制器 4×2=8 态，连接器 4×2×2=16 态。
+- `GTAsyncCrafting.registerMachines`：
+  - 控制器 `.allowExtendedFacing(false)` —— 去掉 `upwards_facing`，保证只暴露 `facing`；
+  - 全部 `.simpleModel("block/async/<id>")` 替代原先的 `asyncStructureModel(...)`（那个 ModelInitializer
+    只在 datagen 里生效，运行时毫无作用，纯死代码）。
+  - `allowExtendedFacing(false)` 安全：GTCEu 所有读 `UPWARDS_FACING` 的地方都先判
+    `isAllowExtendedFacing()`（`MetaMachine.getUpwardsFacing/setUpwardsFacing`、
+    `MultiblockControllerMachine.setUpwardsFacing/onWrenchClick`），关闭后回退 `Direction.NORTH` 不崩。
+- 成形翻转（与 AE 侧行为对齐）：`setBlock(pos, newState, Block.UPDATE_CLIENTS)` 只刷客户端、
+  不通知邻居（无重扫循环），且先判 `current.block is AsyncStructureGtMachineBlock` 防止把已拆掉的方块复活：
+  - 控制器：`onStructureFormed()` 置 `FORMED=true`，`onStructureInvalid()` 置 `false`（都在主线程）；
+  - 连接器：`setHostController`/`onLoad` 里 `updateFormedState()` 置 `FORMED=isFormed()`；
+    `POWERED` 属性为静态 key 匹配而存在，恒为 `false` 从不翻转（blockstate 里 `powered=true/false`
+    映射到同一模型，翻转无视觉效果，故省略）。
+
+### 7.4 三环境一致性
+
+- **Forge+GT**：GT 机器带 `facing+formed(+powered)` → 静态 key 全部命中，成形翻转由检测器驱动；
+- **Forge 无 GT / Fabric**：AE 方块本来就带这些属性，静态资源不变，天然工作；
+- 静态资源无需为 GT 特判 —— 这就是"简单方案"的本质：**属性对齐而非按环境分支**。
+
+---
+
+## 8. 验证清单
 
 - **Forge 带 GT**：搭处理器（核心 + 扩展 bay + 模块）→ 成形；拆装扩展层（0..16）→ 重成形；
    右键 GT 控制器开 GT 菜单；接 ME 吞 32 频道；拆连接器 → 失形。
@@ -172,7 +230,7 @@
 
 ---
 
-## 8. 已知取舍与边界
+## 9. 已知取舍与边界
 
 - common 引用 GT 类 → fabric 编译 classpath 需 `compileOnly` GTCEu（含其内嵌 LDLib/Registrate
   的摊平解压）+ forge universal（`IForgeBlockEntity`）；运行期 fabric 绝不加载。
@@ -187,14 +245,18 @@
 
 ---
 
-## 9. 源码位置备忘
+## 10. 源码位置备忘
 
 - GTCEu 7.5.3 源码：`/tmp/opencode/gtceu/src`
   - `api/pattern/{FactoryBlockPattern,BlockPattern,MultiblockState,MultiblockWorldSavedData}.java`
   - `api/machine/multiblock/MultiblockControllerMachine.java`（`checkPattern`/`asyncCheckPattern`/
     `onStructureFormed`/`patternLock`/`getMultiblockState`）
   - `api/machine/{MetaMachine,IMachineBlockEntity,MachineDefinition,MultiblockMachineDefinition}.java`
-  - `api/block/MetaMachineBlock.java`（`use` → `IInteractedMachine.onUse`）
+  - `api/block/MetaMachineBlock.java`（`use` → `IInteractedMachine.onUse`；facing/upwards_facing 属性）
+  - `api/block/property/GTBlockStateProperties.java`（`UPWARDS_FACING`/`NORTH_ONLY_FACING`/`VERTICAL_FACING`）
+  - `api/registry/registrate/{MachineBuilder,MultiblockMachineBuilder}.java`（`simpleModel` 默认模板
+    line 653/659-661；`allowExtendedFacing(true)` 在 MultiblockMachineBuilder line 64）
+  - `common/data/models/GTMachineModels.java`（`createBasicMachineModel`；运行时模型生成仅 KJS 路径）
   - `integration/ae2/machine/trait/GridNodeHolder.java`（`createManagedNode`、`mainNode`）
   - `integration/ae2/utils/SerializableManagedGridNode.java`
 - AE2 15.4.10 源码：`/tmp/opencode/ae2src`

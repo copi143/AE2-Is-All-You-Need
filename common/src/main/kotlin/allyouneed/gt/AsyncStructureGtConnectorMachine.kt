@@ -1,11 +1,11 @@
 package allyouneed.gt
 
 import allyouneed.async.AsyncChannelNodeHolder
+import allyouneed.async.AsyncStructureEntityBlock
 import allyouneed.async.IAsyncChannelSink
 import allyouneed.async.IAsyncChannelView
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
 import com.gregtechceu.gtceu.api.machine.MetaMachine
-import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties
 import com.gregtechceu.gtceu.integration.ae2.machine.feature.IGridConnectedMachine
 import com.gregtechceu.gtceu.integration.ae2.machine.trait.GridNodeHolder
 import com.gregtechceu.gtceu.integration.ae2.utils.SerializableManagedGridNode
@@ -16,6 +16,8 @@ import appeng.api.networking.IGridNodeListener
 import appeng.api.networking.pathing.ChannelMode
 import appeng.api.orientation.BlockOrientation
 import net.minecraft.core.Direction
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.world.level.block.Block
 import java.util.EnumSet
 
 /**
@@ -49,7 +51,7 @@ abstract class AsyncStructureGtConnectorMachine(
         if (hostController === controller) return
         hostController = controller
         updateExposedSides()
-        updateFormedRenderState()
+        updateFormedState()
     }
 
     fun getHostController(): AsyncStructureGtControllerMachine? = hostController
@@ -57,7 +59,7 @@ abstract class AsyncStructureGtConnectorMachine(
     override fun onLoad() {
         super.onLoad()
         updateExposedSides()
-        updateFormedRenderState()
+        updateFormedState()
     }
 
     override fun onMainNodeStateChanged(reason: IGridNodeListener.State) {
@@ -75,11 +77,14 @@ abstract class AsyncStructureGtConnectorMachine(
         gridNodeHolder.getMainNode().setExposedOnSides(sides)
     }
 
-    /** Mirrors the vanilla `formed` flip: light the connector up once its host structure forms. */
-    private fun updateFormedRenderState() {
-        val renderState = getRenderState()
-        if (renderState.hasProperty(GTMachineModelProperties.IS_FORMED)) {
-            setRenderState(renderState.setValue(GTMachineModelProperties.IS_FORMED, isFormed()))
+    /** Mirrors the vanilla async connectors: flip FORMED so the client shows the formed model. */
+    private fun updateFormedState() {
+        val level = getLevel() as? ServerLevel ?: return
+        val current = level.getBlockState(getPos())
+        if (current.block !is AsyncStructureGtMachineBlock) return
+        val newState = current.setValue(AsyncStructureEntityBlock.FORMED, isFormed())
+        if (current != newState) {
+            level.setBlock(getPos(), newState, Block.UPDATE_CLIENTS)
         }
     }
 

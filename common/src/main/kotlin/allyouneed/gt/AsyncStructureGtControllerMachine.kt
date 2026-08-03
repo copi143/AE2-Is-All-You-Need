@@ -4,6 +4,7 @@ import allyouneed.async.AsyncChannelNodeHolder
 import allyouneed.async.AsyncModuleCluster
 import allyouneed.async.AsyncProcessorCluster
 import allyouneed.async.AsyncStructureDetector
+import allyouneed.async.AsyncStructureEntityBlock
 import allyouneed.async.AsyncSwitchCluster
 import allyouneed.async.IAsyncChannelView
 import appeng.menu.MenuOpener
@@ -23,6 +24,7 @@ import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.BlockHitResult
 
@@ -107,17 +109,30 @@ abstract class AsyncStructureGtControllerMachine(
 
     override fun onStructureFormed() {
         super.onStructureFormed()
+        updateFormedBlockState(true)
         val level = getLevel() as? ServerLevel ?: return
         rebuildCluster(level)
     }
 
     override fun onStructureInvalid() {
         super.onStructureInvalid()
+        updateFormedBlockState(false)
         val level = getLevel() as? ServerLevel
         if (level != null) {
             destroyCluster(level)
         }
         detection = null
+    }
+
+    /** Mirrors the vanilla async blocks: flip the FORMED block state without notifying neighbours. */
+    private fun updateFormedBlockState(formed: Boolean) {
+        val level = getLevel() as? ServerLevel ?: return
+        val current = level.getBlockState(getPos())
+        if (current.block !is AsyncStructureGtMachineBlock) return
+        val newState = current.setValue(AsyncStructureEntityBlock.FORMED, formed)
+        if (current != newState) {
+            level.setBlock(getPos(), newState, Block.UPDATE_CLIENTS)
+        }
     }
 
     private fun rebuildCluster(level: ServerLevel) {
