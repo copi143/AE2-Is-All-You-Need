@@ -71,6 +71,11 @@
   TYPE = `"async_crafting_status_gt"`。
 - `AsyncCraftingStatusScreen` 泛型化 `<M : AbstractContainerMenu & IAsyncCraftingStatusView>`，
   两个菜单共用；forge 侧两个 TYPE 都注册到该屏幕，fabric 侧只注册普通菜单。
+- **GT TYPE 必须进 Forge 注册表**（`init/ForgeMenus.kt`）：`AsyncStructureGtStatusMenu.TYPE`
+  类在首次右键时才加载，若只靠 AE2 `InitMenuTypes.queueRegistration`（AE2 加载期一次性 flush）
+  会漏注册 → 客户端报 `Trying to open invalid screen with name:`。已在 `ForgeMenus` 用
+  `MENUS.register("async_crafting_status_gt") { AsyncStructureGtStatusMenu.TYPE }`（带
+  `isModLoaded("gtceu")` 守卫）提前注册。
 
 ---
 
