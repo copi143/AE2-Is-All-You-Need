@@ -478,3 +478,10 @@ TODO:
 - 重启：重置机器人内部的运行状态。
 - 暂停/继续：让机器人暂停工作并悬停在当前位置。
 - 充电：让机器人回到最近的转接坞充电。
+
+## 版权
+
+- 所有代码为 All Rights Reserve。
+- 所有本地化文本使用 [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) 许可分发。
+- 所有纹理资源以 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 许可分发。
+  - 部分纹理资源衍生自 [Applied Energistics 2](https://github.com/AppliedEnergistics/Applied-Energistics-2/tree/forge/1.20.1)，原许可协议为 [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/)。
