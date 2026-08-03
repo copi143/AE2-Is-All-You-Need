@@ -6,7 +6,9 @@ import allyouneed.client.ForgeCreativeTab
 import allyouneed.forge.init.ForgeBlocks
 import allyouneed.forge.init.ForgeItems
 import allyouneed.forge.init.ForgeMenus
+import allyouneed.forge.init.GTAsyncCrafting
 import allyouneed.util.MODID
+import allyouneed.util.Services
 import allyouneed.util.logger
 import net.minecraftforge.fml.common.Mod
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
@@ -40,6 +42,12 @@ class ExampleMod {
         ForgeBlocks.register(MOD_BUS)
         ForgeMenus.register(MOD_BUS)
         ForgeCreativeTab.register(MOD_BUS)
+
+        // GTCEu host flavour: the common host block is replaced by the GT multiblock machine.
+        if (Services.platform.isModLoaded("gtceu")) {
+            GTAsyncCrafting.init(MOD_BUS)
+        }
+
         CommonObject.init()
 
         // Initialize the scripting system

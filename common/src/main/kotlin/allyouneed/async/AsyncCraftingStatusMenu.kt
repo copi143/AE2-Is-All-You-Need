@@ -6,34 +6,39 @@ import appeng.menu.implementations.MenuTypeBuilder
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.MenuType
 
+/**
+ * Status menu for the plain async synthesis controllers (own-block flavour). Reads the structure
+ * cluster cached by the controller's [AsyncStructureBlockEntity] and the grid state of its
+ * connectors. Shares the common screen with the GTCEu status menu.
+ */
 class AsyncCraftingStatusMenu(
     id: Int,
     playerInventory: Inventory,
-    private val host: AsyncCraftingBlockEntity,
-) : AEBaseMenu(TYPE, id, playerInventory, host) {
+    private val host: AsyncStructureBlockEntity,
+) : AEBaseMenu(TYPE, id, playerInventory, host), IAsyncCraftingStatusView {
 
     @GuiSync(1)
-    var formed: Int = 0
+    override var formed: Int = 0
         private set
 
     @GuiSync(2)
-    var gridConnected: Int = 0
+    override var gridConnected: Int = 0
         private set
 
     @GuiSync(3)
-    var swallowedChannels: Int = 0
+    override var swallowedChannels: Int = 0
         private set
 
     @GuiSync(4)
-    var storageBytes: Long = 0
+    override var storageBytes: Long = 0
         private set
 
     @GuiSync(5)
-    var blockCount: Int = 0
+    override var blockCount: Int = 0
         private set
 
     @GuiSync(6)
-    var infiniteChannelMode: Int = 0
+    override var infiniteChannelMode: Int = 0
         private set
 
     init {
@@ -41,13 +46,22 @@ class AsyncCraftingStatusMenu(
     }
 
     private fun refreshStatus() {
-        val cluster = host.getCluster()
+        val processor = host.getProcessorCluster()
+        val sw = host.getSwitchCluster()
+        val module = host.getModuleCluster()
+        val cluster = processor ?: sw ?: module
         formed = if (cluster != null) 1 else 0
-        gridConnected = if (cluster != null && cluster.isGridConnected()) 1 else 0
-        swallowedChannels = cluster?.getSwallowedChannels() ?: 0
-        storageBytes = cluster?.getStorageBytes() ?: 0
-        blockCount = cluster?.getBlockCount() ?: 0
-        infiniteChannelMode = if (cluster != null && cluster.isInfiniteChannelMode()) 1 else 0
+        val views = host.getConnectorViews()
+        gridConnected = if (views.any { it.isGridConnected }) 1 else 0
+        swallowedChannels = views.sumOf { it.swallowedChannels }
+        infiniteChannelMode = if (views.any { it.isInfiniteChannelMode }) 1 else 0
+        storageBytes = processor?.storageBytes ?: 0
+        blockCount = when {
+            processor != null -> processor.getTotalBlockCount()
+            sw != null -> sw.blockCount
+            module != null -> module.blockCount
+            else -> 0
+        }
     }
 
     override fun broadcastChanges() {
@@ -57,7 +71,7 @@ class AsyncCraftingStatusMenu(
 
     companion object {
         val TYPE: MenuType<AsyncCraftingStatusMenu> = MenuTypeBuilder
-            .create(::AsyncCraftingStatusMenu, AsyncCraftingBlockEntity::class.java)
+            .create(::AsyncCraftingStatusMenu, AsyncStructureBlockEntity::class.java)
             .build("async_crafting_status")
     }
 }

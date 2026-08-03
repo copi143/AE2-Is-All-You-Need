@@ -44,6 +44,39 @@ repositories {
         name = "kotlinforforge"
         url = uri("https://thedarkcolour.github.io/KotlinForForge/")
     }
+    maven {
+        name = "GTCEu Maven"
+        url = uri("https://maven.gtceu.com")
+    }
+}
+
+// GTCEu bundles its real dependencies (LDLib, Registrate, configuration) as nested jars under
+// META-INF/jarjar/ inside the gtceu jar and publishes an empty POM, so the classes are invisible to
+// the compiler. Extract them so the common GT bridge (allyouneed.gt) can compile against them. This
+// is compile-only: at runtime Forge's jarjar extraction provides them, and fabric never loads GT.
+configurations {
+    gtceujar {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    gtceujar("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+}
+
+def extractGtJarjar = tasks.register("extractGtJarjar", Sync) {
+    dependsOn(configurations.gtceujar)
+    from({ zipTree(configurations.gtceujar.singleFile) }) {
+        include "META-INF/jarjar/*.jar"
+        eachFile { fcd -> fcd.relativePath = new org.gradle.api.file.RelativePath(true, fcd.name) }
+        includeEmptyDirs = false
+    }
+    into(layout.buildDirectory.dir("gtjarjar"))
+}
+
+dependencies {
+    compileOnly(files(extractGtJarjar.map { it.outputs.files.asFileTree.files }))
 }
 
 // Declare capabilities on the outgoing configurations.

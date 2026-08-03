@@ -1,13 +1,15 @@
 package allyouneed.forge.init
 
-import allyouneed.async.AsyncCraftingBlock
-import allyouneed.async.AsyncCraftingBlockEntity
-import allyouneed.async.AsyncCraftingConnectorBlock
-import allyouneed.async.AsyncCraftingConnectorBlockEntity
-import allyouneed.async.AsyncCraftingOrientableBlock
+import allyouneed.async.AsyncBlockKind
+import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncCraftingRegistration
-import allyouneed.async.AsyncCraftingUnitRole
-import allyouneed.async.AsyncCraftingUnitType
+import allyouneed.async.AsyncRole
+import allyouneed.async.AsyncStructureBlock
+import allyouneed.async.AsyncStructureBlockEntity
+import allyouneed.async.AsyncStructureConnectorBlock
+import allyouneed.async.AsyncStructureConnectorBlockEntity
+import allyouneed.async.AsyncStructureControllerBlock
+import allyouneed.async.AsyncStructureInterfaceBlock
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
 import allyouneed.iodrive.MEIODriveRegistration
@@ -25,6 +27,7 @@ import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
 import allyouneed.util.MODID
+import allyouneed.util.Services
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import net.minecraft.world.item.BlockItem
@@ -174,83 +177,107 @@ object ForgeBlocks {
             MainCreativeTab.add(it)
         }
 
-    // Async Processing Processor
-    private val asyncInstances: Map<AsyncCraftingUnitType, AsyncCraftingBlock> =
-        AsyncCraftingUnitType.entries.associateWith { unit ->
-            val props = BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
-            when (unit.role) {
-                AsyncCraftingUnitRole.CONNECTOR -> AsyncCraftingConnectorBlock(props, unit)
-                AsyncCraftingUnitRole.HOST -> AsyncCraftingOrientableBlock(props, unit)
-                AsyncCraftingUnitRole.STORAGE, AsyncCraftingUnitRole.WALL, AsyncCraftingUnitRole.GLASS ->
-                    AsyncCraftingBlock(props, unit)
+    // -------------------------------------------------------------------------------------------
+    // Async synthesis structures (the 16-block set). The controllers and connectors are registered
+    // by GTAsyncCrafting (GTRegistrate) under the same ids when GTCEu is loaded, so the common
+    // blocks/items/BEs must be skipped to avoid a registry collision.
+    // -------------------------------------------------------------------------------------------
+
+    private val hasGt: Boolean = Services.platform.isModLoaded("gtceu")
+
+    private val structureProps = BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
+
+    /** Kinds owned by GTAsyncCrafting when GTCEu is loaded: the three controllers + three connectors. */
+    private val gtOwnedKinds: Set<AsyncBlockKind> =
+        if (hasGt) {
+            AsyncBlockKind.entries
+                .filter { it.role == AsyncRole.CONTROLLER || it.role == AsyncRole.CONNECTOR }
+                .toSet()
+        } else {
+            emptySet()
+        }
+
+    private val asyncStructureKinds: List<AsyncBlockKind> =
+        AsyncBlockKind.entries.filter { it !in gtOwnedKinds }
+
+    /** Eagerly created block instances, registered below. Instances (not RegistryObjects) back the
+     *  creative-tab definitions so that `<clinit>` never calls `RegistryObject.get()`. */
+    private val asyncStructureInstances: Map<AsyncBlockKind, Block> =
+        asyncStructureKinds.associateWith { kind ->
+            val block = when (kind.role) {
+                AsyncRole.CONTROLLER -> AsyncStructureControllerBlock(kind, structureProps)
+                AsyncRole.CONNECTOR -> AsyncStructureConnectorBlock(kind, structureProps)
+                AsyncRole.INTERFACE -> AsyncStructureInterfaceBlock(kind, structureProps)
+                else -> AsyncStructureBlock(kind, structureProps)
             }
+            AsyncBlockRegistry.register(kind, block)
+            block
         }
 
-    val ASYNC_BLOCKS: Map<AsyncCraftingUnitType, RegistryObject<AsyncCraftingBlock>> =
-        AsyncCraftingUnitType.entries.associateWith { unit ->
-            BLOCKS.register(unit.id) { asyncInstances.getValue(unit) }
+    private val asyncStructureItemInstances: Map<AsyncBlockKind, BlockItem> =
+        asyncStructureKinds.associateWith { kind ->
+            BlockItem(asyncStructureInstances.getValue(kind), Item.Properties())
         }
 
-    val ASYNC_GLASS: RegistryObject<AsyncCraftingBlock>
-        get() = ASYNC_BLOCKS.getValue(AsyncCraftingUnitType.GLASS)
-
-    val ASYNC_ITEMS: Map<AsyncCraftingUnitType, RegistryObject<BlockItem>> =
-        AsyncCraftingUnitType.entries.associateWith { unit ->
-            ForgeItems.ITEMS.register(unit.id) { asyncItemInstances.getValue(unit) }
+    val ASYNC_STRUCTURE_BLOCKS: Map<AsyncBlockKind, RegistryObject<Block>> =
+        asyncStructureKinds.associateWith { kind ->
+            BLOCKS.register(kind.id) { asyncStructureInstances.getValue(kind) }
         }
 
-    private val asyncItemInstances: Map<AsyncCraftingUnitType, BlockItem> =
-        AsyncCraftingUnitType.entries.associateWith { unit ->
-            BlockItem(asyncInstances.getValue(unit), Item.Properties())
+    val ASYNC_STRUCTURE_ITEMS: Map<AsyncBlockKind, RegistryObject<BlockItem>> =
+        asyncStructureKinds.associateWith { kind ->
+            ForgeItems.ITEMS.register(kind.id) { asyncStructureItemInstances.getValue(kind) }
         }
 
-    val ASYNC_UNIT_BE: RegistryObject<BlockEntityType<AsyncCraftingBlockEntity>> =
-        BLOCK_ENTITIES.register("async_processing_unit") {
+    val ASYNC_STRUCTURE_BE: RegistryObject<BlockEntityType<AsyncStructureBlockEntity>> =
+        BLOCK_ENTITIES.register("async_structure") {
             val type = BlockEntityType.Builder.of(
-                { pos, state -> AsyncCraftingBlockEntity(ASYNC_UNIT_BE.get(), pos, state) },
-                ASYNC_BLOCKS.getValue(AsyncCraftingUnitType.HOST).get(),
-                ASYNC_BLOCKS.getValue(AsyncCraftingUnitType.STORAGE).get(),
-                ASYNC_BLOCKS.getValue(AsyncCraftingUnitType.WALL).get(),
-                ASYNC_BLOCKS.getValue(AsyncCraftingUnitType.GLASS).get(),
+                { pos, state -> AsyncStructureBlockEntity(ASYNC_STRUCTURE_BE.get(), pos, state) },
+                *structureEntityKinds.map { asyncStructureInstances.getValue(it) }.toTypedArray(),
             ).build(null as com.mojang.datafixers.types.Type<*>?)
-            for (unit in AsyncCraftingUnitType.entries.filter {
-                it.role != AsyncCraftingUnitRole.CONNECTOR
-            }) {
-                asyncInstances.getValue(unit).setBlockEntity(AsyncCraftingBlockEntity::class.java, type, null, null)
+            for (kind in structureEntityKinds) {
+                @Suppress("UNCHECKED_CAST")
+                (
+                    asyncStructureInstances.getValue(kind)
+                        as appeng.block.AEBaseEntityBlock<AsyncStructureBlockEntity>
+                    ).setBlockEntity(AsyncStructureBlockEntity::class.java, type, null, null)
             }
-            AsyncCraftingRegistration.setUnitBlockEntityType(type)
+            AsyncCraftingRegistration.setStructureBlockEntityType(type)
             type
         }
 
-    val ASYNC_CONNECTOR_BE: RegistryObject<BlockEntityType<AsyncCraftingConnectorBlockEntity>> =
-        BLOCK_ENTITIES.register("async_processing_connector") {
+    val ASYNC_STRUCTURE_CONNECTOR_BE: RegistryObject<BlockEntityType<AsyncStructureConnectorBlockEntity>> =
+        BLOCK_ENTITIES.register("async_structure_connector") {
             val type = BlockEntityType.Builder.of(
-                { pos, state -> AsyncCraftingConnectorBlockEntity(ASYNC_CONNECTOR_BE.get(), pos, state) },
-                ASYNC_BLOCKS.getValue(AsyncCraftingUnitType.CONNECTOR).get(),
+                { pos, state -> AsyncStructureConnectorBlockEntity(ASYNC_STRUCTURE_CONNECTOR_BE.get(), pos, state) },
+                *connectorKinds.map { asyncStructureInstances.getValue(it) }.toTypedArray(),
             ).build(null as com.mojang.datafixers.types.Type<*>?)
-            @Suppress("UNCHECKED_CAST")
-            (
-                asyncInstances.getValue(AsyncCraftingUnitType.CONNECTOR)
-                    as appeng.block.AEBaseEntityBlock<AsyncCraftingBlockEntity>
-            ).setBlockEntity(
-                AsyncCraftingConnectorBlockEntity::class.java as Class<AsyncCraftingBlockEntity>,
-                type as BlockEntityType<AsyncCraftingBlockEntity>,
-                null,
-                null,
-            )
-            AsyncCraftingRegistration.setConnectorBlockEntityType(type)
+            for (kind in connectorKinds) {
+                @Suppress("UNCHECKED_CAST")
+                (
+                    asyncStructureInstances.getValue(kind)
+                        as appeng.block.AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>
+                    ).setBlockEntity(AsyncStructureConnectorBlockEntity::class.java, type, null, null)
+            }
+            AsyncCraftingRegistration.setStructureConnectorBlockEntityType(type)
             type
         }
 
-    private val asyncDefs: Map<AsyncCraftingUnitType, BlockDefinition<AsyncCraftingBlock>> =
-        AsyncCraftingUnitType.entries.associateWith { unit ->
+    val ASYNC_STRUCTURE_DEFS: Map<AsyncBlockKind, BlockDefinition<Block>> =
+        asyncStructureKinds.associateWith { kind ->
             BlockDefinition(
-                unit.displayName,
-                unit.id.rl,
-                asyncInstances.getValue(unit),
-                asyncItemInstances.getValue(unit),
+                kind.displayName,
+                kind.id.rl,
+                asyncStructureInstances.getValue(kind),
+                asyncStructureItemInstances.getValue(kind),
             ).also { MainCreativeTab.add(it) }
         }
+
+    private val structureEntityKinds: List<AsyncBlockKind>
+        get() = asyncStructureKinds.filter { it.role == AsyncRole.CONTROLLER || it.role == AsyncRole.INTERFACE }
+
+    private val connectorKinds: List<AsyncBlockKind>
+        get() = asyncStructureKinds.filter { it.role == AsyncRole.CONNECTOR }
 
     fun register(bus: IEventBus) {
         BLOCKS.register(bus)

@@ -86,7 +86,6 @@ dependencies {
     modImplementation("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
 
     modImplementation("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
-
     modCompileOnly("mekanism:Mekanism:${libs.versions.mek.get()}:api")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:additions")

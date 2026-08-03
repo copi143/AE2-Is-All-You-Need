@@ -5,13 +5,14 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import appeng.client.gui.AEBaseScreen
 import appeng.client.gui.style.ScreenStyle
+import appeng.menu.AEBaseMenu
 
-class AsyncCraftingStatusScreen(
-    menu: AsyncCraftingStatusMenu,
+class AsyncCraftingStatusScreen<M>(
+    menu: M,
     playerInventory: Inventory,
     title: Component,
     style: ScreenStyle,
-) : AEBaseScreen<AsyncCraftingStatusMenu>(menu, playerInventory, title, style) {
+) : AEBaseScreen<M>(menu, playerInventory, title, style) where M : AEBaseMenu, M : IAsyncCraftingStatusView {
 
     override fun updateBeforeRender() {
         super.updateBeforeRender()

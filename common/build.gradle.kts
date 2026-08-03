@@ -32,6 +32,10 @@ dependencies {
 
     modCompileOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
 
+    // The moddev-generated minecraft jar does not carry the Forge extension interfaces
+    // (net.minecraftforge.common.extensions.*) that GTCEu's IMachineBlockEntity extends.
+    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation(libs.compose.runtime) // required by compose compiler plugin on test source set
@@ -129,16 +133,4 @@ artifacts {
     sourceSets.main.get().resources.sourceDirectories.forEach { resourceDir ->
         add("commonResources", resourceDir)
     }
-}
-
-val generateAsyncPatternNbt by tasks.registering(JavaExec::class) {
-    group = "generation"
-    description = "Regenerates the default async crafting multiblock NBT pattern"
-    dependsOn(tasks.named("classes"))
-    classpath = sourceSets.main.get().runtimeClasspath
-    mainClass.set("allyouneed.tool.GenerateAsyncPatternNbt")
-    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
-    args = listOf(
-        layout.projectDirectory.file("src/main/resources/data/ae2isallyouneed/multiblock/async_crafting.nbt").asFile.absolutePath
-    )
 }

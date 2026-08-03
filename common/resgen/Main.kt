@@ -96,7 +96,7 @@ private val itemStorageCells = run {
     }
 }
 
-// Async crafting multiblock units, matching AsyncCraftingUnitType ids/colors.
+// Async synthesis structure blocks, matching AsyncBlockKind ids/colors.
 private data class AsyncBlockEntry(
     val id: String,
     val displayName: String,
@@ -105,12 +105,25 @@ private data class AsyncBlockEntry(
     val hasPowered: Boolean,
 )
 
-private val asyncBlocks = listOf(
-    AsyncBlockEntry("async_processing_host", "Async Processing Host", "#3F8C52", hasFacing = true, hasPowered = false),
-    AsyncBlockEntry("async_processing_connector", "Async Processing Connector", "#8C6A3F", hasFacing = true, hasPowered = true),
-    AsyncBlockEntry("async_processing_storage", "Async Processing Storage", "#3F6E8C", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_processing_wall", "Async Processing Wall", "#6E6E6E", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_processing_glass", "Async Processing Glass", "#8FBF4F", hasFacing = false, hasPowered = false),
+// Async synthesis structure blocks, matching AsyncBlockKind ids/colors. Controllers/interfaces
+// face horizontally; connectors also carry a powered state.
+private val asyncStructureBlocks = listOf(
+    AsyncBlockEntry("async_machine_frame", "Async Machine Frame", "#4A4A4A", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_machine_block", "Async Machine Block", "#6E6E6E", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_machine_glass", "Async Machine Glass", "#8FBF4F", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("singularity_alloy_reinforced_tower", "Singularity Alloy Reinforced Tower", "#00BCD4", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_energy_core", "Async Energy Core", "#FFB300", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_computing_core", "Async Computing Core", "#E040FB", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_storage_core", "Async Storage Core", "#3F6E8C", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_execution_core", "Async Execution Core", "#D32F2F", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_network_controller", "Async Network Controller", "#3F8C52", hasFacing = true, hasPowered = false),
+    AsyncBlockEntry("async_network_switch", "Async Network Switch", "#00796B", hasFacing = true, hasPowered = false),
+    AsyncBlockEntry("async_factory", "Async Factory", "#F57F17", hasFacing = true, hasPowered = false),
+    AsyncBlockEntry("async_dedicated_cable", "Async Dedicated Cable", "#263238", hasFacing = false, hasPowered = false),
+    AsyncBlockEntry("async_me_connector", "Async ME Connector", "#E0E0E0", hasFacing = true, hasPowered = true),
+    AsyncBlockEntry("async_wan_connector", "Async WAN Connector", "#5C6BC0", hasFacing = true, hasPowered = true),
+    AsyncBlockEntry("async_lan_connector", "Async LAN Connector", "#26A69A", hasFacing = true, hasPowered = true),
+    AsyncBlockEntry("async_module_interface", "Async Module Interface", "#9E9D24", hasFacing = true, hasPowered = false),
 )
 
 fun main(args: Array<String>) {
@@ -162,7 +175,7 @@ fun main(args: Array<String>) {
             craftingStorageBlock(storage.id, storage.displayName)
         }
 
-        for (async in asyncBlocks) {
+        for (async in asyncStructureBlocks) {
             asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
         }
 
@@ -282,9 +295,9 @@ fun main(args: Array<String>) {
             targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
         }
 
-        // Async processor: reuse crafting_storage template tinted per unit color.
+        // Async structure blocks: reuse crafting_storage template tinted per block color.
         // unformed = tinted base; formed = tinted base + light overlay.
-        for (async in asyncBlocks) {
+        for (async in asyncStructureBlocks) {
             layeredTarget(
                 bg = "crafting_storage_bg",
                 mid = "crafting_storage_fg",

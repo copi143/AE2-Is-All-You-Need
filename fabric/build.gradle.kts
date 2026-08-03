@@ -26,6 +26,14 @@ dependencies {
     modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
     modImplementation("appeng:appliedenergistics2-fabric:${libs.versions.ae2.get()}")
 
+    // The common GT bridge (allyouneed.gt) is recompiled into this module's sources, so the plain
+    // GTCEu jar (mojmap, unremapped) must be on the compile classpath. Never a runtime dependency.
+    compileOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+    // IMachineBlockEntity extends IForgeBlockEntity; fabric has no Forge classes, so pull the
+    // Forge universal jar (compile-only) to resolve the hierarchy. The classifier artifact ships the
+    // net.minecraftforge.* classes without the userdev zip.
+    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
+
     val compose = libs.versions.compose.get()
     implementation(project(":kaptor"))
     implementation(libs.compose.runtime)
@@ -50,6 +58,10 @@ repositories {
     maven {
         name = "ModMaven"
         url = uri("https://modmaven.dev/")
+    }
+    maven {
+        name = "Forge"
+        url = uri("https://maven.minecraftforge.net")
     }
     maven {
         name = "GTCEu Maven"

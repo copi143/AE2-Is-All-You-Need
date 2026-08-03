@@ -1,5 +1,7 @@
 package allyouneed
 
+import allyouneed.async.AsyncBlockKind
+import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncCraftingStatusMenu
 import allyouneed.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
@@ -47,7 +49,9 @@ fun initClient() {
         out.accept(ResourceLocation(MODID, "block/crafting/atlas_materials"))
     }
 
-    BlockRenderLayerMap.INSTANCE.putBlock(FabricBlocks.ASYNC_GLASS, RenderType.cutout())
+    AsyncBlockRegistry.get(AsyncBlockKind.GLASS)?.let {
+        BlockRenderLayerMap.INSTANCE.putBlock(it, RenderType.cutout())
+    }
 
     MenuScreens.register(PseudoPatternTerminalMenu.TYPE) { menu, inv, title ->
         val style = StyleManager.loadStyleDoc("/screens/terminals/wireless_terminal.json")

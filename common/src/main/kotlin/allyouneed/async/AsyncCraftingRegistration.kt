@@ -3,24 +3,24 @@ package allyouneed.async
 import net.minecraft.world.level.block.entity.BlockEntityType
 
 object AsyncCraftingRegistration {
-    private var unitBlockEntityType: BlockEntityType<*>? = null
-    private var connectorBlockEntityType: BlockEntityType<*>? = null
+    private var structureBlockEntityType: BlockEntityType<*>? = null
+    private var structureConnectorBlockEntityType: BlockEntityType<*>? = null
 
-    fun setUnitBlockEntityType(t: BlockEntityType<*>) {
-        unitBlockEntityType = t
+    /** Block entity type of the async synthesis structure controllers/interfaces. */
+    fun setStructureBlockEntityType(t: BlockEntityType<*>) {
+        structureBlockEntityType = t
     }
 
-    fun setConnectorBlockEntityType(t: BlockEntityType<*>) {
-        connectorBlockEntityType = t
+    /** Block entity type of the async synthesis structure connectors. */
+    fun setStructureConnectorBlockEntityType(t: BlockEntityType<*>) {
+        structureConnectorBlockEntityType = t
     }
 
-    fun getBlockEntityType(role: AsyncCraftingUnitRole): BlockEntityType<*> {
-        return if (role == AsyncCraftingUnitRole.CONNECTOR) {
-            connectorBlockEntityType
-                ?: throw IllegalStateException("Async connector BE type not registered yet")
-        } else {
-            unitBlockEntityType
-                ?: throw IllegalStateException("Async unit BE type not registered yet")
-        }
-    }
+    fun getStructureBlockEntityType(): BlockEntityType<*> =
+        structureBlockEntityType
+            ?: throw IllegalStateException("Async structure BE type not registered yet")
+
+    fun getStructureConnectorBlockEntityType(): BlockEntityType<*> =
+        structureConnectorBlockEntityType
+            ?: throw IllegalStateException("Async structure connector BE type not registered yet")
 }
