@@ -1,0 +1,21 @@
+{
+  "comment": "Async synthesis block definitions for the NO-GT runtime (Fabric, or Forge without GTCEu). Every block is a plain AE2-style cube block with a static cube_all model; the same textures are shared with the GT definition file (async_blocks_gt.json).",
+  "blocks": [
+    { "id": "async_machine_frame", "displayName": "Async Machine Frame", "color": "#4A4A4A", "role": "FRAME", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_machine_block", "displayName": "Async Machine Block", "color": "#6E6E6E", "role": "MACHINE", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_machine_glass", "displayName": "Async Machine Glass", "color": "#8FBF4F", "role": "GLASS", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "singularity_alloy_reinforced_tower", "displayName": "Singularity Alloy Reinforced Tower", "color": "#00BCD4", "role": "TOWER", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_energy_core", "displayName": "Async Energy Core", "color": "#FFB300", "role": "ENERGY", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_computing_core", "displayName": "Async Computing Core", "color": "#E040FB", "role": "COMPUTING", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_storage_core", "displayName": "Async Storage Core", "color": "#3F6E8C", "role": "STORAGE", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_execution_core", "displayName": "Async Execution Core", "color": "#D32F2F", "role": "EXECUTION", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_network_controller", "displayName": "Async Network Controller", "color": "#3F8C52", "role": "CONTROLLER", "hasFacing": true, "hasPowered": false, "isGt": false },
+    { "id": "async_network_switch", "displayName": "Async Network Switch", "color": "#00796B", "role": "SWITCH", "hasFacing": true, "hasPowered": false, "isGt": false },
+    { "id": "async_factory", "displayName": "Async Factory", "color": "#F57F17", "role": "FACTORY", "hasFacing": true, "hasPowered": false, "isGt": false },
+    { "id": "async_dedicated_cable", "displayName": "Async Dedicated Cable", "color": "#263238", "role": "CABLE", "hasFacing": false, "hasPowered": false, "isGt": false },
+    { "id": "async_me_connector", "displayName": "Async ME Connector", "color": "#E0E0E0", "role": "ME_CONNECTOR", "hasFacing": true, "hasPowered": true, "isGt": false },
+    { "id": "async_wan_connector", "displayName": "Async WAN Connector", "color": "#5C6BC0", "role": "WAN_CONNECTOR", "hasFacing": true, "hasPowered": true, "isGt": false },
+    { "id": "async_lan_connector", "displayName": "Async LAN Connector", "color": "#26A69A", "role": "LAN_CONNECTOR", "hasFacing": true, "hasPowered": true, "isGt": false },
+    { "id": "async_module_interface", "displayName": "Async Module Interface", "color": "#9E9D24", "role": "INTERFACE", "hasFacing": true, "hasPowered": false, "isGt": false }
+  ]
+}

@@ -1,9 +1,12 @@
 package allyouneed.resgen
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import java.nio.file.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
+import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 data class CellEntry(
@@ -96,35 +99,63 @@ private val itemStorageCells = run {
     }
 }
 
-// Async synthesis structure blocks, matching AsyncBlockKind ids/colors.
-private data class AsyncBlockEntry(
+/**
+ * Async synthesis block definition. Both definition files (with/without GT) describe the same
+ * 16-block set and only differ in [isGt]: the six GT-owned blocks (the three controllers and the
+ * three connectors) become GTCEu machines at runtime. Textures and models are generated from the
+ * shared fields, so the two files deliberately produce identical assets.
+ */
+data class AsyncBlockDef(
     val id: String,
     val displayName: String,
     val color: String,
+    val role: String,
     val hasFacing: Boolean,
     val hasPowered: Boolean,
+    val isGt: Boolean,
 )
 
-// Async synthesis structure blocks, matching AsyncBlockKind ids/colors. Controllers/interfaces
-// face horizontally; connectors also carry a powered state.
-private val asyncStructureBlocks = listOf(
-    AsyncBlockEntry("async_machine_frame", "Async Machine Frame", "#4A4A4A", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_machine_block", "Async Machine Block", "#6E6E6E", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_machine_glass", "Async Machine Glass", "#8FBF4F", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("singularity_alloy_reinforced_tower", "Singularity Alloy Reinforced Tower", "#00BCD4", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_energy_core", "Async Energy Core", "#FFB300", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_computing_core", "Async Computing Core", "#E040FB", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_storage_core", "Async Storage Core", "#3F6E8C", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_execution_core", "Async Execution Core", "#D32F2F", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_network_controller", "Async Network Controller", "#3F8C52", hasFacing = true, hasPowered = false),
-    AsyncBlockEntry("async_network_switch", "Async Network Switch", "#00796B", hasFacing = true, hasPowered = false),
-    AsyncBlockEntry("async_factory", "Async Factory", "#F57F17", hasFacing = true, hasPowered = false),
-    AsyncBlockEntry("async_dedicated_cable", "Async Dedicated Cable", "#263238", hasFacing = false, hasPowered = false),
-    AsyncBlockEntry("async_me_connector", "Async ME Connector", "#E0E0E0", hasFacing = true, hasPowered = true),
-    AsyncBlockEntry("async_wan_connector", "Async WAN Connector", "#5C6BC0", hasFacing = true, hasPowered = true),
-    AsyncBlockEntry("async_lan_connector", "Async LAN Connector", "#26A69A", hasFacing = true, hasPowered = true),
-    AsyncBlockEntry("async_module_interface", "Async Module Interface", "#9E9D24", hasFacing = true, hasPowered = false),
-)
+/**
+ * Reads one of the two async block definition files from common/resgen/definitions/.
+ */
+private fun loadAsyncDefinitions(fileName: String): List<AsyncBlockDef> {
+    val path = Path.of("common/resgen/definitions", fileName)
+    require(path.exists()) { "Missing async block definitions: $path" }
+    val root = JsonParser.parseReader(path.toFile().reader()).asJsonObject
+    return root.getAsJsonArray("blocks").map { element ->
+        val obj = element.asJsonObject
+        AsyncBlockDef(
+            id = obj.get("id").asString,
+            displayName = obj.get("displayName").asString,
+            color = obj.get("color").asString,
+            role = obj.get("role").asString,
+            hasFacing = obj.get("hasFacing").asBoolean,
+            hasPowered = obj.get("hasPowered").asBoolean,
+            isGt = obj.get("isGt").asBoolean,
+        )
+    }
+}
+
+private fun loadAsyncBlockSet(): List<AsyncBlockDef> {
+    val gt = loadAsyncDefinitions("async_blocks_gt.json")
+    val vanilla = loadAsyncDefinitions("async_blocks_vanilla.json")
+
+    // Both files must describe the exact same blocks; only the isGt flags may differ. The static
+    // cube_all models are always emitted for all 16 so a Forge install without GTCEu (and Fabric)
+    // renders everything; when GTCEu is present its registrate virtual resource pack overrides the
+    // blockstate/model of the six isGt blocks, and the PNGs are the same in both cases.
+    require(gt.map { it.id } == vanilla.map { it.id }) {
+        "GT/vanilla async definitions must list the same blocks in the same order"
+    }
+    require(gt.zip(vanilla).all { (g, v) -> g.copy(isGt = v.isGt) == v }) {
+        "GT/vanilla async definitions must share id/displayName/color/role/facing/powered"
+    }
+    val gtCount = gt.count { it.isGt }
+    println("[async] ${gt.size} blocks, ${gtCount} GT-owned, ${gt.size - gtCount} plain")
+
+    // Shared field set drives generation; isGt is runtime metadata only.
+    return vanilla
+}
 
 fun main(args: Array<String>) {
     if (args.isNotEmpty()) {
@@ -137,6 +168,8 @@ fun main(args: Array<String>) {
     val output = Path.of("common/res").resolve("assets/$modId")
     val sourceTextures = Path.of("common/resgen/textures")
     val langDir = Path.of("common/resgen/lang")
+
+    val asyncStructureBlocks = loadAsyncBlockSet()
 
     assetGen(modId, output, langDir) {
         translation("itemGroup.$modId", "AE2 Is All You Need")
@@ -295,27 +328,8 @@ fun main(args: Array<String>) {
             targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
         }
 
-        // Async structure blocks: reuse crafting_storage template tinted per block color.
-        // unformed = tinted base; formed = tinted base + light overlay.
-        for (async in asyncStructureBlocks) {
-            layeredTarget(
-                bg = "crafting_storage_bg",
-                mid = "crafting_storage_fg",
-                top = null,
-                outputPrefix = "async/${async.id}",
-                color = async.color,
-                levels = null,
-            )
-            layeredTarget(
-                bg = "crafting_storage_bg",
-                mid = "crafting_storage_fg",
-                top = null,
-                outputPrefix = "async/${async.id}_formed",
-                color = async.color,
-                levels = null,
-                overlays = listOf("crafting_storage_light"),
-            )
-        }
+        // Async structure blocks: dedicated pixel-art textures (AsyncTextures) are generated after
+        // the retexture block below, shared by both the GT and the no-GT definition files.
     }
 
     val texOut = output.resolve("textures/block")
@@ -384,6 +398,11 @@ fun main(args: Array<String>) {
         apTex.copyTo(texOut.resolve("machine_pattern_terminal.png"), overwrite = true)
         apTex.copyTo(itemTexOut.resolve("machine_pattern.png"), overwrite = true)
     }
+
+    // Async synthesis blocks: dedicated pixel-art textures (unformed + formed). Written straight to
+    // textures/block/async/, the same paths referenced by both the static cube_all models (no-GT)
+    // and GTRegistrate's gtceu:machine models (with-GT), so the two definition files share them.
+    AsyncTextures.generate(asyncStructureBlocks, output.resolve("textures/block/async"))
 
     // GUI textures (machine slot square + molecular_assembler GUI with a baked machine slot)
     val guiTexOut = output.resolve("textures/guis")
