@@ -8,10 +8,11 @@ import allyouneed.gt.AsyncStructureGtFactoryMachine
 import allyouneed.gt.AsyncStructureGtLanConnectorMachine
 import allyouneed.gt.AsyncStructureGtMachineBlock
 import allyouneed.gt.AsyncStructureGtMeConnectorMachine
+import allyouneed.gt.AsyncStructureGtPattern
 import allyouneed.gt.AsyncStructureGtProcessorMachine
 import allyouneed.gt.AsyncStructureGtSwitchMachine
 import allyouneed.gt.AsyncStructureGtWanConnectorMachine
-import allyouneed.gt.placeholderAsyncStructurePattern
+import allyouneed.multiblock.AsyncStructureType
 import allyouneed.rl
 import allyouneed.util.MODID
 import appeng.core.MainCreativeTab
@@ -66,11 +67,17 @@ object GTAsyncCrafting {
     lateinit var registrate: GTRegistrate
         private set
 
-    private val controllerKinds: List<Pair<AsyncBlockKind, (IMachineBlockEntity) -> AsyncStructureGtControllerMachine>> =
+    private val controllerKinds: List<Triple<AsyncBlockKind, AsyncStructureType, (IMachineBlockEntity) -> AsyncStructureGtControllerMachine>> =
         listOf(
-            AsyncBlockKind.CONTROLLER to { holder -> AsyncStructureGtProcessorMachine(holder) },
-            AsyncBlockKind.SWITCH to { holder -> AsyncStructureGtSwitchMachine(holder) },
-            AsyncBlockKind.FACTORY to { holder -> AsyncStructureGtFactoryMachine(holder) },
+            Triple(AsyncBlockKind.CONTROLLER, AsyncStructureType.PROCESSOR) { holder ->
+                AsyncStructureGtProcessorMachine(holder)
+            },
+            Triple(AsyncBlockKind.SWITCH, AsyncStructureType.SWITCH) { holder ->
+                AsyncStructureGtSwitchMachine(holder)
+            },
+            Triple(AsyncBlockKind.FACTORY, AsyncStructureType.MODULE) { holder ->
+                AsyncStructureGtFactoryMachine(holder)
+            },
         )
 
     private val connectorKinds: List<Pair<AsyncBlockKind, (IMachineBlockEntity) -> AsyncStructureGtConnectorMachine>> =
@@ -125,7 +132,7 @@ object GTAsyncCrafting {
     /** Registers the three controllers and the three connectors with GTRegistrate. */
     private fun registerMachines() {
         val registrate = this.registrate
-        for ((kind, machineFactory) in controllerKinds) {
+        for ((kind, type, machineFactory) in controllerKinds) {
             val definition = registrate.multiblock(
                 kind.id,
                 machineFactory,
@@ -133,7 +140,7 @@ object GTAsyncCrafting {
                 itemFactory(),
                 blockEntityFactory(),
             )
-                .pattern { placeholderAsyncStructurePattern(it) }
+                .pattern { AsyncStructureGtPattern.build(type, it) }
                 .allowFlip(false)
                 .register()
             definitions[kind] = definition

@@ -15,7 +15,7 @@
 | 结构真相 | **手写常量**（`AsyncStructures`），三种结构：module / switch / processor |
 | 结构形态 | 统一局部坐标系：宽 × 高 × 深，控制器为锚点。扩展 = 尾部追加层，0..16 次，每次 +6 深 |
 | 检测路径 | **检测器驱动**：`AsyncStructureDetector` 从控制器锚点推导朝向、探测扩展数(0..16)、逐格校验；GT 与 common 共用同一检测器 → 行为一致 |
-| GT 控制器 | `MultiblockControllerMachine` 子类，**占位 pattern 仅为满足 registrate**，`checkPattern`/`asyncCheckPattern` 改走检测器 |
+| GT 控制器 | `MultiblockControllerMachine` 子类，**pattern 由形状常量生成（供潜行预览/JEI 显示）**，`checkPattern`/`asyncCheckPattern` 改走检测器 |
 | GT 连接器 | GT 机器（`MetaMachine`）+ `GridNodeHolder` trait，MULTIBLOCK 节点组共享一条链路，成形后吞 32 频道 |
 | 编辑器维度 | **移除**（`MultiblockEditor`、编辑器 NBT datapack 全部删除） |
 | 功能 | 完全保留 AE2 异步合成：吞 32 频道 + 存储 + 对接 ME pattern |
@@ -87,8 +87,14 @@
   `checkPatternWithLock() + onStructureFormed()`，并把状态注册进 `MultiblockWorldSavedData`。
 - `onStructureFormed()`：重建 cluster，逐个连接器 `setHostController(this)`；
   `onStructureInvalid()`：逐个 `setHostController(null)` 并销毁 cluster。
-- 占位 pattern（`gt/AsyncStructureGtPattern.kt`）：单 aisle `"C"` + 控制器谓词，**只为满足
-  registrate**，实际成形判定完全由检测器决定；`allowFlip(false)`。
+- `onUse()`：镜像 `IMultiController.onUse` —— 未成形 + 潜行 + 空手 → 客户端调
+  `MultiblockInWorldPreviewRenderer.showPreview`（其余情形照旧开 GT 菜单）。
+- 真实 pattern（`gt/AsyncStructureGtPattern.kt`）：从 `AsyncStructures` 形状常量生成 base 形状
+  （`FactoryBlockPattern.start()` 坐标：char=局部 x、row=局部 y、aisle=局部 z），每种 kind 一个
+  具体谓词，必需空气用 `Predicates.air()`、任意格默认 any。仅供潜行预览 / JEI 页渲染，
+  成形判定仍完全由检测器决定；`allowFlip(false)`。
+- 预览朝向：GTCEu 1.20.1 的 `MultiblockInWorldPreviewRenderer` 对 EAST/WEST 的旋转与任何一致
+  facing 约定相反（上游缺陷，GT 自家多方块同样受影响）——N/S 精确，E/W 显示为旋转 180°。
 
 ---
 
@@ -127,7 +133,8 @@
   `bus.addGenericListener(MachineDefinition::class.java, Consumer<RegisterEvent<RL, MachineDefinition>>)`），
   GTCEu 注册完自有机器、冻结 `gtceu:machine` 之前广播。
 - 控制器：`registrate.multiblock(id, machineFactory, blockFactory, itemFactory, blockEntityFactory)
-  .pattern { placeholderAsyncStructurePattern(it) }.allowFlip(false).register()`。
+  .pattern { AsyncStructureGtPattern.build(type, it) }.allowFlip(false).register()`（kind → 结构类型：
+  CONTROLLER→PROCESSOR、SWITCH→SWITCH、FACTORY→MODULE）。
 - 连接器：`registrate.machine(id, Function { MachineDefinition(it) }, machineFactory, ...)`。
 - 自定义工厂：`blockFactory<D>` → `AsyncStructureGtMachineBlock(props, definition, kind)`（实现
   `IAsyncKindBlock`，显式覆写 `newBlockEntity` 兼容 fabric 编译的 vanilla `EntityBlock`）；
@@ -151,7 +158,9 @@
 ## 7. 验证清单
 
 - **Forge 带 GT**：搭处理器（核心 + 扩展 bay + 模块）→ 成形；拆装扩展层（0..16）→ 重成形；
-  右键 GT 控制器开 GT 菜单；接 ME 吞 32 频道；拆连接器 → 失形。
+   右键 GT 控制器开 GT 菜单；接 ME 吞 32 频道；拆连接器 → 失形。
+- **潜行+空手预览**：三个控制器（处理器/交换机/工厂）未成形时潜行右键 → 显示 base 结构叠影；
+   朝向 N/S 精确，E/W 因上游渲染器缺陷旋转 180°（已知取舍）。
 - **Forge 无 GT**：common 匹配器跑同一结构；`./gradlew :forge:compileKotlin` + 运行验证。
 - **Fabric**：恒无 GT，common 匹配器回归。
 - 三模块 `compileKotlin` / `build` 全绿。
@@ -164,8 +173,8 @@
   的摊平解压）+ forge universal（`IForgeBlockEntity`）；运行期 fabric 绝不加载。
 - `IMachineBlockEntity extends IForgeBlockEntity`（forge）—— common 只经构造参数间接用到，
   fabric 编译仍须 forge jar 在 classpath。
-- GT 占位 pattern 不表达真实形状：成形信息完全来自检测器，`MultiblockState` pos cache 只是让
-  GT 的重检触发机制（方块更新）能覆盖到结构 bounds。
+- GT pattern 只承担预览显示（不参与成形判定）：成形信息完全来自检测器，`MultiblockState` pos
+  cache 只是让 GT 的重检触发机制（方块更新）能覆盖到结构 bounds。
 - `checkPattern()` 在调用线程（可能是异步）同步跑 `detect()`（纯世界读）；`asyncCheckPattern()`
   把主线程任务放进 `patternLock` —— 若出现数据竞争再收紧。
 - 扩展 0..16，每次 +6 深；超 16 自动拒绝；不检查结构外多余方块（与旧行为一致）。

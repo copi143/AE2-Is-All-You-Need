@@ -9,6 +9,8 @@ import allyouneed.async.IAsyncChannelView
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
+import com.gregtechceu.gtceu.client.renderer.MultiblockInWorldPreviewRenderer
+import com.gregtechceu.gtceu.config.ConfigHolder
 import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.machine.feature.IInteractedMachine
 import com.gregtechceu.gtceu.api.machine.multiblock.MultiblockControllerMachine
@@ -167,6 +169,18 @@ abstract class AsyncStructureGtControllerMachine(
         hand: InteractionHand,
         hit: BlockHitResult,
     ): InteractionResult {
+        // Mirror IMultiController.onUse: sneak + empty hand on an unformed controller previews the
+        // structure in-world. The real pattern (AsyncStructureGtPattern) renders the shape.
+        if (!isFormed && player.isShiftKeyDown() && player.getItemInHand(hand).isEmpty()) {
+            if (isRemote) {
+                MultiblockInWorldPreviewRenderer.showPreview(
+                    pos,
+                    this,
+                    ConfigHolder.INSTANCE.client.inWorldPreviewDuration * 20,
+                )
+            }
+            return InteractionResult.SUCCESS
+        }
         if (!isRemote) {
             MenuOpener.open(AsyncStructureGtStatusMenu.TYPE, player, MenuLocators.forBlockEntity(holder.self()))
         }
