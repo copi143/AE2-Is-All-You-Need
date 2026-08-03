@@ -215,7 +215,9 @@ class AssetGen(private val modId: String, private val output: Path, private val 
      * Async crafting multiblock unit: cube_all unformed + formed variants.
      * [hasFacing] blocks (host/connector) also vary on `facing`; the connector
      * additionally varies on `powered` (all formed/unformed combos are emitted so
-     * every reachable state matches a model).
+     * every reachable state matches a model). Property-less structural blocks have no
+     * facing/formed/powered properties, so their blockstate must use the empty `""`
+     * variant key - the only state that can ever be looked up by the model loader.
      */
     fun asyncBlock(name: String, displayName: String, hasFacing: Boolean, hasPowered: Boolean) {
         translations["block.$modId.$name"] = displayName
@@ -237,23 +239,20 @@ class AssetGen(private val modId: String, private val output: Path, private val 
         blockModels += GeneratedFile("models/block/async/${name}_formed.json", formedModel)
 
         val variants = JsonObject()
-        val dirs = if (hasFacing) listOf("north", "south", "east", "west") else listOf("")
 
         fun addVariant(key: String, model: String) {
             variants.add(key, JsonObject().apply { addProperty("model", "$modId:block/async/$model") })
         }
 
-        for (dir in dirs) {
-            for (formed in listOf("false", "true")) {
-                val model = if (formed == "false") name else "${name}_formed"
-                when {
-                    hasPowered -> for (powered in listOf("false", "true")) {
-                        addVariant("facing=$dir,formed=$formed,powered=$powered", model)
-                    }
-                    hasFacing -> addVariant("facing=$dir,formed=$formed", model)
-                    else -> addVariant("formed=$formed", model)
-                }
+        val dirs = listOf("north", "south", "east", "west")
+        when {
+            hasPowered -> for (dir in dirs) for (formed in listOf("false", "true")) for (powered in listOf("false", "true")) {
+                addVariant("facing=$dir,formed=$formed,powered=$powered", if (formed == "false") name else "${name}_formed")
             }
+            hasFacing -> for (dir in dirs) for (formed in listOf("false", "true")) {
+                addVariant("facing=$dir,formed=$formed", if (formed == "false") name else "${name}_formed")
+            }
+            else -> addVariant("", name)
         }
 
         val stateJson = JsonObject().apply { add("variants", variants) }

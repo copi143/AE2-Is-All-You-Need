@@ -5,6 +5,7 @@ import allyouneed.async.IAsyncChannelSink
 import allyouneed.async.IAsyncChannelView
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
 import com.gregtechceu.gtceu.api.machine.MetaMachine
+import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties
 import com.gregtechceu.gtceu.integration.ae2.machine.feature.IGridConnectedMachine
 import com.gregtechceu.gtceu.integration.ae2.machine.trait.GridNodeHolder
 import com.gregtechceu.gtceu.integration.ae2.utils.SerializableManagedGridNode
@@ -48,6 +49,7 @@ abstract class AsyncStructureGtConnectorMachine(
         if (hostController === controller) return
         hostController = controller
         updateExposedSides()
+        updateFormedRenderState()
     }
 
     fun getHostController(): AsyncStructureGtControllerMachine? = hostController
@@ -55,6 +57,7 @@ abstract class AsyncStructureGtConnectorMachine(
     override fun onLoad() {
         super.onLoad()
         updateExposedSides()
+        updateFormedRenderState()
     }
 
     override fun onMainNodeStateChanged(reason: IGridNodeListener.State) {
@@ -70,6 +73,14 @@ abstract class AsyncStructureGtConnectorMachine(
     private fun updateExposedSides() {
         val sides = if (isFormed()) setOf(self().getFrontFacing()) else emptySet<Direction>()
         gridNodeHolder.getMainNode().setExposedOnSides(sides)
+    }
+
+    /** Mirrors the vanilla `formed` flip: light the connector up once its host structure forms. */
+    private fun updateFormedRenderState() {
+        val renderState = getRenderState()
+        if (renderState.hasProperty(GTMachineModelProperties.IS_FORMED)) {
+            setRenderState(renderState.setValue(GTMachineModelProperties.IS_FORMED, isFormed()))
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
