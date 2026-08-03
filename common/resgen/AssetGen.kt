@@ -215,9 +215,9 @@ class AssetGen(private val modId: String, private val output: Path, private val 
      * Async crafting multiblock unit: cube_all unformed + formed variants.
      * [hasFacing] blocks (host/connector) also vary on `facing`; the connector
      * additionally varies on `powered` (all formed/unformed combos are emitted so
-     * every reachable state matches a model). Property-less structural blocks have no
-     * facing/formed/powered properties, so their blockstate must use the empty `""`
-     * variant key - the only state that can ever be looked up by the model loader.
+     * every reachable state matches a model). Property-less structural blocks carry
+     * the `formed` property, so their blockstate varies `formed=false/true` between
+     * the plain and the `_formed` cube_all models.
      */
     fun asyncBlock(name: String, displayName: String, hasFacing: Boolean, hasPowered: Boolean) {
         translations["block.$modId.$name"] = displayName
@@ -252,7 +252,9 @@ class AssetGen(private val modId: String, private val output: Path, private val 
             hasFacing -> for (dir in dirs) for (formed in listOf("false", "true")) {
                 addVariant("facing=$dir,formed=$formed", if (formed == "false") name else "${name}_formed")
             }
-            else -> addVariant("", name)
+            else -> for (formed in listOf("false", "true")) {
+                addVariant("formed=$formed", if (formed == "false") name else "${name}_formed")
+            }
         }
 
         val stateJson = JsonObject().apply { add("variants", variants) }
@@ -262,6 +264,69 @@ class AssetGen(private val modId: String, private val output: Path, private val 
             addProperty("parent", "$modId:block/async/$name")
         }
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Async machine frame: ME-controller-style connection textures
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Frame block with connection textures. The block carries a [connections] mask (one bit per
+     * direction, set when the neighbour is another frame); for each mask the per-face texture is
+     * `h` when both in-plane horizontal neighbours connect, `v` when both in-plane vertical
+     * neighbours connect, else `c`. Models are emitted once per unique face assignment (deduped
+     * across the 64 masks), each with an unformed and a `_formed` (animated gradient) variant.
+     */
+    fun asyncFrameBlock(name: String, displayName: String) {
+        translations["block.$modId.$name"] = displayName
+
+        val assignmentByModel = LinkedHashMap<List<String>, String>()
+        val modelByMask = LinkedHashMap<Int, String>()
+        for (mask in 0 until 64) {
+            val assignment = frameFaceTextures(mask)
+            val modelId = assignmentByModel.getOrPut(assignment) {
+                "async/${name}_conn_${assignmentByModel.size}"
+            }
+            modelByMask[mask] = modelId
+        }
+
+        for ((assignment, modelId) in assignmentByModel) {
+            val unformedTextures = JsonObject()
+            val formedTextures = JsonObject()
+            for ((i, face) in FRAME_FACE_ORDER.withIndex()) {
+                unformedTextures.addProperty(face, "$modId:block/async/frame_${assignment[i]}")
+                formedTextures.addProperty(face, "$modId:block/async/frame_${assignment[i]}_formed")
+            }
+            unformedTextures.addProperty("particle", "$modId:block/async/frame_c")
+            formedTextures.addProperty("particle", "$modId:block/async/frame_c")
+
+            blockModels += GeneratedFile("models/block/$modelId.json", cubeModel(unformedTextures))
+            blockModels += GeneratedFile("models/block/${modelId}_formed.json", cubeModel(formedTextures))
+        }
+
+        val stateJson = JsonObject().apply {
+            add("variants", JsonObject().apply {
+                for ((mask, modelId) in modelByMask) {
+                    add("connections=$mask,formed=false", JsonObject().apply {
+                        addProperty("model", "$modId:block/$modelId")
+                    })
+                    add("connections=$mask,formed=true", JsonObject().apply {
+                        addProperty("model", "$modId:block/${modelId}_formed")
+                    })
+                }
+            })
+        }
+        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
+
+        val itemJson = JsonObject().apply {
+            addProperty("parent", "$modId:block/${modelByMask.getValue(0)}")
+        }
+        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
+    private fun cubeModel(textures: JsonObject): JsonObject = JsonObject().apply {
+        addProperty("parent", "minecraft:block/cube")
+        add("textures", textures)
     }
 
     fun generate() {
@@ -317,4 +382,43 @@ class AssetGen(private val modId: String, private val output: Path, private val 
 
 fun assetGen(modId: String, output: Path, langDir: Path? = null, init: AssetGen.() -> Unit) {
     AssetGen(modId, output, langDir).apply(init).generate()
+}
+
+// ---------------------------------------------------------------------------------------------
+// Async machine frame connection-texture rule
+// ---------------------------------------------------------------------------------------------
+
+// Bit masks follow net.minecraft.core.Direction order: DOWN, UP, NORTH, SOUTH, WEST, EAST.
+// (1 shl ordinal) matches AsyncStructureFrameBlock.refreshConnections.
+private const val BIT_DOWN = 1 shl 0
+private const val BIT_UP = 1 shl 1
+private const val BIT_NORTH = 1 shl 2
+private const val BIT_SOUTH = 1 shl 3
+private const val BIT_WEST = 1 shl 4
+private const val BIT_EAST = 1 shl 5
+
+private val FRAME_FACE_ORDER = listOf("north", "east", "south", "west", "up", "down")
+
+/**
+ * Per face, the two in-plane direction bits along the face's u axis (horizontal) and v axis
+ * (vertical), matching the vanilla cube UV convention (side faces: u = horizontal perp, v = up/down;
+ * up/down faces: u = east/west, v = north/south).
+ */
+private val FRAME_FACE_AXES: Map<String, Pair<Int, Int>> = mapOf(
+    "north" to ((BIT_EAST or BIT_WEST) to (BIT_UP or BIT_DOWN)),
+    "south" to ((BIT_EAST or BIT_WEST) to (BIT_UP or BIT_DOWN)),
+    "west" to ((BIT_NORTH or BIT_SOUTH) to (BIT_UP or BIT_DOWN)),
+    "east" to ((BIT_NORTH or BIT_SOUTH) to (BIT_UP or BIT_DOWN)),
+    "up" to ((BIT_EAST or BIT_WEST) to (BIT_NORTH or BIT_SOUTH)),
+    "down" to ((BIT_EAST or BIT_WEST) to (BIT_NORTH or BIT_SOUTH)),
+)
+
+/** Per-face texture for a [connections] mask, in [FRAME_FACE_ORDER] order. */
+private fun frameFaceTextures(mask: Int): List<String> = FRAME_FACE_ORDER.map { face ->
+    val (horizontal, vertical) = FRAME_FACE_AXES.getValue(face)
+    when {
+        mask and horizontal == horizontal -> "h"
+        mask and vertical == vertical -> "v"
+        else -> "c"
+    }
 }

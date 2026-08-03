@@ -94,6 +94,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         if (factory is AsyncStructureBlockEntity && factory.kind == AsyncBlockKind.FACTORY) {
             factory.setFormedState(formed)
         }
+        setStructuralFormed(level, module.boundsMin, module.boundsMax, formed)
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -124,6 +125,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         switchCluster = formed
         if (formed != null) {
             resyncConnectors(level, formed)
+            setStructuralFormed(level, formed.boundsMin, formed.boundsMax, true)
         }
         host.updateSubType()
         if (structureChanged) {
@@ -150,6 +152,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         processorCluster = formed
         if (formed != null) {
             resyncConnectors(level, formed)
+            setStructuralFormed(level, formed.boundsMin, formed.boundsMax, true)
         }
         host.updateSubType()
     }
@@ -161,10 +164,14 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     private fun destroyCurrent(level: ServerLevel) {
         unlinkConnectors(level)
         val m = moduleCluster
+        val s = switchCluster
+        val p = processorCluster
         moduleCluster = null
         switchCluster = null
         processorCluster = null
         m?.let { setModuleFormed(level, it, false) }
+        s?.let { setStructuralFormed(level, it.boundsMin, it.boundsMax, false) }
+        p?.let { setStructuralFormed(level, it.boundsMin, it.boundsMax, false) }
     }
 
     private fun resyncConnectors(level: ServerLevel, cluster: Any) {

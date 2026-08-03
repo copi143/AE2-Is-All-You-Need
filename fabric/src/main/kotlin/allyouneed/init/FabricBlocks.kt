@@ -9,6 +9,7 @@ import allyouneed.async.AsyncStructureBlockEntity
 import allyouneed.async.AsyncStructureConnectorBlock
 import allyouneed.async.AsyncStructureConnectorBlockEntity
 import allyouneed.async.AsyncStructureControllerBlock
+import allyouneed.async.AsyncStructureFrameBlock
 import allyouneed.async.AsyncStructureInterfaceBlock
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
@@ -224,11 +225,14 @@ object FabricBlocks {
 
     private fun asyncStructureInstance(kind: AsyncBlockKind): Block {
         return asyncStructureInstances.getOrPut(kind) {
-            when (kind.role) {
-                AsyncRole.CONTROLLER -> AsyncStructureControllerBlock(kind, structureProps)
-                AsyncRole.CONNECTOR -> AsyncStructureConnectorBlock(kind, structureProps)
-                AsyncRole.INTERFACE -> AsyncStructureInterfaceBlock(kind, structureProps)
-                else -> AsyncStructureBlock(kind, structureProps)
+            when (kind) {
+                AsyncBlockKind.FRAME -> AsyncStructureFrameBlock(kind, structureProps)
+                else -> when (kind.role) {
+                    AsyncRole.CONTROLLER -> AsyncStructureControllerBlock(kind, structureProps)
+                    AsyncRole.CONNECTOR -> AsyncStructureConnectorBlock(kind, structureProps)
+                    AsyncRole.INTERFACE -> AsyncStructureInterfaceBlock(kind, structureProps)
+                    else -> AsyncStructureBlock(kind, structureProps)
+                }
             }
         }
     }

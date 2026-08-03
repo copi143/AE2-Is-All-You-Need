@@ -49,9 +49,25 @@ class TextureGen(private val output: Path) {
         val sourceHz: JzCzHz,
     )
 
+    /**
+     * Like [AnimatedLayeredEntry] but the mid's opaque pixels are tinted flat to each [midColors]
+     * entry (alpha preserved) instead of JzCzHz-recolored - for white glow overlays whose shape is
+     * cycled through the gradient. Composites bg + tinted mid per frame, stacked as an animation
+     * strip with `.png.mcmeta`.
+     */
+    private data class AnimatedTintEntry(
+        val bgTemplate: String,
+        val midTemplate: String,
+        val outputPrefix: String,
+        val midColors: List<RGB>,
+        val frameTime: Int,
+        val interpolate: Boolean,
+    )
+
     private val entries = mutableListOf<RecolorEntry>()
     private val layered = mutableListOf<LayeredEntry>()
     private val animatedLayered = mutableListOf<AnimatedLayeredEntry>()
+    private val animatedTints = mutableListOf<AnimatedTintEntry>()
     private var sourceDir: Path? = null
     private var sourceColorHz: JzCzHz? = null
 
@@ -115,6 +131,26 @@ class TextureGen(private val output: Path) {
         )
     }
 
+    /**
+     * White-overlay gradient cycle: [mid] is tinted flat to each [midColors][i] (opaque pixels keep
+     * their alpha) and composited over [bg], stacked into a vertical animation strip.
+     */
+    fun layeredAnimatedTint(
+        bg: String,
+        mid: String,
+        outputPrefix: String,
+        midColors: List<String>,
+        frameTime: Int = 4,
+        interpolate: Boolean = true,
+    ) {
+        require(midColors.isNotEmpty()) { "midColors must not be empty" }
+        animatedTints += AnimatedTintEntry(
+            bg, mid, outputPrefix,
+            midColors.map { RGB(it) },
+            frameTime, interpolate,
+        )
+    }
+
     fun generate() {
         val srcDir = sourceDir ?: error("Call source() first")
 
@@ -126,6 +162,9 @@ class TextureGen(private val output: Path) {
         }
         for (entry in animatedLayered) {
             generateAnimatedLayered(srcDir, entry)
+        }
+        for (entry in animatedTints) {
+            generateAnimatedTint(srcDir, entry)
         }
     }
 
@@ -265,6 +304,52 @@ class TextureGen(private val output: Path) {
 
         writePng(strip, entry.outputPrefix, "")
         writeAnimationMcmeta(entry.outputPrefix, entry.midColors.size, entry.frameTime, entry.interpolate)
+    }
+
+    private fun generateAnimatedTint(srcDir: Path, entry: AnimatedTintEntry) {
+        val bgFile = srcDir.resolve("${entry.bgTemplate}.png")
+        val midFile = srcDir.resolve("${entry.midTemplate}.png")
+        if (!bgFile.exists() || !midFile.exists()) {
+            println("[texture] missing layers for animated tint ${entry.outputPrefix}")
+            return
+        }
+
+        val bg = ensureArgb(ImageIO.read(bgFile.toFile()))
+        val mid = ensureArgb(ImageIO.read(midFile.toFile()))
+
+        val frameH = bg.height
+        val frameW = bg.width
+        val strip = BufferedImage(frameW, frameH * entry.midColors.size, BufferedImage.TYPE_INT_ARGB)
+        val g = strip.createGraphics()
+
+        for ((i, color) in entry.midColors.withIndex()) {
+            val frame = composite(bg, tint(mid, color))
+            g.drawImage(frame, 0, i * frameH, null)
+        }
+        g.dispose()
+
+        writePng(strip, entry.outputPrefix, "")
+        writeAnimationMcmeta(entry.outputPrefix, entry.midColors.size, entry.frameTime, entry.interpolate)
+    }
+
+    /** Replaces the opaque pixels of [src] with [color], preserving their alpha. */
+    private fun tint(src: BufferedImage, color: RGB): BufferedImage {
+        val dst = BufferedImage(src.width, src.height, BufferedImage.TYPE_INT_ARGB)
+        val r = (color.r * 255f + 0.5f).toInt().coerceIn(0, 255)
+        val g = (color.g * 255f + 0.5f).toInt().coerceIn(0, 255)
+        val b = (color.b * 255f + 0.5f).toInt().coerceIn(0, 255)
+        for (y in 0 until src.height) {
+            for (x in 0 until src.width) {
+                val argb = src.getRGB(x, y)
+                val a = (argb ushr 24) and 0xFF
+                if (a == 0) {
+                    dst.setRGB(x, y, 0)
+                } else {
+                    dst.setRGB(x, y, (a shl 24) or (r shl 16) or (g shl 8) or b)
+                }
+            }
+        }
+        return dst
     }
 
     private fun writeAnimationMcmeta(

@@ -7,6 +7,7 @@ import allyouneed.async.AsyncStructureDetector
 import allyouneed.async.AsyncStructureEntityBlock
 import allyouneed.async.AsyncSwitchCluster
 import allyouneed.async.IAsyncChannelView
+import allyouneed.async.setStructuralFormed
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
@@ -144,6 +145,8 @@ abstract class AsyncStructureGtControllerMachine(
         for (pos in connectorPositionsOf(detected)) {
             (MetaMachine.getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.setHostController(this)
         }
+        val (min, max) = boundsOf(detected)
+        setStructuralFormed(level, min, max, true)
     }
 
     private fun destroyCluster(level: ServerLevel) {
@@ -152,6 +155,15 @@ abstract class AsyncStructureGtControllerMachine(
         for (pos in connectorPositionsOf(old)) {
             (MetaMachine.getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.setHostController(null)
         }
+        val (min, max) = boundsOf(old)
+        setStructuralFormed(level, min, max, false)
+    }
+
+    private fun boundsOf(cluster: Any): Pair<BlockPos, BlockPos> = when (cluster) {
+        is AsyncModuleCluster -> cluster.boundsMin to cluster.boundsMax
+        is AsyncSwitchCluster -> cluster.boundsMin to cluster.boundsMax
+        is AsyncProcessorCluster -> cluster.boundsMin to cluster.boundsMax
+        else -> BlockPos.ZERO to BlockPos.ZERO
     }
 
     /** Adds the structure bounds corners and connectors so block changes re-trigger a check. */

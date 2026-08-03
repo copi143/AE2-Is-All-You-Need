@@ -7,6 +7,8 @@ import appeng.blockentity.AEBaseBlockEntity
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import net.minecraft.core.BlockPos
+import net.minecraft.core.Direction
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.player.Player
@@ -16,17 +18,121 @@ import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.StateDefinition
 import net.minecraft.world.level.block.state.properties.BooleanProperty
+import net.minecraft.world.level.block.state.properties.IntegerProperty
 import net.minecraft.world.phys.BlockHitResult
 
 /**
  * Plain structural block of the async synthesis system (frame, machine block, glass, reinforced
  * tower, dedicated cable and the energy/computing/storage/execution cores). It has no block
- * entity and no orientation; the multiblock detectors read it directly from the world.
+ * entity and no orientation; the multiblock detectors read it directly from the world. All
+ * structural blocks carry a [FORMED] state that the detectors set once the surrounding structure
+ * is recognized, lighting the whole multiblock up.
  */
-class AsyncStructureBlock(
+open class AsyncStructureBlock(
     override val kind: AsyncBlockKind,
     props: Properties,
-) : Block(props), IAsyncKindBlock
+) : Block(props), IAsyncKindBlock {
+
+    init {
+        registerDefaultState(
+            defaultBlockState()
+                .setValue(AsyncStructureEntityBlock.FORMED, false),
+        )
+    }
+
+    override fun createBlockStateDefinition(builder: StateDefinition.Builder<Block, BlockState>) {
+        super.createBlockStateDefinition(builder)
+        builder.add(AsyncStructureEntityBlock.FORMED)
+    }
+}
+
+/**
+ * Async machine frame with ME-controller-style connection textures. Carries a [CONNECTIONS] mask
+ * (one bit per direction, set when the neighbour in that direction is another frame) that the
+ * client uses to pick the per-face c/h/v texture, plus the shared structural [FORMED] state. The
+ * mask is recomputed on placement and on any neighbour change.
+ */
+class AsyncStructureFrameBlock(
+    kind: AsyncBlockKind,
+    props: Properties,
+) : AsyncStructureBlock(kind, props) {
+
+    init {
+        registerDefaultState(
+            defaultBlockState()
+                .setValue(AsyncStructureEntityBlock.FORMED, false)
+                .setValue(CONNECTIONS, 0),
+        )
+    }
+
+    override fun createBlockStateDefinition(builder: StateDefinition.Builder<Block, BlockState>) {
+        super.createBlockStateDefinition(builder)
+        builder.add(CONNECTIONS)
+    }
+
+    override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
+        super.onPlace(state, level, pos, oldState, isMoving)
+        if (!level.isClientSide) {
+            refreshConnections(level, pos)
+        }
+    }
+
+    override fun neighborChanged(
+        state: BlockState,
+        level: Level,
+        pos: BlockPos,
+        blockIn: Block,
+        fromPos: BlockPos,
+        isMoving: Boolean,
+    ) {
+        super.neighborChanged(state, level, pos, blockIn, fromPos, isMoving)
+        if (!level.isClientSide) {
+            refreshConnections(level, pos)
+        }
+    }
+
+    private fun refreshConnections(level: Level, pos: BlockPos) {
+        var mask = 0
+        for ((i, dir) in Direction.values().withIndex()) {
+            val kind = (level.getBlockState(pos.relative(dir)).block as? IAsyncKindBlock)?.kind
+            if (kind == AsyncBlockKind.FRAME) {
+                mask = mask or (1 shl i)
+            }
+        }
+        val state = level.getBlockState(pos)
+        if (state.hasProperty(CONNECTIONS) && state.getValue(CONNECTIONS) != mask) {
+            level.setBlock(pos, state.setValue(CONNECTIONS, mask), Block.UPDATE_CLIENTS)
+        }
+    }
+
+    companion object {
+        val CONNECTIONS: IntegerProperty = IntegerProperty.create("connections", 0, 63)
+    }
+}
+
+/**
+ * Flips the [AsyncStructureEntityBlock.FORMED] state of every structural block (an
+ * [AsyncStructureBlock]: frame, machine block, glass, tower, cores, cable) inside the given bounds.
+ * The structure calculators (plain and GT) call this when a structure forms/invalidates so the
+ * whole multiblock lights up. Controllers/connectors/interfaces are not touched - they manage their
+ * own formed state.
+ */
+fun setStructuralFormed(level: ServerLevel, min: BlockPos, max: BlockPos, formed: Boolean) {
+    for (y in min.y..max.y) {
+        for (z in min.z..max.z) {
+            for (x in min.x..max.x) {
+                val pos = BlockPos(x, y, z)
+                val state = level.getBlockState(pos)
+                if (state.block is AsyncStructureBlock) {
+                    val current = state.getValue(AsyncStructureEntityBlock.FORMED)
+                    if (current != formed) {
+                        level.setBlock(pos, state.setValue(AsyncStructureEntityBlock.FORMED, formed), Block.UPDATE_CLIENTS)
+                    }
+                }
+            }
+        }
+    }
+}
 
 /**
  * Shared base of the entity blocks: controllers (network controller, network switch, factory) and

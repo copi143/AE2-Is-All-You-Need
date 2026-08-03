@@ -209,7 +209,11 @@ fun main(args: Array<String>) {
         }
 
         for (async in asyncStructureBlocks) {
-            asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
+            if (async.role == "FRAME") {
+                asyncFrameBlock(async.id, async.displayName)
+            } else {
+                asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
+            }
         }
 
         simpleBlock("me_io_drive", "ME IO Drive")
@@ -328,6 +332,20 @@ fun main(args: Array<String>) {
             targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
         }
 
+        // Async machine frame: animated formed-state glow strips. The base frame_* textures are
+        // copied to the output below; here each light overlay (white strip, alpha 55/133) is tinted
+        // flat through AE2_GRADIENT and stacked into a vertical animation strip per face variant.
+        for (variant in listOf("c", "h", "v")) {
+            layeredAnimatedTint(
+                bg = "async/frame_$variant",
+                mid = "async/frame_light_$variant",
+                outputPrefix = "async/frame_${variant}_formed",
+                midColors = AE2_GRADIENT.map { it.hex },
+                frameTime = 4,
+                interpolate = true,
+            )
+        }
+
         // Async structure blocks: dedicated pixel-art textures (AsyncTextures) are generated after
         // the retexture block below, shared by both the GT and the no-GT definition files.
     }
@@ -335,6 +353,15 @@ fun main(args: Array<String>) {
     val texOut = output.resolve("textures/block")
     texOut.createDirectories()
     sourceTextures.resolve("me_io_drive.png").copyTo(texOut.resolve("me_io_drive.png"), overwrite = true)
+
+    // Async machine frame: base connection textures (unformed faces) referenced by the generated
+    // models. The `_formed` variants are the animated strips produced by the retexture block above.
+    val asyncTexOut = texOut.resolve("async")
+    asyncTexOut.createDirectories()
+    for (variant in listOf("c", "h", "v")) {
+        sourceTextures.resolve("async/frame_$variant.png")
+            .copyTo(asyncTexOut.resolve("frame_$variant.png"), overwrite = true)
+    }
 
     val craftingTexOut = texOut.resolve("crafting")
     craftingTexOut.createDirectories()

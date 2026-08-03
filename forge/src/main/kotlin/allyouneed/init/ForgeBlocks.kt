@@ -6,6 +6,7 @@ import allyouneed.async.AsyncCraftingRegistration
 import allyouneed.async.AsyncRole
 import allyouneed.async.AsyncStructureBlock
 import allyouneed.async.AsyncStructureBlockEntity
+import allyouneed.async.AsyncStructureFrameBlock
 import allyouneed.async.AsyncStructureConnectorBlock
 import allyouneed.async.AsyncStructureConnectorBlockEntity
 import allyouneed.async.AsyncStructureControllerBlock
@@ -204,11 +205,14 @@ object ForgeBlocks {
      *  creative-tab definitions so that `<clinit>` never calls `RegistryObject.get()`. */
     private val asyncStructureInstances: Map<AsyncBlockKind, Block> =
         asyncStructureKinds.associateWith { kind ->
-            val block = when (kind.role) {
-                AsyncRole.CONTROLLER -> AsyncStructureControllerBlock(kind, structureProps)
-                AsyncRole.CONNECTOR -> AsyncStructureConnectorBlock(kind, structureProps)
-                AsyncRole.INTERFACE -> AsyncStructureInterfaceBlock(kind, structureProps)
-                else -> AsyncStructureBlock(kind, structureProps)
+            val block = when (kind) {
+                AsyncBlockKind.FRAME -> AsyncStructureFrameBlock(kind, structureProps)
+                else -> when (kind.role) {
+                    AsyncRole.CONTROLLER -> AsyncStructureControllerBlock(kind, structureProps)
+                    AsyncRole.CONNECTOR -> AsyncStructureConnectorBlock(kind, structureProps)
+                    AsyncRole.INTERFACE -> AsyncStructureInterfaceBlock(kind, structureProps)
+                    else -> AsyncStructureBlock(kind, structureProps)
+                }
             }
             AsyncBlockRegistry.register(kind, block)
             block
