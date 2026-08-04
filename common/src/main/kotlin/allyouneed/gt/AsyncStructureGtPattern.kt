@@ -138,10 +138,11 @@ object AsyncStructureGtPattern {
 
     private fun machineChar(type: AsyncStructureType, x: Int, y: Int, z: Int): Char = when {
         AsyncStructures.isFloorCell(type, x, y, z) -> 'M'
-        AsyncStructures.inCore(type, x, y, z) && type == AsyncStructureType.SWITCH -> SWITCH_CORE_CHAR
-        AsyncStructures.inCore(type, x, y, z) &&
-            type == AsyncStructureType.PROCESSOR &&
-            AsyncStructures.isOuterShellCell(x, y, z) -> PROCESSOR_SHELL_CHAR
+        // The type check short-circuits before inCore, which has no core bounds for MODULE.
+        type == AsyncStructureType.SWITCH && AsyncStructures.inCore(type, x, y, z) -> SWITCH_CORE_CHAR
+        type == AsyncStructureType.PROCESSOR &&
+            AsyncStructures.isOuterShellCell(x, y, z) &&
+            AsyncStructures.inCore(type, x, y, z) -> PROCESSOR_SHELL_CHAR
         else -> GLASS_REPLACE_CHAR
     }
 

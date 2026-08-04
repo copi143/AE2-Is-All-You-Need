@@ -134,6 +134,10 @@ abstract class AsyncStructureGtControllerMachine(
         super.onStructureFormed()
         updateFormedBlockState(true)
         val level = level as? ServerLevel ?: return
+        // GTCEu re-runs onStructureFormed on every block change at a cached position, and the
+        // connector FORMED flip below setBlocks such a position. Once the cluster is built, the
+        // structure content is unchanged, so skip the rebuild to break that re-entrancy.
+        if (cluster != null) return
         rebuildCluster(level)
     }
 
