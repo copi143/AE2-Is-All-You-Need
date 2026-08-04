@@ -1,11 +1,13 @@
 package allyouneed.cell.dimensional
 
+import allyouneed.cell.appendPartitionInfo
+import allyouneed.cell.getFuzzyMode
+import allyouneed.cell.setFuzzyMode
 import appeng.api.config.FuzzyMode
 import appeng.api.storage.StorageCells
 import appeng.api.storage.cells.ICellWorkbenchItem
 import appeng.api.upgrades.IUpgradeInventory
 import appeng.api.upgrades.UpgradeInventories
-import appeng.core.definitions.AEItems
 import appeng.core.localization.GuiText
 import appeng.core.localization.Tooltips
 import appeng.items.AEBaseItem
@@ -28,18 +30,10 @@ class DimensionalCellItem(properties: Properties) : AEBaseItem(properties), ICel
 
     override fun getUpgrades(stack: ItemStack): IUpgradeInventory = UpgradeInventories.forItem(stack, 2)
 
-    override fun getFuzzyMode(stack: ItemStack): FuzzyMode {
-        val fz = stack.orCreateTag.getString(TAG_FUZZY)
-        if (fz.isEmpty()) return FuzzyMode.IGNORE_ALL
-        return try {
-            FuzzyMode.valueOf(fz)
-        } catch (_: IllegalArgumentException) {
-            FuzzyMode.IGNORE_ALL
-        }
-    }
+    override fun getFuzzyMode(stack: ItemStack): FuzzyMode = stack.getFuzzyMode()
 
     override fun setFuzzyMode(stack: ItemStack, fzMode: FuzzyMode) {
-        stack.orCreateTag.putString(TAG_FUZZY, fzMode.name)
+        stack.setFuzzyMode(fzMode)
     }
 
     override fun addToMainCreativeTab(output: CreativeModeTab.Output) {
@@ -65,15 +59,10 @@ class DimensionalCellItem(properties: Properties) : AEBaseItem(properties), ICel
         if (inv != null) {
             lines.add(Tooltips.of(Component.literal("Types: ${inv.getTypeCount()}")))
             if (inv.isPreformatted()) {
-                val modeText = if (inv.getUpgradesInventory().isInstalled(AEItems.INVERTER_CARD)) {
-                    GuiText.Excluded.text()
-                } else {
-                    GuiText.Included.text()
-                }
-                var line = GuiText.Partitioned.withSuffix(" - ").append(modeText)
-                if (inv.isFuzzy()) {
-                    line = line.append(" ").append(GuiText.Fuzzy.text())
-                }
+                val line = GuiText.Partitioned.withSuffix(" - ").appendPartitionInfo(
+                    inv.getPartitionListMode(),
+                    inv.isFuzzy(),
+                )
                 lines.add(Tooltips.of(line))
             }
         }
@@ -81,7 +70,6 @@ class DimensionalCellItem(properties: Properties) : AEBaseItem(properties), ICel
 
     companion object {
         private const val TAG_CELL_ID = "cid"
-        private const val TAG_FUZZY = "FuzzyMode"
 
         fun create(): DimensionalCellItem = DimensionalCellItem(Properties().stacksTo(1))
 

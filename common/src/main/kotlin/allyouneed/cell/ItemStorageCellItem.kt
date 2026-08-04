@@ -1,7 +1,6 @@
 package allyouneed.cell
 
 import appeng.api.config.FuzzyMode
-import appeng.api.config.IncludeExclude
 import appeng.api.storage.StorageCells
 import appeng.api.storage.cells.CellState
 import appeng.api.storage.cells.ICellWorkbenchItem
@@ -33,18 +32,10 @@ class ItemStorageCellItem(
     override fun getUpgrades(stack: ItemStack): IUpgradeInventory =
         UpgradeInventories.forItem(stack, UPGRADE_SLOTS)
 
-    override fun getFuzzyMode(stack: ItemStack): FuzzyMode {
-        val fz = stack.orCreateTag.getString(TAG_FUZZY)
-        if (fz.isEmpty()) return FuzzyMode.IGNORE_ALL
-        return try {
-            FuzzyMode.valueOf(fz)
-        } catch (_: IllegalArgumentException) {
-            FuzzyMode.IGNORE_ALL
-        }
-    }
+    override fun getFuzzyMode(stack: ItemStack): FuzzyMode = stack.getFuzzyMode()
 
     override fun setFuzzyMode(stack: ItemStack, fzMode: FuzzyMode) {
-        stack.orCreateTag.putString(TAG_FUZZY, fzMode.name)
+        stack.setFuzzyMode(fzMode)
     }
 
     override fun appendHoverText(
@@ -57,14 +48,10 @@ class ItemStorageCellItem(
         lines.add(Tooltips.bytesUsed(inv.getUsedBytes(), inv.getTotalBytes()))
         lines.add(Tooltips.typesUsed(inv.getStoredItemTypes(), inv.getTotalItemTypes()))
         if (inv.isPreformatted()) {
-            val modeText = when (inv.getPartitionListMode()) {
-                IncludeExclude.BLACKLIST -> GuiText.Excluded.text()
-                else -> GuiText.Included.text()
-            }
-            var line = GuiText.Partitioned.withSuffix(" - ").append(modeText)
-            if (inv.isFuzzy()) {
-                line = line.append(" ").append(GuiText.Fuzzy.text())
-            }
+            val line = GuiText.Partitioned.withSuffix(" - ").appendPartitionInfo(
+                inv.getPartitionListMode(),
+                inv.isFuzzy(),
+            )
             lines.add(Tooltips.of(line))
         }
     }
@@ -73,7 +60,6 @@ class ItemStorageCellItem(
         ItemStorageCellHandler.getTooltipImage(stack)
 
     companion object {
-        private const val TAG_FUZZY = "FuzzyMode"
         const val UPGRADE_SLOTS = 4
 
         /** Item tint: layer1 is the status LED, matching vanilla storage cells. */

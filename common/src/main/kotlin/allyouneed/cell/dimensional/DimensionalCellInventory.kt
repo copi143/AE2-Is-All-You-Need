@@ -1,10 +1,10 @@
 package allyouneed.cell.dimensional
 
 import allyouneed.api.BigStackSource
+import allyouneed.cell.buildPartitionList
 import allyouneed.util.bigint.BigKeyCounter
 import allyouneed.util.saturateToLong
 import appeng.api.config.Actionable
-import appeng.api.config.FuzzyMode
 import appeng.api.config.IncludeExclude
 import appeng.api.networking.security.IActionSource
 import appeng.api.stacks.AEItemKey
@@ -15,7 +15,6 @@ import appeng.api.storage.cells.CellState
 import appeng.api.storage.cells.ISaveProvider
 import appeng.api.storage.cells.StorageCell
 import appeng.api.upgrades.IUpgradeInventory
-import appeng.core.definitions.AEItems
 import appeng.util.ConfigInventory
 import appeng.util.prioritylist.FuzzyPriorityList
 import appeng.util.prioritylist.IPartitionList
@@ -35,17 +34,11 @@ class DimensionalCellInventory(
     private var data: DimensionalCellData? = null
 
     init {
-        val builder = IPartitionList.builder()
         val upgrades = getUpgradesInventory()
         val config = getConfigInventory()
-        val isFuzzy = upgrades.isInstalled(AEItems.FUZZY_CARD)
-        if (isFuzzy) {
-            builder.fuzzyMode(getFuzzyMode())
-        }
-        builder.addAll(config.keySet())
-        val hasInverter = upgrades.isInstalled(AEItems.INVERTER_CARD)
-        partitionListMode = if (hasInverter) IncludeExclude.BLACKLIST else IncludeExclude.WHITELIST
-        partitionList = builder.build()
+        val (list, mode) = buildPartitionList(stack, upgrades, config)
+        partitionList = list
+        partitionListMode = mode
     }
 
     /**
@@ -173,9 +166,9 @@ class DimensionalCellInventory(
 
     fun getUpgradesInventory(): IUpgradeInventory = cellItem.getUpgrades(stack)
 
-    fun getFuzzyMode(): FuzzyMode = cellItem.getFuzzyMode(stack)
-
     fun isPreformatted(): Boolean = !partitionList.isEmpty
+
+    fun getPartitionListMode(): IncludeExclude = partitionListMode
 
     fun isFuzzy(): Boolean = partitionList is FuzzyPriorityList
 

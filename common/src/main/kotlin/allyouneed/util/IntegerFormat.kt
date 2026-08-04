@@ -178,13 +178,14 @@ data class IntegerFormat(
     enum class Rounding {
         Up, Down, HalfUp, HalfDown, HalfEven;
 
-        fun toJava(): JavaRounding = when (this) {
-            Up -> JavaRounding.UP
-            Down -> JavaRounding.DOWN
-            HalfUp -> JavaRounding.HALF_UP
-            HalfDown -> JavaRounding.HALF_DOWN
-            HalfEven -> JavaRounding.HALF_EVEN
-        }
+        val java: JavaRounding
+            get() = when (this) {
+                Up -> JavaRounding.UP
+                Down -> JavaRounding.DOWN
+                HalfUp -> JavaRounding.HALF_UP
+                HalfDown -> JavaRounding.HALF_DOWN
+                HalfEven -> JavaRounding.HALF_EVEN
+            }
     }
 
     private val biBase: BigInteger = BigInteger.valueOf(base.toLong())
@@ -197,8 +198,11 @@ data class IntegerFormat(
 
     init {
         require(base >= 2) { "base must be >= 2" }
-        require(width >= 0) { "width must be >= 0" }
+        require(base <= 16777216) { "base must be <= 16777216" }
+        require(width >= 0) { "width must be >= 0 (0 is infinity)" }
+        require(width <= 1048576) { "width must be <= 1048576" }
         require(threshold >= 0) { "threshold must be >= 0" }
+        require(threshold <= 67108864) { "threshold must be <= 67108864" }
         if (width > 0) {
             if (min != null && minDisplay.length > width) {
                 throw IllegalArgumentException("minDisplay length exceeds width")
@@ -380,8 +384,8 @@ data class IntegerFormat(
         // Round remainder / divisor to fracDigits (0 = round into integer only)
         val scale = if (fracDigits <= 0) BigInteger.ONE else BigInteger.TEN.pow(fracDigits)
         val numer = remainder.multiply(scale)
-        val bd = BigDecimal(numer).divide(BigDecimal(divisor), (fracDigits + 2).coerceAtLeast(2), rounding.toJava())
-        var fracScaled = bd.setScale(0, rounding.toJava()).toBigInteger()
+        val bd = BigDecimal(numer).divide(BigDecimal(divisor), (fracDigits + 2).coerceAtLeast(2), rounding.java)
+        var fracScaled = bd.setScale(0, rounding.java).toBigInteger()
 
         var intOut = intPart
         if (fracScaled >= scale) {

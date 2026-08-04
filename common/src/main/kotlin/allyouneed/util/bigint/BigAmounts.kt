@@ -16,21 +16,19 @@ object BigAmounts {
     @JvmStatic
     fun getEntryAmount(entry: GridInventoryEntry?): BigInteger {
         if (entry is BigAmountHolder) {
-            return entry.getBigAmount()
-                ?: BigInteger.valueOf(maxOf(0L, entry.storedAmount))
+            return entry.bigAmount ?: BigInteger.valueOf(maxOf(0L, entry.storedAmount))
         }
         if (entry == null) return BigInteger.ZERO
         return BigInteger.valueOf(maxOf(0L, entry.storedAmount))
     }
 
     @JvmStatic
-    fun hasEntryAmount(entry: GridInventoryEntry?): Boolean =
-        entry is BigAmountHolder && entry.getBigAmount() != null
+    fun hasEntryAmount(entry: GridInventoryEntry?): Boolean = entry is BigAmountHolder && entry.bigAmount != null
 
     @JvmStatic
     fun copyEntryAmount(from: GridInventoryEntry?, to: GridInventoryEntry?) {
         if (from !is BigAmountHolder || to !is BigAmountHolder) return
-        to.setBigAmount(from.getBigAmount())
+        to.bigAmount = from.bigAmount
     }
 
     @JvmStatic

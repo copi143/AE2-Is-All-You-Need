@@ -1,7 +1,6 @@
 package allyouneed.cell
 
 import appeng.api.config.Actionable
-import appeng.api.config.FuzzyMode
 import appeng.api.config.IncludeExclude
 import appeng.api.networking.security.IActionSource
 import appeng.api.stacks.AEItemKey
@@ -60,18 +59,9 @@ class ItemStorageCellInventory(
         val upgrades = getUpgradesInventory()
         val config = getConfigInventory()
         val isFuzzy = upgrades.isInstalled(AEItems.FUZZY_CARD)
-
-        val builder = IPartitionList.builder()
-        if (isFuzzy) {
-            builder.fuzzyMode(getFuzzyMode())
-        }
-        builder.addAll(config.keySet())
-        partitionListMode = if (upgrades.isInstalled(AEItems.INVERTER_CARD)) {
-            IncludeExclude.BLACKLIST
-        } else {
-            IncludeExclude.WHITELIST
-        }
-        partitionList = builder.build()
+        val (list, mode) = buildPartitionList(stack, upgrades, config)
+        partitionList = list
+        partitionListMode = mode
 
         hasVoidUpgrade = upgrades.isInstalled(AEItems.VOID_CARD)
 
@@ -246,8 +236,6 @@ class ItemStorageCellInventory(
     fun getUpgradesInventory(): IUpgradeInventory = cellType.getUpgrades(stack)
 
     fun getConfigInventory(): ConfigInventory = cellType.getConfigInventory(stack)
-
-    fun getFuzzyMode(): FuzzyMode = cellType.getFuzzyMode(stack)
 
     fun getCellItems(): Object2LongMap<AEKey> = storedAmounts
 

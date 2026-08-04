@@ -14,30 +14,30 @@ object BigCpuStorage {
     @JvmStatic
     fun clearCluster(cluster: CraftingCPUCluster?) {
         cluster as BigCpuCapacity
-        cluster.setBigStorage(BigInteger.ZERO)
-        cluster.setUnboundedCapacity(false)
+        cluster.bigStorage = BigInteger.ZERO
+        cluster.isUnboundedCapacity = false
     }
 
     @JvmStatic
     fun hasClusterEntry(cluster: CraftingCPUCluster?): Boolean {
         cluster as BigCpuCapacity
-        return cluster.isUnboundedCapacity() || cluster.getBigStorage().signum() > 0
+        return cluster.isUnboundedCapacity || cluster.bigStorage.signum() > 0
     }
 
     @JvmStatic
     fun addClusterBytes(cluster: CraftingCPUCluster?, bytes: BigInteger?, unbounded: Boolean) {
         cluster as BigCpuCapacity
         if (unbounded) {
-            cluster.setUnboundedCapacity(true)
-            cluster.setBigStorage(BigInteger.valueOf(Long.MAX_VALUE))
+            cluster.isUnboundedCapacity = true
+            cluster.bigStorage = BigInteger.valueOf(Long.MAX_VALUE)
             return
         }
-        if (bytes == null || bytes.signum() <= 0 || cluster.isUnboundedCapacity()) return
-        cluster.setBigStorage(cluster.getBigStorage().add(bytes))
+        if (bytes == null || bytes.signum() <= 0 || cluster.isUnboundedCapacity) return
+        cluster.bigStorage = cluster.bigStorage.add(bytes)
     }
 
     @JvmStatic
-    fun isUnbounded(cluster: CraftingCPUCluster?): Boolean = (cluster as BigCpuCapacity).isUnboundedCapacity()
+    fun isUnbounded(cluster: CraftingCPUCluster?): Boolean = (cluster as BigCpuCapacity).isUnboundedCapacity
 
     @JvmStatic
     fun isUnbounded(cpu: ICraftingCPU?): Boolean = cpu is CraftingCPUCluster && isUnbounded(cpu)
@@ -45,8 +45,8 @@ object BigCpuStorage {
     @JvmStatic
     fun getClusterStorage(cluster: CraftingCPUCluster?): BigInteger {
         cluster as BigCpuCapacity
-        if (cluster.isUnboundedCapacity()) return BigInteger.valueOf(Long.MAX_VALUE)
-        return cluster.getBigStorage()
+        if (cluster.isUnboundedCapacity) return BigInteger.valueOf(Long.MAX_VALUE)
+        return cluster.bigStorage
     }
 
     @JvmStatic
