@@ -1,6 +1,6 @@
 package allyouneed.mixin.client;
 
-import allyouneed.util.bigint.BigAmountHolder;
+import allyouneed.api.BigAmountHolder;
 import allyouneed.util.bigint.BigAmounts;
 import appeng.api.stacks.AEKey;
 import appeng.client.gui.me.common.Repo;

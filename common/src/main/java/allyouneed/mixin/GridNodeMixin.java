@@ -42,7 +42,7 @@ public abstract class GridNodeMixin implements AsyncChannelNodeHolder, IMacAddre
 
     @Override
     public void setMacAddress(long mac) {
-        this.allyouneed$macAddress = MacAddress.normalize(mac);
+        this.allyouneed$macAddress = mac;
     }
 
     @Inject(method = "loadFromNBT", at = @At("TAIL"))

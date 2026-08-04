@@ -2,7 +2,7 @@ package allyouneed.mixin;
 
 import allyouneed.cell.CraftingStorage;
 import allyouneed.util.CommonKt;
-import allyouneed.util.bigint.BigCpuCapacity;
+import allyouneed.api.BigCpuCapacity;
 import appeng.block.crafting.ICraftingUnitType;
 import appeng.blockentity.crafting.CraftingBlockEntity;
 import appeng.me.cluster.implementations.CraftingCPUCluster;

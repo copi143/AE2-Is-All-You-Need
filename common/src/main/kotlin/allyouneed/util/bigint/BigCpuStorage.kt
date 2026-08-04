@@ -1,5 +1,6 @@
 package allyouneed.util.bigint
 
+import allyouneed.api.BigCpuCapacity
 import allyouneed.util.IntegerFormat
 import allyouneed.util.saturateToLong
 import appeng.api.networking.crafting.ICraftingCPU
@@ -7,7 +8,7 @@ import appeng.me.cluster.implementations.CraftingCPUCluster
 import java.math.BigInteger
 
 /**
- * Helpers for [BigCpuCapacity] on [CraftingCPUCluster].
+ * Helpers for [allyouneed.api.BigCpuCapacity] on [CraftingCPUCluster].
  * Capacity lives on the cluster instance (mixin fields), not a global map.
  */
 @Suppress("KotlinConstantConditions")

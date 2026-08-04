@@ -1,4 +1,4 @@
-package allyouneed.util.bigint
+package allyouneed.api
 
 import java.math.BigInteger
 

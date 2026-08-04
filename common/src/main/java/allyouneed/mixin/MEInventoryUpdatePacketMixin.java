@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.bigint.BigAmountHolder;
+import allyouneed.api.BigAmountHolder;
 import allyouneed.util.bigint.BigAmounts;
 import appeng.core.sync.packets.MEInventoryUpdatePacket;
 import appeng.menu.me.common.GridInventoryEntry;

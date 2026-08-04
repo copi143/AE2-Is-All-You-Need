@@ -1,11 +1,12 @@
 package allyouneed.util.bigint
 
+import allyouneed.api.BigAmountHolder
 import appeng.api.stacks.AEKey
 import appeng.menu.me.common.GridInventoryEntry
 import java.math.BigInteger
 
 /**
- * Helpers for [BigAmountHolder] amounts on [GridInventoryEntry].
+ * Helpers for [allyouneed.api.BigAmountHolder] amounts on [GridInventoryEntry].
  *
  * Entry amounts live on the entry instance (mixin field). The only process-wide state is a
  * [ThreadLocal] build context while an ME inventory packet is being assembled.

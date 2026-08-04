@@ -1,6 +1,6 @@
 package allyouneed.mixin;
 
-import allyouneed.util.bigint.BigAmountHolder;
+import allyouneed.api.BigAmountHolder;
 import appeng.menu.me.common.GridInventoryEntry;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
