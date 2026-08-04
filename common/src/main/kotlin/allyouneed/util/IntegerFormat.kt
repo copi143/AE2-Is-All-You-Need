@@ -2,8 +2,8 @@ package allyouneed.util
 
 import java.math.BigDecimal
 import java.math.BigInteger
-import kotlin.math.roundToInt
 import kotlin.math.round
+import kotlin.math.roundToInt
 import java.math.RoundingMode as JavaRounding
 
 data class IntegerFormat(
@@ -63,6 +63,113 @@ data class IntegerFormat(
     /** 舍入模式，永远对绝对值进行舍入，不考虑符号 */
     val rounding: Rounding = Rounding.HalfUp,
 ) {
+    /**
+     * 单位前缀（Metric Prefix）配置类。
+     *
+     * 用于管理和获取不同缩放级别（Level）下的单位后缀，支持自定义基础单位、放大级别、缩小级别以及是否允许无限扩展。
+     *
+     * @property baseLevel 无缩放（10^0 / Base^0）时的基础单位后缀。
+     * @property larger 放大级别（Level > 0）的后缀列表，如 `["k", "M", "G"]`。
+     * @property smaller 缩小级别（Level < 0）的后缀列表，从近到远排列，如 `["m", "µ", "n"]`。
+     * @property largerUnlimited 当超过 [larger] 列表最大范围时，是否允许使用 `+N` 形式（如 `G+1`）继续无限扩展。
+     * @property smallerUnlimited 当超过 [smaller] 列表最小范围时，是否允许使用 `-N` 形式（如 `m-1`）继续无限扩展。
+     */
+    data class MetricPrefix(
+        val baseLevel: String,
+        val larger: List<String>,
+        val smaller: List<String>,
+        val largerUnlimited: Boolean,
+        val smallerUnlimited: Boolean,
+    ) {
+        /**
+         * 辅助构造函数。
+         *
+         * 根据传入的带 null 的列表构建 [MetricPrefix]，自动剔除尾部的 null 元素并推断是否允许无限扩展。
+         *
+         * @param baseLevel 基础单位后缀。
+         * @param larger 带结尾拓展标志的放大后缀列表。若最后一个元素非 null，则开启 [largerUnlimited]。
+         * @param smaller 带结尾拓展标志的缩小后缀列表。若最后一个元素非 null，则开启 [smallerUnlimited]。
+         */
+        constructor(
+            baseLevel: String,
+            larger: List<String?>,
+            smaller: List<String?>,
+        ) : this(
+            baseLevel,
+            larger.dropLastWhile { it == null }.apply { assert(all { it != null }) }.filterNotNull(),
+            smaller.dropLastWhile { it == null }.apply { assert(all { it != null }) }.filterNotNull(),
+            larger.last() != null,
+            smaller.last() != null,
+        )
+
+        /**
+         * 根据级别获取对应的单位后缀文本。
+         *
+         * @param n 级别数。0 表示基础级别；> 0 表示放大级别（如 1->k, 2->M）；< 0 表示缩小级别（如 -1->m, -2->µ）。
+         * @return 对应的后缀字符串。若超出了定义的范围且未开启 unlimited 扩展，则返回 `null`。
+         */
+        fun level(n: Int): String? {
+            if (n > 0) {
+                larger.getOrNull(n - 1)?.let { return it }
+                largerUnlimited || return null
+                return (larger.lastOrNull() ?: baseLevel) + "+" + (n - larger.size)
+            }
+            if (n < 0) {
+                smaller.getOrNull(-n - 1)?.let { return it }
+                smallerUnlimited || return null
+                return (smaller.lastOrNull() ?: baseLevel) + "-" + (-n - smaller.size)
+            }
+            return baseLevel
+        }
+
+        companion object {
+            /** 预定义的标准国际单位制（SI）前缀集合。 */
+            @JvmField
+            val SI = of(
+                null,
+                "q", "r", "y", "z", "a", "f", "p", "n", "µ", "m",
+                "",
+                "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q",
+                null,
+            )!!
+
+            /** 预定义的 IEC 二进制单位前缀集合。 */
+            @JvmField
+            val IEC = of(null, "", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi", "Ri", "Qi", null)!!
+
+            /**
+             * 通过平铺的字符串数组安全地构建 [MetricPrefix] 实例。
+             *
+             * 函数会自动寻找所有传入前缀的“公共后缀”作为基准点，并将基准点左右的元素分别划分为缩小和放大级别。
+             * 数组开头或结尾为 `non-null` 时，对应的扩展方向（smaller/larger）将开启 unlimited 模式。
+             *
+             * @param levels 包含完整单位序列的变长参数（包含 null 表示边界/有限界限）。
+             * @return 解析成功时返回 [MetricPrefix] 实例；若结构无法合理解析则返回 `null`。
+             */
+            fun of(vararg levels: String?): MetricPrefix? {
+                val largerUnlimited = levels.last() != null
+                val smallerUnlimited = levels.first() != null
+                val list = levels.dropWhile { it == null }.dropLastWhile { it == null }.filter {
+                    it != null || return@of null
+                }.filterNotNull()
+                val commonSuffix = list.reduce { acc, current ->
+                    val commonLen = (0 until minOf(acc.length, current.length)).takeWhile { i ->
+                        acc[acc.length - 1 - i] == current[current.length - 1 - i]
+                    }.size
+                    acc.takeLast(commonLen)
+                }
+                val baseLevelIndex = list.indexOf(commonSuffix).apply { this >= 0 || return@of null }
+                return MetricPrefix(
+                    baseLevel = list[baseLevelIndex],
+                    larger = list.subList(baseLevelIndex + 1, list.size),
+                    smaller = list.subList(0, baseLevelIndex).reversed(),
+                    largerUnlimited = largerUnlimited,
+                    smallerUnlimited = smallerUnlimited,
+                )
+            }
+        }
+    }
+
     enum class Rounding {
         Up, Down, HalfUp, HalfDown, HalfEven;
 
@@ -105,6 +212,7 @@ data class IntegerFormat(
 
     fun format(value: Long): String = format(BigInteger.valueOf(value))
 
+    @Deprecated("Don't use IntegerFormat to format Floating Points")
     fun format(value: Double): String {
         require(value >= 0) { "amount must be non-negative" }
         if (value.isNaN() || value.isInfinite()) return "???"

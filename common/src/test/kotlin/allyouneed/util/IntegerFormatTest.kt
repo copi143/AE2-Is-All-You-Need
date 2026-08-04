@@ -1,5 +1,6 @@
 package allyouneed.util
 
+import allyouneed.util.IntegerFormat.MetricPrefix
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.math.BigInteger
@@ -56,7 +57,10 @@ class IntegerFormatTest {
     @Test
     fun `IntegerFormat facade methods match si and iec`() {
         assertEquals(IntegerFormat.si(4).format(12_345), IntegerFormat.siFormat(12_345L, 4))
-        assertEquals(IntegerFormat.si(3).format(BigInteger.valueOf(999_999)), IntegerFormat.siFormat(BigInteger.valueOf(999_999), 3))
+        assertEquals(
+            IntegerFormat.si(3).format(BigInteger.valueOf(999_999)),
+            IntegerFormat.siFormat(BigInteger.valueOf(999_999), 3)
+        )
         assertEquals(IntegerFormat.IEC.format(0), IntegerFormat.iecFormatBytes(0))
         assertEquals(IntegerFormat.IEC.format(1024), IntegerFormat.iecFormatBytes(1024))
     }
@@ -66,8 +70,6 @@ class IntegerFormatTest {
         val bytes = 256L * 1024 * 1024 * 1024 * 1024 // 256 TiB
         assertEquals("256Ti", iec.format(bytes))
     }
-
-    // ── format overloads ─────────────────────────────────────────
 
     // ── threshold ────────────────────────────────────────────────
 
@@ -264,4 +266,35 @@ class IntegerFormatTest {
         assertEquals(si.format(12345), si.format(12345L))
         assertEquals(si.format(12345), si.format(BigInteger.valueOf(12345)))
     }
+
+    // ── MetricPrefix ─────────────────────────────────────────────
+
+    @Test
+    fun `metric prefix`() {
+        println(MetricPrefix.SI)
+        println(MetricPrefix.IEC)
+        println(MetricPrefix.of(""))
+        assertEquals("m", MetricPrefix.SI.level(-1))
+        assertEquals("M", MetricPrefix.SI.level(2))
+        assertEquals("Mi", MetricPrefix.IEC.level(2))
+        val test1 = MetricPrefix.of("")!!
+        assertEquals("-2", test1.level(-2))
+        assertEquals("-1", test1.level(-1))
+        assertEquals("", test1.level(0))
+        assertEquals("+1", test1.level(1))
+        assertEquals("+2", test1.level(2))
+        val test2 = MetricPrefix.of(null, "")!!
+        assertEquals(null, test2.level(-2))
+        assertEquals(null, test2.level(-1))
+        assertEquals("", test2.level(0))
+        assertEquals("+1", test2.level(1))
+        assertEquals("+2", test2.level(2))
+        val test3 = MetricPrefix.of(null, "", null)!!
+        assertEquals(null, test3.level(-2))
+        assertEquals(null, test3.level(-1))
+        assertEquals("", test3.level(0))
+        assertEquals(null, test3.level(1))
+        assertEquals(null, test3.level(2))
+    }
+
 }
