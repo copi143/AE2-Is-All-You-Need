@@ -60,38 +60,23 @@ private val cells = listOf(
     CellEntry("creative_energy_cell", "Creative Energy Cell", "#E040FB", isCreative = true),
 )
 
-private val craftingStorages = listOf(
-    CellEntry("1k_crafting_storage", "1K Crafting Storage", AE2_COLORS[0].hex),
-    CellEntry("4k_crafting_storage", "4K Crafting Storage", AE2_COLORS[1].hex),
-    CellEntry("16k_crafting_storage", "16K Crafting Storage", AE2_COLORS[2].hex),
-    CellEntry("64k_crafting_storage", "64K Crafting Storage", AE2_COLORS[3].hex),
-    CellEntry("256k_crafting_storage", "256K Crafting Storage", AE2_COLORS[4].hex),
-    CellEntry("1m_crafting_storage", "1M Crafting Storage", AE2_COLORS[5].hex),
-    CellEntry("4m_crafting_storage", "4M Crafting Storage", AE2_COLORS[6].hex),
-    CellEntry("16m_crafting_storage", "16M Crafting Storage", AE2_COLORS[7].hex),
-    CellEntry("64m_crafting_storage", "64M Crafting Storage", AE2_COLORS[8].hex),
-    CellEntry("256m_crafting_storage", "256M Crafting Storage", AE2_COLORS[9].hex),
-    CellEntry("1g_crafting_storage", "1G Crafting Storage", AE2_COLORS[10].hex),
-    CellEntry("4g_crafting_storage", "4G Crafting Storage", AE2_COLORS[11].hex),
-    CellEntry("16g_crafting_storage", "16G Crafting Storage", AE2_COLORS[12].hex),
-    CellEntry("64g_crafting_storage", "64G Crafting Storage", AE2_COLORS[13].hex),
-    CellEntry("256g_crafting_storage", "256G Crafting Storage", AE2_COLORS[14].hex),
-    CellEntry("1t_crafting_storage", "1T Crafting Storage", AE2_COLORS[15].hex),
-    CellEntry("4t_crafting_storage", "4T Crafting Storage", AE2_COLORS[16].hex),
-    CellEntry("16t_crafting_storage", "16T Crafting Storage", AE2_COLORS[17].hex),
-    CellEntry("64t_crafting_storage", "64T Crafting Storage", AE2_COLORS[18].hex),
-    CellEntry("256t_crafting_storage", "256T Crafting Storage", AE2_COLORS[19].hex),
-    CellEntry("creative_crafting_storage", "Creative Crafting Storage", "#E040FB", isCreative = true),
+val tiers = listOf(
+    "1k", "4k", "16k", "64k", "256k",
+    "1m", "4m", "16m", "64m", "256m",
+    "1g", "4g", "16g", "64g", "256g",
+    "1t", "4t", "16t", "64t", "256t",
 )
+
+private val craftingStorages = run {
+    tiers.mapIndexed { i, tier ->
+        CellEntry("${tier}_crafting_storage", "${tier.uppercase()} Crafting Storage", AE2_COLORS[i].hex)
+    }.toMutableList().apply {
+        add(CellEntry("creative_crafting_storage", "Creative Crafting Storage", "#E040FB", isCreative = true))
+    }.toList()
+}
 
 // Item storage cell tiers, colored per AE2_COLORS like the other storage tiers.
 private val itemStorageCells = run {
-    val tiers = listOf(
-        "1k", "4k", "16k", "64k", "256k",
-        "1m", "4m", "16m", "64m", "256m",
-        "1g", "4g", "16g", "64g", "256g",
-        "1t", "4t", "16t", "64t", "256t",
-    )
     tiers.mapIndexed { i, tier ->
         CellEntry("${tier}_item_storage_cell", "${tier.uppercase()} Item Storage Cell", AE2_COLORS[i].hex)
     }
