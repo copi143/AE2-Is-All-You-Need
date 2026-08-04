@@ -5,9 +5,10 @@ import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraftforge.event.TickEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
+import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.fml.common.Mod
 
-@Mod.EventBusSubscriber(modid = "ae2isallyouneed", bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod.EventBusSubscriber(modid = "ae2isallyouneed", bus = Mod.EventBusSubscriber.Bus.FORGE, value = [Dist.CLIENT])
 object ComposeDemoKeybind {
     val OPEN_DEMO = KeyMapping(
         "key.ae2isallyouneed.open_demo",
