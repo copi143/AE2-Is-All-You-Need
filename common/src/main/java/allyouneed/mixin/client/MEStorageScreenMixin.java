@@ -1,8 +1,8 @@
 package allyouneed.mixin.client;
 
-import allyouneed.util.bigint.BigAmounts;
 import allyouneed.util.CommonKt;
 import allyouneed.util.SiFormat;
+import allyouneed.util.bigint.BigAmounts;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
 import appeng.client.gui.me.common.MEStorageScreen;
@@ -14,6 +14,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
@@ -22,10 +23,11 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
 
-@Mixin(value = MEStorageScreen.class, remap = false)
+@Mixin(value = MEStorageScreen.class)
 public abstract class MEStorageScreenMixin {
 
-    private static String formatFullAmount(AEKey what, BigInteger amount) {
+    @Unique
+    private static String allyouneed$formatFullAmount(AEKey what, BigInteger amount) {
         StringBuilder result = new StringBuilder();
         int perUnit = what.getAmountPerUnit();
         if (perUnit > 1) {
@@ -41,7 +43,7 @@ public abstract class MEStorageScreenMixin {
         return result.toString();
     }
 
-    @Redirect(method = "renderSlot", at = @At(value = "INVOKE", target = "Lappeng/api/stacks/AEKey;formatAmount(JLappeng/api/stacks/AmountFormat;)Ljava/lang/String;"))
+    @Redirect(method = "renderSlot", at = @At(value = "INVOKE", target = "Lappeng/api/stacks/AEKey;formatAmount(JLappeng/api/stacks/AmountFormat;)Ljava/lang/String;", remap = false))
     private String allyouneed$formatSlotAmount(AEKey key, long amount, AmountFormat format, GuiGraphics guiGraphics, Slot s) {
         if (s instanceof RepoSlot repoSlot) {
             GridInventoryEntry entry = repoSlot.getEntry();
@@ -58,7 +60,7 @@ public abstract class MEStorageScreenMixin {
         return key.formatAmount(amount, format);
     }
 
-    @Redirect(method = "renderGridInventoryEntryTooltip", at = @At(value = "INVOKE", target = "Lappeng/core/localization/Tooltips;shouldShowAmountTooltip(Lappeng/api/stacks/AEKey;J)Z"))
+    @Redirect(method = "renderGridInventoryEntryTooltip", at = @At(value = "INVOKE", target = "Lappeng/core/localization/Tooltips;shouldShowAmountTooltip(Lappeng/api/stacks/AEKey;J)Z"), remap = false)
     private boolean allyouneed$shouldShowBigTooltip(AEKey what, long amount, GuiGraphics guiGraphics, GridInventoryEntry entry, int x, int y) {
         BigInteger big = BigAmounts.getEntryAmount(entry);
         if (big.bitLength() > 14) { // > ~16384 always show
@@ -67,10 +69,10 @@ public abstract class MEStorageScreenMixin {
         return Tooltips.shouldShowAmountTooltip(what, CommonKt.saturateToLong(big));
     }
 
-    @Redirect(method = "renderGridInventoryEntryTooltip", at = @At(value = "INVOKE", target = "Lappeng/core/localization/Tooltips;getAmountTooltip(Lappeng/core/localization/ButtonToolTips;Lappeng/api/stacks/AEKey;J)Lnet/minecraft/network/chat/Component;"))
+    @Redirect(method = "renderGridInventoryEntryTooltip", at = @At(value = "INVOKE", target = "Lappeng/core/localization/Tooltips;getAmountTooltip(Lappeng/core/localization/ButtonToolTips;Lappeng/api/stacks/AEKey;J)Lnet/minecraft/network/chat/Component;"), remap = false)
     private Component allyouneed$bigAmountTooltip(ButtonToolTips baseText, AEKey what, long amount, GuiGraphics guiGraphics, GridInventoryEntry entry, int x, int y) {
         BigInteger big = BigAmounts.getEntryAmount(entry);
-        String amountText = formatFullAmount(what, big);
+        String amountText = allyouneed$formatFullAmount(what, big);
         return baseText.text(amountText).withStyle(Tooltips.MUTED_COLOR);
     }
 }

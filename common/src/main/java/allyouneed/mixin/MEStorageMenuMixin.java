@@ -21,22 +21,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Publish BigInteger network totals while building ME inventory update packets,
  * and detect changes that would be invisible after long saturation.
  */
-@Mixin(value = MEStorageMenu.class, remap = false)
+@Mixin(value = MEStorageMenu.class)
 public abstract class MEStorageMenuMixin {
 
     @Final
-    @Shadow
-    @Nullable
-    protected MEStorage storage;
+    @Shadow(remap = false)
+    protected @Nullable MEStorage storage;
 
     @Final
-    @Shadow
+    @Shadow(remap = false)
     private IncrementalUpdateHelper updateHelper;
 
     @Unique
     private BigKeyCounter allyouneed$previousBigStacks = new BigKeyCounter();
 
-    @Redirect(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/api/storage/MEStorage;getAvailableStacks()Lappeng/api/stacks/KeyCounter;"))
+    @Redirect(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/api/storage/MEStorage;getAvailableStacks()Lappeng/api/stacks/KeyCounter;", remap = false))
     private KeyCounter allyouneed$captureBigStacks(MEStorage storage) {
         KeyCounter stacks = storage.getAvailableStacks();
         BigKeyCounter big;
@@ -52,7 +51,7 @@ public abstract class MEStorageMenuMixin {
         return stacks;
     }
 
-    @Inject(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/menu/me/common/IncrementalUpdateHelper;hasChanges()Z"))
+    @Inject(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/menu/me/common/IncrementalUpdateHelper;hasChanges()Z", remap = false))
     private void allyouneed$detectBigChanges(CallbackInfo ci) {
         BigKeyCounter current = BigAmounts.getCurrent();
         if (current == null) {

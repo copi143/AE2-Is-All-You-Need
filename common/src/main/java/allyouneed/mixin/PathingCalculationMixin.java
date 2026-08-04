@@ -1,5 +1,6 @@
 package allyouneed.mixin;
 
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,9 +23,11 @@ import appeng.me.pathfinding.PathingCalculation;
 @Mixin(value = PathingCalculation.class, remap = false)
 public abstract class PathingCalculationMixin {
 
+    @Final
     @Shadow
     private Reference2IntOpenHashMap<GridNode> channelBottlenecks;
 
+    @Final
     @Shadow
     private IGrid grid;
 

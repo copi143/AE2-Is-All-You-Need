@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Style;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -36,11 +37,12 @@ public class TooltipsMixin {
         // AE2 BYTE_NUMS length is 4; values needing index >= 4 crash (roughly >= 1 TiB * 1000)
         long gib = 1024L * 1024L * 1024L;
         if (number >= gib * 1000L) {
-            cir.setReturnValue(formatLabel(IecFormat.formatBytes(number)));
+            cir.setReturnValue(allyouneed$formatLabel(IecFormat.formatBytes(number)));
         }
     }
 
-    private static MutableComponent formatLabel(String label) {
+    @Unique
+    private static MutableComponent allyouneed$formatLabel(String label) {
         // Split trailing unit letter(s) if present (e.g. "256t", "1g", "512k")
         int split = label.length();
         while (split > 0 && Character.isLetter(label.charAt(split - 1))) {
