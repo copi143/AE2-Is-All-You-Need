@@ -1,12 +1,10 @@
 package allyouneed.pattern.pseudo
 
 import allyouneed.pattern.AEPatternUtil
-import allyouneed.pattern.PseudoPatternDecoder
+import allyouneed.pattern.ModEncodedPatternItem
 import appeng.api.crafting.IPatternDetails
-import appeng.api.crafting.PatternDetailsHelper
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.GenericStack
-import appeng.crafting.pattern.EncodedPatternItem
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.Tag
@@ -14,12 +12,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 
-class PseudoPatternItem(props: Properties) : EncodedPatternItem(props) {
-    init {
-        // Register decoder early, matching reference implementations (e.g. Probability-Pattern)
-        PatternDetailsHelper.registerDecoder(PseudoPatternDecoder)
-    }
-
+class PseudoPatternItem(props: Properties) : ModEncodedPatternItem(props) {
     fun encode(displayName: Component?, icon: ItemStack?, inputs: Array<GenericStack?>): ItemStack {
         val tag = CompoundTag()
         if (displayName != null) tag.putString("displayName", Component.Serializer.toJson(displayName))

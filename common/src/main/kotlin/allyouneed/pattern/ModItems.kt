@@ -34,10 +34,3 @@ object ModItems {
         DimensionalCellItem.create()
     }
 }
-
-object ModPatternDecoders {
-    fun register() {
-        // Decoders are now registered inside the Item constructors (see PseudoPatternItem).
-        // We keep a no-op here so existing call sites do not break.
-    }
-}

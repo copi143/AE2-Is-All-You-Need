@@ -1,20 +1,15 @@
 package allyouneed.pattern.machine
 
+import allyouneed.pattern.ModEncodedPatternItem
 import appeng.api.crafting.IPatternDetails
-import appeng.api.crafting.PatternDetailsHelper
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.GenericStack
-import appeng.crafting.pattern.EncodedPatternItem
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.ListTag
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 
-class MachinePatternItem(props: Properties) : EncodedPatternItem(props) {
-    init {
-        PatternDetailsHelper.registerDecoder(MachinePatternDecoder)
-    }
-
+class MachinePatternItem(props: Properties) : ModEncodedPatternItem(props) {
     fun encode(machineTypeId: String, inputs: Array<GenericStack?>, output: GenericStack): ItemStack {
         val tag = CompoundTag()
         tag.putString(MachinePatternTags.MACHINE_TYPE, machineTypeId)

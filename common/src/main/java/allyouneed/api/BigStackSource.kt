@@ -1,6 +1,6 @@
 package allyouneed.api
 
-import allyouneed.mixin.DelegatingMEInventoryAccessor
+import allyouneed.mixin.ae2.DelegatingMEInventoryAccessor
 import allyouneed.util.bigint.BigKeyCounter
 import appeng.api.storage.MEStorage
 import appeng.me.storage.DelegatingMEInventory

@@ -4,9 +4,7 @@
   "package": "allyouneed.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "${mod_id}.refmap.json",
-  "mixins": [
-    "PatternProviderLogicMixin"
-  ],
+  "mixins": [],
   "client": [
     "MixinTitleScreen",
     "client.BuiltInModelHooksAccessor",
