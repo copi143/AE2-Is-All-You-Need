@@ -23,13 +23,11 @@ object IecFormat {
     /** Bytes label using IEC binary units (e.g. `4Ki`, `256Mi`). */
     @JvmStatic
     fun formatBytes(bytes: Long): String {
-        if (bytes < 0 || bytes == Long.MAX_VALUE) return "∞"
         return IntegerFormat.IEC.format(bytes)
     }
 
     @JvmStatic
     fun formatBytes(bytes: BigInteger): String {
-        if (bytes.signum() < 0) return "∞"
         return IntegerFormat.IEC.format(bytes)
     }
 }

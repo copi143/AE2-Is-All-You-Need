@@ -55,8 +55,6 @@ class IntegerFormatTest {
     fun `IEC formatBytes matches format`() {
         assertEquals(iec.format(0), IecFormat.formatBytes(0))
         assertEquals(iec.format(1024), IecFormat.formatBytes(1024))
-        assertEquals("∞", IecFormat.formatBytes(-1))
-        assertEquals("∞", IecFormat.formatBytes(Long.MAX_VALUE))
     }
 
     @Test
@@ -189,7 +187,7 @@ class IntegerFormatTest {
     }
 
     @Test
-    fun `showPositiveSign`() {
+    fun `show positive sign`() {
         val fmt = si.copy(showPositiveSign = true)
         assertEquals("+1", fmt.format(1))
         assertEquals("0", fmt.format(0))
@@ -226,7 +224,7 @@ class IntegerFormatTest {
     }
 
     @Test
-    fun `allowOmitLeadingZero`() {
+    fun `allow omit leading zero`() {
         val fmt = IntegerFormat(
             base = 1000,
             postfixes = listOf("", "k"),
