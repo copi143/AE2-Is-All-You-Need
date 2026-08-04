@@ -1,6 +1,6 @@
 package allyouneed.util.bigint
 
-import allyouneed.util.IecFormat
+import allyouneed.util.IntegerFormat
 import allyouneed.util.saturateToLong
 import appeng.api.networking.crafting.ICraftingCPU
 import appeng.me.cluster.implementations.CraftingCPUCluster
@@ -93,6 +93,6 @@ object BigCpuStorage {
     @JvmStatic
     fun formatBinaryBytes(bytes: BigInteger?): String {
         if (bytes == null || bytes.signum() <= 0) return "0"
-        return IecFormat.formatBytes(bytes)
+        return IntegerFormat.iecFormatBytes(bytes)
     }
 }

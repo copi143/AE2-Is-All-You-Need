@@ -3,6 +3,7 @@ package allyouneed.util
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.math.roundToInt
+import kotlin.math.round
 import java.math.RoundingMode as JavaRounding
 
 data class IntegerFormat(
@@ -103,6 +104,18 @@ data class IntegerFormat(
     fun format(value: Int): String = format(BigInteger.valueOf(value.toLong()))
 
     fun format(value: Long): String = format(BigInteger.valueOf(value))
+
+    fun format(value: Double): String {
+        require(value >= 0) { "amount must be non-negative" }
+        if (value.isNaN() || value.isInfinite()) return "???"
+        if (value <= Long.MAX_VALUE.toDouble() && value == round(value)) {
+            return format(value.toLong())
+        }
+        if (value > Long.MAX_VALUE.toDouble()) {
+            return format(BigDecimal.valueOf(value).toBigInteger())
+        }
+        return format(value.toLong())
+    }
 
     fun format(value: BigInteger): String {
         if (min != null && value < min) return minDisplay
@@ -333,5 +346,26 @@ data class IntegerFormat(
             allowOmitDecimal = true,
             allowOmitLeadingZero = width in 1..4,
         )
+
+        @JvmStatic
+        fun siFormat(value: Long, width: Int): String = si(width).format(value)
+
+        @JvmStatic
+        fun siFormat(value: BigInteger, width: Int): String = si(width).format(value)
+
+        @JvmStatic
+        fun siFormat(value: Double, width: Int): String = si(width).format(value)
+
+        @JvmStatic
+        fun iecFormat(value: Long, width: Int): String = iec(width).format(value)
+
+        @JvmStatic
+        fun iecFormat(value: BigInteger, width: Int): String = iec(width).format(value)
+
+        @JvmStatic
+        fun iecFormatBytes(value: Long): String = IEC.format(value)
+
+        @JvmStatic
+        fun iecFormatBytes(value: BigInteger): String = IEC.format(value)
     }
 }

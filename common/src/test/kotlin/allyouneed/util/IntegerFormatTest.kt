@@ -51,10 +51,14 @@ class IntegerFormatTest {
         assertEquals("1Gi", iec.format(1024L * 1024 * 1024))
     }
 
+    // ── façades ──────────────────────────────────────────────────
+
     @Test
-    fun `IEC formatBytes matches format`() {
-        assertEquals(iec.format(0), IecFormat.formatBytes(0))
-        assertEquals(iec.format(1024), IecFormat.formatBytes(1024))
+    fun `IntegerFormat facade methods match si and iec`() {
+        assertEquals(IntegerFormat.si(4).format(12_345), IntegerFormat.siFormat(12_345L, 4))
+        assertEquals(IntegerFormat.si(3).format(BigInteger.valueOf(999_999)), IntegerFormat.siFormat(BigInteger.valueOf(999_999), 3))
+        assertEquals(IntegerFormat.IEC.format(0), IntegerFormat.iecFormatBytes(0))
+        assertEquals(IntegerFormat.IEC.format(1024), IntegerFormat.iecFormatBytes(1024))
     }
 
     @Test
@@ -62,6 +66,8 @@ class IntegerFormatTest {
         val bytes = 256L * 1024 * 1024 * 1024 * 1024 // 256 TiB
         assertEquals("256Ti", iec.format(bytes))
     }
+
+    // ── format overloads ─────────────────────────────────────────
 
     // ── threshold ────────────────────────────────────────────────
 
@@ -249,14 +255,6 @@ class IntegerFormatTest {
         )
         // 999_500 → 999.5k → rounds to 1000k → 1M
         assertEquals("1M", fmt.format(999_500))
-    }
-
-    // ── façades ──────────────────────────────────────────────────
-
-    @Test
-    fun `SiFormat facade matches IntegerFormat si width`() {
-        assertEquals(IntegerFormat.si(4).format(12_345), SiFormat.format(12_345L, 4))
-        assertEquals(IntegerFormat.si(3).format(BigInteger.valueOf(999_999)), SiFormat.format(BigInteger.valueOf(999_999), 3))
     }
 
     // ── format overloads ─────────────────────────────────────────

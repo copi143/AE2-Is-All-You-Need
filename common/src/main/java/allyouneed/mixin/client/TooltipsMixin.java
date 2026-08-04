@@ -1,6 +1,6 @@
 package allyouneed.mixin.client;
 
-import allyouneed.util.IecFormat;
+import allyouneed.util.IntegerFormat;
 import appeng.core.localization.Tooltips;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * AE2 {@code BYTE_NUMS} only has 4 entries and OOBs once storage reaches ~1 TiB+.
- * Route large / unbounded values through {@link IecFormat}.
+ * Route large / unbounded values through {@link IntegerFormat}.
  */
 @Mixin(value = Tooltips.class, remap = false)
 public class TooltipsMixin {
@@ -37,7 +37,7 @@ public class TooltipsMixin {
         // AE2 BYTE_NUMS length is 4; values needing index >= 4 crash (roughly >= 1 TiB * 1000)
         long gib = 1024L * 1024L * 1024L;
         if (number >= gib * 1000L) {
-            cir.setReturnValue(allyouneed$formatLabel(IecFormat.formatBytes(number)));
+            cir.setReturnValue(allyouneed$formatLabel(IntegerFormat.iecFormatBytes(number)));
         }
     }
 
