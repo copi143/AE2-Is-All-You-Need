@@ -14,6 +14,7 @@ import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
 import com.gregtechceu.gtceu.client.renderer.MultiblockInWorldPreviewRenderer
 import com.gregtechceu.gtceu.config.ConfigHolder
 import com.gregtechceu.gtceu.api.machine.MetaMachine
+import com.gregtechceu.gtceu.api.machine.feature.IMachineLife
 import com.gregtechceu.gtceu.api.machine.feature.IInteractedMachine
 import com.gregtechceu.gtceu.api.machine.multiblock.MultiblockControllerMachine
 import com.gregtechceu.gtceu.api.pattern.MultiblockState
@@ -43,7 +44,7 @@ import net.minecraft.world.phys.BlockHitResult
  */
 abstract class AsyncStructureGtControllerMachine(
     holder: IMachineBlockEntity,
-) : MultiblockControllerMachine(holder), IInteractedMachine {
+) : MultiblockControllerMachine(holder), IInteractedMachine, IMachineLife {
 
     /** The detector result of the most recent pattern check, consumed by [onStructureFormed]. */
     private var detection: Any? = null
@@ -101,6 +102,49 @@ abstract class AsyncStructureGtControllerMachine(
                     }
                 })
             }
+        }
+    }
+
+    /**
+     * Forces a main-thread pattern check and keeps the saved-data mapping / async-logic state
+     * consistent. Used by [allyouneed.async.AsyncStructureNotifier] so manual builds revalidate
+     * immediately instead of waiting for the async poller. Mirrors the body of [asyncCheckPattern]
+     * but also re-enters async logic on failure, so a formed-but-broken structure unforms and
+     * resumes polling.
+     */
+    fun requestStructureCheck() {
+        val level = getLevel() as? ServerLevel ?: return
+        level.server.tell(TickTask(0) {
+            patternLock.lock()
+            try {
+                if (checkPatternWithLock()) {
+                    setFlipped(false)
+                    onStructureFormed()
+                    val mwsd = MultiblockWorldSavedData.getOrCreate(level)
+                    mwsd.addMapping(getMultiblockState())
+                    mwsd.removeAsyncLogic(this)
+                } else {
+                    onStructureInvalid()
+                    val mwsd = MultiblockWorldSavedData.getOrCreate(level)
+                    mwsd.removeMapping(getMultiblockState())
+                    mwsd.addAsyncLogic(this)
+                }
+            } finally {
+                patternLock.unlock()
+            }
+        })
+    }
+
+    /**
+     * The host controller carries no structural block state of its own, so GTCEu's block-state
+     * hook cannot tell that the structure it anchored is gone. When the host is removed, tear the
+     * structure down (unlight the remaining blocks, unlink the connectors).
+     */
+    override fun onMachineRemoved() {
+        val level = getLevel() as? ServerLevel ?: return
+        if (isFormed) {
+            onStructureInvalid()
+            MultiblockWorldSavedData.getOrCreate(level).removeMapping(getMultiblockState())
         }
     }
 
@@ -166,7 +210,12 @@ abstract class AsyncStructureGtControllerMachine(
         else -> BlockPos.ZERO to BlockPos.ZERO
     }
 
-    /** Adds the structure bounds corners and connectors so block changes re-trigger a check. */
+    /**
+     * Caches every in-bounds position of the detected structure so GTCEu's LevelMixin fires
+     * [MultiblockState.onBlockStateChanged] for a change at any structural block, not just the
+     * bounds corners. Breaking or replacing any block of a formed structure therefore invalidates
+     * it (and re-enters async logic) instead of leaving the glow stuck.
+     */
     private fun cachePositions(detected: Any): List<BlockPos> {
         val (min, max) = when (detected) {
             is AsyncModuleCluster -> detected.boundsMin to detected.boundsMax
@@ -175,12 +224,13 @@ abstract class AsyncStructureGtControllerMachine(
             else -> return emptyList()
         }
         return buildList {
-            add(min)
-            add(max)
-            add(BlockPos(min.x, min.y, max.z))
-            add(BlockPos(min.x, max.y, min.z))
-            add(BlockPos(max.x, min.y, min.z))
-            addAll(connectorPositionsOf(detected))
+            for (y in min.y..max.y) {
+                for (z in min.z..max.z) {
+                    for (x in min.x..max.x) {
+                        add(BlockPos(x, y, z))
+                    }
+                }
+            }
         }
     }
 

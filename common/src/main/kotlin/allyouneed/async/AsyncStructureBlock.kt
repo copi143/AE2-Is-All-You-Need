@@ -44,6 +44,26 @@ open class AsyncStructureBlock(
         super.createBlockStateDefinition(builder)
         builder.add(AsyncStructureEntityBlock.FORMED)
     }
+
+    override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
+        super.onPlace(state, level, pos, oldState, isMoving)
+        notifyStructureChanged(level, pos)
+    }
+
+    override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
+        super.onRemove(state, level, pos, newState, isMoving)
+        notifyStructureChanged(level, pos)
+    }
+
+    /**
+     * Structural blocks carry no block entity, so nothing else revalidates the surrounding
+     * multiblock when one is placed or removed. Ask the nearby controllers to revalidate.
+     */
+    private fun notifyStructureChanged(level: Level, pos: BlockPos) {
+        if (level is ServerLevel) {
+            AsyncStructureNotifier.onStructuralBlockChanged(level, pos)
+        }
+    }
 }
 
 /**
@@ -116,6 +136,11 @@ class AsyncStructureFrameBlock(
  * The structure calculators (plain and GT) call this when a structure forms/invalidates so the
  * whole multiblock lights up. Controllers/connectors/interfaces are not touched - they manage their
  * own formed state.
+ *
+ * The state is written straight into the chunk plus a client block-update packet instead of
+ * [Level.setBlock], so flipping FORMED over a whole structure does not fire onPlace/onRemove or the
+ * GTCEu LevelMixin recheck once per block. FORMED is purely cosmetic and never read server-side by
+ * the detectors, so skipping the block events is safe.
  */
 fun setStructuralFormed(level: ServerLevel, min: BlockPos, max: BlockPos, formed: Boolean) {
     for (y in min.y..max.y) {
@@ -124,9 +149,10 @@ fun setStructuralFormed(level: ServerLevel, min: BlockPos, max: BlockPos, formed
                 val pos = BlockPos(x, y, z)
                 val state = level.getBlockState(pos)
                 if (state.block is AsyncStructureBlock) {
-                    val current = state.getValue(AsyncStructureEntityBlock.FORMED)
-                    if (current != formed) {
-                        level.setBlock(pos, state.setValue(AsyncStructureEntityBlock.FORMED, formed), Block.UPDATE_CLIENTS)
+                    val newState = state.setValue(AsyncStructureEntityBlock.FORMED, formed)
+                    if (state != newState) {
+                        level.getChunkAt(pos).setBlockState(pos, newState, false)
+                        level.sendBlockUpdated(pos, state, newState, Block.UPDATE_CLIENTS)
                     }
                 }
             }
