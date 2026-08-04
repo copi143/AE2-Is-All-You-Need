@@ -49,7 +49,7 @@ class LayoutNode {
 
         // 应用 ScrollModifier 的 scrollOffset
         modifier.foldElements {
-            if (it is allyouneed.compose.ui.modifier.ScrollModifier) {
+            if (it is ScrollModifier) {
                 scrollOffsetY = -it.scrollState.value
             }
         }

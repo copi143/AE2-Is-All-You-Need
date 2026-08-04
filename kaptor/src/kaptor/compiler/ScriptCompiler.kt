@@ -5,7 +5,6 @@ import kaptor.ir.IrHandler
 import kaptor.ir.IrScriptFile
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 
 class ScriptCompiler {

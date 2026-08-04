@@ -36,8 +36,8 @@ open class AsyncStructureBlockEntity(
             ?: AsyncBlockKind.MACHINE
 
     fun isFormed(): Boolean {
-        if (isClientSide()) {
-            return getBlockState().getValue(AsyncStructureEntityBlock.FORMED)
+        if (isClientSide) {
+            return blockState.getValue(AsyncStructureEntityBlock.FORMED)
         }
         return calc.isFormed()
     }
@@ -70,7 +70,7 @@ open class AsyncStructureBlockEntity(
     /** Sets the FORMED block state without notifying neighbours (no rescan loop). */
     fun setFormedState(formed: Boolean) {
         val lvl = level ?: return
-        if (lvl.isClientSide || notLoaded() || isRemoved()) return
+        if (lvl.isClientSide || notLoaded() || isRemoved) return
         val current = lvl.getBlockState(worldPosition)
         if (current.block !is AsyncStructureEntityBlock<*>) return
         val newState = current.setValue(AsyncStructureEntityBlock.FORMED, formed)
@@ -118,7 +118,7 @@ class AsyncStructureConnectorBlockEntity(
     private var hostController: AsyncStructureBlockEntity? = null
 
     init {
-        getMainNode()
+        mainNode
             .setFlags(GridFlags.MULTIBLOCK, GridFlags.REQUIRE_CHANNEL, GridFlags.DENSE_CAPACITY)
             .addService(IGridMultiblock::class.java, IGridMultiblock { getMultiblockNodes() })
     }
@@ -135,18 +135,18 @@ class AsyncStructureConnectorBlockEntity(
     }
 
     override fun isFormed(): Boolean {
-        if (isClientSide()) {
-            return getBlockState().getValue(AsyncStructureEntityBlock.FORMED)
+        if (isClientSide) {
+            return blockState.getValue(AsyncStructureEntityBlock.FORMED)
         }
         return hostController?.isFormed() == true
     }
 
     override val isGridConnected: Boolean
-        get() = mainNode.isOnline()
+        get() = mainNode.isOnline
 
     fun updateSubType() {
         val lvl = level
-        if (lvl == null || lvl.isClientSide || notLoaded() || isRemoved()) return
+        if (lvl == null || lvl.isClientSide || notLoaded() || isRemoved) return
         val current = lvl.getBlockState(worldPosition)
         if (current.block !is AsyncStructureConnectorBlock) return
         val newState = current
@@ -172,15 +172,15 @@ class AsyncStructureConnectorBlockEntity(
         if (!isFormed()) {
             return emptySet()
         }
-        val facing = getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING)
+        val facing = blockState.getValue(BlockStateProperties.HORIZONTAL_FACING)
         return setOf(facing)
     }
 
     fun getPowered(): Boolean {
-        if (isClientSide()) {
-            return getBlockState().getValue(AsyncStructureEntityBlock.POWERED)
+        if (isClientSide) {
+            return blockState.getValue(AsyncStructureEntityBlock.POWERED)
         }
-        return mainNode.isOnline()
+        return mainNode.isOnline
     }
 
     private fun getMultiblockNodes(): Iterator<IGridNode> {

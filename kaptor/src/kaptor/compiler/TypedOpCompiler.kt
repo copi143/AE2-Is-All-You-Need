@@ -1,7 +1,6 @@
 package kaptor.compiler
 
 import kaptor.ir.*
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 
 private val objectOpNames = mapOf(

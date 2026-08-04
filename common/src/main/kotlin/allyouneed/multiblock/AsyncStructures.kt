@@ -21,9 +21,7 @@ import net.minecraft.core.Direction
  * structure body extends "behind" the controller.
  */
 enum class AsyncStructureType(val baseDepth: Int) {
-    MODULE(5),
-    SWITCH(11),
-    PROCESSOR(19),
+    MODULE(5), SWITCH(11), PROCESSOR(19),
 }
 
 object AsyncStructures {
@@ -61,7 +59,7 @@ object AsyncStructures {
      */
     fun worldOffset(type: AsyncStructureType, facing: Direction, x: Int, y: Int, z: Int): Triple<Int, Int, Int> {
         val (ax, ay, az) = anchorCell(type)
-        val right = facing.getClockWise()
+        val right = facing.clockWise
         return Triple(
             (x - ax) * right.stepX + (z - az) * facing.stepX,
             y - ay,
@@ -78,8 +76,8 @@ object AsyncStructures {
         if (x >= width(type) || y >= height(type) || z >= depth(type, 0)) return false
         return when (type) {
             AsyncStructureType.MODULE -> false
-            AsyncStructureType.SWITCH -> y in 2..height(type) - 1 && !inCore(type, x, y, z)
-            AsyncStructureType.PROCESSOR -> y in 2..height(type) - 1 && !inCore(type, x, y, z)
+            AsyncStructureType.SWITCH -> y in 2..<height(type) && !inCore(type, x, y, z)
+            AsyncStructureType.PROCESSOR -> y in 2..<height(type) && !inCore(type, x, y, z)
         }
     }
 
@@ -102,7 +100,14 @@ object AsyncStructures {
      * machine glass may replace machine blocks on walls, and core machine blocks may be replaced by
      * the matching connectors.
      */
-    fun isValidCell(type: AsyncStructureType, extensions: Int, x: Int, y: Int, z: Int, actual: AsyncBlockKind): Boolean {
+    fun isValidCell(
+        type: AsyncStructureType,
+        extensions: Int,
+        x: Int,
+        y: Int,
+        z: Int,
+        actual: AsyncBlockKind
+    ): Boolean {
         val expected = blockAt(type, extensions, x, y, z) ?: return true
         if (expected == actual) return true
 
@@ -112,11 +117,17 @@ object AsyncStructures {
 
         return when (type) {
             AsyncStructureType.MODULE -> false
-            AsyncStructureType.SWITCH -> expected == AsyncBlockKind.MACHINE && inCore(type, x, y, z) &&
-                actual in setOf(AsyncBlockKind.WAN_CONNECTOR, AsyncBlockKind.LAN_CONNECTOR)
-            AsyncStructureType.PROCESSOR -> expected == AsyncBlockKind.MACHINE && inCore(type, x, y, z) &&
-                isOuterShellCell(x, y, z) &&
-                actual in setOf(AsyncBlockKind.ME_CONNECTOR, AsyncBlockKind.LAN_CONNECTOR)
+            AsyncStructureType.SWITCH -> expected == AsyncBlockKind.MACHINE && inCore(type, x, y, z) && actual in setOf(
+                AsyncBlockKind.WAN_CONNECTOR,
+                AsyncBlockKind.LAN_CONNECTOR
+            )
+
+            AsyncStructureType.PROCESSOR -> expected == AsyncBlockKind.MACHINE && inCore(
+                type,
+                x,
+                y,
+                z
+            ) && isOuterShellCell(x, y, z) && actual in setOf(AsyncBlockKind.ME_CONNECTOR, AsyncBlockKind.LAN_CONNECTOR)
         }
     }
 
@@ -255,6 +266,7 @@ object AsyncStructures {
                     if (x == 9 && y == 8 && z == 3) AsyncBlockKind.CONTROLLER else AsyncBlockKind.MACHINE
                 }
             }
+
             1 -> {
                 var count = 0
                 if (atLayer(lx, 1)) count++
@@ -270,19 +282,19 @@ object AsyncStructures {
                     null
                 }
             }
+
             2 -> {
                 var count = 0
                 if (atLayer(lx, 2)) count++
                 if (atLayer(ly, 2)) count++
                 if (atLayer(lz, 2)) count++
-                if (count == 3) {
-                    AsyncBlockKind.FRAME
-                } else if (count == 2) {
-                    AsyncBlockKind.TOWER
-                } else {
-                    null
+                when (count) {
+                    3 -> AsyncBlockKind.FRAME
+                    2 -> AsyncBlockKind.TOWER
+                    else -> null
                 }
             }
+
             3 -> null
             4 -> AsyncBlockKind.COMPUTING
             else -> AsyncBlockKind.STORAGE
@@ -302,7 +314,7 @@ object AsyncStructures {
         val d = depth(type, extensions)
         val upperZ1 = 1
         val upperZ2 = d - 2
-        if (x < 1 || x > 17 || z < upperZ1 || z > upperZ2) return null
+        if (x !in 1..17 || z < upperZ1 || z > upperZ2) return null
         if (x == 1 || x == 17 || z == upperZ1 || z == upperZ2) return AsyncBlockKind.FRAME
 
         val cz1 = 3
@@ -325,12 +337,14 @@ object AsyncStructures {
                 x == 2 || x == 8 || x == 10 || x == 16 -> AsyncBlockKind.MACHINE
                 else -> null
             }
+
             2 -> when {
                 x == 5 || x == 13 -> AsyncBlockKind.MODULE_INTERFACE
                 x == 1 || x == 9 || x == 17 -> AsyncBlockKind.FRAME
                 x == 2 || x == 8 || x == 10 || x == 16 -> AsyncBlockKind.MACHINE
                 else -> null
             }
+
             5 -> if (x == 1 || x == 17) AsyncBlockKind.FRAME else AsyncBlockKind.TOWER
             else -> null
         }

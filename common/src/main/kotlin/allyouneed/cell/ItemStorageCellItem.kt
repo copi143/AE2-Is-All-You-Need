@@ -80,8 +80,8 @@ class ItemStorageCellItem(
         fun getColor(stack: ItemStack, tintIndex: Int): Int {
             if (tintIndex == 1) {
                 val inv = StorageCells.getCellInventory(stack, null)
-                val state = inv?.getStatus() ?: CellState.EMPTY
-                return state.getStateColor()
+                val state = inv?.status ?: CellState.EMPTY
+                return state.stateColor
             }
             return 0xFFFFFF
         }

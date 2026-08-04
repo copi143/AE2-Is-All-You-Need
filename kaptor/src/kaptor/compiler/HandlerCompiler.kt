@@ -3,7 +3,6 @@ package kaptor.compiler
 import kaptor.ir.HookType
 import kaptor.ir.IrHandler
 import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 
 fun generateHandler(

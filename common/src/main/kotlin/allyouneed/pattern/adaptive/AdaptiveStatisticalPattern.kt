@@ -36,7 +36,7 @@ class AdaptiveStatisticalPattern(
             if (!tag.contains(NBT_KEY_INPUTS) || !tag.contains(NBT_KEY_OUTPUT)) return null
 
             val inputList = tag.getList(NBT_KEY_INPUTS, Tag.TAG_COMPOUND.toInt())
-            val inputs = (0 until inputList.size).mapNotNull { GenericStack.readTag(inputList.getCompound(it)) }
+            val inputs = inputList.indices.mapNotNull { GenericStack.readTag(inputList.getCompound(it)) }
             val output = GenericStack.readTag(tag.getCompound(NBT_KEY_OUTPUT)) ?: return null
             val probability = tag.getDouble(NBT_KEY_PROBABILITY).coerceIn(0.01, 1.0)
             val timeout = tag.getInt(NBT_KEY_TIMEOUT).coerceAtLeast(1)

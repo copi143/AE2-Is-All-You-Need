@@ -12,31 +12,26 @@ import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
 
 class AdaptivePatternTerminalMenu(
-    containerId: Int,
-    playerInventory: Inventory,
-    host: IPatternTerminalMenuHost?
+    containerId: Int, playerInventory: Inventory, host: IPatternTerminalMenuHost?
 ) : PatternEncodingTermMenu(TYPE, containerId, playerInventory, host, true) {
 
     companion object {
-        val TYPE: MenuType<AdaptivePatternTerminalMenu> = MenuTypeBuilder
-            .create(::AdaptivePatternTerminalMenu, IPatternTerminalMenuHost::class.java)
-            .build("adaptive_pattern_terminal")
+        val TYPE: MenuType<AdaptivePatternTerminalMenu> =
+            MenuTypeBuilder.create(::AdaptivePatternTerminalMenu, IPatternTerminalMenuHost::class.java)
+                .build("adaptive_pattern_terminal")
 
         private const val ACTION_SET_PROBABILITY = "set_adaptive_probability"
         private const val ACTION_SET_TIMEOUT = "set_adaptive_timeout"
     }
 
-    private val encodingLogic: AdaptivePatternEncodingLogic
-    var probability: Double = 0.8
+    private val encodingLogic = host!!.logic as AdaptivePatternEncodingLogic
+
+    var probability: Double = encodingLogic.probability
         private set
-    var timeout: Int = 30
+    var timeout: Int = encodingLogic.timeout
         private set
 
     init {
-        encodingLogic = host!!.logic as AdaptivePatternEncodingLogic
-        probability = encodingLogic.probability
-        timeout = encodingLogic.timeout
-
         registerClientAction(ACTION_SET_PROBABILITY, Double::class.java) { setProbability(it) }
         registerClientAction(ACTION_SET_TIMEOUT, Int::class.java) { setTimeout(it) }
     }

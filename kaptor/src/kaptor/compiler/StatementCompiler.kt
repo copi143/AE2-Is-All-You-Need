@@ -2,7 +2,6 @@ package kaptor.compiler
 
 import kaptor.ir.*
 import org.objectweb.asm.Label
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 
 fun compileInstruction(ctx: MethodContext, instr: IrInstruction) {

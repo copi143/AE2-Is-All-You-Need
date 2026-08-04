@@ -3,17 +3,7 @@ package allyouneed.forge.init
 import allyouneed.async.AsyncBlockKind
 import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncRole
-import allyouneed.gt.AsyncStructureGtConnectorBlock
-import allyouneed.gt.AsyncStructureGtConnectorMachine
-import allyouneed.gt.AsyncStructureGtControllerMachine
-import allyouneed.gt.AsyncStructureGtFactoryMachine
-import allyouneed.gt.AsyncStructureGtLanConnectorMachine
-import allyouneed.gt.AsyncStructureGtMachineBlock
-import allyouneed.gt.AsyncStructureGtMeConnectorMachine
-import allyouneed.gt.AsyncStructureGtPattern
-import allyouneed.gt.AsyncStructureGtProcessorMachine
-import allyouneed.gt.AsyncStructureGtSwitchMachine
-import allyouneed.gt.AsyncStructureGtWanConnectorMachine
+import allyouneed.gt.*
 import allyouneed.multiblock.AsyncStructureType
 import allyouneed.rl
 import allyouneed.util.MODID
@@ -25,7 +15,6 @@ import com.gregtechceu.gtceu.api.blockentity.MetaMachineBlockEntity
 import com.gregtechceu.gtceu.api.item.MetaMachineItem
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
 import com.gregtechceu.gtceu.api.machine.MachineDefinition
-import com.gregtechceu.gtceu.api.machine.MetaMachine
 import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition
 import com.gregtechceu.gtceu.api.registry.registrate.GTRegistrate
 import net.minecraft.core.BlockPos
@@ -120,8 +109,8 @@ object GTAsyncCrafting {
         // deferred until common setup.
         bus.addListener(Consumer<FMLCommonSetupEvent> {
             for ((kind, definition) in definitions) {
-                val block: Block = definition.getBlock()
-                val item = definition.getItem()
+                val block: Block = definition.block
+                val item = definition.item
                 AsyncBlockRegistry.register(kind, block)
                 BlockDefinition(kind.displayName, kind.id.rl, block, item).also {
                     MainCreativeTab.add(it)

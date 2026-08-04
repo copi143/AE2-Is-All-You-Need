@@ -8,7 +8,6 @@ import allyouneed.cell.CraftingStorage
 import allyouneed.cell.ItemStorageCell
 import allyouneed.cell.ItemStorageCellItem
 import allyouneed.client.CraftingStorageModels
-import allyouneed.fabric.init.FabricBlocks
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
 import allyouneed.machineassembler.MachineAssemblerMenu

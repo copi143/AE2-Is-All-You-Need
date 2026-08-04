@@ -72,7 +72,7 @@ object AsyncStructureGtPattern {
         val controllerKind = cellKind(type)
         builder.where(
             KIND_TO_CHAR.getValue(controllerKind),
-            Predicates.controller(Predicates.blocks(definition.getBlock())),
+            Predicates.controller(Predicates.blocks(definition.block)),
         )
         return builder.build()
     }

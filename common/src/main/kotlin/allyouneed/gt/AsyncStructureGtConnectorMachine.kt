@@ -68,23 +68,23 @@ abstract class AsyncStructureGtConnectorMachine(
     }
 
     override fun getGridConnectableSides(orientation: BlockOrientation): Set<Direction> {
-        return if (isFormed()) EnumSet.of(self().getFrontFacing()) else emptySet()
+        return if (isFormed()) EnumSet.of(self().frontFacing) else emptySet()
     }
 
     /** Changing the exposed sides (formed vs unformed) triggers a pathing recalculation. */
     private fun updateExposedSides() {
-        val sides = if (isFormed()) setOf(self().getFrontFacing()) else emptySet<Direction>()
+        val sides = if (isFormed()) setOf(self().frontFacing) else emptySet<Direction>()
         gridNodeHolder.getMainNode().setExposedOnSides(sides)
     }
 
     /** Mirrors the vanilla async connectors: flip FORMED so the client shows the formed model. */
     private fun updateFormedState() {
-        val level = getLevel() as? ServerLevel ?: return
-        val current = level.getBlockState(getPos())
+        val level = level as? ServerLevel ?: return
+        val current = level.getBlockState(pos)
         if (current.block !is AsyncStructureGtMachineBlock) return
         val newState = current.setValue(AsyncStructureEntityBlock.FORMED, isFormed())
         if (current != newState) {
-            level.setBlock(getPos(), newState, Block.UPDATE_CLIENTS)
+            level.setBlock(pos, newState, Block.UPDATE_CLIENTS)
         }
     }
 
@@ -95,14 +95,14 @@ abstract class AsyncStructureGtConnectorMachine(
     override fun isFormed(): Boolean = hostController?.isFormed() == true
 
     override val isGridConnected: Boolean
-        get() = gridNodeHolder.getMainNode().isOnline()
+        get() = gridNodeHolder.getMainNode().isOnline
 
     override val swallowedChannels: Int
-        get() = (gridNodeHolder.getMainNode().getNode() as? AsyncChannelNodeHolder)
+        get() = (gridNodeHolder.getMainNode().node as? AsyncChannelNodeHolder)
             ?.asyncSwallowedChannels ?: 0
 
     override val isInfiniteChannelMode: Boolean
-        get() = gridNodeHolder.getMainNode().getNode()?.grid?.pathingService?.channelMode == ChannelMode.INFINITE
+        get() = gridNodeHolder.getMainNode().node?.grid?.pathingService?.channelMode == ChannelMode.INFINITE
 }
 
 /** GTCEu ME connector of the async synthesis system. */
@@ -139,10 +139,10 @@ class AsyncStructureGridNodeTrait(
         val nodes = ArrayList<IGridNode>()
         val connector = machine as? AsyncStructureGtConnectorMachine ?: return nodes.iterator()
         val host = connector.getHostController() ?: return nodes.iterator()
-        val level = machine.getLevel() ?: return nodes.iterator()
+        val level = machine.level ?: return nodes.iterator()
         for (pos in host.connectorPositions()) {
             val node = (MetaMachine.getMachine(level, pos) as? AsyncStructureGtConnectorMachine)
-                ?.getMainNode()?.getNode()
+                ?.getMainNode()?.node
             if (node != null) {
                 nodes.add(node)
             }

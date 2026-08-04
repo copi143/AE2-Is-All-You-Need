@@ -42,7 +42,7 @@ class MEIODriveBlockEntity(
     private var isCached = false
 
     init {
-        getMainNode()
+        mainNode
             .addService(IStorageProvider::class.java, this)
             .addService(IGridTickable::class.java, this)
             .setFlags(GridFlags.REQUIRE_CHANNEL)
@@ -174,7 +174,7 @@ class MEIODriveBlockEntity(
             for (slot in 0 until CELL_COUNT) {
                 power += updateStateForSlot(slot)
             }
-            getMainNode().setIdlePowerUsage(power)
+            mainNode.setIdlePowerUsage(power)
             isCached = true
         }
     }
@@ -200,7 +200,7 @@ class MEIODriveBlockEntity(
             isCached = false
             updateState()
         }
-        IStorageProvider.requestUpdate(getMainNode())
+        IStorageProvider.requestUpdate(mainNode)
         markForUpdate()
     }
 
@@ -236,7 +236,7 @@ class MEIODriveBlockEntity(
 
     // -- Inner classes --
 
-    private inner class CellFilter : appeng.util.inv.filter.IAEItemFilter {
+    private class CellFilter : appeng.util.inv.filter.IAEItemFilter {
         override fun allowExtract(inv: InternalInventory, slot: Int, amount: Int) = true
         override fun allowInsert(inv: InternalInventory, slot: Int, stack: ItemStack) =
             !stack.isEmpty && StorageCells.isCellHandled(stack)

@@ -1,10 +1,7 @@
 package allyouneed.compose.ui.modifier
 
-import allyouneed.compose.ui.layout.Constraints
-import allyouneed.compose.ui.layout.Measurable
-import allyouneed.compose.ui.layout.Placeable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 interface PointerInputModifier : Modifier.Element

@@ -6,7 +6,6 @@ import appeng.api.networking.IManagedGridNode
 import appeng.me.ManagedGridNode
 import appeng.me.helpers.IGridConnectedBlockEntity
 import appeng.parts.AEBasePart
-import appeng.parts.networking.CablePart
 
 /** Extension: MAC of a live grid node, or [MacAddress.NONE]. */
 fun IGridNode.macAddress(): Long = if (this is IMacAddressHolder) macAddress else MacAddress.NONE

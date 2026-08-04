@@ -3,34 +3,29 @@ package allyouneed.pattern.adaptive
 import appeng.client.gui.me.items.PatternEncodingTermScreen
 import appeng.client.gui.style.ScreenStyle
 import appeng.client.gui.widgets.AETextField
-import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 
 class AdaptivePatternTerminalScreen(
-    menu: AdaptivePatternTerminalMenu,
-    playerInventory: Inventory,
-    title: Component,
-    style: ScreenStyle
+    menu: AdaptivePatternTerminalMenu, playerInventory: Inventory, title: Component, style: ScreenStyle
 ) : PatternEncodingTermScreen<AdaptivePatternTerminalMenu>(menu, playerInventory, title, style) {
 
-    private val probabilityField: AETextField
-    private val timeoutField: AETextField
-
-    init {
-        probabilityField = widgets.addTextField("adaptiveProbability")
-        probabilityField.setMaxLength(8)
-        probabilityField.setMessage(Component.translatable("gui.ae2isallyouneed.adaptive_probability"))
-        probabilityField.setValue(formatProbability(menu.probability))
-        probabilityField.setResponder { value ->
+    @Suppress("UsePropertyAccessSyntax")
+    private val probabilityField: AETextField = widgets.addTextField("adaptiveProbability").apply {
+        setMaxLength(8)
+        message = Component.translatable("gui.ae2isallyouneed.adaptive_probability")
+        value = formatProbability(menu.probability)
+        setResponder { value ->
             parseDouble(value)?.let { menu.setProbability(it) }
         }
+    }
 
-        timeoutField = widgets.addTextField("adaptiveTimeout")
-        timeoutField.setMaxLength(5)
-        timeoutField.setMessage(Component.translatable("gui.ae2isallyouneed.adaptive_timeout"))
-        timeoutField.setValue(menu.timeout.toString())
-        timeoutField.setResponder { value ->
+    @Suppress("UsePropertyAccessSyntax")
+    private val timeoutField: AETextField = widgets.addTextField("adaptiveTimeout").apply {
+        setMaxLength(5)
+        message = Component.translatable("gui.ae2isallyouneed.adaptive_timeout")
+        value = menu.timeout.toString()
+        setResponder { value ->
             parseInt(value)?.let { menu.setTimeout(it) }
         }
     }
@@ -51,7 +46,9 @@ class AdaptivePatternTerminalScreen(
         }
     }
 
-    override fun render(guiGraphics: net.minecraft.client.gui.GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+    override fun render(
+        guiGraphics: net.minecraft.client.gui.GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float
+    ) {
         super.render(guiGraphics, mouseX, mouseY, partialTick)
         probabilityField.render(guiGraphics, mouseX, mouseY, partialTick)
         timeoutField.render(guiGraphics, mouseX, mouseY, partialTick)

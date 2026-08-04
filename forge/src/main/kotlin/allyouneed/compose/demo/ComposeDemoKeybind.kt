@@ -1,9 +1,8 @@
 package allyouneed.compose.demo
 
 import com.mojang.blaze3d.platform.InputConstants
-import net.minecraft.client.Minecraft
 import net.minecraft.client.KeyMapping
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent
+import net.minecraft.client.Minecraft
 import net.minecraftforge.event.TickEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod

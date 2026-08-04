@@ -30,7 +30,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
 
     /** Called by an upstream block to force a full rescan of this structure. */
     fun requestRescan(level: ServerLevel) {
-        revalidate(level, host.getBlockPos())
+        revalidate(level, host.blockPos)
     }
 
     fun getModuleCluster(): AsyncModuleCluster? = moduleCluster
@@ -49,7 +49,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     }
 
     private fun revalidate(level: ServerLevel, triggerPos: BlockPos) {
-        if (host.isRemoved() || host.notLoaded()) return
+        if (host.isRemoved || host.notLoaded()) return
         when (host.kind) {
             AsyncBlockKind.MODULE_INTERFACE -> updateModule(level)
             AsyncBlockKind.SWITCH -> updateSwitch(level)
@@ -77,7 +77,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     // ---------------------------------------------------------------------------------------------
 
     private fun updateModule(level: ServerLevel) {
-        val formed = AsyncStructureDetector.detectModule(level, host.getBlockPos())
+        val formed = AsyncStructureDetector.detectModule(level, host.blockPos)
         val old = moduleCluster
         val unchanged = formed != null && old != null && formed.factoryPos == old.factoryPos
         if (unchanged) return
@@ -102,7 +102,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     // ---------------------------------------------------------------------------------------------
 
     private fun updateSwitch(level: ServerLevel) {
-        val formed = AsyncStructureDetector.detectSwitch(level, host.getBlockPos())
+        val formed = AsyncStructureDetector.detectSwitch(level, host.blockPos)
         val old = switchCluster
         val oldLive = old != null && !old.isDestroyed
         val structureChanged = !oldLive || formed == null ||
@@ -138,7 +138,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     // ---------------------------------------------------------------------------------------------
 
     private fun updateProcessor(level: ServerLevel) {
-        val formed = AsyncStructureDetector.detectProcessor(level, host.getBlockPos())
+        val formed = AsyncStructureDetector.detectProcessor(level, host.blockPos)
         val old = processorCluster
         val oldLive = old != null && !old.isDestroyed
         val changed = !oldLive || formed == null ||
@@ -202,7 +202,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
      * bounds contain the interface) to rescan.
      */
     private fun notifyHostController(level: ServerLevel) {
-        AsyncStructureDetector.findHostController(level, host.getBlockPos())?.requestRescan()
+        AsyncStructureDetector.findHostController(level, host.blockPos)?.requestRescan()
     }
 
     /**

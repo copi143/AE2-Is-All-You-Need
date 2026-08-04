@@ -10,7 +10,6 @@ import appeng.helpers.IPatternTerminalMenuHost
 import appeng.menu.guisync.GuiSync
 import appeng.menu.implementations.MenuTypeBuilder
 import appeng.menu.me.items.PatternEncodingTermMenu
-import appeng.parts.encoding.EncodingMode
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.CraftingContainer
 import net.minecraft.world.inventory.MenuType
@@ -25,26 +24,23 @@ class MachinePatternTerminalMenu(
 ) : PatternEncodingTermMenu(TYPE, containerId, playerInventory, host, true) {
 
     companion object {
-        val TYPE: MenuType<MachinePatternTerminalMenu> = MenuTypeBuilder
-            .create(::MachinePatternTerminalMenu, IPatternTerminalMenuHost::class.java)
-            .build("machine_pattern_terminal")
+        val TYPE: MenuType<MachinePatternTerminalMenu> =
+            MenuTypeBuilder.create(::MachinePatternTerminalMenu, IPatternTerminalMenuHost::class.java)
+                .build("machine_pattern_terminal")
 
         private const val ACTION_SET_MACHINE = "set_machine"
     }
 
-    private val encodingLogic: MachinePatternEncodingLogic
+    private val encodingLogic = host!!.logic as MachinePatternEncodingLogic
 
     @GuiSync(90)
-    var selectedMachineIndex: Int = 0
+    var selectedMachineIndex: Int = MachineTypeRegistry.indexById(encodingLogic.virtualMachineTypeId)
         private set
 
     val selectedMachine: MachineType?
         get() = MachineTypeRegistry.getAll().getOrNull(selectedMachineIndex)
 
     init {
-        encodingLogic = host!!.logic as MachinePatternEncodingLogic
-        selectedMachineIndex = MachineTypeRegistry.indexById(encodingLogic.virtualMachineTypeId)
-
         registerClientAction(ACTION_SET_MACHINE, Int::class.java) { setMachineIndex(it) }
     }
 
@@ -138,7 +134,7 @@ class MachinePatternTerminalMenu(
             container.setItem(i, key.toStack(gs.amount().toInt()))
         }
 
-        val output = machineType.resolve(getPlayer().level(), container)
+        val output = machineType.resolve(player.level(), container)
         if (output == null) {
             broadcastChanges()
             return

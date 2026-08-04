@@ -125,7 +125,7 @@ class AsyncStructureFrameBlock(
         }
         val state = level.getBlockState(pos)
         if (state.hasProperty(CONNECTIONS) && state.getValue(CONNECTIONS) != mask) {
-            level.setBlock(pos, state.setValue(CONNECTIONS, mask), Block.UPDATE_CLIENTS)
+            level.setBlock(pos, state.setValue(CONNECTIONS, mask), UPDATE_CLIENTS)
         }
     }
 
@@ -198,8 +198,7 @@ abstract class AsyncStructureEntityBlock<T : AEBaseBlockEntity>(
         fromPos: BlockPos,
         isMoving: Boolean,
     ) {
-        val be = level.getBlockEntity(pos)
-        when (be) {
+        when (val be = level.getBlockEntity(pos)) {
             is AsyncStructureBlockEntity -> be.updateMultiBlock(fromPos)
             is AsyncStructureConnectorBlockEntity -> be.updateMultiBlock(fromPos)
             else -> {}
@@ -210,8 +209,7 @@ abstract class AsyncStructureEntityBlock<T : AEBaseBlockEntity>(
         if (newState.block === state.block) {
             return
         }
-        val be = level.getBlockEntity(pos)
-        when (be) {
+        when (val be = level.getBlockEntity(pos)) {
             is AsyncStructureBlockEntity -> be.disconnect()
             is AsyncStructureConnectorBlockEntity -> be.disconnect()
             else -> {}

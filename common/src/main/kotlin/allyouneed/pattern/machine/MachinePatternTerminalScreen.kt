@@ -45,10 +45,10 @@ private class MachineSlotWidget(
 
         if (isHovered) {
             val lines = mutableListOf<Component>()
-            if (machine != null) {
-                lines += Component.literal(machine.name)
+            lines += if (machine != null) {
+                Component.literal(machine.name)
             } else {
-                lines += Component.translatable("gui.ae2isallyouneed.machine_slot_no_machine")
+                Component.translatable("gui.ae2isallyouneed.machine_slot_no_machine")
             }
             lines += Component.translatable("gui.ae2isallyouneed.machine_slot_hint")
             guiGraphics.renderComponentTooltip(Minecraft.getInstance().font, lines, mouseX, mouseY)

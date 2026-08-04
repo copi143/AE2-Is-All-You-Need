@@ -55,6 +55,6 @@ class CreativeMeCellItem(properties: Properties) : AEBaseItem(properties), ICell
 
     companion object {
         fun create(): CreativeMeCellItem =
-            CreativeMeCellItem(Item.Properties().stacksTo(1))
+            CreativeMeCellItem(Properties().stacksTo(1))
     }
 }

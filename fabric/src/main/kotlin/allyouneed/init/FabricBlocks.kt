@@ -43,31 +43,31 @@ object FabricBlocks {
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
     )
 
-    lateinit var PSEUDO_PATTERN_TERMINAL_BE: net.minecraft.world.level.block.entity.BlockEntityType<PseudoPatternTerminalBlockEntity>
+    lateinit var PSEUDO_PATTERN_TERMINAL_BE: BlockEntityType<PseudoPatternTerminalBlockEntity>
 
     val ADAPTIVE_PATTERN_TERMINAL: AdaptivePatternTerminalBlock = AdaptivePatternTerminalBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
     )
 
-    lateinit var ADAPTIVE_PATTERN_TERMINAL_BE: net.minecraft.world.level.block.entity.BlockEntityType<AdaptivePatternTerminalBlockEntity>
+    lateinit var ADAPTIVE_PATTERN_TERMINAL_BE: BlockEntityType<AdaptivePatternTerminalBlockEntity>
 
     val MACHINE_ASSEMBLER: MachineAssemblerBlock = MachineAssemblerBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
     )
 
-    lateinit var MACHINE_ASSEMBLER_BE: net.minecraft.world.level.block.entity.BlockEntityType<MachineAssemblerBlockEntity>
+    lateinit var MACHINE_ASSEMBLER_BE: BlockEntityType<MachineAssemblerBlockEntity>
 
     val MACHINE_PATTERN_TERMINAL: MachinePatternTerminalBlock = MachinePatternTerminalBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
     )
 
-    lateinit var MACHINE_PATTERN_TERMINAL_BE: net.minecraft.world.level.block.entity.BlockEntityType<MachinePatternTerminalBlockEntity>
+    lateinit var MACHINE_PATTERN_TERMINAL_BE: BlockEntityType<MachinePatternTerminalBlockEntity>
 
     val ME_IO_DRIVE: MEIODriveBlock = MEIODriveBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
     )
 
-    lateinit var ME_IO_DRIVE_BE: net.minecraft.world.level.block.entity.BlockEntityType<MEIODriveBlockEntity>
+    lateinit var ME_IO_DRIVE_BE: BlockEntityType<MEIODriveBlockEntity>
 
     fun register() {
         val blockId = "pseudo_pattern_terminal".rl

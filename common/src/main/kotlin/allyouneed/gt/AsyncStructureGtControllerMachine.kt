@@ -1,24 +1,16 @@
 package allyouneed.gt
 
-import allyouneed.async.AsyncChannelNodeHolder
-import allyouneed.async.AsyncModuleCluster
-import allyouneed.async.AsyncProcessorCluster
-import allyouneed.async.AsyncStructureDetector
-import allyouneed.async.AsyncStructureEntityBlock
-import allyouneed.async.AsyncSwitchCluster
-import allyouneed.async.IAsyncChannelView
-import allyouneed.async.setStructuralFormed
+import allyouneed.async.*
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
-import com.gregtechceu.gtceu.client.renderer.MultiblockInWorldPreviewRenderer
-import com.gregtechceu.gtceu.config.ConfigHolder
-import com.gregtechceu.gtceu.api.machine.MetaMachine
-import com.gregtechceu.gtceu.api.machine.feature.IMachineLife
 import com.gregtechceu.gtceu.api.machine.feature.IInteractedMachine
+import com.gregtechceu.gtceu.api.machine.feature.IMachineLife
 import com.gregtechceu.gtceu.api.machine.multiblock.MultiblockControllerMachine
 import com.gregtechceu.gtceu.api.pattern.MultiblockState
 import com.gregtechceu.gtceu.api.pattern.MultiblockWorldSavedData
+import com.gregtechceu.gtceu.client.renderer.MultiblockInWorldPreviewRenderer
+import com.gregtechceu.gtceu.config.ConfigHolder
 import net.minecraft.core.BlockPos
 import net.minecraft.server.TickTask
 import net.minecraft.server.level.ServerLevel
@@ -63,10 +55,10 @@ abstract class AsyncStructureGtControllerMachine(
     // ---------------------------------------------------------------------------------------------
 
     override fun checkPattern(): Boolean {
-        val level = getLevel() as? ServerLevel ?: return false
+        val level = level as? ServerLevel ?: return false
         val detected = detect(level)
         detection = detected
-        val state = getMultiblockState()
+        val state = multiblockState
         if (detected == null) {
             state.setError(MultiblockState.UNINIT_ERROR)
             return false
@@ -84,9 +76,9 @@ abstract class AsyncStructureGtControllerMachine(
      * deferred to the main thread inside the multiblock lock.
      */
     override fun asyncCheckPattern(periodID: Long) {
-        val level = getLevel() as? ServerLevel ?: return
-        if (getMultiblockState().hasError() || !isFormed) {
-            if ((getOffsetTimer() + periodID) % 4L == 0L) {
+        val level = level as? ServerLevel ?: return
+        if (multiblockState.hasError() || !isFormed) {
+            if ((offsetTimer + periodID) % 4L == 0L) {
                 level.server.tell(TickTask(0) {
                     patternLock.lock()
                     try {
@@ -94,7 +86,7 @@ abstract class AsyncStructureGtControllerMachine(
                             setFlipped(false)
                             onStructureFormed()
                             val mwsd = MultiblockWorldSavedData.getOrCreate(level)
-                            mwsd.addMapping(getMultiblockState())
+                            mwsd.addMapping(multiblockState)
                             mwsd.removeAsyncLogic(this)
                         }
                     } finally {
@@ -113,7 +105,7 @@ abstract class AsyncStructureGtControllerMachine(
      * resumes polling.
      */
     fun requestStructureCheck() {
-        val level = getLevel() as? ServerLevel ?: return
+        val level = level as? ServerLevel ?: return
         level.server.tell(TickTask(0) {
             patternLock.lock()
             try {
@@ -121,12 +113,12 @@ abstract class AsyncStructureGtControllerMachine(
                     setFlipped(false)
                     onStructureFormed()
                     val mwsd = MultiblockWorldSavedData.getOrCreate(level)
-                    mwsd.addMapping(getMultiblockState())
+                    mwsd.addMapping(multiblockState)
                     mwsd.removeAsyncLogic(this)
                 } else {
                     onStructureInvalid()
                     val mwsd = MultiblockWorldSavedData.getOrCreate(level)
-                    mwsd.removeMapping(getMultiblockState())
+                    mwsd.removeMapping(multiblockState)
                     mwsd.addAsyncLogic(this)
                 }
             } finally {
@@ -141,10 +133,10 @@ abstract class AsyncStructureGtControllerMachine(
      * structure down (unlight the remaining blocks, unlink the connectors).
      */
     override fun onMachineRemoved() {
-        val level = getLevel() as? ServerLevel ?: return
+        val level = level as? ServerLevel ?: return
         if (isFormed) {
             onStructureInvalid()
-            MultiblockWorldSavedData.getOrCreate(level).removeMapping(getMultiblockState())
+            MultiblockWorldSavedData.getOrCreate(level).removeMapping(multiblockState)
         }
     }
 
@@ -155,14 +147,14 @@ abstract class AsyncStructureGtControllerMachine(
     override fun onStructureFormed() {
         super.onStructureFormed()
         updateFormedBlockState(true)
-        val level = getLevel() as? ServerLevel ?: return
+        val level = level as? ServerLevel ?: return
         rebuildCluster(level)
     }
 
     override fun onStructureInvalid() {
         super.onStructureInvalid()
         updateFormedBlockState(false)
-        val level = getLevel() as? ServerLevel
+        val level = level as? ServerLevel
         if (level != null) {
             destroyCluster(level)
         }
@@ -171,12 +163,12 @@ abstract class AsyncStructureGtControllerMachine(
 
     /** Mirrors the vanilla async blocks: flip the FORMED block state without notifying neighbours. */
     private fun updateFormedBlockState(formed: Boolean) {
-        val level = getLevel() as? ServerLevel ?: return
-        val current = level.getBlockState(getPos())
+        val level = level as? ServerLevel ?: return
+        val current = level.getBlockState(pos)
         if (current.block !is AsyncStructureGtMachineBlock) return
         val newState = current.setValue(AsyncStructureEntityBlock.FORMED, formed)
         if (current != newState) {
-            level.setBlock(getPos(), newState, Block.UPDATE_CLIENTS)
+            level.setBlock(pos, newState, Block.UPDATE_CLIENTS)
         }
     }
 
@@ -187,7 +179,7 @@ abstract class AsyncStructureGtControllerMachine(
         if (detected == null) return
         cluster = detected
         for (pos in connectorPositionsOf(detected)) {
-            (MetaMachine.getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.setHostController(this)
+            (getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.setHostController(this)
         }
         val (min, max) = boundsOf(detected)
         setStructuralFormed(level, min, max, true)
@@ -197,7 +189,7 @@ abstract class AsyncStructureGtControllerMachine(
         val old = cluster ?: return
         cluster = null
         for (pos in connectorPositionsOf(old)) {
-            (MetaMachine.getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.setHostController(null)
+            (getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.setHostController(null)
         }
         val (min, max) = boundsOf(old)
         setStructuralFormed(level, min, max, false)
@@ -248,7 +240,7 @@ abstract class AsyncStructureGtControllerMachine(
     ): InteractionResult {
         // Mirror IMultiController.onUse: sneak + empty hand on an unformed controller previews the
         // structure in-world. The real pattern (AsyncStructureGtPattern) renders the shape.
-        if (!isFormed && player.isShiftKeyDown() && player.getItemInHand(hand).isEmpty()) {
+        if (!isFormed && player.isShiftKeyDown && player.getItemInHand(hand).isEmpty) {
             if (isRemote) {
                 MultiblockInWorldPreviewRenderer.showPreview(
                     pos,
@@ -269,16 +261,16 @@ abstract class AsyncStructureGtControllerMachine(
     fun connectorPositions(): List<BlockPos> = connectorPositionsOf(cluster)
 
     fun getConnectorViews(): List<IAsyncChannelView> {
-        val level = getLevel() as? ServerLevel ?: return emptyList()
+        val level = level as? ServerLevel ?: return emptyList()
         return connectorPositions().mapNotNull { pos ->
-            (MetaMachine.getMachine(level, pos) as? IAsyncChannelView)
+            (getMachine(level, pos) as? IAsyncChannelView)
         }
     }
 }
 
 /** GTCEu controller of the async synthesis processor (19 x 15 x (19 + 6N)). */
 class AsyncStructureGtProcessorMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
-    override fun detect(level: ServerLevel): Any? = AsyncStructureDetector.detectProcessor(level, getPos())
+    override fun detect(level: ServerLevel): Any? = AsyncStructureDetector.detectProcessor(level, pos)
 
     override fun connectorPositionsOf(cluster: Any?): List<BlockPos> =
         (cluster as? AsyncProcessorCluster)?.connectorPositions ?: emptyList()
@@ -286,7 +278,7 @@ class AsyncStructureGtProcessorMachine(holder: IMachineBlockEntity) : AsyncStruc
 
 /** GTCEu controller of an async synthesis network switch (19 x 7 x (11 + 6N)). */
 class AsyncStructureGtSwitchMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
-    override fun detect(level: ServerLevel): Any? = AsyncStructureDetector.detectSwitch(level, getPos())
+    override fun detect(level: ServerLevel): Any? = AsyncStructureDetector.detectSwitch(level, pos)
 
     override fun connectorPositionsOf(cluster: Any?): List<BlockPos> =
         (cluster as? AsyncSwitchCluster)?.connectorPositions ?: emptyList()
@@ -298,8 +290,8 @@ class AsyncStructureGtSwitchMachine(holder: IMachineBlockEntity) : AsyncStructur
  */
 class AsyncStructureGtFactoryMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
     override fun detect(level: ServerLevel): Any? {
-        val facing = getFrontFacing()
-        val interfacePos = getPos().offset(2 * facing.stepX, -4, 2 * facing.stepZ)
+        val facing = frontFacing
+        val interfacePos = pos.offset(2 * facing.stepX, -4, 2 * facing.stepZ)
         return AsyncStructureDetector.detectModule(level, interfacePos)
     }
 }

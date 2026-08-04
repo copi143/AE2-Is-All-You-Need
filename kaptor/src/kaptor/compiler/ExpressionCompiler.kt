@@ -1,7 +1,6 @@
 package kaptor.compiler
 
 import kaptor.ir.*
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 
 fun compileExpression(ctx: MethodContext, expr: IrExpression) {
@@ -36,7 +35,7 @@ fun compileExpression(ctx: MethodContext, expr: IrExpression) {
             for (arg in expr.arguments) {
                 compileExpression(ctx, arg)
             }
-            val argTypes = expr.arguments.map { "Ljava/lang/Object;" }.joinToString("")
+            val argTypes = expr.arguments.joinToString("") { "Ljava/lang/Object;" }
             mv.visitMethodInsn(
                 INVOKEVIRTUAL, "java/lang/Object", expr.methodName, "(${argTypes})Ljava/lang/Object;", false
             )
@@ -191,7 +190,7 @@ private fun compileFunctionCall(ctx: MethodContext, expr: IrFunctionCall) {
             for (arg in expr.arguments) {
                 compileExpression(ctx, arg)
             }
-            val argTypes = expr.arguments.map { "Ljava/lang/Object;" }.joinToString("")
+            val argTypes = expr.arguments.joinToString("") { "Ljava/lang/Object;" }
             mv.visitMethodInsn(
                 INVOKEVIRTUAL, TYPE_HANDLER_BASE, expr.name, "(${argTypes})Ljava/lang/Object;", false
             )

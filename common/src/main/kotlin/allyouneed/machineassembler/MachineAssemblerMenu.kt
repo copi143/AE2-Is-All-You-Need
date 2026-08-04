@@ -54,13 +54,13 @@ class MachineAssemblerMenu(
     }
 
     override fun setupConfig() {
-        val mac = this.getHost().getSubInventory(MachineAssemblerBlockEntity.INV_MAIN)!!
+        val mac = this.host.getSubInventory(MachineAssemblerBlockEntity.INV_MAIN)!!
 
         for (i in 0 until MachineAssemblerBlockEntity.GRID_SLOTS - 1) {
             this.addSlot(MachineAssemblerPatternSlot(this, mac, i), SlotSemantics.MACHINE_CRAFTING_GRID)
         }
 
-        val machineInv = this.getHost().getSubInventory(MachineAssemblerBlockEntity.INV_MACHINE)!!
+        val machineInv = this.host.getSubInventory(MachineAssemblerBlockEntity.INV_MACHINE)!!
         this.addSlot(MachineAssemblerMachineSlot(machineInv, 0), MachineSlotSemantics.MACHINE)
 
         encodedPatternSlot = this.addSlot(
@@ -99,7 +99,7 @@ class MachineAssemblerPatternSlot(
 ) : AppEngSlot(inv, invSlot), IOptionalSlot {
 
     override fun mayPlace(stack: ItemStack): Boolean {
-        return super.mayPlace(stack) && this.menu.isValidItemForSlot(this.getContainerSlot(), stack)
+        return super.mayPlace(stack) && this.menu.isValidItemForSlot(this.containerSlot, stack)
     }
 
     override fun getCurrentValidationState(): Boolean {
@@ -110,12 +110,12 @@ class MachineAssemblerPatternSlot(
     override fun isRenderDisabled(): Boolean = true
 
     override fun isSlotEnabled(): Boolean {
-        if (!inventory.getStackInSlot(getContainerSlot()).isEmpty) {
+        if (!inventory.getStackInSlot(containerSlot).isEmpty) {
             return true
         }
 
-        val slot = getContainerSlot()
-        val pattern = menu.getHost().getCurrentPattern()
+        val slot = containerSlot
+        val pattern = menu.host.getCurrentPattern()
         return slot >= 0 && slot < MachineAssemblerBlockEntity.GRID_SLOTS - 1 &&
             pattern != null && pattern.isSlotEnabled(slot)
     }

@@ -38,10 +38,10 @@ class AdaptivePatternEncodingLogic(host: IPatternTerminalLogicHost) : PatternEnc
         val tag = pattern.tag ?: return
         if (!tag.contains(AdaptiveStatisticalPattern.NBT_KEY_INPUTS)) return
 
-        setMode(appeng.parts.encoding.EncodingMode.PROCESSING)
+        mode = appeng.parts.encoding.EncodingMode.PROCESSING
 
         val inputList = tag.getList(AdaptiveStatisticalPattern.NBT_KEY_INPUTS, net.minecraft.nbt.Tag.TAG_COMPOUND.toInt())
-        val inputs = (0 until inputList.size).mapNotNull { GenericStack.readTag(inputList.getCompound(it)) }
+        val inputs = inputList.indices.mapNotNull { GenericStack.readTag(inputList.getCompound(it)) }
 
         val outputTag = tag.getCompound(AdaptiveStatisticalPattern.NBT_KEY_OUTPUT)
         val output = GenericStack.readTag(outputTag)

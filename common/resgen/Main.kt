@@ -1,12 +1,10 @@
 package allyouneed.resgen
 
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.nio.file.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
-import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 data class CellEntry(
@@ -151,7 +149,7 @@ private fun loadAsyncBlockSet(): List<AsyncBlockDef> {
         "GT/vanilla async definitions must share id/displayName/color/role/facing/powered"
     }
     val gtCount = gt.count { it.isGt }
-    println("[async] ${gt.size} blocks, ${gtCount} GT-owned, ${gt.size - gtCount} plain")
+    println("[async] ${gt.size} blocks, $gtCount GT-owned, ${gt.size - gtCount} plain")
 
     // Shared field set drives generation; isGt is runtime metadata only.
     return vanilla

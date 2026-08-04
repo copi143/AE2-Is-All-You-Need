@@ -4,12 +4,7 @@ import allyouneed.compose.ui.draw.McDrawScope
 import allyouneed.compose.ui.layout.*
 import allyouneed.compose.ui.modifier.DrawModifier
 import allyouneed.compose.ui.modifier.Modifier
-import allyouneed.compose.ui.modifier.clickable
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 
 @Composable
 fun Slider(

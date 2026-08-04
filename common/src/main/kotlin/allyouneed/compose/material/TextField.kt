@@ -1,13 +1,10 @@
 package allyouneed.compose.material
 
-import allyouneed.compose.ui.layout.*
+import allyouneed.compose.ui.layout.Box
 import allyouneed.compose.ui.modifier.Modifier
 import allyouneed.compose.ui.modifier.background
 import allyouneed.compose.ui.modifier.padding
-import androidx.compose.runtime.*
-import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.components.EditBox
-import net.minecraft.network.chat.Component
+import androidx.compose.runtime.Composable
 
 @Composable
 fun TextField(

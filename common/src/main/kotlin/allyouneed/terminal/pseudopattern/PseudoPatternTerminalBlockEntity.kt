@@ -41,7 +41,7 @@ class PseudoPatternTerminalBlockEntity(
         ) { }
 
     override fun returnToMainMenu(player: Player, subMenu: ISubMenu) {
-        MenuOpener.open(PseudoPatternTerminalMenu.TYPE, player, subMenu.getLocator(), true)
+        MenuOpener.open(PseudoPatternTerminalMenu.TYPE, player, subMenu.locator, true)
     }
 
     override fun getMainMenuIcon(): ItemStack =

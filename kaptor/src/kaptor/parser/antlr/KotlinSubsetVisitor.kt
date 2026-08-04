@@ -407,7 +407,7 @@ class KotlinSubsetVisitor(
 
     private fun parseInfixFunctionCall(ctx: KotlinParser.InfixFunctionCallContext): IrNode {
         var left = parseRangeExpression(ctx.rangeExpression(0))
-        for (i in 0 until ctx.simpleIdentifier().size) {
+        for (i in ctx.simpleIdentifier().indices) {
             val name = ctx.simpleIdentifier(i).text
             val right = parseRangeExpression(ctx.rangeExpression(i + 1))
             left = IrMethodCall(left as IrExpression, name, listOf(right as IrExpression))

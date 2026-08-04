@@ -14,10 +14,9 @@ class MachineAssemblerScreen(
     style: ScreenStyle,
 ) : UpgradeableScreen<MachineAssemblerMenu>(menu, playerInventory, title, style) {
 
-    private val pb: ProgressBar
+    private val pb: ProgressBar = ProgressBar(this.menu, style.getImage("progressBar"), Direction.VERTICAL)
 
     init {
-        this.pb = ProgressBar(this.menu, style.getImage("progressBar"), Direction.VERTICAL)
         widgets.add("progressBar", this.pb)
     }
 

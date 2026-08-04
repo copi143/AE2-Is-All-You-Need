@@ -10,7 +10,6 @@ import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.util.Services
 import allyouneed.util.debugLogger
-import allyouneed.util.logger
 import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
 import appeng.api.storage.StorageCells
@@ -18,9 +17,7 @@ import appeng.api.upgrades.Upgrades
 import appeng.core.definitions.AEItems
 import appeng.core.localization.GuiText
 import appeng.items.parts.PartModelsHelper
-import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
-import net.minecraft.world.item.Items
 
 // This class is part of the common project meaning it is shared between all supported loaders. Code written here can only
 // import and access the vanilla codebase, libraries used by vanilla, and optionally third party libraries that provide

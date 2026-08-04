@@ -3,7 +3,6 @@ package allyouneed.compose.platform
 import allyouneed.compose.ui.draw.McDrawScope
 import allyouneed.compose.ui.layout.Constraints
 import allyouneed.compose.ui.modifier.ClickableModifier
-import allyouneed.compose.ui.modifier.Rect
 import allyouneed.compose.ui.modifier.ScrollModifier
 import allyouneed.compose.ui.modifier.foldElements
 import allyouneed.compose.ui.node.LayoutNode
@@ -11,11 +10,7 @@ import allyouneed.compose.ui.node.UiApplier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
 import androidx.compose.runtime.Recomposer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 

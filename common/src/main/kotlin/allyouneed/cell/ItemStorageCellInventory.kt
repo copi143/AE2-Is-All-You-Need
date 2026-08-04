@@ -37,7 +37,7 @@ class ItemStorageCellInventory(
     private val cellType: ItemStorageCellItem = stack.item as ItemStorageCellItem
 
     private val keyType: AEKeyType = AEKeyType.items()
-    private val amountPerByte: Long = keyType.getAmountPerByte().toLong()
+    private val amountPerByte: Long = keyType.amountPerByte.toLong()
 
     /** Total capacity in bytes (long, unlike vanilla's int). */
     private val totalBytes: Long = cellType.cellType.sizeBytes
@@ -108,7 +108,7 @@ class ItemStorageCellInventory(
 
     override fun canFitInsideCell(): Boolean = storedAmounts.isEmpty
 
-    override fun getDescription(): net.minecraft.network.chat.Component = stack.getHoverName()
+    override fun getDescription(): net.minecraft.network.chat.Component = stack.hoverName
 
     override fun persist() {
         if (isPersisted) return

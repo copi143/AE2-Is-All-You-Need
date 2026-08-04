@@ -217,7 +217,7 @@ class DimensionalCellData(val cellId: Int) {
         fun fromNbt(cellId: Int, tag: CompoundTag): DimensionalCellData {
             val data = DimensionalCellData(cellId)
             val list = tag.getList("e", Tag.TAG_COMPOUND.toInt())
-            for (i in 0 until list.size) {
+            for (i in list.indices) {
                 val entry = list.getCompound(i)
                 val key = AEKey.fromTagGeneric(entry.getCompound("k")) ?: continue
                 val amount = BigInteger(entry.getByteArray("a"))

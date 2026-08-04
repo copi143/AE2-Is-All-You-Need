@@ -90,7 +90,7 @@ class MachineAssemblerBlockEntity(
     private var reboot = true
 
     init {
-        getMainNode()
+        mainNode
             .setIdlePowerUsage(0.0)
             .addService(IGridTickable::class.java, this)
         upgrades = UpgradeInventories.forMachine(
@@ -110,7 +110,7 @@ class MachineAssemblerBlockEntity(
         val name = if (machineType != null) {
             Component.literal(machineType.name)
         } else if (hasCustomName()) {
-            getCustomName()
+            customName
         } else {
             MachineAssemblerRegistration.block.asItem().description
         }
@@ -137,8 +137,8 @@ class MachineAssemblerBlockEntity(
     }
 
     override fun pushPattern(patternDetails: IPatternDetails, table: Array<KeyCounter>, where: Direction): Boolean {
-        if (this.myPattern.isEmpty()) {
-            val isEmpty = this.gridInv.isEmpty() && this.patternInv.isEmpty()
+        if (this.myPattern.isEmpty) {
+            val isEmpty = this.gridInv.isEmpty && this.patternInv.isEmpty
 
             if (isEmpty && patternDetails is MachinePatternDetails) {
                 val pattern = patternDetails as MachinePatternDetails
@@ -168,7 +168,7 @@ class MachineAssemblerBlockEntity(
 
         for (list in table) {
             list.removeZeros()
-            if (!list.isEmpty()) {
+            if (!list.isEmpty) {
                 throw RuntimeException("Could not fill grid with some items, including " + list.iterator().next())
             }
         }
@@ -178,7 +178,7 @@ class MachineAssemblerBlockEntity(
         val wasEnabled = this.isAwake
         this.isAwake = this.myPlan != null && this.hasMats() || this.canPush()
         if (wasEnabled != this.isAwake) {
-            getMainNode().ifPresent { grid, node ->
+            mainNode.ifPresent { grid, node ->
                 if (this.isAwake) {
                     grid.tickManager.wakeDevice(node)
                 } else {
@@ -188,7 +188,7 @@ class MachineAssemblerBlockEntity(
         }
     }
 
-    private fun canPush(): Boolean = !this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty()
+    private fun canPush(): Boolean = !this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty
 
     private fun hasMats(): Boolean {
         if (this.myPlan == null) {
@@ -199,10 +199,10 @@ class MachineAssemblerBlockEntity(
             this.craftingInv.setItem(x, this.gridInv.getStackInSlot(x))
         }
 
-        return !this.myPlan!!.assemble(this.craftingInv, this.level!!).isEmpty()
+        return !this.myPlan!!.assemble(this.craftingInv, this.level!!).isEmpty
     }
 
-    override fun acceptsPlans(): Boolean = this.patternInv.isEmpty()
+    override fun acceptsPlans(): Boolean = this.patternInv.isEmpty
 
     override fun readFromStream(data: FriendlyByteBuf): Boolean {
         val c = super.readFromStream(data)
@@ -220,7 +220,7 @@ class MachineAssemblerBlockEntity(
         super.saveAdditional(data)
         if (this.forcePlan) {
             val pattern = myPlan?.definition?.toStack() ?: myPattern
-            if (!pattern.isEmpty()) {
+            if (!pattern.isEmpty) {
                 val compound = CompoundTag()
                 pattern.save(compound)
                 data.put("myPlan", compound)
@@ -240,7 +240,7 @@ class MachineAssemblerBlockEntity(
 
         if (data.contains("myPlan")) {
             val pattern = ItemStack.of(data.getCompound("myPlan"))
-            if (!pattern.isEmpty()) {
+            if (!pattern.isEmpty) {
                 this.forcePlan = true
                 this.myPattern = pattern
                 this.pushDirection = Direction.entries.toTypedArray()[data.getInt("pushDirection")]
@@ -256,7 +256,7 @@ class MachineAssemblerBlockEntity(
 
         if (this.forcePlan) {
             if (level != null && myPlan == null) {
-                if (!myPattern.isEmpty()) {
+                if (!myPattern.isEmpty) {
                     if (PatternDetailsHelper.decodePattern(myPattern, level, false) is MachinePatternDetails) {
                         this.myPlan = PatternDetailsHelper.decodePattern(myPattern, level, false) as MachinePatternDetails
                     }
@@ -303,7 +303,7 @@ class MachineAssemblerBlockEntity(
 
     override fun getSubInventory(id: ResourceLocation): InternalInventory? {
         return when (id) {
-            ISegmentedInventory.UPGRADES -> this.upgrades
+            UPGRADES -> this.upgrades
             INV_MAIN -> this.internalInv
             INV_MACHINE -> this.machineInv
             else -> super.getSubInventory(id)
@@ -347,10 +347,10 @@ class MachineAssemblerBlockEntity(
     }
 
     override fun tickingRequest(node: IGridNode, ticksSinceLastCall: Int): TickRateModulation {
-        if (!this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty()) {
+        if (!this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty) {
             this.pushOut(this.gridInv.getStackInSlot(OUTPUT_SLOT))
 
-            if (this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty()) {
+            if (this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty) {
                 this.saveChanges()
             }
 
@@ -415,7 +415,7 @@ class MachineAssemblerBlockEntity(
                     this.gridInv.setItemDirect(x, craftingRemainders[x])
                 }
 
-                if (this.patternInv.isEmpty()) {
+                if (this.patternInv.isEmpty) {
                     this.forcePlan = false
                     this.myPlan = null
                     this.pushDirection = null
@@ -433,7 +433,7 @@ class MachineAssemblerBlockEntity(
     }
 
     private fun ejectHeldItems() {
-        if (this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty()) {
+        if (this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty) {
             for (x in 0 until GRID_SLOTS - 1) {
                 val held = this.gridInv.getStackInSlot(x)
                 if (!held.isEmpty
@@ -449,7 +449,7 @@ class MachineAssemblerBlockEntity(
     }
 
     private fun userPower(ticksPassed: Int, bonusValue: Int, acceleratorTax: Double): Int {
-        val grid = getMainNode().getGrid()
+        val grid = mainNode.grid
         return if (grid != null) {
             (grid.energyService.extractAEPower(
                 ticksPassed * bonusValue * acceleratorTax,
@@ -484,16 +484,9 @@ class MachineAssemblerBlockEntity(
             return output
         }
 
-        val te: BlockEntity? = this.level?.getBlockEntity(this.worldPosition.relative(d))
+        val te: BlockEntity = this.level?.getBlockEntity(this.worldPosition.relative(d)) ?: return output
 
-        if (te == null) {
-            return output
-        }
-
-        val adaptor = InternalInventory.wrapExternal(te, d.opposite)
-        if (adaptor == null) {
-            return output
-        }
+        val adaptor = InternalInventory.wrapExternal(te, d.opposite) ?: return output
 
         val size = output.count
         var remaining = adaptor.addItems(output)
@@ -510,9 +503,9 @@ class MachineAssemblerBlockEntity(
         if (reason != IGridNodeListener.State.GRID_BOOT) {
             var newState = false
 
-            val grid = getMainNode().getGrid()
+            val grid = mainNode.grid
             if (grid != null) {
-                newState = this.getMainNode().isPowered && grid.energyService.extractAEPower(
+                newState = this.mainNode.isPowered && grid.energyService.extractAEPower(
                     1.0,
                     Actionable.SIMULATE,
                     PowerMultiplier.CONFIG,
@@ -533,7 +526,7 @@ class MachineAssemblerBlockEntity(
     override fun getUpgrades(): IUpgradeInventory = upgrades
 
     fun getCurrentPattern(): MachinePatternDetails? {
-        return if (isClientSide()) {
+        return if (isClientSide) {
             val patternItem = patternInv.getStackInSlot(0)
             PatternDetailsHelper.decodePattern(patternItem, level) as? MachinePatternDetails
         } else {
@@ -543,7 +536,7 @@ class MachineAssemblerBlockEntity(
 
     private inner class CraftingGridFilter : IAEItemFilter {
         private fun hasPattern(): Boolean =
-            this@MachineAssemblerBlockEntity.myPlan != null && !this@MachineAssemblerBlockEntity.patternInv.isEmpty()
+            this@MachineAssemblerBlockEntity.myPlan != null && !this@MachineAssemblerBlockEntity.patternInv.isEmpty
 
         override fun allowExtract(inv: InternalInventory, slot: Int, amount: Int): Boolean = slot == OUTPUT_SLOT
 

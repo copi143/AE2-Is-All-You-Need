@@ -30,7 +30,7 @@ import net.minecraft.world.level.block.state.StateDefinition
  * this trap by reading the static `MachineDefinition.getBuilt()`).
  */
 open class AsyncStructureGtMachineBlock(
-    props: BlockBehaviour.Properties,
+    props: Properties,
     definition: MachineDefinition,
     override val kind: AsyncBlockKind,
 ) : MetaMachineBlock(props, definition), IAsyncKindBlock {
@@ -45,12 +45,12 @@ open class AsyncStructureGtMachineBlock(
     }
 
     override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity? =
-        definition.getBlockEntityType().create(pos, state)
+        definition.blockEntityType.create(pos, state)
 }
 
 /** GT machine block of the async connectors: additionally carries the [POWERED] state. */
 class AsyncStructureGtConnectorBlock(
-    props: BlockBehaviour.Properties,
+    props: Properties,
     definition: MachineDefinition,
     kind: AsyncBlockKind,
 ) : AsyncStructureGtMachineBlock(props, definition, kind) {

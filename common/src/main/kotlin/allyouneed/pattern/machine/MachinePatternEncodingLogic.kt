@@ -51,11 +51,11 @@ class MachinePatternEncodingLogic(host: IPatternTerminalLogicHost) : PatternEnco
         val typeId = tag.getString(MachinePatternTags.MACHINE_TYPE)
         if (MachineTypeRegistry.byId(typeId) == null) return
 
-        setMode(EncodingMode.PROCESSING)
+        mode = EncodingMode.PROCESSING
         virtualMachineTypeId = typeId
 
         val inputList = tag.getList(MachinePatternTags.INPUTS, Tag.TAG_COMPOUND.toInt())
-        val inputs = (0 until inputList.size).map { GenericStack.readTag(inputList.getCompound(it)) }
+        val inputs = inputList.indices.map { GenericStack.readTag(inputList.getCompound(it)) }
 
         val output = GenericStack.readTag(tag.getCompound(MachinePatternTags.OUTPUT))
 

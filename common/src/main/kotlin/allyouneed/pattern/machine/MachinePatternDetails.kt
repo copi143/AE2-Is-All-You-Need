@@ -49,7 +49,7 @@ class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails
     private fun readArray(tag: CompoundTag, key: String): Array<GenericStack?> {
         val list = tag.getList(key, Tag.TAG_COMPOUND.toInt())
         val arr = arrayOfNulls<GenericStack>(list.size)
-        for (i in 0 until list.size) {
+        for (i in list.indices) {
             arr[i] = GenericStack.readTag(list.getCompound(i))
         }
         return arr
@@ -97,7 +97,7 @@ class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails
 
     /** Whether the given assembler grid slot is used by this machine. */
     fun isSlotEnabled(slot: Int): Boolean {
-        return slot < machineType?.inputSlots ?: 0
+        return slot < (machineType?.inputSlots ?: 0)
     }
 
     /** Fills the assembler grid from the pushed inputs. */
