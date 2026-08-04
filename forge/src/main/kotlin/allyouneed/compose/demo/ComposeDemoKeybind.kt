@@ -1,5 +1,6 @@
 package allyouneed.compose.demo
 
+import allyouneed.client.compose.demo.ComposeDemoScreen
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft

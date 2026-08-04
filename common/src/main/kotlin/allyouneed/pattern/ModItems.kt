@@ -1,6 +1,6 @@
 package allyouneed.pattern
 
-import allyouneed.cell.CreativeMeCellItem
+import allyouneed.cell.creative.CreativeMeCellItem
 import allyouneed.cell.dimensional.DimensionalCellItem
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.adaptive.AdaptivePatternItem

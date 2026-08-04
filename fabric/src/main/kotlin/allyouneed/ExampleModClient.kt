@@ -5,8 +5,8 @@ import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncCraftingStatusMenu
 import allyouneed.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
-import allyouneed.cell.ItemStorageCell
-import allyouneed.cell.ItemStorageCellItem
+import allyouneed.cell.item.ItemStorageCell
+import allyouneed.cell.item.ItemStorageCellItem
 import allyouneed.client.CraftingStorageModels
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
