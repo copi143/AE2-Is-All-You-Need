@@ -169,9 +169,10 @@ Host (BE / Part)
 | 项 | 决策 |
 | --- | --- |
 | 宽度 | 48-bit，存为 `long & 0xFFFF_FFFF_FFFFL` |
-| 粒度 | **每个 `GridNode` 一个** |
-| 覆盖 | Mixin `GridNode` / `ManagedGridNode` → 全部 AE2 节点 |
+| 粒度 | **每个 `GridNode` 一个**（设备节点） |
+| 覆盖 | 全部 AE2 设备节点；**线缆 `ICablePart` / `CablePart` 不分配** |
 | 分配 | 世界级 `MacAddressRegistry`（类比维度元件） |
+| 冲突 | live 表一对一：`register` 拒绝抢占；NBT/扳手恢复冲突时 **重新分配** |
 | 权威存储 | `ManagedGridNode` 字段 + 节点 NBT key `ayn_mac` |
 | 扳手 | 写入物品 `allyouneed_macs`（tagName → mac） |
 | 挖掉 | 不写 / 不带 MAC → 重放后重新分配 |

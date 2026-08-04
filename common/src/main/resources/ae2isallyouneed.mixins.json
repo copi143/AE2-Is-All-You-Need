@@ -19,11 +19,17 @@
     "GridInventoryEntryMixin",
     "DelegatingMEInventoryAccessor",
     "GridNodeMixin",
+    "ManagedGridNodeMixin",
+    "AEBaseBlockEntityMixin",
+    "AEBaseEntityBlockMixin",
+    "IPartMixin",
+    "PartPlacementMixin",
     "PathingCalculationMixin",
     "ServerChunkCacheAccessor",
     "ChunkMapAccessor"
   ],
   "client": [
+    "ItemStackTooltipMixin",
     "CreativeScreenSidebarMixin",
     "FacadeCreativeTabMixin",
     "client.ReadableNumberConverterMixin",

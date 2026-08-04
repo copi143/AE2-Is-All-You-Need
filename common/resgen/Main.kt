@@ -196,6 +196,11 @@ fun main(args: Array<String>) {
         translation("gui.$modId.async.status.working", "Working")
         translation("gui.$modId.async.status.not_working", "Not working")
 
+        translation("gui.$modId.mac", "MAC: %s")
+        translation("gui.$modId.mac_named", "MAC (%s): %s")
+        translation("gui.$modId.mac_item", "MAC: %s")
+        translation("config.jade.plugin_$modId.mac", "MAC Address")
+
         for (cell in cells) {
             if (cell.isCreative) {
                 simpleBlock(cell.id, cell.displayName)

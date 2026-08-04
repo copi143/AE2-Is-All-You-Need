@@ -1,6 +1,7 @@
 package allyouneed.forge.init
 
 import allyouneed.cell.dimensional.DimensionalCellStore
+import allyouneed.mac.MacAddressRegistry
 import allyouneed.util.MODID
 import net.minecraftforge.event.server.ServerAboutToStartEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
@@ -12,10 +13,12 @@ object ForgeServerEvents {
     @SubscribeEvent
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
         DimensionalCellStore.attach(event.server)
+        MacAddressRegistry.attach(event.server)
     }
 
     @SubscribeEvent
     fun onServerStopping(event: ServerStoppingEvent) {
+        MacAddressRegistry.detach()
         DimensionalCellStore.detach()
     }
 }

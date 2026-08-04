@@ -125,5 +125,9 @@
   "gui.ae2isallyouneed.async.status.storage": "存储：%s MB",
   "gui.ae2isallyouneed.async.status.block_count": "方块数：%s",
   "gui.ae2isallyouneed.async.status.working": "工作正常",
-  "gui.ae2isallyouneed.async.status.not_working": "未工作"
+  "gui.ae2isallyouneed.async.status.not_working": "未工作",
+  "gui.ae2isallyouneed.mac": "MAC：%s",
+  "gui.ae2isallyouneed.mac_named": "MAC（%s）：%s",
+  "gui.ae2isallyouneed.mac_item": "MAC：%s",
+  "config.jade.plugin_ae2isallyouneed.mac": "MAC 地址"
 }

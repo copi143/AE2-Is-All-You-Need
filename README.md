@@ -515,8 +515,9 @@ TODO:
 | 项 | 说明 |
 | --- | --- |
 | 格式 | 48-bit，显示为 `XX:XX:XX:XX:XX:XX`（本地管理位） |
-| 粒度 | 每个 `GridNode` 一个（线缆总线多 Part、P2P outer 等各自独立） |
-| 覆盖 | 全部 AE2 节点（原版 + 本模组 + 其它 addon，经 Mixin） |
+| 粒度 | 每个设备 `GridNode` 一个（多 Part、P2P outer 等各自独立） |
+| 覆盖 | 全部 AE2 **设备**节点；**线缆不分配 MAC** |
+| 冲突 | 同一时刻一个 MAC 只对应一个存活节点；复制/冲突时自动重分配 |
 | 分配 | 世界存档级注册表，首次入网时分配 |
 | 扳手拆除 | **保留** MAC，写入掉落物 NBT，重放后恢复 |
 | 普通挖掉 | **不保留**，再次放置分配新 MAC |
@@ -528,7 +529,7 @@ TODO:
 - [x] 每节点 48-bit MAC 分配与世界持久化
 - [x] 扳手保留 / 挖掉丢弃
 - [x] 按 MAC 查找存活节点 API（`MacAddressRegistry`）
-- [ ] 客户端 / Jade / 终端显示
+- [x] Jade / WTHIT / TOP 显示（AE2 igtooltip）+ 扳手物品 tooltip
 - [ ] 机器人与远程控制绑定
 
 ## 版权
