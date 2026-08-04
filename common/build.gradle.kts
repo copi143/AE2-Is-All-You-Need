@@ -36,6 +36,10 @@ dependencies {
     // (net.minecraftforge.common.extensions.*) that GTCEu's IMachineBlockEntity extends.
     compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
 
+    // Mixin's IMixinConfigPlugin declares org.objectweb.asm.tree.ClassNode (and the shaded
+    // mixin jar does not bundle ASM), so the plugin needs it on the compile classpath.
+    compileOnly("org.ow2.asm:asm-tree:9.8")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation(libs.compose.runtime) // required by compose compiler plugin on test source set

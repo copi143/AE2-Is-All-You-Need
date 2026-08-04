@@ -1,14 +1,24 @@
-# GTCEu 多方块集成知识库（检测器驱动的三结构异步合成系统）
+# GTCEu 多方块集成知识库（异步合成系统：检测器驱动 → 分组重复 mixin 原生 pattern）
 
 > 目标：把异步合成核心 + 结构 + GT 桥接**尽可能多**地放进 common source set
-> （forge 专属的注册总线胶水留在 forge）。结构改为**手写常量 + 检测器驱动**
-> （`AsyncStructures` 形状常量 + `AsyncStructureDetector` 世界扫描），不再有 NBT datapack，
-> 也不再兼容「多方块结构编辑」维度。GTCEu 存在时控制器注册为 GT 机器
+> （forge 专属的注册总线胶水留在 forge）。结构为**手写常量**（`AsyncStructures` 单一真相源），
+> 不再有 NBT datapack，也不再兼容「多方块结构编辑」维度。GTCEu 存在时控制器注册为 GT 机器
 > （`MultiblockControllerMachine`），GT 缺失时走 common 自有方块/匹配器。
+>
+> **架构两阶段（2026-08）**：①旧——检测器驱动（`AsyncStructureDetector` 逐格判形，已实现已提交）；
+> ②新——switch/processor 的 GT 控制器改用 **native GTCEu `BlockPattern` 判形**，配一个「分组重复
+> （6 层一组）」mixin；检测器仅保留给 vanilla 路径与模块探测。修改大纲见 §1。
 
 ---
 
-## 1. 最终决策（2026-08 更新）
+## 1. 架构演进与修改大纲（2026-08：检测器驱动 → 分组重复 mixin）
+
+> 本节是**目标态**的修改大纲，供后续（压缩上下文后）直接照此实现；旧架构细节仍保留在各节，
+> 已标注「历史」。核心动机：switch/processor 尾部是「每 6 层一组、重复 0..16 次」的扩展 bay，
+> GTCEu 只支持单 aisle 重复，因此给 `BlockPattern` 加「组重复」语义的 mixin，让 GT 控制器改用
+> **原生 pattern 判形**，去掉检测器路径的自定义匹配/失效/轮询代码。
+
+### 1.1 最终决策（旧架构，检测器驱动，已实现）
 
 | 事项 | 决策 |
 | --- | --- |
@@ -22,6 +32,145 @@
 | 菜单 | 单一 `AsyncCraftingStatusScreen` + `IAsyncCraftingStatusView`；普通菜单 + GT 菜单共用 |
 | 仓口 | 不复用 GT 仓口/外壳 |
 | 创造标签 | GT 机器加入 AE2 `MainCreativeTab`（`FMLCommonSetupEvent` 时用 `BlockDefinition` 包装 `def.getBlock()/getItem()`） |
+
+### 1.2 目标态决策（新架构，待实现）
+
+| 事项 | 决策 |
+| --- | --- |
+| switch/processor GT 成形 | **native `BlockPattern` 判形**（mixin 支持 6 层组重复），删除检测器路径的 `checkPattern`/`asyncCheckPattern`/`requestStructureCheck` |
+| 形状真相 | 仍是 `AsyncStructures`（单一真相源）；GT pattern 由它生成 |
+| 检测器新用途 | 仅剩：vanilla（非 GT）结构判形 + 模块探测（工厂机 `detectModule`）；普通路径全部不变 |
+| 组重复编码 | 组首 aisle `aisleRepetitions[c] = [min,max]`（组整体重复次数），组内其余 G-1 个 aisle 保持 `[1,1]`；新增 `groupSizes` 表标记组首 |
+| 匹配重复数 | min=0（与检测器 0..16 完全一致，N=0 允许成形） |
+| 预览 | 第 0 页 = 1 次重复（in-world 叠影取 `getMatchingShapes().get(0)`）；JEI 页序 1..16,0 |
+| autoBuild | 组默认放 `max(1, min)` = 1 组（6 层） |
+| 连接器/菜单/渲染/注册胶水 | 全部不变 |
+| 连接器计数上限 | 由谓词 `setMaxGlobalLimited` 表达，与检测器一致：wan≤1 / lan≤2（switch），me≤1 / lan≤2（processor） |
+
+### 1.3 修改大纲（文件级清单）
+
+| 文件 | 改动 |
+| --- | --- |
+| `common/src/main/java/allyouneed/mixin/BlockPatternGroupedMixin.java` | 新增。`@Unique int[] groupSizes`；`@Overwrite` `checkPatternAt(6参)` / `getPreview` / `autoBuild` |
+| `common/src/main/kotlin/allyouneed/gt/IGroupedBlockPattern.kt` | 新增接口：`setGroup(aisleIndex, groupSize)` / `getGroupSize(aisleIndex)`（mixin `@Unique` 字段实现） |
+| `common/src/main/java/allyouneed/mixin/MultiblockMachineDefinitionGroupMixin.java` | 新增。`@Overwrite getMatchingShapes()`：组首且 min==0 的维度页面序 = 1..max 再补 0 |
+| `common/src/main/resources/ae2isallyouneed.mixins.json` | 注册上述两个 mixin（`allyouneed.mixin` 包，Java 文件） |
+| `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtPattern.kt` | 重写 `build()`：发全深度布局（base + 组 + 收尾 + 后墙），构造后 `setGroup(baseCount, 6)` |
+| `common/src/main/kotlin/allyouneed/multiblock/AsyncStructures.kt` | `isFloorCell` / `inCore` / `isOuterShellCell` 改为 public（pattern 生成器需要） |
+| `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtControllerMachine.kt` | 删检测器覆写；`rebuildCluster` 改从 pattern 的 pos cache 汇总 cluster 摘要 |
+| `common/src/main/kotlin/allyouneed/async/AsyncStructureNotifier.kt` | 删 GT 分支（`requestStructureCheck()`），保留 vanilla 分支 |
+
+### 1.4 mixin 设计细节（核心，GTCEu 7.5.3）
+
+关键事实：
+- `IMultiController.checkPattern()` → `getPattern().checkPatternAt(state, false)` → 2 参 → 6 参
+  `checkPatternAt(state, centerPos, frontFacing, upwardsFacing, isFlipped, savePredicate)`。
+- 异步流程：`MultiblockWorldSavedData.searchingTask`（后台线程）→ `asyncCheckPattern(periodID)` →
+  `checkPatternWithTryLock()` 在**异步线程**跑匹配；成形后 `server.execute { checkPatternWithLock();
+  onStructureFormed(); addMapping; removeAsyncLogic }` 在**主线程**再跑一次匹配再 `onStructureFormed()`。
+  → mixin 匹配代码必须异步安全：只经 `MultiblockState.update` 读世界（LevelMixin 保证 off-thread 安全）；
+  `onStructureFormed` 必然主线程，`rebuildCluster` 可安全读世界。
+- `MultiblockMachineDefinition.getMatchingShapes()`（懒加载 memoized）用 `repetitionDFS` 枚举
+  `aisleRepetitions` 每维 [min,max] → 组编码下组=1 个维度 → 17 页（不会 16^6 爆炸）。
+  `MultiblockInWorldPreviewRenderer.showPreview`（in-world 叠影）与 `PatternPreviewWidget`（JEI）都消费
+  `getMatchingShapes()`。
+- `formedRepetitionCount[]` 只有赋值、无下游读取（死字段），组编码不影响其他逻辑。
+- 计数谓词：`SimplePredicate.testGlobal` 逐格累计，超 `maxCount` 报 `SinglePredicateError`；
+  `blocks(a).or(blocks(b).setMaxGlobalLimited(n))` 把 b 移到 limited 并限次，a 留在 common 不限量。
+
+`BlockPatternGroupedMixin`：
+- `groupSizes[c]`：组首 = G；组内其余 = 0；单 aisle = 1。
+- `checkPatternAt(6参)` 重构循环：外层按「步」迭代（单 aisle 或组）。组步依次匹配
+  `blockMatches[c..c+G-1]` 共 G 个连续 z（每组内 z 逐个递增），一组完整成功后 `z += G`；组重复计数
+  落在 `[aisleRepetitions[组首][0], [组首][1]]`。**逐格逻辑原样保留**：findFirstAisle 滑动/回退
+  （`r < min` 时 `r=c=0; z=minZ++; matchContext.reset(); findFirstAisle=false`）、`layerCount` 层限制、
+  `ioMap`、parts 共享（`canPartShared` / share 错误）、`vaBlocks`(ActiveBlock)、pos cache（`addCache`）、
+  `savePredicate` 的 predicates 记录、各错误路径（`PatternStringError`/`SinglePredicateError`/`PatternError`）；
+  组内 G 个 aisle 的 `formedRepetitionCount` 都写组计数。
+- `getPreview(int[] repetition)`：组首按 `repetition[组首]` 次渲染 `blockMatches[组首..组首+G-1]`
+  G 个 slice（组内依次渲染、x 递增），组内其余 aisle 跳过。
+- `autoBuild`：组按 `max(1, aisleRepetitions[组首][0])` 次放置（匹配仍允许 0，构建默认 1 组）；
+  层/全局 limited 计数、candidates 选块、放置与朝向修正逻辑不变。
+
+`MultiblockMachineDefinitionGroupMixin`：
+- `@Overwrite getMatchingShapes()`：`pattern is IGroupedBlockPattern` 且某组首 min==0 → 该维度枚举序
+  `1..max, 0`（保证第 0 页 = 1 次重复）；其余维度维持 `min..max`。
+
+### 1.5 新 pattern 布局与谓词（`AsyncStructureGtPattern.build` 重写）
+
+布局（全部与扩展数 N 无关；N=0 → base+收尾+后墙，N → 总深 +6N）：
+
+| 结构 | base aisles | 组（6 层，重复 [0,16]） | 收尾 | 后墙 | 总 aisle 数 |
+| --- | --- | --- | --- | --- | --- |
+| SWITCH | z=0..8（9） | z=9..14 | z=15 | z=16 | 17 |
+| PROCESSOR | z=0..16（17） | z=17..22 | z=23 | z=24 | 25 |
+
+组内容（每层 19×height；y=0 地板：`F@x=0,18`、`M@x=1..17`；y=1 各行见 `upperFloorCell`；y≥2 全
+don't-care）：
+- row0/row4：`F@x=1,9,17`，其余 M（x=0,18 为**必需空气**）；
+- row1/row3：`F@x=1,9,17`、`M@x=2,8,10,16`，其余空气；
+- row2（接口行）：`Z@x=5,13`、`F@x=1,9,17`、`M@x=2,8,10,16`，其余空气；
+- row5：`F@x=1,17`、`TOWER@x=2..16`，x=0,18 空气。
+
+谓词（对应 `AsyncStructures.isValidCell` 替换规则）：
+- 地板层（y∈{0,1}）MACHINE → `blocks(machine)`；
+- 非地板 MACHINE → `blocks(machine).or(blocks(glass))`；
+- SWITCH 核心内（`inCore`）M 格 →
+  `blocks(machine).or(blocks(glass)).or(blocks(wan).setMaxGlobalLimited(1)).or(blocks(lan).setMaxGlobalLimited(2))`；
+- PROCESSOR 外壳单面（`isOuterShellCell`）M 格 → 同上，`blocks(me).setMaxGlobalLimited(1)` / `blocks(lan).setMaxGlobalLimited(2)`；
+- 控制器格 → `Predicates.controller(Predicates.blocks(definition.getBlock()))`；
+- 必需空气 → `Predicates.air()`；任意格 → 默认 any；FRAME/TOWER/ENERGY/COMPUTING/STORAGE/EXECUTION/MODULE_INTERFACE → 各自块。
+- base 层核心函数格（ENERGY/TOWER/COMPUTING/STORAGE 等）照 `blockAt` 原样。
+- 构造完成后：`(pattern as IGroupedBlockPattern).setGroup(baseCount, 6)`（baseCount = 9/17）。
+
+前置：`AsyncStructures.isFloorCell` / `inCore` / `isOuterShellCell` 需 public。
+
+### 1.6 GT 控制器简化（`gt/AsyncStructureGtControllerMachine.kt`）
+
+- **删**：`checkPattern()` / `asyncCheckPattern()` / `requestStructureCheck()` 覆写、`cachePositions`、
+  `detection` 字段、`AsyncStructureNotifier` 的 GT 分支调用。
+- **留**：`onStructureFormed` / `onStructureInvalid`（super + `updateFormedBlockState` + 重建/销毁
+  cluster）、`onMachineRemoved`（IMachineLife）、`onUse`（潜行预览走 GT 原生 `showPreview`）、
+  `connectorPositions()` / `getConnectorViews()` / `getCluster()`、status 菜单表面。
+- `rebuildCluster` 改从 pattern 的 `MultiblockState` pos cache 汇总（**单一真相源，不再二次跑检测器**）：
+  遍历 cache 得 bounds min/max、blockCount = 匹配格数；`MetaMachine.getMachine(level, pos)` 扫描收集
+  GT 连接器机器位置；扫 STORAGE 块累加 `storageBytes`；扫接口块收集接口位置。构造与旧 cluster 同构的
+  摘要（`AsyncSwitchCluster` / `AsyncProcessorCluster`），后续 `setStructuralFormed` / 连接器链接 /
+  status 逻辑不变。
+- `GTAsyncCrafting` 的 `.pattern { AsyncStructureGtPattern.build(type, it) }` 注册行不变（只换实现）。
+
+### 1.7 Notifier 调整（`async/AsyncStructureNotifier.kt`）
+
+- **保留** vanilla 分支：普通结构方块（frame/glass/tower/cores/cable）无 BE、无轮询，靠
+  `onPlace`/`onRemove` → notifier → 附近普通控制器 `requestRescan`。
+- **删** GT 分支（`MetaMachine.getMachine(...) is AsyncStructureGtControllerMachine →
+  requestStructureCheck()`）：GT 控制器成形后由 LevelMixin 逐格失效（pos cache），未成形由 GT 异步
+  轮询（每 4 tick）自动成形。
+
+### 1.8 保持不变的部分
+
+- §2 结构设计（`AsyncStructures` / `AsyncStructureDetector`）：形状常量不变；检测器保留给 vanilla +
+  模块探测。
+- §3 菜单/屏幕、§5 连接器、§6 注册胶水、§7 渲染/blockstate：全部不变。
+- 连接器计数上限与检测器一致（见 §1.2 决策表），由谓词 max 限制表达。
+
+### 1.9 新架构验证清单
+
+- `:forge:compileKotlin` + `:fabric:compileKotlin`（含 `ae2isallyouneed.mixins.json` 加载）。
+- 游戏内 Forge：搭 switch/processor（1..N bay）→ 成形；潜行+空手预览（第 0 页 = 1 bay）与 JEI 页
+  （1..16,0）正常；拆任意结构块 → 立即失形（LevelMixin 逐格失效）；手动补齐 → ≤4 tick 成形；
+  GT 终端 autoBuild → 默认放 1 组 bay；连接器网格链接 / status（storageBytes / blockCount）正确。
+- 奇偶校验：同结构检测器路径与 GT pattern 路径结论一致（0..16、计数上限、玻璃/连接器替换格一致）。
+- vanilla（无 GT）/ fabric 回归：不受影响。
+
+### 1.10 新架构风险与取舍
+
+- `@Overwrite` 三个方法体与 GTCEu 7.5.3 内部强耦合（版本已 pin 死，可接受；升级需逐行复查）。
+- 新匹配代码异步线程安全要求严格：只经 `MultiblockState.update` 读世界。
+- JEI 页面顺序 1..16,0（第 0 页是 1 bay 叠影，页码非升序）。
+- cluster 摘要与 pattern 绑定：未来改 shape 需同步 `rebuildCluster` 的 cache 汇总逻辑。
+- 检测器与 pattern 是两套判形实现（模块 / vanilla 仍走检测器）——保持 `AsyncStructures` 为唯一真相源，
+  避免分叉。
 
 ---
 
@@ -79,17 +228,19 @@
 
 ---
 
-## 4. GT 控制器：`gt/AsyncStructureGtControllerMachine.kt`
+## 4. GT 控制器（旧：检测器驱动，已实现；目标态见 §1.6）：`gt/AsyncStructureGtControllerMachine.kt`
 
 - 抽象基类 `AsyncStructureGtControllerMachine : MultiblockControllerMachine, IInteractedMachine`；
   三个子类：`AsyncStructureGtProcessorMachine` / `AsyncStructureGtSwitchMachine` /
   `AsyncStructureGtFactoryMachine`。
 - 工厂控制器没有结构锚（模块由接口探测），`detect()` 用
   `getPos().offset(2*facing.stepX, -4, 2*facing.stepZ)` 反推接口位置再 `detectModule`。
-- `checkPattern()`：跑 `AsyncStructureDetector`，成功则把结构 bounds 角点 + 连接器位置写入
-  `MultiblockState` pos cache（保证方块变化能触发重检）。
+- `checkPattern()`：跑 `AsyncStructureDetector`，成功则把结构**全部 in-bounds 位置**（`cachePositions`）
+  写入 `MultiblockState` pos cache（保证任意结构方块变化都能触发重检，不只角点）。
 - `asyncCheckPattern()`：**不在异步线程碰世界** —— 检测延迟到主线程，在 `patternLock` 内执行
   `checkPatternWithLock() + onStructureFormed()`，并把状态注册进 `MultiblockWorldSavedData`。
+- `requestStructureCheck()`：主线程立即重检的入口，供 `AsyncStructureNotifier` 调用（结构方块
+  onPlace/onRemove 时），使手动搭建立即成形、成形后被拆立即失形并回到异步轮询。
 - `onStructureFormed()`：重建 cluster，逐个连接器 `setHostController(this)`；
   `onStructureInvalid()`：逐个 `setHostController(null)` 并销毁 cluster。
 - `onUse()`：镜像 `IMultiController.onUse` —— 未成形 + 潜行 + 空手 → 客户端调
@@ -218,7 +369,7 @@
 
 ---
 
-## 8. 验证清单
+## 8. 验证清单（旧架构，历史；新架构验证见 §1.9）
 
 - **Forge 带 GT**：搭处理器（核心 + 扩展 bay + 模块）→ 成形；拆装扩展层（0..16）→ 重成形；
    右键 GT 控制器开 GT 菜单；接 ME 吞 32 频道；拆连接器 → 失形。
@@ -230,7 +381,7 @@
 
 ---
 
-## 9. 已知取舍与边界
+## 9. 已知取舍与边界（旧架构，历史；新架构取舍见 §1.10）
 
 - common 引用 GT 类 → fabric 编译 classpath 需 `compileOnly` GTCEu（含其内嵌 LDLib/Registrate
   的摊平解压）+ forge universal（`IForgeBlockEntity`）；运行期 fabric 绝不加载。
@@ -249,9 +400,12 @@
 
 - GTCEu 7.5.3 源码：`/tmp/opencode/gtceu/src`
   - `api/pattern/{FactoryBlockPattern,BlockPattern,MultiblockState,MultiblockWorldSavedData}.java`
-  - `api/machine/multiblock/MultiblockControllerMachine.java`（`checkPattern`/`asyncCheckPattern`/
-    `onStructureFormed`/`patternLock`/`getMultiblockState`）
+  - `api/pattern/TraceabilityPredicate.java`、`api/pattern/predicates/SimplePredicate.java`
+    （`testGlobal`/`testLimited` 计数；`setMin/MaxGlobalLimited` 语义）
+  - `api/machine/multiblock/MultiblockControllerMachine.java`（`asyncCheckPattern`/`onStructureFormed`/
+    `patternLock`/`getMultiblockState`）
   - `api/machine/{MetaMachine,IMachineBlockEntity,MachineDefinition,MultiblockMachineDefinition}.java`
+    （`MultiblockMachineDefinition.getMatchingShapes`/`repetitionDFS` —— mixin 目标）
   - `api/block/MetaMachineBlock.java`（`use` → `IInteractedMachine.onUse`；facing/upwards_facing 属性）
   - `api/block/property/GTBlockStateProperties.java`（`UPWARDS_FACING`/`NORTH_ONLY_FACING`/`VERTICAL_FACING`）
   - `api/registry/registrate/{MachineBuilder,MultiblockMachineBuilder}.java`（`simpleModel` 默认模板
@@ -271,5 +425,7 @@
     IAsyncKindBlock}`
   - `common/.../gt/{AsyncStructureGtControllerMachine,AsyncStructureGtConnectorMachine,
     AsyncStructureGtMachineBlock,AsyncStructureGtPattern,AsyncStructureGtStatusMenu}.kt`
+  - （目标态新增）`common/.../mixin/{BlockPatternGroupedMixin,MultiblockMachineDefinitionGroupMixin}.java`
+    与 `common/.../gt/IGroupedBlockPattern.kt`；注册进 `common/src/main/resources/ae2isallyouneed.mixins.json`
   - `forge/.../{ExampleMod,init/ForgeBlocks,init/GTAsyncCrafting,forge/client/ForgeClientEvents}`
   - `fabric/.../init/FabricBlocks`

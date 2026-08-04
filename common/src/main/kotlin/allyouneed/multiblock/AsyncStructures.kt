@@ -131,12 +131,14 @@ object AsyncStructures {
         }
     }
 
-    private fun isFloorCell(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean = when (type) {
+    /** Whether [y] is part of the floor (walls may be glass-replaced only above the floor). */
+    fun isFloorCell(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean = when (type) {
         AsyncStructureType.MODULE -> y == 0 || y == height(type) - 1
         else -> y == 0 || y == 1
     }
 
-    private fun inCore(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean {
+    /** Whether a local cell lies inside the switch/processor core (connectors may replace there). */
+    fun inCore(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean {
         val b = coreBounds(type)
         return x in b[0]..b[1] && y in b[2]..b[3] && z in b[4]..b[5]
     }
@@ -147,7 +149,8 @@ object AsyncStructures {
         else -> throw IllegalStateException("no core")
     }
 
-    private fun isOuterShellCell(x: Int, y: Int, z: Int): Boolean {
+    /** Whether a processor core cell lies on exactly one shell face (ME/LAN may replace there). */
+    fun isOuterShellCell(x: Int, y: Int, z: Int): Boolean {
         val b = coreBounds(AsyncStructureType.PROCESSOR)
         var count = 0
         if (x == b[0] || x == b[1]) count++

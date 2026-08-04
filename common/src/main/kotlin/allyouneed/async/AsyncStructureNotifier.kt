@@ -1,7 +1,5 @@
 package allyouneed.async
 
-import allyouneed.gt.AsyncStructureGtControllerMachine
-import com.gregtechceu.gtceu.api.machine.MetaMachine
 import net.minecraft.core.BlockPos
 import net.minecraft.server.TickTask
 import net.minecraft.server.level.ServerLevel
@@ -10,8 +8,12 @@ import net.minecraft.server.level.ServerLevel
  * Reacts to structural blocks (frame, machine block, glass, tower, cores, cable) being placed or
  * removed. Structural blocks carry no block entity, so nothing else revalidates the surrounding
  * multiblock when they change - which leaves manual builds unformed and broken structures stuck
- * formed. On a structural change we scan a box around the position and ask the affected controllers
- * to revalidate immediately instead of waiting for the GT async poller.
+ * formed. On a structural change we scan a box around the position and ask the affected plain
+ * controllers to revalidate immediately instead of waiting for a poll.
+ *
+ * GT controllers are deliberately not notified here: once formed they are invalidated cell by cell
+ * by GTCEu's LevelMixin (the pattern's position cache), and unformed ones are formed by the GT
+ * async poller every 4 ticks.
  *
  * The scan is deferred to the next server tick and coalesced (at most one scan per
  * [SCAN_INTERVAL] per level), so rapid placements such as a GT one-click build cost a single scan
@@ -60,18 +62,12 @@ object AsyncStructureNotifier {
             for (z in (pos.z - RZ)..(pos.z + RZ)) {
                 for (x in (pos.x - RX)..(pos.x + RX)) {
                     val be = level.getBlockEntity(BlockPos(x, y, z)) ?: continue
-                    when (be) {
-                        is AsyncStructureBlockEntity -> when (be.kind) {
+                    if (be is AsyncStructureBlockEntity) {
+                        when (be.kind) {
                             AsyncBlockKind.MODULE_INTERFACE,
                             AsyncBlockKind.SWITCH,
                             AsyncBlockKind.CONTROLLER -> be.requestRescan()
                             else -> {}
-                        }
-                        else -> {
-                            val machine = MetaMachine.getMachine(level, be.blockPos)
-                            if (machine is AsyncStructureGtControllerMachine) {
-                                machine.requestStructureCheck()
-                            }
                         }
                     }
                 }

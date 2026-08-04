@@ -1,6 +1,13 @@
 package allyouneed.gt
 
-import allyouneed.async.*
+import allyouneed.async.AsyncBlockKind
+import allyouneed.async.AsyncModuleCluster
+import allyouneed.async.AsyncProcessorCluster
+import allyouneed.async.AsyncStructureDetector
+import allyouneed.async.AsyncStructureEntityBlock
+import allyouneed.async.AsyncSwitchCluster
+import allyouneed.async.IAsyncChannelView
+import allyouneed.async.setStructuralFormed
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
@@ -23,38 +30,39 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.BlockHitResult
 
 /**
- * Detector-driven GTCEu multiblock controller of the async synthesis structures. The common
- * [AsyncStructureDetector] is the single source of truth for what counts as formed, so both the
- * plain (own block) and the GT flavours behave identically.
+ * GTCEu multiblock controller of the async synthesis structures.
  *
- * GTCEu normally matches a [com.gregtechceu.gtceu.api.pattern.BlockPattern]; the depth-extending
- * switch/processor cannot be expressed as a GT pattern (a pattern repeats a single aisle only), so
- * a placeholder pattern is registered purely to satisfy registrate and [checkPattern] is overridden
- * to run the detector instead. Because [IMultiController.checkPattern] is invoked from an async
- * thread, the actual detection is deferred to the main thread via the GT multiblock lock and a
- * server tick task.
+ * The switch/processor form through GTCEu's **native** [com.gregtechceu.gtceu.api.pattern.BlockPattern]
+ * check (the trailing extension bays are a 6-aisle group repeated 0..16 times via the
+ * [IGroupedBlockPattern] mixin). The pattern check fills the [MultiblockState] position cache with
+ * every required cell; the cluster summary ([AsyncSwitchCluster]/[AsyncProcessorCluster]) is rebuilt
+ * from that cache alone - the detector is never run for switch/processor forming.
+ *
+ * The factory (module) is the exception: a module is anchored at its floor interface (Z), which a GT
+ * pattern cannot express, so it keeps the detector path ([AsyncStructureDetector.detectModule]).
  */
 abstract class AsyncStructureGtControllerMachine(
     holder: IMachineBlockEntity,
 ) : MultiblockControllerMachine(holder), IInteractedMachine, IMachineLife {
 
-    /** The detector result of the most recent pattern check, consumed by [onStructureFormed]. */
+    /** True for the factory, which forms by module interface probing instead of a GT pattern. */
+    protected open val usesDetector: Boolean = false
+
+    /** Detector result of the most recent check, consumed by [rebuildCluster] (factory only). */
     private var detection: Any? = null
 
     /** The live cluster of the formed structure (module / switch / processor). */
     private var cluster: Any? = null
 
-    /** Runs the detector for this structure kind, anchored at the controller's position. */
-    protected abstract fun detect(level: ServerLevel): Any?
-
-    /** Connector positions of a detected structure, used to link the GT connector machines. */
-    protected open fun connectorPositionsOf(cluster: Any?): List<BlockPos> = emptyList()
-
     // ---------------------------------------------------------------------------------------------
-    // Pattern checking (detector-driven)
+    // Pattern checking
     // ---------------------------------------------------------------------------------------------
 
     override fun checkPattern(): Boolean {
+        if (!usesDetector) {
+            val pattern = getPattern()
+            return pattern != null && pattern.checkPatternAt(multiblockState, false)
+        }
         val level = level as? ServerLevel ?: return false
         val detected = detect(level)
         detection = detected
@@ -72,10 +80,15 @@ abstract class AsyncStructureGtControllerMachine(
     }
 
     /**
-     * Mirrors the GT default but never touches the world from the async thread: detection is
-     * deferred to the main thread inside the multiblock lock.
+     * The switch/processor use GTCEu's default: the pattern check runs on the async thread, forming
+     * happens on the main thread. The factory keeps the main-thread deferral because the detector
+     * reads the world directly and must not run off-thread.
      */
     override fun asyncCheckPattern(periodID: Long) {
+        if (!usesDetector) {
+            super.asyncCheckPattern(periodID)
+            return
+        }
         val level = level as? ServerLevel ?: return
         if (multiblockState.hasError() || !isFormed) {
             if ((offsetTimer + periodID) % 4L == 0L) {
@@ -97,35 +110,8 @@ abstract class AsyncStructureGtControllerMachine(
         }
     }
 
-    /**
-     * Forces a main-thread pattern check and keeps the saved-data mapping / async-logic state
-     * consistent. Used by [allyouneed.async.AsyncStructureNotifier] so manual builds revalidate
-     * immediately instead of waiting for the async poller. Mirrors the body of [asyncCheckPattern]
-     * but also re-enters async logic on failure, so a formed-but-broken structure unforms and
-     * resumes polling.
-     */
-    fun requestStructureCheck() {
-        val level = level as? ServerLevel ?: return
-        level.server.tell(TickTask(0) {
-            patternLock.lock()
-            try {
-                if (checkPatternWithLock()) {
-                    setFlipped(false)
-                    onStructureFormed()
-                    val mwsd = MultiblockWorldSavedData.getOrCreate(level)
-                    mwsd.addMapping(multiblockState)
-                    mwsd.removeAsyncLogic(this)
-                } else {
-                    onStructureInvalid()
-                    val mwsd = MultiblockWorldSavedData.getOrCreate(level)
-                    mwsd.removeMapping(multiblockState)
-                    mwsd.addAsyncLogic(this)
-                }
-            } finally {
-                patternLock.unlock()
-            }
-        })
-    }
+    /** Runs the detector for this structure kind, anchored at the controller's position. */
+    protected open fun detect(level: ServerLevel): Any? = null
 
     /**
      * The host controller carries no structural block state of its own, so GTCEu's block-state
@@ -174,14 +160,12 @@ abstract class AsyncStructureGtControllerMachine(
 
     private fun rebuildCluster(level: ServerLevel) {
         destroyCluster(level)
-        val detected = detection
-        detection = null
-        if (detected == null) return
-        cluster = detected
-        for (pos in connectorPositionsOf(detected)) {
+        val newCluster = buildCluster(level) ?: return
+        cluster = newCluster
+        for (pos in connectorPositionsOf(newCluster)) {
             (getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.setHostController(this)
         }
-        val (min, max) = boundsOf(detected)
+        val (min, max) = boundsOf(newCluster)
         setStructuralFormed(level, min, max, true)
     }
 
@@ -195,6 +179,22 @@ abstract class AsyncStructureGtControllerMachine(
         setStructuralFormed(level, min, max, false)
     }
 
+    /**
+     * Builds the cluster summary. For the switch/processor this derives everything from the
+     * pattern's position cache (single source of truth, no second detector run); the factory
+     * consumes its detector result instead.
+     */
+    private fun buildCluster(level: ServerLevel): Any? {
+        if (usesDetector) {
+            return detection.also { detection = null }
+        }
+        val scan = scanCache(level) ?: return null
+        return createCluster(level, scan)
+    }
+
+    /** Constructs the structure-specific cluster from the pattern scan of the matched cells. */
+    protected open fun createCluster(level: ServerLevel, scan: CacheScan): Any? = null
+
     private fun boundsOf(cluster: Any): Pair<BlockPos, BlockPos> = when (cluster) {
         is AsyncModuleCluster -> cluster.boundsMin to cluster.boundsMax
         is AsyncSwitchCluster -> cluster.boundsMin to cluster.boundsMax
@@ -202,11 +202,78 @@ abstract class AsyncStructureGtControllerMachine(
         else -> BlockPos.ZERO to BlockPos.ZERO
     }
 
+    protected open fun connectorPositionsOf(cluster: Any?): List<BlockPos> = when (cluster) {
+        is AsyncSwitchCluster -> cluster.connectorPositions
+        is AsyncProcessorCluster -> cluster.connectorPositions
+        else -> emptyList()
+    }
+
+    /** The matched cells of the pattern check, as the information the cluster needs. */
+    protected class CacheScan(
+        val min: BlockPos,
+        val max: BlockPos,
+        val blockCount: Int,
+        val storageBytes: Long,
+        val meConnectors: List<BlockPos>,
+        val wanConnectors: List<BlockPos>,
+        val lanConnectors: List<BlockPos>,
+        val interfaces: List<BlockPos>,
+    )
+
+    /**
+     * Summarizes the pattern's position cache: bounds and block count of the matched cells, plus
+     * the storage/connector/interface positions the cluster needs. Air cells in the cache are
+     * skipped, mirroring the detector's scan.
+     */
+    private fun scanCache(level: ServerLevel): CacheScan? {
+        val cache = multiblockState.getCache()
+        if (cache.isEmpty()) return null
+        var minX = Int.MAX_VALUE
+        var minY = Int.MAX_VALUE
+        var minZ = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE
+        var maxY = Int.MIN_VALUE
+        var maxZ = Int.MIN_VALUE
+        var blockCount = 0
+        var storageBytes = 0L
+        val me = ArrayList<BlockPos>()
+        val wan = ArrayList<BlockPos>()
+        val lan = ArrayList<BlockPos>()
+        val interfaces = ArrayList<BlockPos>()
+        for (pos in cache) {
+            val actual = AsyncStructureDetector.kindOf(level, pos) ?: continue
+            blockCount++
+            minX = minOf(minX, pos.x)
+            minY = minOf(minY, pos.y)
+            minZ = minOf(minZ, pos.z)
+            maxX = maxOf(maxX, pos.x)
+            maxY = maxOf(maxY, pos.y)
+            maxZ = maxOf(maxZ, pos.z)
+            when (actual) {
+                AsyncBlockKind.STORAGE -> storageBytes += actual.storageBytes
+                AsyncBlockKind.ME_CONNECTOR -> me.add(pos)
+                AsyncBlockKind.WAN_CONNECTOR -> wan.add(pos)
+                AsyncBlockKind.LAN_CONNECTOR -> lan.add(pos)
+                AsyncBlockKind.MODULE_INTERFACE -> interfaces.add(pos)
+                else -> {}
+            }
+        }
+        return CacheScan(
+            BlockPos(minX, minY, minZ),
+            BlockPos(maxX, maxY, maxZ),
+            blockCount,
+            storageBytes,
+            me,
+            wan,
+            lan,
+            interfaces,
+        )
+    }
+
     /**
      * Caches every in-bounds position of the detected structure so GTCEu's LevelMixin fires
-     * [MultiblockState.onBlockStateChanged] for a change at any structural block, not just the
-     * bounds corners. Breaking or replacing any block of a formed structure therefore invalidates
-     * it (and re-enters async logic) instead of leaving the glow stuck.
+     * [MultiblockState.onBlockStateChanged] for a change at any structural block. Only used by the
+     * factory, whose detector result carries the bounds.
      */
     private fun cachePositions(detected: Any): List<BlockPos> {
         val (min, max) = when (detected) {
@@ -270,18 +337,44 @@ abstract class AsyncStructureGtControllerMachine(
 
 /** GTCEu controller of the async synthesis processor (19 x 15 x (19 + 6N)). */
 class AsyncStructureGtProcessorMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
-    override fun detect(level: ServerLevel): Any? = AsyncStructureDetector.detectProcessor(level, pos)
-
-    override fun connectorPositionsOf(cluster: Any?): List<BlockPos> =
-        (cluster as? AsyncProcessorCluster)?.connectorPositions ?: emptyList()
+    override fun createCluster(level: ServerLevel, scan: CacheScan): Any? {
+        val cluster = AsyncProcessorCluster(
+            anchorPos = pos,
+            boundsMin = scan.min,
+            boundsMax = scan.max,
+            blockCount = scan.blockCount,
+            storageBytes = scan.storageBytes,
+            connectorCount = scan.meConnectors.size + scan.lanConnectors.size,
+            meConnectorPositions = scan.meConnectors,
+            wanConnectorPositions = scan.wanConnectors,
+            lanConnectorPositions = scan.lanConnectors,
+            interfacePositions = scan.interfaces,
+        )
+        for (interfacePos in scan.interfaces) {
+            AsyncStructureDetector.detectModule(level, interfacePos)?.let(cluster::addModule)
+        }
+        return cluster
+    }
 }
 
 /** GTCEu controller of an async synthesis network switch (19 x 7 x (11 + 6N)). */
 class AsyncStructureGtSwitchMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
-    override fun detect(level: ServerLevel): Any? = AsyncStructureDetector.detectSwitch(level, pos)
-
-    override fun connectorPositionsOf(cluster: Any?): List<BlockPos> =
-        (cluster as? AsyncSwitchCluster)?.connectorPositions ?: emptyList()
+    override fun createCluster(level: ServerLevel, scan: CacheScan): Any? {
+        val cluster = AsyncSwitchCluster(
+            anchorPos = pos,
+            boundsMin = scan.min,
+            boundsMax = scan.max,
+            blockCount = scan.blockCount,
+            meConnectorPositions = scan.meConnectors,
+            wanConnectorPositions = scan.wanConnectors,
+            lanConnectorPositions = scan.lanConnectors,
+            interfacePositions = scan.interfaces,
+        )
+        for (interfacePos in scan.interfaces) {
+            AsyncStructureDetector.detectModule(level, interfacePos)?.let(cluster::addModule)
+        }
+        return cluster
+    }
 }
 
 /**
@@ -289,6 +382,8 @@ class AsyncStructureGtSwitchMachine(holder: IMachineBlockEntity) : AsyncStructur
  * the module; detection starts at the module interface directly below/behind it.
  */
 class AsyncStructureGtFactoryMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
+    override val usesDetector: Boolean get() = true
+
     override fun detect(level: ServerLevel): Any? {
         val facing = frontFacing
         val interfacePos = pos.offset(2 * facing.stepX, -4, 2 * facing.stepZ)
