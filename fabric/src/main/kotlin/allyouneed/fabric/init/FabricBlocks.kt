@@ -26,6 +26,7 @@ import allyouneed.pattern.machine.MachinePatternTerminalRegistration
 import allyouneed.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
+import appeng.block.AEBaseEntityBlock
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import net.fabricmc.fabric.api.`object`.builder.v1.block.entity.FabricBlockEntityTypeBuilder
@@ -89,7 +90,7 @@ object FabricBlocks {
             ADAPTIVE_PATTERN_TERMINAL
         ).build()
         @Suppress("UNCHECKED_CAST")
-        (ADAPTIVE_PATTERN_TERMINAL as appeng.block.AEBaseEntityBlock<AdaptivePatternTerminalBlockEntity>).setBlockEntity(
+        (ADAPTIVE_PATTERN_TERMINAL as AEBaseEntityBlock<AdaptivePatternTerminalBlockEntity>).setBlockEntity(
             AdaptivePatternTerminalBlockEntity::class.java, ADAPTIVE_PATTERN_TERMINAL_BE, null, null
         )
         AdaptivePatternTerminalRegistration.setBlockEntityType(ADAPTIVE_PATTERN_TERMINAL_BE)
@@ -111,7 +112,7 @@ object FabricBlocks {
             MACHINE_ASSEMBLER
         ).build()
         @Suppress("UNCHECKED_CAST")
-        (MACHINE_ASSEMBLER as appeng.block.AEBaseEntityBlock<MachineAssemblerBlockEntity>).setBlockEntity(
+        (MACHINE_ASSEMBLER as AEBaseEntityBlock<MachineAssemblerBlockEntity>).setBlockEntity(
             MachineAssemblerBlockEntity::class.java, MACHINE_ASSEMBLER_BE, null, null
         )
         MachineAssemblerRegistration.setBlockEntityType(MACHINE_ASSEMBLER_BE)
@@ -134,7 +135,7 @@ object FabricBlocks {
             MACHINE_PATTERN_TERMINAL
         ).build()
         @Suppress("UNCHECKED_CAST")
-        (MACHINE_PATTERN_TERMINAL as appeng.block.AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
+        (MACHINE_PATTERN_TERMINAL as AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
             MachinePatternTerminalBlockEntity::class.java, MACHINE_PATTERN_TERMINAL_BE, null, null
         )
         MachinePatternTerminalRegistration.setBlockEntityType(MACHINE_PATTERN_TERMINAL_BE)
@@ -156,7 +157,7 @@ object FabricBlocks {
             ME_IO_DRIVE
         ).build()
         @Suppress("UNCHECKED_CAST")
-        (ME_IO_DRIVE as appeng.block.AEBaseEntityBlock<MEIODriveBlockEntity>).setBlockEntity(
+        (ME_IO_DRIVE as AEBaseEntityBlock<MEIODriveBlockEntity>).setBlockEntity(
             MEIODriveBlockEntity::class.java, ME_IO_DRIVE_BE, null, null
         )
         MEIODriveRegistration.setBlockEntityType(ME_IO_DRIVE_BE)
@@ -194,12 +195,12 @@ object FabricBlocks {
 
         for (kind in structureKinds) {
             @Suppress("UNCHECKED_CAST")
-            (asyncStructureInstance(kind) as appeng.block.AEBaseEntityBlock<AsyncStructureBlockEntity>)
+            (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureBlockEntity>)
                 .setBlockEntity(AsyncStructureBlockEntity::class.java, structureBE, null, null)
         }
         for (kind in connectorKinds) {
             @Suppress("UNCHECKED_CAST")
-            (asyncStructureInstance(kind) as appeng.block.AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>)
+            (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>)
                 .setBlockEntity(AsyncStructureConnectorBlockEntity::class.java, structureConnectorBE, null, null)
         }
 

@@ -489,7 +489,7 @@ class MachineAssemblerBlockEntity(
         val adaptor = InternalInventory.wrapExternal(te, d.opposite) ?: return output
 
         val size = output.count
-        var remaining = adaptor.addItems(output)
+        val remaining = adaptor.addItems(output)
         val newSize = if (remaining.isEmpty) 0 else remaining.count
 
         if (size != newSize) {

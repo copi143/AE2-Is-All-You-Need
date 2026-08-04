@@ -32,6 +32,7 @@ class ScriptLanguageServer(private val port: Int = 0) {
     private val documents = ConcurrentHashMap<String, String>()
     private val languageService = ScriptLanguageService()
 
+    @Suppress("ConstPropertyName")
     companion object {
         const val METHOD_initialize = "initialize"
         const val METHOD_initialized = "initialized"

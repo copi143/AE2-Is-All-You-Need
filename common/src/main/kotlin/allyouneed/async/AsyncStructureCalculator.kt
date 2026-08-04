@@ -176,9 +176,9 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
 
     private fun resyncConnectors(level: ServerLevel, cluster: Any) {
         val positions = when (cluster) {
-            is AsyncSwitchCluster -> cluster.connectorPositions
-            is AsyncProcessorCluster -> cluster.connectorPositions
-            else -> emptyList()
+            is AsyncSwitchCluster -> cluster.connectorPositions.toSet()
+            is AsyncProcessorCluster -> cluster.connectorPositions.toSet()
+            else -> emptySet()
         }
         val removed = linkedConnectors - positions
         for (pos in removed) {

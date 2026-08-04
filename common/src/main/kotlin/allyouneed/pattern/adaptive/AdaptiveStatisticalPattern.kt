@@ -7,6 +7,7 @@ import appeng.api.stacks.AEKey
 import appeng.api.stacks.GenericStack
 import net.minecraft.nbt.Tag
 import net.minecraft.world.level.Level
+import kotlin.math.ceil
 
 /**
  * Adaptive probability pattern: instead of pre-computing a fixed number of attempts
@@ -68,13 +69,13 @@ class AdaptiveStatisticalPattern(
     private fun getAttemptCount(): Long {
         val n = requestedOutputAmount ?: output.amount()
         if (probability >= 1.0) return n
-        return Math.max(1, Math.ceil(n.toDouble() / probability).toLong())
+        return 1L.coerceAtLeast(ceil(n.toDouble() / probability).toLong())
     }
 
     fun forRequest(requestedOutputAmount: Long): AdaptiveStatisticalPattern {
         return AdaptiveStatisticalPattern(
             definition, inputsPerAttempt, output, probability, timeout,
-            Math.max(1, requestedOutputAmount)
+            1L.coerceAtLeast(requestedOutputAmount)
         )
     }
 

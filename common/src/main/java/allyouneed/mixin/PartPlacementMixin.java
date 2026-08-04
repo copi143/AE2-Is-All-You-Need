@@ -7,8 +7,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import allyouneed.mac.MacHosts;
-import allyouneed.mac.MacNbt;
+import allyouneed.netaddr.mac.MacHosts;
+import allyouneed.netaddr.mac.MacNbt;
 import appeng.api.parts.IPart;
 import appeng.api.parts.IPartItem;
 import appeng.parts.PartPlacement;

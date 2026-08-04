@@ -7,8 +7,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import allyouneed.mac.MacNbt;
-import allyouneed.mac.MacTooltipTexts;
+import allyouneed.netaddr.mac.MacNbt;
+import allyouneed.netaddr.mac.MacTooltipTexts;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;

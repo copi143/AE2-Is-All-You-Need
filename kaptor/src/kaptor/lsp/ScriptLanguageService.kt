@@ -290,14 +290,12 @@ class ScriptLanguageService {
 
         val token = result.tokens.find {
             offset >= getSourceOffset(source, it.line, it.column) && offset < getSourceOffset(
-                source,
-                it.stopLine,
-                it.stopColumn
+                source, it.stopLine, it.stopColumn
             )
         } ?: return null
 
-        return when {
-            token.type in listOf(
+        return when (token.type) {
+            in listOf(
                 "IF",
                 "ELSE",
                 "WHEN",
@@ -315,7 +313,7 @@ class ScriptLanguageService {
                 "IMPORT"
             ) -> HoverInfo("**${token.text}**", "Kotlin keyword")
 
-            token.type == "Identifier" -> {
+            "Identifier" -> {
                 if (token.text in builtInFunctions) {
                     HoverInfo("**${token.text}()**", "Built-in function")
                 } else {
@@ -348,9 +346,7 @@ class ScriptLanguageService {
 
         val token = result.tokens.find {
             offset >= getSourceOffset(source, it.line, it.column) && offset < getSourceOffset(
-                source,
-                it.stopLine,
-                it.stopColumn
+                source, it.stopLine, it.stopColumn
             )
         } ?: return null
 

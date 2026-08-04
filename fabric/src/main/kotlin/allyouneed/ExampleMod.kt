@@ -3,7 +3,7 @@ package allyouneed
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.dimensional.DimensionalCellStore
-import allyouneed.mac.MacAddressRegistry
+import allyouneed.netaddr.mac.MacAddressRegistry
 import allyouneed.fabric.init.FabricBlocks
 import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus

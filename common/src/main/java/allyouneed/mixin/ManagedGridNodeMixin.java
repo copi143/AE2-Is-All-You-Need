@@ -1,6 +1,11 @@
 package allyouneed.mixin;
 
-import allyouneed.mac.*;
+import allyouneed.api.IMacAddressHolder;
+import allyouneed.api.IManagedMacAddressHolder;
+import allyouneed.netaddr.mac.MacAddress;
+import allyouneed.netaddr.mac.MacAddressRegistry;
+import allyouneed.netaddr.mac.MacNbt;
+import allyouneed.netaddr.mac.MacPolicy;
 import appeng.me.GridNode;
 import appeng.me.ManagedGridNode;
 import net.minecraft.core.BlockPos;

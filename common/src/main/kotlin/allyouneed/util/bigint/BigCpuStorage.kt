@@ -10,6 +10,7 @@ import java.math.BigInteger
  * Helpers for [BigCpuCapacity] on [CraftingCPUCluster].
  * Capacity lives on the cluster instance (mixin fields), not a global map.
  */
+@Suppress("KotlinConstantConditions")
 object BigCpuStorage {
     @JvmStatic
     fun clearCluster(cluster: CraftingCPUCluster?) {

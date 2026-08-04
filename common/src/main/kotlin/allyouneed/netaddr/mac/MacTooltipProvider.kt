@@ -1,5 +1,6 @@
-package allyouneed.mac
+package allyouneed.netaddr.mac
 
+import allyouneed.util.MODID
 import appeng.api.integrations.igtooltip.ClientRegistration
 import appeng.api.integrations.igtooltip.CommonRegistration
 import appeng.api.integrations.igtooltip.PartTooltips
@@ -64,6 +65,6 @@ class MacTooltipProvider : TooltipProvider {
 
     companion object {
         @JvmField
-        val ID: ResourceLocation = ResourceLocation(allyouneed.util.MODID, "mac")
+        val ID: ResourceLocation = ResourceLocation(MODID, "mac")
     }
 }

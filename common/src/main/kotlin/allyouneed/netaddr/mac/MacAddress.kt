@@ -1,6 +1,6 @@
-package allyouneed.mac
+package allyouneed.netaddr.mac
 
-import allyouneed.mac.MacAddress.MASK
+import allyouneed.netaddr.mac.MacAddress.MASK
 
 
 /**

@@ -56,6 +56,7 @@ open class AsyncStructureBlockEntity(
                 null -> emptyList()
                 else -> sw.connectorPositions
             }
+
             else -> processor.connectorPositions
         }
         return positions.mapNotNull { lvl.getBlockEntity(it) as? IAsyncChannelView }
@@ -111,15 +112,12 @@ class AsyncStructureConnectorBlockEntity(
     type: BlockEntityType<*>,
     pos: BlockPos,
     state: BlockState,
-) : AENetworkBlockEntity(type, pos, state),
-    IAsyncChannelSink,
-    IAsyncChannelView {
+) : AENetworkBlockEntity(type, pos, state), IAsyncChannelSink, IAsyncChannelView {
 
     private var hostController: AsyncStructureBlockEntity? = null
 
     init {
-        mainNode
-            .setFlags(GridFlags.MULTIBLOCK, GridFlags.REQUIRE_CHANNEL, GridFlags.DENSE_CAPACITY)
+        mainNode.setFlags(GridFlags.MULTIBLOCK, GridFlags.REQUIRE_CHANNEL, GridFlags.DENSE_CAPACITY)
             .addService(IGridMultiblock::class.java, IGridMultiblock { getMultiblockNodes() })
     }
 
@@ -149,8 +147,7 @@ class AsyncStructureConnectorBlockEntity(
         if (lvl == null || lvl.isClientSide || notLoaded() || isRemoved) return
         val current = lvl.getBlockState(worldPosition)
         if (current.block !is AsyncStructureConnectorBlock) return
-        val newState = current
-            .setValue(AsyncStructureEntityBlock.FORMED, isFormed())
+        val newState = current.setValue(AsyncStructureEntityBlock.FORMED, isFormed())
             .setValue(AsyncStructureEntityBlock.POWERED, getPowered())
         if (current != newState) {
             lvl.setBlock(worldPosition, newState, Block.UPDATE_CLIENTS)
@@ -226,12 +223,8 @@ class AsyncStructureConnectorBlockEntity(
     // -- Channel sink --
 
     override fun getItemFromBlockEntity(): Item {
-        val lvl = level
-        if (lvl == null) {
-            return Items.AIR
-        }
-        return (lvl.getBlockState(worldPosition).block as? AsyncStructureConnectorBlock)?.asItem()
-            ?: Items.AIR
+        val lvl = level ?: return Items.AIR
+        return (lvl.getBlockState(worldPosition).block as? AsyncStructureConnectorBlock)?.asItem() ?: Items.AIR
     }
 
     override val swallowedChannels: Int

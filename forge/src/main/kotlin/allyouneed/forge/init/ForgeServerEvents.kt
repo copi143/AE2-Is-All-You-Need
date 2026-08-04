@@ -1,7 +1,7 @@
 package allyouneed.forge.init
 
 import allyouneed.cell.dimensional.DimensionalCellStore
-import allyouneed.mac.MacAddressRegistry
+import allyouneed.netaddr.mac.MacAddressRegistry
 import allyouneed.util.MODID
 import net.minecraftforge.event.server.ServerAboutToStartEvent
 import net.minecraftforge.event.server.ServerStoppingEvent

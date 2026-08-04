@@ -181,9 +181,9 @@ object AsyncStructures {
         if (x == 0 || x == 2) {
             return AsyncBlockKind.MACHINE
         }
-        return when {
-            z == 1 || z == 3 -> AsyncBlockKind.TOWER
-            z == 2 -> if (y == 3) AsyncBlockKind.EXECUTION else AsyncBlockKind.ENERGY
+        return when (z) {
+            1, 3 -> AsyncBlockKind.TOWER
+            2 -> if (y == 3) AsyncBlockKind.EXECUTION else AsyncBlockKind.ENERGY
             else -> null
         }
     }
@@ -221,9 +221,9 @@ object AsyncStructures {
         if (edges == 1) {
             return if (x == 9 && y == 4 && z == 3) AsyncBlockKind.SWITCH else AsyncBlockKind.MACHINE
         }
-        return when {
-            z == 4 || z == 6 -> if (y == 4) AsyncBlockKind.ENERGY else AsyncBlockKind.TOWER
-            z == 5 -> if (y == 4) AsyncBlockKind.COMPUTING else AsyncBlockKind.ENERGY
+        return when (z) {
+            4, 6 -> if (y == 4) AsyncBlockKind.ENERGY else AsyncBlockKind.TOWER
+            5 -> if (y == 4) AsyncBlockKind.COMPUTING else AsyncBlockKind.ENERGY
             else -> null
         }
     }
@@ -332,16 +332,16 @@ object AsyncStructures {
         val row = (z - bayStart) % EXTENSION_DEPTH
         return when (row) {
             0, 4 -> if (x == 1 || x == 9 || x == 17) AsyncBlockKind.FRAME else AsyncBlockKind.MACHINE
-            1, 3 -> when {
-                x == 1 || x == 9 || x == 17 -> AsyncBlockKind.FRAME
-                x == 2 || x == 8 || x == 10 || x == 16 -> AsyncBlockKind.MACHINE
+            1, 3 -> when (x) {
+                1, 9, 17 -> AsyncBlockKind.FRAME
+                2, 8, 10, 16 -> AsyncBlockKind.MACHINE
                 else -> null
             }
 
-            2 -> when {
-                x == 5 || x == 13 -> AsyncBlockKind.MODULE_INTERFACE
-                x == 1 || x == 9 || x == 17 -> AsyncBlockKind.FRAME
-                x == 2 || x == 8 || x == 10 || x == 16 -> AsyncBlockKind.MACHINE
+            2 -> when (x) {
+                5, 13 -> AsyncBlockKind.MODULE_INTERFACE
+                1, 9, 17 -> AsyncBlockKind.FRAME
+                2, 8, 10, 16 -> AsyncBlockKind.MACHINE
                 else -> null
             }
 

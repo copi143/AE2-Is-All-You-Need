@@ -470,8 +470,7 @@ class KotlinSubsetVisitor(
     private fun parsePrefixUnaryExpression(ctx: KotlinParser.PrefixUnaryExpressionContext): IrNode {
         var expr = parsePostfixUnaryExpression(ctx.postfixUnaryExpression())
         for (prefix in ctx.unaryPrefix()) {
-            val opCtx = prefix.prefixUnaryOperator()
-            if (opCtx == null) continue
+            val opCtx = prefix.prefixUnaryOperator() ?: continue
             val unaryOp = when {
                 opCtx.SUB() != null -> UnaryOperator.MINUS
                 opCtx.excl() != null -> UnaryOperator.NOT

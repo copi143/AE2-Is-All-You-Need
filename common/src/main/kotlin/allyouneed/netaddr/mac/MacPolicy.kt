@@ -1,5 +1,6 @@
-package allyouneed.mac
+package allyouneed.netaddr.mac
 
+import allyouneed.api.IManagedMacAddressHolder
 import appeng.api.implementations.parts.ICablePart
 import appeng.api.networking.IGridNode
 import appeng.api.networking.IManagedGridNode

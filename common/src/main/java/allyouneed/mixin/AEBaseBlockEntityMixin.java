@@ -1,7 +1,7 @@
 package allyouneed.mixin;
 
-import allyouneed.mac.MacHosts;
-import allyouneed.mac.MacNbt;
+import allyouneed.netaddr.mac.MacHosts;
+import allyouneed.netaddr.mac.MacNbt;
 import appeng.blockentity.AEBaseBlockEntity;
 import appeng.util.SettingsFrom;
 import net.minecraft.nbt.CompoundTag;
