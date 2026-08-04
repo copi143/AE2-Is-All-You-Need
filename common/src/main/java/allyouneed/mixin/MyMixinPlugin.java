@@ -8,6 +8,20 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ * 本配置通用可选依赖守卫。
+ *
+ * 部分 mixin 针对可选运行时依赖的类（当前是 GTCEu：{@code allyouneed.mixin.gtceu}
+ * 里的组模式 mixin；以后可能更多）。在没有该依赖的平台上（Fabric 从不带 GTCEu）
+ * 目标类不存在，mixin 必须被跳过，否则配置处理会失败。提前否决 mixin 让配置能
+ * 干净加载，而在类存在时 mixin 仍然生效。
+ *
+ * 每个目标类都被通用探测：如果它的类文件在 classpath 上不可达，就跳过该 mixin。
+ * 没有硬编码的依赖列表，未来新增的可选依赖会被自动处理。
+ *
+ * 探测绝不能加载类：在这里调用 {@code Class.forName} 会在 MixinTransformer 提交
+ * 本配置之前就把目标类注册进 classloader，于是已加载的类永远不会被变换，mixin
+ * 静默地永不生效。用 classpath 资源查找可以检查存在性而不加载。
+ *
  * Generic optional-dependency guard for the mixins in this config.
  *
  * <p>Some mixins target classes of optional runtime dependencies (currently GTCEu: the group

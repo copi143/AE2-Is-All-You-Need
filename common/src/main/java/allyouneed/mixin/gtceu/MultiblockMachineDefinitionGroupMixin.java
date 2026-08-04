@@ -14,6 +14,15 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
+ * 组感知的 JEI / 世界内预览页面枚举。
+ *
+ * 原版 {@link MultiblockMachineDefinition#getMatchingShapes()} 的 DFS 把每个
+ * {@code aisleRepetitions} 维度枚举为 {@code [min..max]}，因此 {@code [0, 16]}
+ * 的组 aisle 会把 0 舱位的页面排在第一个。而世界内预览
+ * （{@code MultiblockInWorldPreviewRenderer.showPreview}）渲染
+ * {@code getMatchingShapes().get(0)}，所以第一页必须展示一个舱位。本 overwrite
+ * 把组维度的顺序改为 {@code 1..max} 后接 {@code 0}。
+ *
  * Group-aware JEI / in-world preview page enumeration.
  *
  * <p>The stock {@link MultiblockMachineDefinition#getMatchingShapes()} DFS enumerates every
@@ -34,7 +43,7 @@ public abstract class MultiblockMachineDefinitionGroupMixin {
 
     /**
      * @author ae2isallyouneed
-     * @reason Grouped-repetition page ordering (see class doc); otherwise a verbatim port.
+     * @reason 分组重复的页面排序（见类文档）；其余为逐行移植。 / Grouped-repetition page ordering (see class doc); otherwise a verbatim port.
      */
     @Overwrite
     public List<MultiblockShapeInfo> getMatchingShapes() {
@@ -45,6 +54,9 @@ public abstract class MultiblockMachineDefinitionGroupMixin {
     }
 
     /**
+     * 枚举步骤重复。一个步骤覆盖 [getGroupSize] 个 aisle（单个为 1），因此递归按
+     * 组大小推进；组内部的 aisle 永远不会被访问。
+     *
      * Enumerates the step repeats. A step covers [getGroupSize] aisles (1 for singles), so the
      * recursion advances by the group size; interior aisles of a group are never visited.
      */

@@ -13,6 +13,10 @@ import net.minecraft.world.inventory.MenuType
 import net.minecraft.world.level.block.entity.BlockEntity
 
 /**
+ * GTCEu 形态的 async 合成结构控制器状态菜单。刻意只依赖 [BlockEntity]（从不依赖
+ * GTCEu 方块实体类），因此可以由 AE2 的跨平台菜单机制构建。与普通状态菜单共用
+ * 同一个界面。
+ *
  * Status menu for the GTCEu controllers of the async synthesis structures. Deliberately only relies
  * on [BlockEntity] (never on the GTCEu block entity class) so it can be built by AE2's
  * cross-platform menu machinery. Shares the common screen with the plain status menu.

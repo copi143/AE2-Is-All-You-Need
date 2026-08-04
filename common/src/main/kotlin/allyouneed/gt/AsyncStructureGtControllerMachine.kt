@@ -30,6 +30,17 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.BlockHitResult
 
 /**
+ * async 合成结构的 GTCEu 多方块控制器。
+ *
+ * 交换机/处理器通过 GTCEu **原生** [com.gregtechceu.gtceu.api.pattern.BlockPattern]
+ * 检查成形（尾部扩展舱是一个 6-aisle 组，通过 [IGroupedBlockPattern] mixin 重复
+ * 0..16 次）。模式检查会把每个必需格子填进 [MultiblockState] 的位置缓存；簇摘要
+ * （[AsyncSwitchCluster]/[AsyncProcessorCluster]）只从该缓存重建——交换机/处理器
+ * 成形从不运行检测器。
+ *
+ * 工厂（模块）是例外：模块锚定在其地板接口（Z）上，GT 模式无法表达这种关系，
+ * 所以它保留检测器路径（[AsyncStructureDetector.detectModule]）。
+ *
  * GTCEu multiblock controller of the async synthesis structures.
  *
  * The switch/processor form through GTCEu's **native** [com.gregtechceu.gtceu.api.pattern.BlockPattern]
@@ -45,13 +56,13 @@ abstract class AsyncStructureGtControllerMachine(
     holder: IMachineBlockEntity,
 ) : MultiblockControllerMachine(holder), IInteractedMachine, IMachineLife {
 
-    /** True for the factory, which forms by module interface probing instead of a GT pattern. */
+    /** 工厂为 true，它通过模块接口探测成形，而不是 GT 模式。 / True for the factory, which forms by module interface probing instead of a GT pattern. */
     protected open val usesDetector: Boolean = false
 
-    /** Detector result of the most recent check, consumed by [rebuildCluster] (factory only). */
+    /** 最近一次检查的检测结果，由 [rebuildCluster] 消费（仅工厂）。 / Detector result of the most recent check, consumed by [rebuildCluster] (factory only). */
     private var detection: Any? = null
 
-    /** The live cluster of the formed structure (module / switch / processor). */
+    /** 已成形结构的活动簇（模块 / 交换机 / 处理器）。 / The live cluster of the formed structure (module / switch / processor). */
     private var cluster: Any? = null
 
     // ---------------------------------------------------------------------------------------------
@@ -80,6 +91,9 @@ abstract class AsyncStructureGtControllerMachine(
     }
 
     /**
+     * 交换机/处理器使用 GTCEu 默认方式：模式检查在 async 线程上运行，成形在主线程
+     * 上进行。工厂保留主线程延迟，因为检测器直接读世界，绝不能在子线程上跑。
+     *
      * The switch/processor use GTCEu's default: the pattern check runs on the async thread, forming
      * happens on the main thread. The factory keeps the main-thread deferral because the detector
      * reads the world directly and must not run off-thread.
@@ -110,10 +124,13 @@ abstract class AsyncStructureGtControllerMachine(
         }
     }
 
-    /** Runs the detector for this structure kind, anchored at the controller's position. */
+    /** 以控制器位置为锚点，运行本结构种类的检测器。 / Runs the detector for this structure kind, anchored at the controller's position. */
     protected open fun detect(level: ServerLevel): Any? = null
 
     /**
+     * 宿主控制器自己没有结构方块状态，所以 GTCEu 的方块状态钩子无法判断它锚定的
+     * 结构已经消失。宿主被移除时，把结构整体拆掉（熄灭其余方块、解链连接器）。
+     *
      * The host controller carries no structural block state of its own, so GTCEu's block-state
      * hook cannot tell that the structure it anchored is gone. When the host is removed, tear the
      * structure down (unlight the remaining blocks, unlink the connectors).
@@ -151,7 +168,7 @@ abstract class AsyncStructureGtControllerMachine(
         detection = null
     }
 
-    /** Mirrors the vanilla async blocks: flip the FORMED block state without notifying neighbours. */
+    /** 与普通 async 方块一致：翻转 FORMED 方块状态，不通知邻居。 / Mirrors the vanilla async blocks: flip the FORMED block state without notifying neighbours. */
     private fun updateFormedBlockState(formed: Boolean) {
         val level = level as? ServerLevel ?: return
         val current = level.getBlockState(pos)
@@ -184,6 +201,9 @@ abstract class AsyncStructureGtControllerMachine(
     }
 
     /**
+     * 构建簇摘要。交换机/处理器的一切都从 pattern 的位置缓存推导（单一事实来源，
+     * 不再跑第二次检测器）；工厂则消费自己的检测结果。
+     *
      * Builds the cluster summary. For the switch/processor this derives everything from the
      * pattern's position cache (single source of truth, no second detector run); the factory
      * consumes its detector result instead.
@@ -196,7 +216,7 @@ abstract class AsyncStructureGtControllerMachine(
         return createCluster(level, scan)
     }
 
-    /** Constructs the structure-specific cluster from the pattern scan of the matched cells. */
+    /** 从匹配格子的模式扫描结果构造本结构专属的簇。 / Constructs the structure-specific cluster from the pattern scan of the matched cells. */
     protected open fun createCluster(level: ServerLevel, scan: CacheScan): Any? = null
 
     private fun boundsOf(cluster: Any): Pair<BlockPos, BlockPos> = when (cluster) {
@@ -212,7 +232,7 @@ abstract class AsyncStructureGtControllerMachine(
         else -> emptyList()
     }
 
-    /** The matched cells of the pattern check, as the information the cluster needs. */
+    /** 模式检查匹配到的格子，转为簇所需的信息。 / The matched cells of the pattern check, as the information the cluster needs. */
     protected class CacheScan(
         val min: BlockPos,
         val max: BlockPos,
@@ -225,6 +245,9 @@ abstract class AsyncStructureGtControllerMachine(
     )
 
     /**
+     * 汇总 pattern 的位置缓存：匹配格子的边界与方块数，加上簇需要的存储/连接器/
+     * 接口位置。缓存中的空气格被跳过，与检测器的扫描保持一致。
+     *
      * Summarizes the pattern's position cache: bounds and block count of the matched cells, plus
      * the storage/connector/interface positions the cluster needs. Air cells in the cache are
      * skipped, mirroring the detector's scan.
@@ -275,6 +298,9 @@ abstract class AsyncStructureGtControllerMachine(
     }
 
     /**
+     * 缓存检测结构的每个在界位置，让 GTCEu 的 LevelMixin 在任意结构方块变化时触发
+     * [MultiblockState.onBlockStateChanged]。仅工厂使用，其检测结果携带边界。
+     *
      * Caches every in-bounds position of the detected structure so GTCEu's LevelMixin fires
      * [MultiblockState.onBlockStateChanged] for a change at any structural block. Only used by the
      * factory, whose detector result carries the bounds.
@@ -339,7 +365,7 @@ abstract class AsyncStructureGtControllerMachine(
     }
 }
 
-/** GTCEu controller of the async synthesis processor (19 x 15 x (19 + 6N)). */
+/** async 合成处理器（19 x 15 x (19 + 6N)）的 GTCEu 控制器。 / GTCEu controller of the async synthesis processor (19 x 15 x (19 + 6N)). */
 class AsyncStructureGtProcessorMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
     override fun createCluster(level: ServerLevel, scan: CacheScan): Any? {
         val cluster = AsyncProcessorCluster(
@@ -361,7 +387,7 @@ class AsyncStructureGtProcessorMachine(holder: IMachineBlockEntity) : AsyncStruc
     }
 }
 
-/** GTCEu controller of an async synthesis network switch (19 x 7 x (11 + 6N)). */
+/** async 合成网络交换机（19 x 7 x (11 + 6N)）的 GTCEu 控制器。 / GTCEu controller of an async synthesis network switch (19 x 7 x (11 + 6N)). */
 class AsyncStructureGtSwitchMachine(holder: IMachineBlockEntity) : AsyncStructureGtControllerMachine(holder) {
     override fun createCluster(level: ServerLevel, scan: CacheScan): Any? {
         val cluster = AsyncSwitchCluster(
@@ -382,6 +408,9 @@ class AsyncStructureGtSwitchMachine(holder: IMachineBlockEntity) : AsyncStructur
 }
 
 /**
+ * async 合成工厂（3 x 7 x 5）的 GTCEu 控制器。工厂是模块的顶前方块；检测从它
+ * 正下后方的模块接口开始。
+ *
  * GTCEu controller of an async synthesis factory (3 x 7 x 5). The factory is the top-front block of
  * the module; detection starts at the module interface directly below/behind it.
  */

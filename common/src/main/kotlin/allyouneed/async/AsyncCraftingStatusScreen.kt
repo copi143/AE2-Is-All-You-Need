@@ -7,6 +7,16 @@ import appeng.client.gui.AEBaseScreen
 import appeng.client.gui.style.ScreenStyle
 import appeng.menu.AEBaseMenu
 
+/**
+ * async 合成处理器的状态界面，对所有宿主通用（自有方块与 GTCEu 机器共用）。
+ * 除已成形/已接入网格之外，还展示通道吞噬状态、总存储容量与方块数；只有成形、
+ * 已接入、且（无限通道模式下或）吞满了 32 条通道，才判定为“工作中”。
+ *
+ * Status screen of the async synthesis processor, shared by every host flavour (own block and
+ * GTCEu machines). Besides formed/grid-connected it shows the swallowed-channels state, total
+ * storage capacity and block count; it is considered "working" only when formed, connected, and
+ * (in infinite channel mode or) swallowing the full 32 channels.
+ */
 class AsyncCraftingStatusScreen<M>(
     menu: M,
     playerInventory: Inventory,

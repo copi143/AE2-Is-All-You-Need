@@ -51,10 +51,10 @@
 
 | 文件 | 改动 |
 | --- | --- |
-| `common/src/main/java/allyouneed/mixin/BlockPatternGroupedMixin.java` | 新增。`@Unique int[] groupSizes`；`@Overwrite` `checkPatternAt(6参)` / `getPreview` / `autoBuild` |
+| `common/src/main/java/allyouneed/mixin/gtceu/BlockPatternGroupedMixin.java` | 新增。`@Unique int[] groupSizes`；`@Overwrite` `checkPatternAt(6参)` / `getPreview` / `autoBuild` |
 | `common/src/main/kotlin/allyouneed/gt/IGroupedBlockPattern.kt` | 新增接口：`setGroup(aisleIndex, groupSize)` / `getGroupSize(aisleIndex)`（mixin `@Unique` 字段实现） |
-| `common/src/main/java/allyouneed/mixin/MultiblockMachineDefinitionGroupMixin.java` | 新增。`@Overwrite getMatchingShapes()`：组首且 min==0 的维度页面序 = 1..max 再补 0 |
-| `common/src/main/resources/ae2isallyouneed.mixins.json` | 注册上述两个 mixin（`allyouneed.mixin` 包，Java 文件） |
+| `common/src/main/java/allyouneed/mixin/gtceu/MultiblockMachineDefinitionGroupMixin.java` | 新增。`@Overwrite getMatchingShapes()`：组首且 min==0 的维度页面序 = 1..max 再补 0 |
+| `common/src/main/resources/ae2isallyouneed.mixins.json` | 注册上述两个 mixin（`allyouneed.mixin.gtceu` 包，Java 文件）；`plugin` 为 `allyouneed.mixin.MyMixinPlugin`（通用可选依赖守卫） |
 | `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtPattern.kt` | 重写 `build()`：发全深度布局（base + 组 + 收尾 + 后墙），构造后 `setGroup(baseCount, 6)` |
 | `common/src/main/kotlin/allyouneed/multiblock/AsyncStructures.kt` | `isFloorCell` / `inCore` / `isOuterShellCell` 改为 public（pattern 生成器需要） |
 | `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtControllerMachine.kt` | 删检测器覆写；`rebuildCluster` 改从 pattern 的 pos cache 汇总 cluster 摘要 |
@@ -425,7 +425,8 @@ don't-care）：
     IAsyncKindBlock}`
   - `common/.../gt/{AsyncStructureGtControllerMachine,AsyncStructureGtConnectorMachine,
     AsyncStructureGtMachineBlock,AsyncStructureGtPattern,AsyncStructureGtStatusMenu}.kt`
-  - （目标态新增）`common/.../mixin/{BlockPatternGroupedMixin,MultiblockMachineDefinitionGroupMixin}.java`
-    与 `common/.../gt/IGroupedBlockPattern.kt`；注册进 `common/src/main/resources/ae2isallyouneed.mixins.json`
+  - （目标态新增）`common/.../mixin/gtceu/{BlockPatternGroupedMixin,MultiblockMachineDefinitionGroupMixin}.java`
+     与 `common/.../gt/IGroupedBlockPattern.kt`；注册进 `common/src/main/resources/ae2isallyouneed.mixins.json`，
+     `plugin` = `allyouneed.mixin.MyMixinPlugin`（通用可选依赖守卫）
   - `forge/.../{ExampleMod,init/ForgeBlocks,init/GTAsyncCrafting,forge/client/ForgeClientEvents}`
   - `fabric/.../init/FabricBlocks`

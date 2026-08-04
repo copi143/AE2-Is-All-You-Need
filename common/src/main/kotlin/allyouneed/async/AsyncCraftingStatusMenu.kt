@@ -7,6 +7,9 @@ import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.MenuType
 
 /**
+ * 自有方块形态的普通 async 合成控制器状态菜单。读取控制器 [AsyncStructureBlockEntity]
+ * 缓存的结构簇以及其连接器的网格状态。与 GTCEu 状态菜单共用同一个界面。
+ *
  * Status menu for the plain async synthesis controllers (own-block flavour). Reads the structure
  * cluster cached by the controller's [AsyncStructureBlockEntity] and the grid state of its
  * connectors. Shares the common screen with the GTCEu status menu.

@@ -1,5 +1,6 @@
 package allyouneed.async
 
+import allyouneed.api.AsyncChannelNodeHolder
 import appeng.api.networking.GridFlags
 import appeng.api.networking.IGridMultiblock
 import appeng.api.networking.IGridNode
@@ -19,6 +20,9 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.properties.BlockStateProperties
 
 /**
+ * async 合成控制器（网络控制器、网络交换机、工厂）与模块接口（Z）的方块实体。
+ * 控制器是其多方块结构的锚点；接口记录搭建在它上面的模块。这些都不是网格方块。
+ *
  * Block entity of the async synthesis controllers (network controller, network switch, factory)
  * and of the module interface (Z). Controllers are the anchors of their multiblock structure;
  * the interface tracks which module is mounted on it. None of these are grid blocks.
@@ -48,7 +52,7 @@ open class AsyncStructureBlockEntity(
     fun getSwitchCluster(): AsyncSwitchCluster? = calc.getSwitchCluster()
     fun getProcessorCluster(): AsyncProcessorCluster? = calc.getProcessorCluster()
 
-    /** Grid-connected views of the connectors of the formed structure, for the status menus. */
+    /** 已成形结构的连接器的网格接入视图，供状态菜单使用。 / Grid-connected views of the connectors of the formed structure, for the status menus. */
     fun getConnectorViews(): List<IAsyncChannelView> {
         val lvl = level as? ServerLevel ?: return emptyList()
         val positions = when (val processor = calc.getProcessorCluster()) {
@@ -62,13 +66,13 @@ open class AsyncStructureBlockEntity(
         return positions.mapNotNull { lvl.getBlockEntity(it) as? IAsyncChannelView }
     }
 
-    /** Forces a full rescan of this structure. Used for upstream notifications. */
+    /** 强制对本结构做一次完整重扫，用于上游通知。 / Forces a full rescan of this structure. Used for upstream notifications. */
     fun requestRescan() {
         val lvl = level as? ServerLevel ?: return
         calc.requestRescan(lvl)
     }
 
-    /** Sets the FORMED block state without notifying neighbours (no rescan loop). */
+    /** 设置 FORMED 方块状态，但不通知邻居（避免重扫循环）。 / Sets the FORMED block state without notifying neighbours (no rescan loop). */
     fun setFormedState(formed: Boolean) {
         val lvl = level ?: return
         if (lvl.isClientSide || notLoaded() || isRemoved) return
@@ -104,6 +108,10 @@ open class AsyncStructureBlockEntity(
 }
 
 /**
+ * async 合成连接器（ME / WAN / LAN）的方块实体。已接入网格：一旦所属结构成形，
+ * 其网格节点就会吞掉通道，上限为稠密（dense）容量。连接器由所属结构控制器的
+ * 计算器链接到该控制器。
+ *
  * Block entity of the async synthesis connectors (ME / WAN / LAN). Grid-connected: once its
  * structure forms, its grid node swallows channels up to the dense capacity. The connector is
  * linked to its host structure's controller by the controller's calculator.
@@ -125,7 +133,7 @@ class AsyncStructureConnectorBlockEntity(
         get() = (level?.getBlockState(worldPosition)?.block as? AsyncStructureConnectorBlock)?.kind
             ?: AsyncBlockKind.ME_CONNECTOR
 
-    /** Links (or unlinks, with null) this connector to a formed host structure. */
+    /** 把此连接器链接（或传入 null 解链）到一个已成形的宿主结构。 / Links (or unlinks, with null) this connector to a formed host structure. */
     fun setHostController(controller: AsyncStructureBlockEntity?) {
         if (hostController === controller) return
         hostController = controller
@@ -234,6 +242,9 @@ class AsyncStructureConnectorBlockEntity(
         }
 
     /**
+     * 无限通道模式下通道数没有上限，sink 无法吞掉任何东西；只要结构成形且已接入
+     * 网格，就视为正常工作。
+     *
      * In INFINITE channel mode channels are unbounded, so the sink cannot swallow anything;
      * the structure is treated as working as long as it is formed and connected.
      */

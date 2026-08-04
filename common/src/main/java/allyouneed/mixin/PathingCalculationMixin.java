@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 
-import allyouneed.async.AsyncChannelNodeHolder;
+import allyouneed.api.AsyncChannelNodeHolder;
 import allyouneed.async.IAsyncChannelSink;
 import appeng.api.networking.IGrid;
 import appeng.me.GridNode;

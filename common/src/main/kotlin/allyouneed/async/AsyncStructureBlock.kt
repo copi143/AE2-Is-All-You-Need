@@ -22,6 +22,11 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty
 import net.minecraft.world.phys.BlockHitResult
 
 /**
+ * async 合成系统的普通结构方块（框架、机器方块、玻璃、强化塔、专用线缆，
+ * 以及能量/计算/存储/执行核心）。它没有方块实体、没有朝向；多方块检测器
+ * 直接从世界中读取它。所有结构方块都带有一个 [FORMED] 状态，检测器在识别出
+ * 周围结构后设置它，让整座多方块亮起来。
+ *
  * Plain structural block of the async synthesis system (frame, machine block, glass, reinforced
  * tower, dedicated cable and the energy/computing/storage/execution cores). It has no block
  * entity and no orientation; the multiblock detectors read it directly from the world. All
@@ -58,6 +63,9 @@ open class AsyncStructureBlock(
     }
 
     /**
+     * 结构方块没有方块实体，所以它被放置或移除时，没有别的东西会重新校验周围
+     * 的多方块。请附近控制器重新校验。
+     *
      * Structural blocks carry no block entity, so nothing else revalidates the surrounding
      * multiblock when one is placed or removed. Ask the nearby controllers to revalidate.
      */
@@ -69,6 +77,10 @@ open class AsyncStructureBlock(
 }
 
 /**
+ * async 机器框架，带 ME 控制器风格的连接贴图。它带有一个 [CONNECTIONS] 掩码
+ * （每个方向一位，当该方向的邻居是另一块框架时置位），客户端用它挑选每面的
+ * c/h/v 贴图；同时共享结构的 [FORMED] 状态。掩码在放置时和任何邻居变化时重算。
+ *
  * Async machine frame with ME-controller-style connection textures. Carries a [CONNECTIONS] mask
  * (one bit per direction, set when the neighbour in that direction is another frame) that the
  * client uses to pick the per-face c/h/v texture, plus the shared structural [FORMED] state. The
@@ -135,6 +147,15 @@ class AsyncStructureFrameBlock(
 }
 
 /**
+ * 翻转给定边界内每个结构方块（[AsyncStructureBlock]：框架、机器方块、玻璃、塔、
+ * 核心、线缆）的 [AsyncStructureEntityBlock.FORMED] 状态。结构计算器（自有方块与
+ * GT）在结构成形/失效时调用它，让整座多方块亮起来。控制器/连接器/接口不受影响——
+ * 它们自己管理成形状态。
+ *
+ * 该状态被直接写入 chunk，并附带一个客户端方块更新包，而不是走 [Level.setBlock]，
+ * 因此整座结构翻转 FORMED 不会逐方块触发 onPlace/onRemove 或 GTCEu LevelMixin 的
+ * 重新检测。FORMED 纯粹是外观性的，检测器在服务端从不读取它，跳过方块事件是安全的。
+ *
  * Flips the [AsyncStructureEntityBlock.FORMED] state of every structural block (an
  * [AsyncStructureBlock]: frame, machine block, glass, tower, cores, cable) inside the given bounds.
  * The structure calculators (plain and GT) call this when a structure forms/invalidates so the
@@ -165,6 +186,10 @@ fun setStructuralFormed(level: ServerLevel, min: BlockPos, max: BlockPos, formed
 }
 
 /**
+ * 实体方块的公共基类：控制器（网络控制器、网络交换机、工厂）与模块接口（Z）。
+ * 它们朝向一个水平方向，并带有一个 [FORMED] 方块状态，由结构检测器在识别出
+ * 周围多方块后设置。
+ *
  * Shared base of the entity blocks: controllers (network controller, network switch, factory) and
  * the module interface (Z). They face a horizontal direction and carry a [FORMED] block state that
  * the structure detectors set once the surrounding multiblock is recognized.
@@ -223,7 +248,7 @@ abstract class AsyncStructureEntityBlock<T : AEBaseBlockEntity>(
     }
 }
 
-/** Controllers of the three structures: network controller (processor), network switch, factory. */
+/** 三种结构的控制器：网络控制器（处理器）、网络交换机、工厂。 / Controllers of the three structures: network controller (processor), network switch, factory. */
 class AsyncStructureControllerBlock(
     kind: AsyncBlockKind,
     props: Properties,
@@ -252,7 +277,7 @@ class AsyncStructureControllerBlock(
     }
 }
 
-/** Module interface (Z): the mounting point on which an async synthesis module is built. */
+/** 模块接口（Z）：async 合成模块的安装点。 / Module interface (Z): the mounting point on which an async synthesis module is built. */
 class AsyncStructureInterfaceBlock(
     kind: AsyncBlockKind,
     props: Properties,
@@ -264,6 +289,9 @@ class AsyncStructureInterfaceBlock(
 }
 
 /**
+ * 已接入网格的连接器（ME / WAN / LAN）。额外带有一个 [POWERED] 状态，反映其
+ * 网格节点的在线状态。
+ *
  * Grid-connected connector (ME / WAN / LAN). Additionally carries a [POWERED] state reflecting its
  * grid node online state.
  */

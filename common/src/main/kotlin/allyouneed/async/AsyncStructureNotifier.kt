@@ -5,6 +5,17 @@ import net.minecraft.server.TickTask
 import net.minecraft.server.level.ServerLevel
 
 /**
+ * 响应结构方块（框架、机器方块、玻璃、塔、核心、线缆）的放置与移除。
+ * 结构方块没有方块实体，所以它们变化时没有别的东西会重新校验周围的多方块——
+ * 这会让手动搭建的结构一直不成形、已被破坏的结构一直卡在成形状态。结构变化时，
+ * 我们扫描该位置周围的盒子，并让受影响的自有控制器立即重新校验，而不是等待轮询。
+ *
+ * GT 控制器在这里刻意不通知：成形后它们会被 GTCEu 的 LevelMixin（pattern 的
+ * 位置缓存）逐格失效；未成形的则由 GT async 轮询器每 4 tick 成形。
+ *
+ * 扫描被推迟到下一个服务端 tick，并进行合并（每 [SCAN_INTERVAL] 每世界至多一次），
+ * 因此像 GT 一键建造那样的大量放置只会产生围绕最近变化位置的一次扫描。
+ *
  * Reacts to structural blocks (frame, machine block, glass, tower, cores, cable) being placed or
  * removed. Structural blocks carry no block entity, so nothing else revalidates the surrounding
  * multiblock when they change - which leaves manual builds unformed and broken structures stuck
@@ -25,7 +36,7 @@ object AsyncStructureNotifier {
     private const val RY = 12
     private const val RZ = 24
 
-    /** Minimum server ticks between two scans of the same level (coalesces build bursts). */
+    /** 同一世界两次扫描之间的最小服务端 tick 数（合并建造爆发）。 / Minimum server ticks between two scans of the same level (coalesces build bursts). */
     private const val SCAN_INTERVAL = 4
 
     private val pending = HashMap<ServerLevel, BlockPos>()

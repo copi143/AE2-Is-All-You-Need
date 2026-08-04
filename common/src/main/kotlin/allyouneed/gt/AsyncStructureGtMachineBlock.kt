@@ -13,6 +13,21 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.StateDefinition
 
 /**
+ * async 合成系统的 GT 机器方块（三个控制器与三个连接器）。包装常规的
+ * [MetaMachineBlock]，并暴露 async 方块种类，让公共结构检测器无需关心控制器/
+ * 连接器由哪条注册路径产生，即可从世界读取它们。
+ *
+ * 两个具体形态与普通 async 方块一一对应，使 `common/resgen` 生成的静态方块状态
+ * 对 AE 与 GT 两条注册路径都能解析：
+ *  - [AsyncStructureGtMachineBlock]（控制器）：`facing` + `formed`
+ *  - [AsyncStructureGtConnectorBlock]（连接器）：`facing` + `formed` + `powered`
+ *
+ * “是否是连接器”必须烤进具体子类，而不是用一个派生实例字段：
+ * `createBlockStateDefinition` 在 `BlockBehaviour` 构造链中就被调用，早于本类任何
+ * 字段初始化；此时 `connector = kind.role == ...` 字段会读成 `false`，从而在状态
+ * 定义里悄悄丢掉 POWERED（GTCEu 自身通过读静态的 `MachineDefinition.getBuilt()`
+ * 避开这个陷阱）。
+ *
  * GT machine block of the async synthesis system (the three controllers and the three connectors).
  * Wraps a regular [MetaMachineBlock] and exposes the async block kind so the common structure
  * detectors read controllers/connectors from the world regardless of which registration path
@@ -48,7 +63,7 @@ open class AsyncStructureGtMachineBlock(
         definition.blockEntityType.create(pos, state)
 }
 
-/** GT machine block of the async connectors: additionally carries the [POWERED] state. */
+/** async 连接器的 GT 机器方块：额外携带 [POWERED] 状态。 / GT machine block of the async connectors: additionally carries the [POWERED] state. */
 class AsyncStructureGtConnectorBlock(
     props: Properties,
     definition: MachineDefinition,

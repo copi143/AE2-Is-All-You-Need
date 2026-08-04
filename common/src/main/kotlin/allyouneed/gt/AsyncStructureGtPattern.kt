@@ -12,6 +12,19 @@ import com.gregtechceu.gtceu.api.pattern.TraceabilityPredicate
 import net.minecraft.world.level.block.Block
 
 /**
+ * async 合成结构的 GTCEu 模式，从 [AsyncStructures] 中手写的形状常量生成。
+ *
+ * 对交换机/处理器而言这是**成形**模式：尾部扩展舱被编码为一个 [AsyncStructures.EXTENSION_DEPTH]
+ * 个连续 aisle 的“组”，通过 [IGroupedBlockPattern] mixin 重复 `[0, MAX_EXTENSIONS]` 次，
+ * 因此原生 [BlockPattern] 检查接受 0..16 个舱位，与检测器完全一致（见 [AsyncStructures.depth]）。
+ * 模块（工厂）保留单一静态 5-aisle 模式；工厂通过接口探测成形，不走模式检查。
+ *
+ * 网格用 `FactoryBlockPattern.start()` 坐标编写：字符（行字符串）= 局部 x（西->东），
+ * 行 = 局部 y（下->上），aisle = 局部 z（前->后），因此 [BlockPattern] 规范（NORTH）输出
+ * 与检测器的 NORTH 朝向世界布局一致。这让预览对 NORTH/SOUTH 朝向控制器精确无误；
+ * GTCEu 的渲染器对 EAST/WEST 的旋转与任何一致的朝向约定相反，所以那些朝向上会 180° 旋转
+ * （上游怪癖，影响所有 GT 多方块）。
+ *
  * GTCEu pattern of an async synthesis structure, generated from the hand-written shape constants in
  * [AsyncStructures].
  *
@@ -53,6 +66,12 @@ object AsyncStructureGtPattern {
     private const val DONTCARE_CHAR = ' '
 
     /**
+     * 镜像 [AsyncStructures.isValidCell] 的逐格 MACHINE 谓词：
+     *  - 'M'：地板机器方块，玻璃不可替换它们；
+     *  - 'R'：墙面上的机器方块，玻璃可以替换它们；
+     *  - 'V'：交换机核心机器方块，wan/lan 连接器可以替换它们（限制 1/2）；
+     *  - 'O'：处理器外壳机器方块，me/lan 连接器可以替换它们（限制 1/2）。
+     *
      * Per-cell MACHINE predicates mirroring [AsyncStructures.isValidCell]:
      *  - 'M': floor machines, glass may not replace them;
      *  - 'R': machines on walls, glass may replace them;
@@ -64,6 +83,11 @@ object AsyncStructureGtPattern {
     private const val PROCESSOR_SHELL_CHAR = 'O'
 
     /**
+     * 把 [type] 的全深度结构构建为 GT 模式（底座 + 一个舱位组 + 收尾行 + 后墙）。
+     * 生成器惰性运行（模式工厂被 memoized），所以 [definition.block] 和
+     * [AsyncBlockRegistry] 查找是安全的：到第一次预览/JEI 访问时，GT 方块/物品
+     * 注册已完成，`FMLCommonSetupEvent` 也已填充注册表。
+     *
      * Builds the full-depth structure of [type] as a GT pattern (base + one bay group + closing
      * row + back wall). The generator runs lazily (the pattern factory is memoized), so
      * [definition.block] and the [AsyncBlockRegistry] lookups are safe: by the first preview/JEI
@@ -146,6 +170,7 @@ object AsyncStructureGtPattern {
         else -> GLASS_REPLACE_CHAR
     }
 
+    /** 该结构种类的锚点格子必须是控制器方块。 / The anchor cell of this structure kind must be a controller block. */
     private fun cellKind(type: AsyncStructureType): AsyncBlockKind {
         val (ax, ay, az) = AsyncStructures.anchorCell(type)
         return checkNotNull(AsyncStructures.blockAt(type, 0, ax, ay, az)) { "anchor cell must be a controller" }

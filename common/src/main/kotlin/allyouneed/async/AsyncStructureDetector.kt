@@ -9,6 +9,19 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.block.state.properties.BlockStateProperties
 
 /**
+ * 三种 async 合成结构的“锚点检测器”。
+ *
+ * 形状真相（shape truth）在 [AsyncStructures] 中。检测从控制器锚点开始，用
+ * 控制器的朝向推导结构取向，探测扩展舱数量（0..[AsyncStructures.MAX_EXTENSIONS]）
+ * 并校验每个在界内的格子，区分三类：
+ *
+ *  - 必需方块（[AsyncStructures.blockAt] 返回某个种类，用 [AsyncStructures.isValidCell] 校验）
+ *  - 必需空气（[AsyncStructures.blockAt] 返回 null，该格必须为空）
+ *  - 无关格子（[AsyncStructures.isDonCare]），接受任意方块
+ *
+ * 模块从地板接口（Z）向上检测（3x7x5）；交换机扫描其扩展舱接口上的所有模块；
+ * 处理器扫描自身的模块以及经 LAN/WAN 连接器和专用线缆可达的交换机（直接或级联）。
+ *
  * Anchor-based detector for the three async synthesis structures.
  *
  * The shape truth lives in [AsyncStructures]. Detection starts at a controller anchor, derives the
@@ -48,6 +61,9 @@ object AsyncStructureDetector {
     // ---------------------------------------------------------------------------------------------
 
     /**
+     * 检测 [interfacePos] 地板接口上搭建的模块。接口方块的朝向固定模块取向；
+     * 工厂控制器位于接口正下后方，朝向必须一致。3x7x5 每一格都是必需方块。
+     *
      * Detects the module built on the [interfacePos] floor interface. The interface block's facing
      * fixes the module orientation; the factory controller is found directly below/behind it and must
      * face the same way. Every one of the 3x7x5 cells is required.
@@ -164,6 +180,9 @@ object AsyncStructureDetector {
     }
 
     /**
+     * 从处理器的 LAN 连接器出发，沿专用线缆级联到交换机上的 WAN 连接器，再经由
+     * 每台交换机自身的 LAN 连接器递归展开。
+     *
      * Cascades from the processor's LAN connectors through dedicated cable to WAN connectors on
      * switches, then recursively through each switch's own LAN connectors.
      */
@@ -185,11 +204,11 @@ object AsyncStructureDetector {
         }
     }
 
-    /** Follows dedicated cable from [from] until a WAN connector is found at the far end. */
+    /** 从 [from] 沿专用线缆追踪，直到远端找到 WAN 连接器。 / Follows dedicated cable from [from] until a WAN connector is found at the far end. */
     private fun followCableToWan(level: ServerLevel, from: BlockPos): BlockPos? =
         followCable(level, from, AsyncBlockKind.WAN_CONNECTOR)
 
-    /** Follows dedicated cable from a WAN connector to the LAN connector at the far end. */
+    /** 从 WAN 连接器沿专用线缆追踪到远端的 LAN 连接器。 / Follows dedicated cable from a WAN connector to the LAN connector at the far end. */
     fun followCableFromWan(level: ServerLevel, from: BlockPos): BlockPos? =
         followCable(level, from, AsyncBlockKind.LAN_CONNECTOR)
 
@@ -215,6 +234,9 @@ object AsyncStructureDetector {
     }
 
     /**
+     * 找到缓存结构边界包含 [pos]（模块接口或连接器）的已成形交换机或处理器
+     * 控制器。用于把重扫通知向上游路由。
+     *
      * Locates the formed switch or processor controller whose cached structure bounds contain
      * [pos] (a module interface or a connector). Used to route rescan notifications upstream.
      */
@@ -239,6 +261,9 @@ object AsyncStructureDetector {
     }
 
     /**
+     * 找到结构包含 [memberPos]（WAN 连接器）的交换机并检测它。交换机控制器
+     * 总在核心内，所以有界搜索即可。
+     *
      * Locates the switch whose structure contains [memberPos] (a WAN connector) and detects it. The
      * switch controller always sits within the core, so a bounded search suffices.
      */
@@ -277,6 +302,10 @@ object AsyncStructureDetector {
     )
 
     /**
+     * 从其控制器 [anchorPos] 出发校验整座结构，返回方块数、连接器与接口位置，
+     * 以及所有必需格子的边界。无关格子被跳过；必需空气格必须为空；必需方块格
+     * 必须通过 [AsyncStructures.isValidCell]。
+     *
      * Validates a whole structure from its controller [anchorPos]. Returns the block counts, the
      * connector and interface positions, and the bounds of all required cells. A cell is skipped when
      * it is a don't-care cell; required-air cells must be empty; required-block cells must match via

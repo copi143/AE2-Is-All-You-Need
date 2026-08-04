@@ -55,6 +55,25 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 /**
+ * 向 GTCEu 的 {@link BlockPattern} 注入“分组重复”：一个步骤可以覆盖 {@code G}
+ * 个连续 aisle（async 扩展舱），整体作为一个单元重复，而不是单个切片。
+ *
+ * 组元数据存放在一个 {@code @Unique int[] groupSizes} 字段中，通过
+ * {@link IGroupedBlockPattern} 接口暴露。组第一个 aisle 存 {@code G}，组内部 aisle
+ * 默认 1，且只会作为其组步骤的一部分被访问到。
+ *
+ * 三个被 overwrite 的方法是对 GTCEu 7.5.3 原版的逐行移植，只是把 aisle 循环按
+ * 步骤重构（{@code c += groupSize}）：
+ * <ul>
+ *   <li>{@link #checkPatternAt(MultiblockState, BlockPos, Direction, Direction, boolean, boolean)}
+ *       在每个步骤处匹配 {@code groupSize} 个连续 z 切片；每个格子层面的关注点
+ *       （findFirstAisle 滑动/回退、层限制、pos 缓存、部件共享、io/vaBlocks）
+ *       原样保留。</li>
+ *   <li>{@link #getPreview(int[])} 每次组重复渲染 {@code groupSize} 个切片。</li>
+ *   <li>{@link #autoBuild(Player, MultiblockState)} 放置 {@code max(1, min)} 次组重复
+ *       （成形仍允许 0）。</li>
+ * </ul>
+ *
  * Injects "group repetition" into the GTCEu {@link BlockPattern}: a step may cover {@code G}
  * consecutive aisles (the async extension bay) that repeat as a unit instead of a single slice.
  *
@@ -126,7 +145,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
 
     /**
      * @author ae2isallyouneed
-     * @reason Grouped-repetition pattern matching (see class doc); otherwise a verbatim port.
+     * @reason 分组重复的模式匹配（见类文档）；其余为逐行移植。 / Grouped-repetition pattern matching (see class doc); otherwise a verbatim port.
      */
     @Overwrite
     public boolean checkPatternAt(MultiblockState worldState, BlockPos centerPos, Direction frontFacing,
@@ -244,7 +263,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
 
     /**
      * @author ae2isallyouneed
-     * @reason Grouped-repetition preview (see class doc); otherwise a verbatim port.
+     * @reason 分组重复的预览（见类文档）；其余为逐行移植。 / Grouped-repetition preview (see class doc); otherwise a verbatim port.
      */
     @Overwrite
     public BlockInfo[][][] getPreview(int[] repetition) {
@@ -395,7 +414,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
 
     /**
      * @author ae2isallyouneed
-     * @reason Grouped-repetition auto build (see class doc); otherwise a verbatim port.
+     * @reason 分组重复的自动建造（见类文档）；其余为逐行移植。 / Grouped-repetition auto build (see class doc); otherwise a verbatim port.
      */
     @Overwrite
     public void autoBuild(Player player, MultiblockState worldState) {

@@ -4,6 +4,16 @@ import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 
 /**
+ * 每个方块实体的检测状态，服务于 async 合成结构。
+ *
+ * 宿主实体扮演的角色决定检测什么：
+ *  - 模块接口：检测搭建在它上面的模块（向上）
+ *  - 网络交换机：检测交换机结构及其舱位上的模块
+ *  - 网络控制器：检测处理器结构、其模块以及经线缆连接的交换机
+ *
+ * 每次重扫都会刷新方块实体的 FORMED 状态、把结构内的连接器方块实体链接到它，
+ * 并通知上层的所属结构（接口 -> 宿主，交换机 -> 处理器），使模块/交换机列表保持一致。
+ *
  * Per-block-entity detector state for the async synthesis structures.
  *
  * The role of the host entity decides what is detected:
@@ -28,7 +38,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         revalidate(level, selfPos)
     }
 
-    /** Called by an upstream block to force a full rescan of this structure. */
+    /** 由上层方块调用，强制对本结构做一次完整重扫。 / Called by an upstream block to force a full rescan of this structure. */
     fun requestRescan(level: ServerLevel) {
         revalidate(level, host.blockPos)
     }
@@ -58,7 +68,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         }
     }
 
-    /** Destroys the cached cluster(s) when the block is removed; notifies upstream. */
+    /** 方块被移除时销毁缓存的簇，并通知上游。 / Destroys the cached cluster(s) when the block is removed; notifies upstream. */
     fun destroy(level: ServerLevel) {
         val hadModule = moduleCluster != null
         val hadSwitch = switchCluster != null
@@ -198,6 +208,8 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     }
 
     /**
+     * 模块接口通知托管它的交换机或处理器（其缓存结构边界包含该接口）重扫。
+     *
      * A module interface notifies the switch or processor that hosts it (its cached structure
      * bounds contain the interface) to rescan.
      */
@@ -206,6 +218,9 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     }
 
     /**
+     * 交换机通知与它相连的处理器。处理器通过从交换机 WAN 连接器向上沿线缆
+     * 走到处理器所有的 LAN 连接器来定位。
+     *
      * A switch notifies the processor it is wired to. The processor is found by walking cables
      * upstream from the switch's WAN connector until a processor-owned LAN connector is reached.
      */

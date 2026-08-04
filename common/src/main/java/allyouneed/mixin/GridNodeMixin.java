@@ -1,7 +1,7 @@
 package allyouneed.mixin;
 
 import allyouneed.api.IMacAddressHolder;
-import allyouneed.async.AsyncChannelNodeHolder;
+import allyouneed.api.AsyncChannelNodeHolder;
 import allyouneed.netaddr.mac.MacAddress;
 import allyouneed.netaddr.mac.MacAddressRegistry;
 import allyouneed.netaddr.mac.MacNbt;

@@ -35,6 +35,23 @@ import java.util.function.Consumer
 import java.util.function.Function
 
 /**
+ * async 合成控制器与连接器的 GTCEu 注册胶水。所有 GT 专属内容（机器类、占位
+ * 模式、状态菜单）都在 common；此对象只负责把它接进 GTCEu 的 registrate 和
+ * AE2 创造模式标签页。
+ *
+ * Kotlin-for-Forge 注意事项：[GTRegistrate.registerEventListeners] 会访问
+ * `FMLJavaModLoadingContext.get()`，在 KFF 下这不是当前活跃的加载上下文，会抛
+ * ClassCastException。因此同一个监听器改为通过一个暴露了受保护 registrate 处理
+ * 器的小子类，直接注册到 KFF 的 MOD_BUS 上。该子类还覆写 `getModEventBus()`，
+ * 让 registrate 的内部注册步骤（例如通过 `OneTimeEventReceiver` 的设置渲染层）
+ * 使用 KFF 的 MOD_BUS，而不是损坏的加载上下文查找。
+ *
+ * 构造注意事项：GTCEu 在自己的 `FMLConstructModEvent.enqueueWork` 任务中注册
+ * 材料、机器和配方类型——该任务在每 mod 构造函数之后运行，并边走边冻结其注册表。
+ * 因此在我们的构造函数中触碰任何 GT 静态状态都会与 GTCEu 的内容设置竞态。机器
+ * 改为从 GTCEu 的 `GTCEuAPI.RegisterEvent`（机器注册表）注册——GTCEu 在注册完
+ * 自己的机器后、机器注册表冻结前触发该事件。
+ *
  * GTCEu registration glue for the async synthesis controllers and connectors. Everything GT-specific
  * (the machine classes, the placeholder pattern and the status menu) lives in common; this object
  * only wires it into GTCEu's registrate and the AE2 creative tab.

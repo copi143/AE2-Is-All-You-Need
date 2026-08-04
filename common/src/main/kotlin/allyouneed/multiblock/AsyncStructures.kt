@@ -4,6 +4,21 @@ import allyouneed.async.AsyncBlockKind
 import net.minecraft.core.Direction
 
 /**
+ * 三种 async 合成结构的形状真相，手写、无数据驱动。
+ *
+ * 每种结构都位于自己的局部坐标系中，并锚定在控制器方块上：
+ *
+ *  - MODULE：3 宽（x）x 7 高（y）x 5 深（z）。工厂在正面 (1, 3, 0)。
+ *  - SWITCH：19 宽 x 7 高 x (11 + 6N) 深。交换机方块在核心正面 (9, 4, 3)。
+ *            底座核心 13x5x5；核心后方的地板承载扩展舱。
+ *  - PROCESSOR：19 宽 x 15 高 x (19 + 6N) 深。控制器在核心正面 (9, 8, 3)。
+ *            底座核心 13x13x13。
+ *
+ * 每个格子要么是必需的，要么是“无关”。必需格子必须包含 [blockAt] 返回的方块；
+ * 当 [blockAt] 返回 null 时该格必须是空气（例如处理器 7x7 的空气层）。
+ * 无关格子（[isDonCare]）接受任意方块。坐标方向：x = 西->东、y = 下->上、
+ * z = 前->后。控制器面朝前方（局部 z 增加方向）；结构主体在控制器“背后”延伸。
+ *
  * Hand-written, data-driven-free definitions of the three async synthesis structures.
  *
  * Each structure lives in a local coordinate system and is anchored at its controller block:
@@ -46,7 +61,7 @@ object AsyncStructures {
         else -> type.baseDepth + EXTENSION_DEPTH * extensions
     }
 
-    /** Anchor (controller) cell in local coordinates. */
+    /** 局部坐标系中的锚点（控制器）格子。 / Anchor (controller) cell in local coordinates. */
     fun anchorCell(type: AsyncStructureType): Triple<Int, Int, Int> = when (type) {
         AsyncStructureType.MODULE -> Triple(1, 3, 0)
         AsyncStructureType.SWITCH -> Triple(9, 4, 3)
@@ -54,6 +69,9 @@ object AsyncStructures {
     }
 
     /**
+     * 局部格子相对锚点、对水平朝向而言的世界偏移。局部 +y 朝上，局部 +z 沿
+     * [facing] 方向，局部 +x 沿 facing 的顺时针一侧。
+     *
      * World offset of a local cell relative to the anchor for a horizontal facing. Local +y is up,
      * local +z points along [facing] and local +x along the facing's clockwise side.
      */
@@ -68,6 +86,9 @@ object AsyncStructures {
     }
 
     /**
+     * 一个局部格子是否可以放任意方块。所有其他在界格子都是必需的；必需方块与
+     * 必需空气的区别见类文档。
+     *
      * Whether a local cell may contain anything. All other in-bounds cells are required; see the
      * class comment for the distinction between required blocks and required air.
      */
@@ -82,6 +103,9 @@ object AsyncStructures {
     }
 
     /**
+     * 局部格子处期望的方块种类。只对必需格子有意义：必需空气格返回 null。
+     * 无关格子请忽略该返回值。
+     *
      * Expected block kind at a local cell. Only meaningful for required cells: returns null for
      * required-air cells. Ignore it for don't-care cells.
      */
@@ -96,6 +120,9 @@ object AsyncStructures {
     }
 
     /**
+     * 一个 [actual] 种类的方块在局部格子处是否可接受。处理替换规则：机器玻璃可以
+     * 替换墙上的机器方块，核心机器方块可以被匹配的连接器替换。
+     *
      * Whether a block of [actual] kind is acceptable at a local cell. Handles the replacement rules:
      * machine glass may replace machine blocks on walls, and core machine blocks may be replaced by
      * the matching connectors.
@@ -131,13 +158,13 @@ object AsyncStructures {
         }
     }
 
-    /** Whether [y] is part of the floor (walls may be glass-replaced only above the floor). */
+    /** [y] 是否属于地板的一部分（只有地板以上的墙才允许玻璃替换）。 / Whether [y] is part of the floor (walls may be glass-replaced only above the floor). */
     fun isFloorCell(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean = when (type) {
         AsyncStructureType.MODULE -> y == 0 || y == height(type) - 1
         else -> y == 0 || y == 1
     }
 
-    /** Whether a local cell lies inside the switch/processor core (connectors may replace there). */
+    /** 局部格子是否位于交换机/处理器核心内（连接器可以在这里替换）。 / Whether a local cell lies inside the switch/processor core (connectors may replace there). */
     fun inCore(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean {
         val b = coreBounds(type)
         return x in b[0]..b[1] && y in b[2]..b[3] && z in b[4]..b[5]
@@ -149,7 +176,7 @@ object AsyncStructures {
         else -> throw IllegalStateException("no core")
     }
 
-    /** Whether a processor core cell lies on exactly one shell face (ME/LAN may replace there). */
+    /** 处理器核心格子是否恰好位于一个壳面之上（ME/LAN 可以在这里替换）。 / Whether a processor core cell lies on exactly one shell face (ME/LAN may replace there). */
     fun isOuterShellCell(x: Int, y: Int, z: Int): Boolean {
         val b = coreBounds(AsyncStructureType.PROCESSOR)
         var count = 0
@@ -191,7 +218,7 @@ object AsyncStructures {
         }
     }
 
-    /** The module interface (Z) cell directly below the module's bottom centre. */
+    /** 模块底部中心正下方的模块接口（Z）格子。 / The module interface (Z) cell directly below the module's bottom centre. */
     val moduleInterfaceCell: Triple<Int, Int, Int> = Triple(1, -1, 2)
 
     // ---------------------------------------------------------------------------------------------
@@ -309,6 +336,10 @@ object AsyncStructures {
     // ---------------------------------------------------------------------------------------------
 
     /**
+     * y = 1 处的上层地板。一个完整矩形，带框架环和机器内部；核心底面积是
+     * “无关”（被核心盖住）。扩展舱追加在核心后方，每个舱位在局部 x = 5 和
+     * x = 13 处提供两个模块接口（Z）。
+     *
      * The upper floor at y = 1. A full rectangle with a frame ring and machine interior; the core
      * footprint is "don't care" (it is covered by the core). Extension bays are appended behind the
      * core, each providing two module interfaces (Z) at local x = 5 and x = 13.

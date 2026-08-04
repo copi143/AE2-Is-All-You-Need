@@ -1,6 +1,6 @@
 package allyouneed.gt
 
-import allyouneed.async.AsyncChannelNodeHolder
+import allyouneed.api.AsyncChannelNodeHolder
 import allyouneed.async.AsyncStructureEntityBlock
 import allyouneed.async.IAsyncChannelSink
 import allyouneed.async.IAsyncChannelView
@@ -21,6 +21,10 @@ import net.minecraft.world.level.block.Block
 import java.util.EnumSet
 
 /**
+ * async 合成系统的 GTCEu 连接器（ME / WAN / LAN）。通过 [GridNodeHolder] 风格的
+ * trait 接入网格；只要宿主结构成形，节点就吞掉通道（上限 32，稠密容量）。连接器
+ * 由所属结构控制器的检测器链接到该控制器。
+ *
  * GTCEu connector (ME / WAN / LAN) of the async synthesis system. Grid-connected through a
  * [GridNodeHolder]-style trait; the node swallows channels (up to 32, the dense capacity) as long
  * as the host structure is formed. The connector is linked to its host structure's controller by
@@ -46,7 +50,7 @@ abstract class AsyncStructureGtConnectorMachine(
         this.online = online
     }
 
-    /** Links (or unlinks, with null) this connector to a formed host structure. */
+    /** 把此连接器链接（或传入 null 解链）到一个已成形的宿主结构。 / Links (or unlinks, with null) this connector to a formed host structure. */
     fun setHostController(controller: AsyncStructureGtControllerMachine?) {
         if (hostController === controller) return
         hostController = controller
@@ -71,13 +75,13 @@ abstract class AsyncStructureGtConnectorMachine(
         return if (isFormed()) EnumSet.of(self().frontFacing) else emptySet()
     }
 
-    /** Changing the exposed sides (formed vs unformed) triggers a pathing recalculation. */
+    /** 改变暴露面（成形 vs 未成形）会触发一次路径重算。 / Changing the exposed sides (formed vs unformed) triggers a pathing recalculation. */
     private fun updateExposedSides() {
         val sides = if (isFormed()) setOf(self().frontFacing) else emptySet<Direction>()
         gridNodeHolder.getMainNode().setExposedOnSides(sides)
     }
 
-    /** Mirrors the vanilla async connectors: flip FORMED so the client shows the formed model. */
+    /** 与普通 async 连接器一致：翻转 FORMED，让客户端显示成形模型。 / Mirrors the vanilla async connectors: flip FORMED so the client shows the formed model. */
     private fun updateFormedState() {
         val level = level as? ServerLevel ?: return
         val current = level.getBlockState(pos)
@@ -105,16 +109,21 @@ abstract class AsyncStructureGtConnectorMachine(
         get() = gridNodeHolder.getMainNode().node?.grid?.pathingService?.channelMode == ChannelMode.INFINITE
 }
 
-/** GTCEu ME connector of the async synthesis system. */
+/** async 合成系统的 GTCEu ME 连接器。 / GTCEu ME connector of the async synthesis system. */
 class AsyncStructureGtMeConnectorMachine(holder: IMachineBlockEntity) : AsyncStructureGtConnectorMachine(holder)
 
-/** GTCEu WAN connector of the async synthesis system. */
+/** async 合成系统的 GTCEu WAN 连接器。 / GTCEu WAN connector of the async synthesis system. */
 class AsyncStructureGtWanConnectorMachine(holder: IMachineBlockEntity) : AsyncStructureGtConnectorMachine(holder)
 
-/** GTCEu LAN connector of the async synthesis system. */
+/** async 合成系统的 GTCEu LAN 连接器。 / GTCEu LAN connector of the async synthesis system. */
 class AsyncStructureGtLanConnectorMachine(holder: IMachineBlockEntity) : AsyncStructureGtConnectorMachine(holder)
 
 /**
+ * 为 async 连接器配置的 [GridNodeHolder]：节点参与结构的多方块节点组（因此所有
+ * 连接器共享一条通道），并通过通道吞噬 mixin 吞掉最多 32 条稠密通道。暴露面
+ * 初始为空，由宿主结构的成形状态经 [AsyncStructureGtConnectorMachine.updateExposedSides]
+ * 驱动。
+ *
  * [GridNodeHolder] configured for the async connectors: the node participates in the structure's
  * multiblock node group (so all connectors share one channel) and swallows up to the dense 32
  * channels via the channel-swallow mixin. Exposed sides start empty and are driven by the host
@@ -134,7 +143,7 @@ class AsyncStructureGridNodeTrait(
         return node
     }
 
-    /** All connector nodes of the same host structure form one multiblock channel group. */
+    /** 同一宿主结构的所有连接器节点组成一个多方块通道组。 / All connector nodes of the same host structure form one multiblock channel group. */
     private fun collectMultiblockNodes(): Iterator<IGridNode> {
         val nodes = ArrayList<IGridNode>()
         val connector = machine as? AsyncStructureGtConnectorMachine ?: return nodes.iterator()
