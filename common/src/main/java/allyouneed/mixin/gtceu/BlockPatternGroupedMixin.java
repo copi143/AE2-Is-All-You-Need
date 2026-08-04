@@ -1,4 +1,4 @@
-package allyouneed.mixin;
+package allyouneed.mixin.gtceu;
 
 import allyouneed.gt.IGroupedBlockPattern;
 import com.gregtechceu.gtceu.api.block.ActiveBlock;
