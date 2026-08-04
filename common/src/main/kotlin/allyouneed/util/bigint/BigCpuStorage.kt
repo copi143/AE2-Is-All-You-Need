@@ -93,6 +93,6 @@ object BigCpuStorage {
     @JvmStatic
     fun formatBinaryBytes(bytes: BigInteger?): String {
         if (bytes == null || bytes.signum() <= 0) return "0"
-        return IntegerFormat.iecFormatBytes(bytes)
+        return IntegerFormat.iecFormat(bytes)
     }
 }

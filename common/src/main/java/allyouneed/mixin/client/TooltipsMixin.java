@@ -37,7 +37,7 @@ public class TooltipsMixin {
         // AE2 BYTE_NUMS length is 4; values needing index >= 4 crash (roughly >= 1 TiB * 1000)
         long gib = 1024L * 1024L * 1024L;
         if (number >= gib * 1000L) {
-            cir.setReturnValue(allyouneed$formatLabel(IntegerFormat.iecFormatBytes(number)));
+            cir.setReturnValue(allyouneed$formatLabel(IntegerFormat.iecFormat(number)));
         }
     }
 

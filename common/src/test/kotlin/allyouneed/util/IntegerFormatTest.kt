@@ -61,8 +61,8 @@ class IntegerFormatTest {
             IntegerFormat.si(3).format(BigInteger.valueOf(999_999)),
             IntegerFormat.siFormat(BigInteger.valueOf(999_999), 3)
         )
-        assertEquals(IntegerFormat.IEC.format(0), IntegerFormat.iecFormatBytes(0))
-        assertEquals(IntegerFormat.IEC.format(1024), IntegerFormat.iecFormatBytes(1024))
+        assertEquals(IntegerFormat.IEC.format(0), IntegerFormat.iecFormat(0))
+        assertEquals(IntegerFormat.IEC.format(1024), IntegerFormat.iecFormat(1024))
     }
 
     @Test
@@ -77,7 +77,7 @@ class IntegerFormatTest {
     fun `threshold delays promotion`() {
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf("", "k", "M"),
+            mp = MetricPrefix.of("", "k", "M")!!,
             threshold = 1500,
             allowOmitDecimal = true,
         )
@@ -93,7 +93,7 @@ class IntegerFormatTest {
     fun `threshold 500 promotes early`() {
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf("", "k", "M"),
+            mp = MetricPrefix.of("", "k", "M")!!,
             threshold = 500,
             allowOmitDecimal = true,
         )
@@ -108,7 +108,7 @@ class IntegerFormatTest {
         // Sequential levels: "" → k → M → G; beyond G uses G+n
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf("", "k", "M", "G"),
+            mp = MetricPrefix.of("", "k", "M", "G")!!,
             allowPlus = true,
             allowOmitDecimal = true,
         )
@@ -124,7 +124,7 @@ class IntegerFormatTest {
     fun `without allowPlus stays on last unit`() {
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf("", "k", "M", "G"),
+            mp = MetricPrefix.of("", "k", "M", "G")!!,
             allowPlus = false,
             allowOmitDecimal = true,
         )
@@ -146,7 +146,7 @@ class IntegerFormatTest {
     fun `width too small returns errDisplay`() {
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf(""),
+            mp = MetricPrefix.EMPTY,
             width = 2,
             errDisplay = "E!",
         )
@@ -156,10 +156,10 @@ class IntegerFormatTest {
     @Test
     fun `init rejects display longer than width`() {
         assertThrows<IllegalArgumentException> {
-            IntegerFormat(1000, listOf(""), width = 2, errDisplay = "ERR")
+            IntegerFormat(1000, MetricPrefix.EMPTY, width = 2, errDisplay = "ERR")
         }
         assertThrows<IllegalArgumentException> {
-            IntegerFormat(1000, listOf(""), width = 2, min = BigInteger.ZERO, minDisplay = "MIN")
+            IntegerFormat(1000, MetricPrefix.EMPTY, width = 2, min = BigInteger.ZERO, minDisplay = "MIN")
         }
     }
 
@@ -169,7 +169,7 @@ class IntegerFormatTest {
     fun `min and max clamps to display`() {
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf("", "k"),
+            mp = MetricPrefix.of("", "k")!!,
             min = BigInteger.TEN,
             max = BigInteger.valueOf(5000),
             minDisplay = "LO",
@@ -206,7 +206,7 @@ class IntegerFormatTest {
     fun `positive sign consumes width`() {
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf(""),
+            mp = MetricPrefix.EMPTY,
             width = 3,
             showPositiveSign = true,
             errDisplay = "ER",
@@ -221,8 +221,8 @@ class IntegerFormatTest {
 
     @Test
     fun `allowOmitDecimal strips trailing zeros`() {
-        val with = IntegerFormat(1000, listOf("", "k"), allowOmitDecimal = true)
-        val without = IntegerFormat(1000, listOf("", "k"), allowOmitDecimal = false, maxDecimalPlaces = 2)
+        val with = IntegerFormat(1000, MetricPrefix.of("", "k")!!, allowOmitDecimal = true)
+        val without = IntegerFormat(1000, MetricPrefix.of("", "k")!!, allowOmitDecimal = false, maxDecimalPlaces = 2)
         assertEquals("1k", with.format(1000))
         // 1100 → 1.1k either way when omit trims
         assertEquals("1.1k", with.format(1100))
@@ -235,7 +235,7 @@ class IntegerFormatTest {
     fun `allow omit leading zero`() {
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf("", "k"),
+            mp = MetricPrefix.of("", "k")!!,
             threshold = 500,
             allowOmitDecimal = true,
             allowOmitLeadingZero = true,
@@ -250,7 +250,7 @@ class IntegerFormatTest {
         // 999.5k with HalfUp 0 decimal places → 1000k → 1M
         val fmt = IntegerFormat(
             base = 1000,
-            postfixes = listOf("", "k", "M"),
+            mp = MetricPrefix.of("", "k", "M")!!,
             maxDecimalPlaces = 0,
             rounding = IntegerFormat.Rounding.HalfUp,
             allowOmitDecimal = true,
@@ -274,6 +274,7 @@ class IntegerFormatTest {
         println(MetricPrefix.SI)
         println(MetricPrefix.IEC)
         println(MetricPrefix.of(""))
+        assertEquals(null, MetricPrefix.of("A", "A", ""))
         assertEquals("m", MetricPrefix.SI.level(-1))
         assertEquals("M", MetricPrefix.SI.level(2))
         assertEquals("Mi", MetricPrefix.IEC.level(2))

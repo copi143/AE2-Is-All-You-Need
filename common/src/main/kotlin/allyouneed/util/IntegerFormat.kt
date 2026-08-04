@@ -9,8 +9,8 @@ import java.math.RoundingMode as JavaRounding
 data class IntegerFormat(
     /** 每个单位的基数，一般是 1000 或 1024 */
     val base: Int,
-    /** 每级单位的后缀，从无缩放开始，类似 `["", "k", "M", "G"]` */
-    val postfixes: List<String>,
+    /** 每级的单位，参考 [MetricPrefix] 文档 */
+    val mp: MetricPrefix,
     /** 目标文本长度，输出可以比其短但不能比其长，0 为无限制 */
     val width: Int = 0,
     /** 最小值，当数字小于该值时，显示为 [minDisplay] */
@@ -66,11 +66,11 @@ data class IntegerFormat(
     /**
      * 单位前缀（Metric Prefix）配置类。
      *
-     * 用于管理和获取不同缩放级别（Level）下的单位后缀，支持自定义基础单位、放大级别、缩小级别以及是否允许无限扩展。
+     * 用于管理和获取不同缩放级别（Level）下的单位前缀，支持自定义基础单位、放大级别、缩小级别以及是否允许无限扩展。
      *
-     * @property baseLevel 无缩放（10^0 / Base^0）时的基础单位后缀。
-     * @property larger 放大级别（Level > 0）的后缀列表，如 `["k", "M", "G"]`。
-     * @property smaller 缩小级别（Level < 0）的后缀列表，从近到远排列，如 `["m", "µ", "n"]`。
+     * @property baseLevel 无缩放（10^0 / Base^0）时的基础单位前缀。
+     * @property larger 放大级别（Level > 0）的前缀列表，如 `["k", "M", "G"]`。
+     * @property smaller 缩小级别（Level < 0）的前缀列表，从近到远排列，如 `["m", "µ", "n"]`。
      * @property largerUnlimited 当超过 [larger] 列表最大范围时，是否允许使用 `+N` 形式（如 `G+1`）继续无限扩展。
      * @property smallerUnlimited 当超过 [smaller] 列表最小范围时，是否允许使用 `-N` 形式（如 `m-1`）继续无限扩展。
      */
@@ -86,9 +86,9 @@ data class IntegerFormat(
          *
          * 根据传入的带 null 的列表构建 [MetricPrefix]，自动剔除尾部的 null 元素并推断是否允许无限扩展。
          *
-         * @param baseLevel 基础单位后缀。
-         * @param larger 带结尾拓展标志的放大后缀列表。若最后一个元素非 null，则开启 [largerUnlimited]。
-         * @param smaller 带结尾拓展标志的缩小后缀列表。若最后一个元素非 null，则开启 [smallerUnlimited]。
+         * @param baseLevel 基础单位前缀。
+         * @param larger 带结尾拓展标志的放大前缀列表。若最后一个元素非 null，则开启 [largerUnlimited]。
+         * @param smaller 带结尾拓展标志的缩小前缀列表。若最后一个元素非 null，则开启 [smallerUnlimited]。
          */
         constructor(
             baseLevel: String,
@@ -103,10 +103,10 @@ data class IntegerFormat(
         )
 
         /**
-         * 根据级别获取对应的单位后缀文本。
+         * 根据级别获取对应的单位前缀文本。
          *
          * @param n 级别数。0 表示基础级别；> 0 表示放大级别（如 1->k, 2->M）；< 0 表示缩小级别（如 -1->m, -2->µ）。
-         * @return 对应的后缀字符串。若超出了定义的范围且未开启 unlimited 扩展，则返回 `null`。
+         * @return 对应的前缀字符串。若超出了定义的范围且未开启 unlimited 扩展，则返回 `null`。
          */
         fun level(n: Int): String? {
             if (n > 0) {
@@ -137,6 +137,10 @@ data class IntegerFormat(
             @JvmField
             val IEC = of(null, "", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi", "Ri", "Qi", null)!!
 
+            /** 预定义的使用 +1 +2 -1 -2 的单位前缀。 */
+            @JvmField
+            val EMPTY = of("")!!
+
             /**
              * 通过平铺的字符串数组安全地构建 [MetricPrefix] 实例。
              *
@@ -158,6 +162,7 @@ data class IntegerFormat(
                     }.size
                     acc.takeLast(commonLen)
                 }
+                list.size == list.toSet().size || return null
                 val baseLevelIndex = list.indexOf(commonSuffix).apply { this >= 0 || return@of null }
                 return MetricPrefix(
                     baseLevel = list[baseLevelIndex],
@@ -192,7 +197,6 @@ data class IntegerFormat(
 
     init {
         require(base >= 2) { "base must be >= 2" }
-        require(postfixes.isNotEmpty()) { "postfixes must not be empty" }
         require(width >= 0) { "width must be >= 0" }
         require(threshold >= 0) { "threshold must be >= 0" }
         if (width > 0) {
@@ -307,16 +311,7 @@ data class IntegerFormat(
     private fun canPromoteLevel(level: Int): Boolean {
         // level is current index; promoting goes to level+1
         if (allowPlus) return true
-        return level + 1 <= postfixes.lastIndex
-    }
-
-    private fun unitString(level: Int): String {
-        if (level <= postfixes.lastIndex) {
-            return postfixes[level]
-        }
-        // allowPlus overflow: lastUnit + "+" + k
-        val k = level - postfixes.lastIndex
-        return postfixes.last() + "+" + k
+        return level + 1 <= mp.larger.size
     }
 
     /**
@@ -356,7 +351,7 @@ data class IntegerFormat(
                 }
             }
 
-            val unit = unitString(outLevel)
+            val unit = mp.level(outLevel)!!
             val mantissa = formatMantissa(outInt, outFrac)
             val text = mantissa + unit
             if (bodyWidth <= 0 || text.length <= bodyWidth) {
@@ -364,7 +359,7 @@ data class IntegerFormat(
             }
         }
 
-        val intOnly = intPart.toString() + unitString(level)
+        val intOnly = intPart.toString() + mp.level(level)!!
         if (bodyWidth <= 0 || intOnly.length <= bodyWidth) {
             return intOnly
         }
@@ -417,43 +412,27 @@ data class IntegerFormat(
     }
 
     companion object {
-        @JvmField
-        val SiPostfixes = listOf("", "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q")
-
-        @JvmField
-        val IecPostfixes = listOf("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi", "Yi", "Ri", "Qi")
-
         /** SI decimal prefixes, base 1000. */
         @JvmField
-        val SI = IntegerFormat(
-            base = 1000,
-            postfixes = SiPostfixes,
-            allowOmitDecimal = true,
-        )
+        val SI = IntegerFormat(base = 1000, mp = MetricPrefix.SI, allowOmitDecimal = true)
 
         /** IEC 80000-13 binary prefixes, base 1024. */
         @JvmField
-        val IEC = IntegerFormat(
-            base = 1024,
-            postfixes = IecPostfixes,
-            allowOmitDecimal = true,
-        )
+        val IEC = IntegerFormat(base = 1024, mp = MetricPrefix.IEC, allowOmitDecimal = true)
 
         /** SI with a fixed slot width (AE2 readable-number style). */
         @JvmStatic
-        fun si(width: Int): IntegerFormat = SI.copy(
-            width = width,
-            allowOmitDecimal = true,
-            allowOmitLeadingZero = width in 1..4,
-        )
+        fun si(width: Int): IntegerFormat = SI.copy(width = width, allowOmitLeadingZero = width in 1..4)
 
         /** IEC with a fixed slot width. */
         @JvmStatic
-        fun iec(width: Int): IntegerFormat = IEC.copy(
-            width = width,
-            allowOmitDecimal = true,
-            allowOmitLeadingZero = width in 1..4,
-        )
+        fun iec(width: Int): IntegerFormat = IEC.copy(width = width, allowOmitLeadingZero = width in 1..4)
+
+        @JvmStatic
+        fun siFormat(value: Long): String = SI.format(value)
+
+        @JvmStatic
+        fun siFormat(value: BigInteger): String = SI.format(value)
 
         @JvmStatic
         fun siFormat(value: Long, width: Int): String = si(width).format(value)
@@ -465,15 +444,15 @@ data class IntegerFormat(
         fun siFormat(value: Double, width: Int): String = si(width).format(value)
 
         @JvmStatic
+        fun iecFormat(value: Long): String = IEC.format(value)
+
+        @JvmStatic
+        fun iecFormat(value: BigInteger): String = IEC.format(value)
+
+        @JvmStatic
         fun iecFormat(value: Long, width: Int): String = iec(width).format(value)
 
         @JvmStatic
         fun iecFormat(value: BigInteger, width: Int): String = iec(width).format(value)
-
-        @JvmStatic
-        fun iecFormatBytes(value: Long): String = IEC.format(value)
-
-        @JvmStatic
-        fun iecFormatBytes(value: BigInteger): String = IEC.format(value)
     }
 }

@@ -18,6 +18,6 @@ public class CPUSelectionListMixin {
             cir.setReturnValue("∞");
             return;
         }
-        cir.setReturnValue(IntegerFormat.iecFormatBytes(storage));
+        cir.setReturnValue(IntegerFormat.iecFormat(storage));
     }
 }
