@@ -7,7 +7,7 @@ import dev.emi.emi.api.widget.Bounds
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen
 
 @EmiEntrypoint
-class Ae2EmiPlugin : EmiPlugin {
+class MyEmiPlugin : EmiPlugin {
     companion object {
         private const val IMAGE_WIDTH = 195
         private const val IMAGE_HEIGHT = 136
