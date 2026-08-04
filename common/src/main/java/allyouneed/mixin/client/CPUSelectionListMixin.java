@@ -15,7 +15,7 @@ public class CPUSelectionListMixin {
     private void allyouneed$formatStorage(CraftingStatusMenu.CraftingCpuListEntry cpu, CallbackInfoReturnable<String> cir) {
         long storage = cpu.storage();
         if (storage == Long.MAX_VALUE || storage < 0) {
-            cir.setReturnValue("\u221E");
+            cir.setReturnValue("∞");
             return;
         }
         cir.setReturnValue(IecFormat.formatBytes(storage));

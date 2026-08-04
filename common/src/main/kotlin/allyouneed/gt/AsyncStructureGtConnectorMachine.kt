@@ -99,7 +99,7 @@ abstract class AsyncStructureGtConnectorMachine(
 
     override val swallowedChannels: Int
         get() = (gridNodeHolder.getMainNode().getNode() as? AsyncChannelNodeHolder)
-            ?.getAsyncSwallowedChannels() ?: 0
+            ?.asyncSwallowedChannels ?: 0
 
     override val isInfiniteChannelMode: Boolean
         get() = gridNodeHolder.getMainNode().getNode()?.grid?.pathingService?.channelMode == ChannelMode.INFINITE

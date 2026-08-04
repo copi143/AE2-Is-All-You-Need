@@ -9,12 +9,10 @@ import appeng.parts.AEBasePart
 import appeng.parts.networking.CablePart
 
 /** Extension: MAC of a live grid node, or [MacAddress.NONE]. */
-fun IGridNode.macAddress(): Long =
-    if (this is IMacAddressHolder) getMacAddress() else MacAddress.NONE
+fun IGridNode.macAddress(): Long = if (this is IMacAddressHolder) macAddress else MacAddress.NONE
 
 /** Extension: MAC cached on a managed node, or [MacAddress.NONE]. */
-fun IManagedGridNode.macAddress(): Long =
-    if (this is IManagedMacAddressHolder) getMacAddress() else MacAddress.NONE
+fun IManagedGridNode.macAddress(): Long = if (this is IManagedMacAddressHolder) macAddress else MacAddress.NONE
 
 fun Long.toMacString(): String = MacAddress.format(this)
 
@@ -37,8 +35,7 @@ object MacHosts {
         }
     }
 
-    private fun isCableHost(host: Any): Boolean =
-        host is ICablePart || host is CablePart
+    private fun isCableHost(host: Any): Boolean = host is ICablePart
 
     private fun collectManagedNodes(host: Any): List<ManagedGridNode> {
         val out = ArrayList<ManagedGridNode>(2)

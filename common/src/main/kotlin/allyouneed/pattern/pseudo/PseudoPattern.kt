@@ -68,7 +68,7 @@ class AEPseudoPattern(private val definition: AEItemKey) : IPatternDetails {
         if (!tag.contains(key)) return emptyArray()
         val list = tag.getList(key, Tag.TAG_COMPOUND.toInt())
         val arr = arrayOfNulls<GenericStack>(list.size)
-        for (i in 0 until list.size) arr[i] = GenericStack.readTag(list.getCompound(i))
+        for (i in list.indices) arr[i] = GenericStack.readTag(list.getCompound(i))
         return arr
     }
 

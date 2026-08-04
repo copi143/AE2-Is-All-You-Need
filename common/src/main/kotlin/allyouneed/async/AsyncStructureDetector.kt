@@ -200,7 +200,7 @@ object AsyncStructureDetector {
         while (stack.isNotEmpty()) {
             val pos = stack.removeFirst()
             if (!seen.add(pos)) continue
-            for (dir in Direction.values()) {
+            for (dir in Direction.entries) {
                 val neighbor = pos.offset(dir.normal)
                 if (seen.contains(neighbor)) continue
                 when (val kind = kindOf(level, neighbor)) {

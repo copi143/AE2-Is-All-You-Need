@@ -12,19 +12,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface BigStackSource {
     /**
-     * Append this storage's full BigInteger totals into {@code out}.
-     */
-    void getBigAvailableStacks(BigKeyCounter out);
-
-    /**
-     * Last snapshot if any; optional cache for callers that already listed.
-     */
-    @Nullable
-    default BigKeyCounter getLastBigStacks() {
-        return null;
-    }
-
-    /**
      * Unwrap common AE2 wrappers and collect big stacks when available.
      *
      * @return true if big stacks were collected (caller should skip long path)
@@ -47,5 +34,18 @@ public interface BigStackSource {
             break;
         }
         return false;
+    }
+
+    /**
+     * Append this storage's full BigInteger totals into {@code out}.
+     */
+    void getBigAvailableStacks(BigKeyCounter out);
+
+    /**
+     * Last snapshot if any; optional cache for callers that already listed.
+     */
+    @Nullable
+    default BigKeyCounter getLastBigStacks() {
+        return null;
     }
 }

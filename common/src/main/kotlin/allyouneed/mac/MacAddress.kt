@@ -1,5 +1,8 @@
 package allyouneed.mac
 
+import allyouneed.mac.MacAddress.MASK
+
+
 /**
  * 48-bit MAC helpers. Values are stored as [Long] masked with [MASK].
  * Bit 1 of the first octet is set (locally administered) for newly allocated addresses.
@@ -12,22 +15,25 @@ object MacAddress {
     const val LOCALLY_ADMINISTERED = 0x02_00_00_00_00_00L
 
     @JvmStatic
-    fun isValid(mac: Long): Boolean = mac != NONE && (mac and MASK.inv()) == 0L && mac != 0L
+    fun isValid(mac: Long): Boolean = mac != NONE && (mac and MASK) == mac
 
     @JvmStatic
     fun normalize(mac: Long): Long = mac and MASK
 
     @JvmStatic
-    fun format(mac: Long): String {
-        val m = normalize(mac)
-        return "%02X:%02X:%02X:%02X:%02X:%02X".format(
-            ((m shr 40) and 0xFF).toInt(),
-            ((m shr 32) and 0xFF).toInt(),
-            ((m shr 24) and 0xFF).toInt(),
-            ((m shr 16) and 0xFF).toInt(),
-            ((m shr 8) and 0xFF).toInt(),
-            (m and 0xFF).toInt(),
+    fun format(mac: Long): String = if (isValid(mac)) {
+        "%02X:%02X:%02X:%02X:%02X:%02X".format(
+            ((mac shr 40) and 0xFF).toInt(),
+            ((mac shr 32) and 0xFF).toInt(),
+            ((mac shr 24) and 0xFF).toInt(),
+            ((mac shr 16) and 0xFF).toInt(),
+            ((mac shr 8) and 0xFF).toInt(),
+            (mac and 0xFF).toInt(),
         )
+    } else if (mac == 0L) {
+        "N/A"
+    } else {
+        "Error MAC Address"
     }
 
     @JvmStatic

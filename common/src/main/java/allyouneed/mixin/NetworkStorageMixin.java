@@ -21,6 +21,7 @@ import java.util.NavigableMap;
  * Aggregate per-mount stacks with BigInteger to avoid long overflow, then write
  * saturated longs into the outgoing {@link KeyCounter} for AE2 compatibility.
  */
+@SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(value = NetworkStorage.class, remap = false)
 public abstract class NetworkStorageMixin implements BigStackSource {
 

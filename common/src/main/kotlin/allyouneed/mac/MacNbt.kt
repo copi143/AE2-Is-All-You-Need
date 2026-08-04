@@ -24,7 +24,7 @@ object MacNbt {
     @JvmStatic
     fun writeNodeMac(nodeTag: CompoundTag, mac: Long) {
         if (MacAddress.isValid(mac)) {
-            nodeTag.putLong(NODE_KEY, MacAddress.normalize(mac))
+            nodeTag.putLong(NODE_KEY, mac)
         } else {
             nodeTag.remove(NODE_KEY)
         }
@@ -33,7 +33,7 @@ object MacNbt {
     @JvmStatic
     fun readNodeMac(nodeTag: CompoundTag?): Long {
         if (nodeTag == null || !nodeTag.contains(NODE_KEY)) return MacAddress.NONE
-        return MacAddress.normalize(nodeTag.getLong(NODE_KEY))
+        return nodeTag.getLong(NODE_KEY)
     }
 
     @JvmStatic
@@ -45,7 +45,7 @@ object MacNbt {
         val compound = CompoundTag()
         for ((name, mac) in macs) {
             if (MacAddress.isValid(mac)) {
-                compound.putLong(name, MacAddress.normalize(mac))
+                compound.putLong(name, mac)
             }
         }
         if (compound.isEmpty) {

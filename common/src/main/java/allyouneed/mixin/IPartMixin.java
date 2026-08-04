@@ -1,17 +1,16 @@
 package allyouneed.mixin;
 
-import java.util.List;
-import java.util.Map;
-
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-
 import allyouneed.mac.MacHosts;
 import allyouneed.mac.MacNbt;
 import appeng.api.parts.IPart;
 import appeng.util.SettingsFrom;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Part drops: wrench keeps MAC, normal break does not.

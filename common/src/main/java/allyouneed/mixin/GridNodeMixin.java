@@ -1,21 +1,17 @@
 package allyouneed.mixin;
 
+import allyouneed.async.AsyncChannelNodeHolder;
+import allyouneed.mac.*;
+import appeng.api.networking.IGridNode;
+import appeng.me.GridNode;
+import net.minecraft.nbt.CompoundTag;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import allyouneed.async.AsyncChannelNodeHolder;
-import allyouneed.mac.IMacAddressHolder;
-import allyouneed.mac.MacAddress;
-import allyouneed.mac.MacAddressRegistry;
-import allyouneed.mac.MacNbt;
-import allyouneed.mac.MacPolicy;
-import appeng.api.networking.IGridNode;
-import appeng.me.GridNode;
-import net.minecraft.nbt.CompoundTag;
-
+@SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(value = GridNode.class, remap = false)
 public abstract class GridNodeMixin implements AsyncChannelNodeHolder, IMacAddressHolder {
 
@@ -26,13 +22,13 @@ public abstract class GridNodeMixin implements AsyncChannelNodeHolder, IMacAddre
     private long allyouneed$macAddress = MacAddress.NONE;
 
     @Override
-    public void setAsyncSwallowedChannels(int channels) {
-        this.allyouneed$asyncSwallowedChannels = channels;
+    public int getAsyncSwallowedChannels() {
+        return this.allyouneed$asyncSwallowedChannels;
     }
 
     @Override
-    public int getAsyncSwallowedChannels() {
-        return this.allyouneed$asyncSwallowedChannels;
+    public void setAsyncSwallowedChannels(int channels) {
+        this.allyouneed$asyncSwallowedChannels = channels;
     }
 
     @Override
@@ -47,7 +43,7 @@ public abstract class GridNodeMixin implements AsyncChannelNodeHolder, IMacAddre
 
     @Inject(method = "loadFromNBT", at = @At("TAIL"))
     private void allyouneed$loadMac(String name, CompoundTag nodeDataContainer, CallbackInfo ci) {
-        IGridNode self = (IGridNode) (Object) this;
+        IGridNode self = (IGridNode) this;
         if (!MacPolicy.shouldHaveMac(self)) {
             this.allyouneed$macAddress = MacAddress.NONE;
             return;
@@ -62,7 +58,7 @@ public abstract class GridNodeMixin implements AsyncChannelNodeHolder, IMacAddre
 
     @Inject(method = "saveToNBT", at = @At("TAIL"))
     private void allyouneed$saveMac(String name, CompoundTag nodeData, CallbackInfo ci) {
-        IGridNode self = (IGridNode) (Object) this;
+        IGridNode self = (IGridNode) this;
         if (!MacPolicy.shouldHaveMac(self) || !MacAddress.isValid(this.allyouneed$macAddress)) {
             if (nodeData.get(name) instanceof CompoundTag nodeTag) {
                 MacNbt.writeNodeMac(nodeTag, MacAddress.NONE);
@@ -81,13 +77,13 @@ public abstract class GridNodeMixin implements AsyncChannelNodeHolder, IMacAddre
     @Inject(method = "destroy", at = @At("HEAD"))
     private void allyouneed$unregisterMac(CallbackInfo ci) {
         if (MacAddress.isValid(this.allyouneed$macAddress)) {
-            MacAddressRegistry.unregister(this.allyouneed$macAddress, (IGridNode) (Object) this);
+            MacAddressRegistry.unregister(this.allyouneed$macAddress, (IGridNode) this);
         }
     }
 
     @Inject(method = "markReady", at = @At("TAIL"))
     private void allyouneed$registerMac(CallbackInfo ci) {
-        IGridNode self = (IGridNode) (Object) this;
+        IGridNode self = (IGridNode) this;
         if (!MacPolicy.shouldHaveMac(self)) {
             this.allyouneed$macAddress = MacAddress.NONE;
             return;

@@ -1,5 +1,11 @@
 package allyouneed.mixin;
 
+import allyouneed.mac.*;
+import appeng.me.GridNode;
+import appeng.me.ManagedGridNode;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -7,18 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import allyouneed.mac.IMacAddressHolder;
-import allyouneed.mac.IManagedMacAddressHolder;
-import allyouneed.mac.MacAddress;
-import allyouneed.mac.MacAddressRegistry;
-import allyouneed.mac.MacNbt;
-import allyouneed.mac.MacPolicy;
-import appeng.me.GridNode;
-import appeng.me.ManagedGridNode;
-import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.level.Level;
-
+@SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(value = ManagedGridNode.class, remap = false)
 public abstract class ManagedGridNodeMixin implements IManagedMacAddressHolder {
 

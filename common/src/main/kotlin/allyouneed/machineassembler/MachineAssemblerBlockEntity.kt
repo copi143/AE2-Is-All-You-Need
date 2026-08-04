@@ -243,7 +243,7 @@ class MachineAssemblerBlockEntity(
             if (!pattern.isEmpty()) {
                 this.forcePlan = true
                 this.myPattern = pattern
-                this.pushDirection = Direction.values()[data.getInt("pushDirection")]
+                this.pushDirection = Direction.entries.toTypedArray()[data.getInt("pushDirection")]
             }
         }
 
@@ -464,7 +464,7 @@ class MachineAssemblerBlockEntity(
     private fun pushOut(output: ItemStack) {
         var remaining = output
         if (this.pushDirection == null) {
-            for (d in Direction.values()) {
+            for (d in Direction.entries) {
                 remaining = this.pushTo(remaining, d)
             }
         } else {

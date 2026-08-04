@@ -20,26 +20,43 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
+@SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(CreativeModeInventoryScreen.class)
 public abstract class CreativeScreenSidebarMixin {
 
-    @Unique private static final int SIDEBAR_WIDTH = 80;
-    @Unique private static final int ENTRY_HEIGHT = 22;
-    @Unique private static final int ENTRY_PADDING = 1;
-    @Unique private static final int SIDEBAR_PADDING = 2;
-    @Unique private static final int ICON_SIZE = 16;
-    @Unique private static final int ICON_X = 3;
-    @Unique private static final int TEXT_X = 22;
-    @Unique private static final int TEXT_Y_OFFSET = 5;
-    @Unique private static final int BG_COLOR = 0xC0101010;
-    @Unique private static final int BORDER_COLOR = 0xFF555555;
-    @Unique private static final int SELECTED_BG_COLOR = 0x80444444;
-    @Unique private static final int HOVER_BG_COLOR = 0x40333333;
-    @Unique private static final int IMAGE_WIDTH = 195;
-    @Unique private static final int IMAGE_HEIGHT = 136;
+    @Unique
+    private static final int SIDEBAR_WIDTH = 80;
+    @Unique
+    private static final int ENTRY_HEIGHT = 22;
+    @Unique
+    private static final int ENTRY_PADDING = 1;
+    @Unique
+    private static final int SIDEBAR_PADDING = 2;
+    @Unique
+    private static final int ICON_SIZE = 16;
+    @Unique
+    private static final int ICON_X = 3;
+    @Unique
+    private static final int TEXT_X = 22;
+    @Unique
+    private static final int TEXT_Y_OFFSET = 5;
+    @Unique
+    private static final int BG_COLOR = 0xC0101010;
+    @Unique
+    private static final int BORDER_COLOR = 0xFF555555;
+    @Unique
+    private static final int SELECTED_BG_COLOR = 0x80444444;
+    @Unique
+    private static final int HOVER_BG_COLOR = 0x40333333;
+    @Unique
+    private static final int IMAGE_WIDTH = 195;
+    @Unique
+    private static final int IMAGE_HEIGHT = 136;
 
-    @Unique private int scrollOffset = 0;
-    @Unique private List<CreativeTabGroup> currentGroupList = List.of();
+    @Unique
+    private int scrollOffset = 0;
+    @Unique
+    private List<CreativeTabGroup> currentGroupList = List.of();
 
     @Unique
     private static int screenWidth() {
@@ -86,6 +103,28 @@ public abstract class CreativeScreenSidebarMixin {
 
     // --- Tab rendering filter ---
 
+    @Unique
+    private static void drawTriangleUp(GuiGraphics g, int x, int y, int w, int h, int color) {
+        for (int row = 0; row < h; row++) {
+            int l = x + (w * row / (h * 2));
+            int r = x + w - (w * row / (h * 2));
+            g.fill(l, y + h - 1 - row, r, y + h - row, color);
+        }
+    }
+
+    // --- Tab click filter ---
+
+    @Unique
+    private static void drawTriangleDown(GuiGraphics g, int x, int y, int w, int h, int color) {
+        for (int row = 0; row < h; row++) {
+            int l = x + (w * row / (h * 2));
+            int r = x + w - (w * row / (h * 2));
+            g.fill(l, y + row, r, y + row + 1, color);
+        }
+    }
+
+    // --- Tab hover filter ---
+
     @Inject(method = "renderTabButton", at = @At("HEAD"), cancellable = true)
     private void hideNonGroupTab(GuiGraphics guiGraphics, CreativeModeTab tab, CallbackInfo ci) {
         if (!isTabInSelectedGroup(tab)) {
@@ -93,7 +132,7 @@ public abstract class CreativeScreenSidebarMixin {
         }
     }
 
-    // --- Tab click filter ---
+    // --- Init ---
 
     @Inject(method = "checkTabClicked", at = @At("RETURN"), cancellable = true)
     private void filterTabClick(CreativeModeTab tab, double relativeMouseX, double relativeMouseY, CallbackInfoReturnable<Boolean> cir) {
@@ -102,7 +141,7 @@ public abstract class CreativeScreenSidebarMixin {
         }
     }
 
-    // --- Tab hover filter ---
+    // --- Render ---
 
     @Inject(method = "checkTabHovering", at = @At("RETURN"), cancellable = true)
     private void filterTabHover(GuiGraphics guiGraphics, CreativeModeTab tab, int mouseX, int mouseY, CallbackInfoReturnable<Boolean> cir) {
@@ -111,15 +150,11 @@ public abstract class CreativeScreenSidebarMixin {
         }
     }
 
-    // --- Init ---
-
     @Inject(method = "init", at = @At("TAIL"))
     private void initSidebar(CallbackInfo ci) {
         currentGroupList = CreativeTabGroupRegistry.INSTANCE.getGroupList();
         scrollOffset = 0;
     }
-
-    // --- Render ---
 
     @Inject(method = "render", at = @At("TAIL"))
     private void renderSidebar(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
@@ -153,8 +188,7 @@ public abstract class CreativeScreenSidebarMixin {
             int entryRight = contentX + SIDEBAR_WIDTH - SIDEBAR_PADDING * 2;
 
             boolean isSelected = group.getId().equals(selectedId);
-            boolean isHovered = mouseX >= contentX && mouseX < entryRight
-                && mouseY >= entryY && mouseY < entryY + ENTRY_HEIGHT;
+            boolean isHovered = mouseX >= contentX && mouseX < entryRight && mouseY >= entryY && mouseY < entryY + ENTRY_HEIGHT;
 
             if (isSelected) {
                 graphics.fill(contentX, entryY, entryRight, entryY + ENTRY_HEIGHT, SELECTED_BG_COLOR);
@@ -184,24 +218,6 @@ public abstract class CreativeScreenSidebarMixin {
         }
     }
 
-    @Unique
-    private static void drawTriangleUp(GuiGraphics g, int x, int y, int w, int h, int color) {
-        for (int row = 0; row < h; row++) {
-            int l = x + (w * row / (h * 2));
-            int r = x + w - (w * row / (h * 2));
-            g.fill(l, y + h - 1 - row, r, y + h - row, color);
-        }
-    }
-
-    @Unique
-    private static void drawTriangleDown(GuiGraphics g, int x, int y, int w, int h, int color) {
-        for (int row = 0; row < h; row++) {
-            int l = x + (w * row / (h * 2));
-            int r = x + w - (w * row / (h * 2));
-            g.fill(l, y + row, r, y + row + 1, color);
-        }
-    }
-
     // --- Mouse ---
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
@@ -212,8 +228,7 @@ public abstract class CreativeScreenSidebarMixin {
         int sidebarX = left - SIDEBAR_WIDTH - SIDEBAR_PADDING;
         int sidebarY = top + SIDEBAR_PADDING;
 
-        if (mouseX < sidebarX || mouseX > sidebarX + SIDEBAR_WIDTH
-            || mouseY < top || mouseY > top + IMAGE_HEIGHT) {
+        if (mouseX < sidebarX || mouseX > sidebarX + SIDEBAR_WIDTH || mouseY < top || mouseY > top + IMAGE_HEIGHT) {
             return;
         }
 
@@ -235,8 +250,7 @@ public abstract class CreativeScreenSidebarMixin {
         int top = guiTop();
         int sidebarX = left - SIDEBAR_WIDTH - SIDEBAR_PADDING;
 
-        if (mouseX < sidebarX || mouseX > sidebarX + SIDEBAR_WIDTH
-            || mouseY < top || mouseY > top + IMAGE_HEIGHT) {
+        if (mouseX < sidebarX || mouseX > sidebarX + SIDEBAR_WIDTH || mouseY < top || mouseY > top + IMAGE_HEIGHT) {
             return;
         }
 

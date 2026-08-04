@@ -4,7 +4,6 @@ import appeng.api.implementations.parts.ICablePart
 import appeng.api.networking.IGridNode
 import appeng.api.networking.IManagedGridNode
 import appeng.me.ManagedGridNode
-import appeng.parts.networking.CablePart
 
 /**
  * Which AE2 hosts/nodes receive a MAC.
@@ -14,7 +13,7 @@ object MacPolicy {
     @JvmStatic
     fun shouldHaveMac(owner: Any?): Boolean {
         if (owner == null) return false
-        if (owner is ICablePart || owner is CablePart) return false
+        if (owner is ICablePart) return false
         return true
     }
 
@@ -32,7 +31,7 @@ object MacPolicy {
 
     @JvmStatic
     fun clearMac(managed: IManagedMacAddressHolder) {
-        managed.setMacAddress(MacAddress.NONE)
+        managed.macAddress = MacAddress.NONE
     }
 
     @JvmStatic

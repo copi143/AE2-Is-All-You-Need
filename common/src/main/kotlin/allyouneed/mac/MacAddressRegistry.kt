@@ -146,9 +146,9 @@ object MacAddressRegistry {
             return
         }
 
-        var mac = managed.getMacAddress()
+        var mac = managed.macAddress
         if (!MacAddress.isValid(mac) && node is IMacAddressHolder) {
-            mac = node.getMacAddress()
+            mac = node.macAddress
         }
 
         if (MacAddress.isValid(mac) && isLiveConflict(mac, node)) {
@@ -185,9 +185,9 @@ object MacAddressRegistry {
             }
         }
 
-        managed.setMacAddress(mac)
+        managed.macAddress = mac
         if (node is IMacAddressHolder) {
-            node.setMacAddress(mac)
+            node.macAddress = mac
         }
     }
 
@@ -197,9 +197,9 @@ object MacAddressRegistry {
         for (managed in nodes) {
             if (managed !is IManagedMacAddressHolder) continue
             if (MacPolicy.isCableManaged(managed)) continue
-            val mac = managed.getMacAddress()
+            val mac = managed.macAddress
             if (MacAddress.isValid(mac)) {
-                result[managed.getMacTagName()] = MacAddress.normalize(mac)
+                result[managed.macTagName] = MacAddress.normalize(mac)
             }
         }
         return result
@@ -212,7 +212,7 @@ object MacAddressRegistry {
             clearBound(managed, managed.node)
             return
         }
-        val mac = macs[managed.getMacTagName()] ?: return
+        val mac = macs[managed.macTagName] ?: return
         if (!MacAddress.isValid(mac)) return
 
         val node = managed.node
@@ -226,30 +226,30 @@ object MacAddressRegistry {
             return
         }
 
-        managed.setMacAddress(mac)
+        managed.macAddress = mac
         if (node is IMacAddressHolder) {
-            node.setMacAddress(mac)
+            node.macAddress = mac
             if (!register(mac, node)) {
                 // Lost race: clear and let next ensureAndBind fix
-                managed.setMacAddress(MacAddress.NONE)
-                node.setMacAddress(MacAddress.NONE)
+                managed.macAddress = MacAddress.NONE
+                node.macAddress = MacAddress.NONE
             }
         }
     }
 
     private fun clearBound(managed: IManagedMacAddressHolder, node: IGridNode?) {
-        val old = managed.getMacAddress()
+        val old = managed.macAddress
         if (MacAddress.isValid(old) && node != null) {
             unregister(old, node)
         }
         if (node is IMacAddressHolder) {
-            val nodeMac = node.getMacAddress()
+            val nodeMac = node.macAddress
             if (MacAddress.isValid(nodeMac)) {
                 unregister(nodeMac, node)
-                node.setMacAddress(MacAddress.NONE)
+                node.macAddress = MacAddress.NONE
             }
         }
-        managed.setMacAddress(MacAddress.NONE)
+        managed.macAddress = MacAddress.NONE
     }
 
     private fun loadMeta(dir: Path) {

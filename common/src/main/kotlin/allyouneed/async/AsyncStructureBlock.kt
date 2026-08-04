@@ -45,11 +45,13 @@ open class AsyncStructureBlock(
         builder.add(AsyncStructureEntityBlock.FORMED)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
         super.onPlace(state, level, pos, oldState, isMoving)
         notifyStructureChanged(level, pos)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
         super.onRemove(state, level, pos, newState, isMoving)
         notifyStructureChanged(level, pos)
@@ -90,6 +92,7 @@ class AsyncStructureFrameBlock(
         builder.add(CONNECTIONS)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
         super.onPlace(state, level, pos, oldState, isMoving)
         if (!level.isClientSide) {
@@ -97,6 +100,7 @@ class AsyncStructureFrameBlock(
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun neighborChanged(
         state: BlockState,
         level: Level,
@@ -113,7 +117,7 @@ class AsyncStructureFrameBlock(
 
     private fun refreshConnections(level: Level, pos: BlockPos) {
         var mask = 0
-        for ((i, dir) in Direction.values().withIndex()) {
+        for ((i, dir) in Direction.entries.withIndex()) {
             val kind = (level.getBlockState(pos.relative(dir)).block as? IAsyncKindBlock)?.kind
             if (kind == AsyncBlockKind.FRAME) {
                 mask = mask or (1 shl i)
@@ -227,7 +231,7 @@ class AsyncStructureControllerBlock(
     props: Properties,
 ) : AsyncStructureEntityBlock<AsyncStructureBlockEntity>(kind, props) {
 
-    override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity? {
+    override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity {
         return AsyncStructureBlockEntity(AsyncCraftingRegistration.getStructureBlockEntityType(), pos, state)
     }
 
@@ -256,7 +260,7 @@ class AsyncStructureInterfaceBlock(
     props: Properties,
 ) : AsyncStructureEntityBlock<AsyncStructureBlockEntity>(kind, props) {
 
-    override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity? {
+    override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity {
         return AsyncStructureBlockEntity(AsyncCraftingRegistration.getStructureBlockEntityType(), pos, state)
     }
 }
@@ -283,7 +287,7 @@ class AsyncStructureConnectorBlock(
         builder.add(POWERED)
     }
 
-    override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity? {
+    override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity {
         return AsyncStructureConnectorBlockEntity(
             AsyncCraftingRegistration.getStructureConnectorBlockEntityType(),
             pos,

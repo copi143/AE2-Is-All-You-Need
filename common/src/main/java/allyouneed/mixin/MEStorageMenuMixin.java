@@ -8,6 +8,7 @@ import appeng.api.storage.MEStorage;
 import appeng.menu.me.common.IncrementalUpdateHelper;
 import appeng.menu.me.common.MEStorageMenu;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -23,10 +24,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = MEStorageMenu.class, remap = false)
 public abstract class MEStorageMenuMixin {
 
+    @Final
     @Shadow
     @Nullable
     protected MEStorage storage;
 
+    @Final
     @Shadow
     private IncrementalUpdateHelper updateHelper;
 

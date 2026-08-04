@@ -25,7 +25,7 @@ class WirelessPseudoPatternTerminalItem(props: Properties) :
         inventorySlot: Int,
         stack: ItemStack,
         @Nullable pos: BlockPos?
-    ): ItemMenuHost? {
+    ): ItemMenuHost {
         return WirelessTerminalMenuHost(player, inventorySlot, stack) { p, _ ->
             openFromInventory(p, inventorySlot, true)
         }

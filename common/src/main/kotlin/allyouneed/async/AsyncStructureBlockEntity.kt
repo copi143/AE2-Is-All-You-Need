@@ -237,7 +237,7 @@ class AsyncStructureConnectorBlockEntity(
     override val swallowedChannels: Int
         get() {
             val node = gridNode
-            return if (node is AsyncChannelNodeHolder) node.getAsyncSwallowedChannels() else 0
+            return if (node is AsyncChannelNodeHolder) node.asyncSwallowedChannels else 0
         }
 
     /**
