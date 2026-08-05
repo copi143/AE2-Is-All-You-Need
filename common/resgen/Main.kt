@@ -197,10 +197,20 @@ fun main(args: Array<String>) {
         }
 
         for (async in asyncStructureBlocks) {
-            if (async.role == "FRAME") {
-                asyncFrameBlock(async.id, async.displayName)
-            } else {
-                asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
+            when (async.role) {
+                "FRAME" -> asyncFrameBlock(async.id, async.displayName)
+                // Tower: directional faces (horizontal row of towers → east/west, vertical → up/down).
+                "TOWER" -> asyncBlock(
+                    async.id, async.displayName, async.hasFacing, async.hasPowered,
+                    faces = listOf("tower", "tower_h", "tower", "tower_h", "tower_v", "tower_v"),
+                )
+                // Module interface: the socket face (with pin holes) points in the facing direction.
+                "INTERFACE" -> asyncBlock(
+                    async.id, async.displayName, async.hasFacing, async.hasPowered,
+                    faces = listOf("socket_up", "socket", "socket", "socket", "socket", "socket"),
+                    formedFaces = listOf("socket_up_formed", "socket", "socket", "socket", "socket", "socket"),
+                )
+                else -> asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
             }
         }
 
@@ -334,6 +344,21 @@ fun main(args: Array<String>) {
             )
         }
 
+        // Async cores: the hand-drawn `*_formed_light` overlays are the formed-state glow mask,
+        // animated exactly like the frame lights above. The static `*_formed.png` files in the
+        // source are just design previews; the output `_formed` strips are generated from the
+        // base + light overlay and written under the block-id names the models reference.
+        for (core in listOf("storage_core", "execution_core")) {
+            layeredAnimatedTint(
+                bg = "async/$core",
+                mid = "async/${core}_formed_light",
+                outputPrefix = "async/async_${core}_formed",
+                midColors = AE2_GRADIENT.map { it.hex },
+                frameTime = 4,
+                interpolate = true,
+            )
+        }
+
         // Async structure blocks: dedicated pixel-art textures (AsyncTextures) are generated after
         // the retexture block below, shared by both the GT and the no-GT definition files.
     }
@@ -346,9 +371,41 @@ fun main(args: Array<String>) {
     // models. The `_formed` variants are the animated strips produced by the retexture block above.
     val asyncTexOut = texOut.resolve("async")
     asyncTexOut.createDirectories()
+    fun copyAsyncTexture(source: String, dest: String = source) {
+        val src = sourceTextures.resolve("async/$source.png")
+        if (src.exists()) {
+            src.copyTo(asyncTexOut.resolve("$dest.png"), overwrite = true)
+        }
+    }
+
     for (variant in listOf("c", "h", "v")) {
-        sourceTextures.resolve("async/frame_$variant.png")
-            .copyTo(asyncTexOut.resolve("frame_$variant.png"), overwrite = true)
+        copyAsyncTexture("frame_$variant")
+    }
+
+    // Hand-drawn cube_all block faces, renamed to the block-id textures the models reference.
+    // storage_core/execution_core `_formed` are the animated strips generated above, so only their
+    // unformed base is copied here.
+    for ((source, blockId) in listOf(
+        "wall" to "async_machine_block",
+        "glass" to "async_machine_glass",
+        "energy_core" to "async_energy_core",
+        "computing_core" to "async_computing_core",
+        "storage_core" to "async_storage_core",
+        "execution_core" to "async_execution_core",
+    )) {
+        copyAsyncTexture(source, blockId)
+        if (source != "storage_core" && source != "execution_core") {
+            copyAsyncTexture("${source}_formed", "${blockId}_formed")
+        }
+    }
+
+    // Directional face textures referenced by the tower (tower/tower_h/tower_v) and the module
+    // interface (socket/socket_up/socket_up_formed) models, kept under their source names.
+    for (face in listOf("tower", "tower_h", "tower_v")) {
+        copyAsyncTexture(face)
+    }
+    for (face in listOf("socket", "socket_up", "socket_up_formed")) {
+        copyAsyncTexture(face)
     }
 
     val craftingTexOut = texOut.resolve("crafting")
@@ -417,7 +474,17 @@ fun main(args: Array<String>) {
     // Async synthesis blocks: dedicated pixel-art textures (unformed + formed). Written straight to
     // textures/block/async/, the same paths referenced by both the static cube_all models (no-GT)
     // and GTRegistrate's gtceu:machine models (with-GT), so the two definition files share them.
-    AsyncTextures.generate(asyncStructureBlocks, output.resolve("textures/block/async"))
+    // Blocks with hand-drawn textures (frame + wall/glass/tower/cores/interface) are copied above
+    // and skipped here; only the remaining GT-machine blocks stay procedural.
+    val handDrawnAsyncBlocks = setOf(
+        "async_machine_frame", "async_machine_block", "async_machine_glass",
+        "singularity_alloy_reinforced_tower", "async_energy_core", "async_computing_core",
+        "async_storage_core", "async_execution_core", "async_module_interface",
+    )
+    AsyncTextures.generate(
+        asyncStructureBlocks.filter { it.id !in handDrawnAsyncBlocks },
+        output.resolve("textures/block/async"),
+    )
 
     // GUI textures (machine slot square + molecular_assembler GUI with a baked machine slot)
     val guiTexOut = output.resolve("textures/guis")

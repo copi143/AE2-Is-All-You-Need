@@ -212,45 +212,51 @@ class AssetGen(private val modId: String, private val output: Path, private val 
     }
 
     /**
-     * Async crafting multiblock unit: cube_all unformed + formed variants.
-     * [hasFacing] blocks (host/connector) also vary on `facing`; the connector
-     * additionally varies on `powered` (all formed/unformed combos are emitted so
-     * every reachable state matches a model). Property-less structural blocks carry
-     * the `formed` property, so their blockstate varies `formed=false/true` between
-     * the plain and the `_formed` cube_all models.
+     * Async crafting multiblock unit: unformed + formed variants. By default both are `cube_all`
+     * using the block's own textures; when [faces] is given the block renders as a directional cube
+     * with a per-face texture per [FRAME_FACE_ORDER] entry (texture names under `block/async/`),
+     * and [formedFaces] (same order) overrides the formed per-face set, defaulting to [faces].
+     * [hasFacing] blocks (host/connector) also vary on `facing` (with y-rotation so the model's
+     * `north` face points in the facing direction); the connector additionally varies on `powered`
+     * (all formed/unformed combos are emitted so every reachable state matches a model).
+     * Property-less structural blocks carry the `formed` property, so their blockstate varies
+     * `formed=false/true` between the plain and the `_formed` models.
      */
-    fun asyncBlock(name: String, displayName: String, hasFacing: Boolean, hasPowered: Boolean) {
+    fun asyncBlock(
+        name: String,
+        displayName: String,
+        hasFacing: Boolean,
+        hasPowered: Boolean,
+        faces: List<String>? = null,
+        formedFaces: List<String>? = null,
+    ) {
         translations["block.$modId.$name"] = displayName
 
-        val unformedModel = JsonObject().apply {
-            addProperty("parent", "minecraft:block/cube_all")
-            add("textures", JsonObject().apply {
-                addProperty("all", "$modId:block/async/$name")
-            })
+        val (unformedModel, formedModel) = if (faces == null) {
+            cubeAllModel("$modId:block/async/$name") to cubeAllModel("$modId:block/async/${name}_formed")
+        } else {
+            faceCubeModel(faces) to faceCubeModel(formedFaces ?: faces)
         }
         blockModels += GeneratedFile("models/block/async/$name.json", unformedModel)
-
-        val formedModel = JsonObject().apply {
-            addProperty("parent", "minecraft:block/cube_all")
-            add("textures", JsonObject().apply {
-                addProperty("all", "$modId:block/async/${name}_formed")
-            })
-        }
         blockModels += GeneratedFile("models/block/async/${name}_formed.json", formedModel)
 
         val variants = JsonObject()
 
-        fun addVariant(key: String, model: String) {
-            variants.add(key, JsonObject().apply { addProperty("model", "$modId:block/async/$model") })
+        fun addVariant(key: String, model: String, y: Int = 0) {
+            variants.add(key, JsonObject().apply {
+                addProperty("model", "$modId:block/async/$model")
+                if (y != 0) addProperty("y", y)
+            })
         }
 
         val dirs = listOf("north", "south", "east", "west")
+        val yaw = mapOf("north" to 0, "south" to 180, "east" to 90, "west" to 270)
         when {
             hasPowered -> for (dir in dirs) for (formed in listOf("false", "true")) for (powered in listOf("false", "true")) {
-                addVariant("facing=$dir,formed=$formed,powered=$powered", if (formed == "false") name else "${name}_formed")
+                addVariant("facing=$dir,formed=$formed,powered=$powered", if (formed == "false") name else "${name}_formed", yaw.getValue(dir))
             }
             hasFacing -> for (dir in dirs) for (formed in listOf("false", "true")) {
-                addVariant("facing=$dir,formed=$formed", if (formed == "false") name else "${name}_formed")
+                addVariant("facing=$dir,formed=$formed", if (formed == "false") name else "${name}_formed", yaw.getValue(dir))
             }
             else -> for (formed in listOf("false", "true")) {
                 addVariant("formed=$formed", if (formed == "false") name else "${name}_formed")
@@ -264,6 +270,22 @@ class AssetGen(private val modId: String, private val output: Path, private val 
             addProperty("parent", "$modId:block/async/$name")
         }
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
+    private fun cubeAllModel(texture: String): JsonObject = JsonObject().apply {
+        addProperty("parent", "minecraft:block/cube_all")
+        add("textures", JsonObject().apply { addProperty("all", texture) })
+    }
+
+    /** `block/cube` model with per-face textures in [FRAME_FACE_ORDER], particle = first face. */
+    private fun faceCubeModel(faces: List<String>): JsonObject = JsonObject().apply {
+        addProperty("parent", "minecraft:block/cube")
+        add("textures", JsonObject().apply {
+            for ((i, face) in FRAME_FACE_ORDER.withIndex()) {
+                addProperty(face, "$modId:block/async/${faces[i]}")
+            }
+            addProperty("particle", "$modId:block/async/${faces[0]}")
+        })
     }
 
     // ---------------------------------------------------------------------------------------------
