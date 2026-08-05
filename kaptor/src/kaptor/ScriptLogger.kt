@@ -14,6 +14,7 @@ internal object JULLogger : ScriptLogger {
     override fun error(msg: String, t: Throwable?) {
         if (t != null) log.log(java.util.logging.Level.SEVERE, msg, t) else log.severe(msg)
     }
+
     override fun debug(msg: String) = log.fine(msg)
 }
 

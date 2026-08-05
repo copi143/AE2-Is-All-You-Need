@@ -3,10 +3,10 @@ package allyouneed
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.dimensional.DimensionalCellStore
-import allyouneed.netaddr.mac.MacAddressRegistry
 import allyouneed.fabric.init.FabricBlocks
 import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
+import allyouneed.netaddr.mac.MacAddressRegistry
 import allyouneed.util.MODID
 import allyouneed.util.logger
 import appeng.api.features.P2PTunnelAttunement

@@ -1,16 +1,6 @@
 package allyouneed.fabric.init
 
-import allyouneed.async.AsyncBlockKind
-import allyouneed.async.AsyncBlockRegistry
-import allyouneed.async.AsyncCraftingRegistration
-import allyouneed.async.AsyncRole
-import allyouneed.async.AsyncStructureBlock
-import allyouneed.async.AsyncStructureBlockEntity
-import allyouneed.async.AsyncStructureConnectorBlock
-import allyouneed.async.AsyncStructureConnectorBlockEntity
-import allyouneed.async.AsyncStructureControllerBlock
-import allyouneed.async.AsyncStructureFrameBlock
-import allyouneed.async.AsyncStructureInterfaceBlock
+import allyouneed.async.*
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
 import allyouneed.iodrive.MEIODriveRegistration
@@ -23,9 +13,9 @@ import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
 import allyouneed.pattern.machine.MachinePatternTerminalBlock
 import allyouneed.pattern.machine.MachinePatternTerminalBlockEntity
 import allyouneed.pattern.machine.MachinePatternTerminalRegistration
-import allyouneed.util.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
+import allyouneed.util.rl
 import appeng.block.AEBaseEntityBlock
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
@@ -145,7 +135,12 @@ object FabricBlocks {
         val machineTerminalItem = BlockItem(MACHINE_PATTERN_TERMINAL, Item.Properties())
         Registry.register(BuiltInRegistries.ITEM, machineTerminalId, machineTerminalItem)
 
-        BlockDefinition("Machine Pattern Terminal", machineTerminalId, MACHINE_PATTERN_TERMINAL, machineTerminalItem).also {
+        BlockDefinition(
+            "Machine Pattern Terminal",
+            machineTerminalId,
+            MACHINE_PATTERN_TERMINAL,
+            machineTerminalItem
+        ).also {
             MainCreativeTab.add(it)
         }
 

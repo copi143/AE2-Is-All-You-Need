@@ -14,8 +14,6 @@ import com.gregtechceu.gtceu.api.pattern.error.PatternStringError;
 import com.gregtechceu.gtceu.api.pattern.error.SinglePredicateError;
 import com.gregtechceu.gtceu.api.pattern.predicates.SimplePredicate;
 import com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext;
-import com.gregtechceu.gtceu.api.pattern.util.RelativeDirection;
-import com.gregtechceu.gtceu.utils.GTUtil;
 import com.lowdragmc.lowdraglib.utils.BlockInfo;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -33,7 +31,6 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
@@ -45,23 +42,18 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 /**
  * 向 GTCEu 的 {@link BlockPattern} 注入“分组重复”：一个步骤可以覆盖 {@code G}
  * 个连续 aisle（async 扩展舱），整体作为一个单元重复，而不是单个切片。
- *
+ * <p>
  * 组元数据存放在一个 {@code @Unique int[] groupSizes} 字段中，通过
  * {@link IGroupedBlockPattern} 接口暴露。组第一个 aisle 存 {@code G}，组内部 aisle
  * 默认 1，且只会作为其组步骤的一部分被访问到。
- *
+ * <p>
  * 三个被 overwrite 的方法是对 GTCEu 7.5.3 原版的逐行移植，只是把 aisle 循环按
  * 步骤重构（{@code c += groupSize}）：
  * <ul>
@@ -73,7 +65,7 @@ import java.util.function.Consumer;
  *   <li>{@link #autoBuild(Player, MultiblockState)} 放置 {@code max(1, min)} 次组重复
  *       （成形仍允许 0）。</li>
  * </ul>
- *
+ * <p>
  * Injects "group repetition" into the GTCEu {@link BlockPattern}: a step may cover {@code G}
  * consecutive aisles (the async extension bay) that repeat as a unit instead of a single slice.
  *
@@ -110,15 +102,8 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
     protected int[] centerOffset;
     @Shadow
     protected int[] formedRepetitionCount;
-
-    @Shadow
-    protected abstract BlockPos setActualRelativeOffset(int x, int y, int z, Direction facing,
-                                                         Direction upwardsFacing, boolean isFlipped);
-
-    @Shadow
-    private void resetFacing(BlockPos pos, BlockState blockState, Direction facing,
-                             BiPredicate<BlockPos, Direction> checker, Consumer<BlockState> consumer) {
-    }
+    @Unique
+    private int[] groupSizes;
 
     @Shadow
     private static IntObjectPair<IItemHandler> getMatchStackWithHandler(List<ItemStack> candidates,
@@ -126,8 +111,14 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
         return null;
     }
 
-    @Unique
-    private int[] groupSizes;
+    @Shadow
+    protected abstract BlockPos setActualRelativeOffset(int x, int y, int z, Direction facing,
+                                                        Direction upwardsFacing, boolean isFlipped);
+
+    @Shadow
+    private void resetFacing(BlockPos pos, BlockState blockState, Direction facing,
+                             BiPredicate<BlockPos, Direction> checker, Consumer<BlockState> consumer) {
+    }
 
     @Override
     public void setGroup(int aisleIndex, int groupSize) {

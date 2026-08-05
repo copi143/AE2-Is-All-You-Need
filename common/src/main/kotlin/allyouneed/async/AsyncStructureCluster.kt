@@ -120,7 +120,8 @@ class AsyncProcessorCluster(
 
     fun getSwitches(): List<AsyncSwitchCluster> = switches
 
-    fun getTotalBlockCount(): Int = blockCount + switches.sumOf { it.blockCount } + modules.size + switches.sumOf { it.getModules().size }
+    fun getTotalBlockCount(): Int =
+        blockCount + switches.sumOf { it.blockCount } + modules.size + switches.sumOf { it.getModules().size }
 
     fun boundsContain(pos: BlockPos): Boolean =
         pos.x in boundsMin.x..boundsMax.x && pos.y in boundsMin.y..boundsMax.y && pos.z in boundsMin.z..boundsMax.z

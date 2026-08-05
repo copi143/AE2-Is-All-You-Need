@@ -116,9 +116,9 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         val old = switchCluster
         val oldLive = old != null && !old.isDestroyed
         val structureChanged = !oldLive || formed == null ||
-            formed.anchorPos != old.anchorPos || formed.boundsMin != old.boundsMin || formed.boundsMax != old.boundsMax
+                formed.anchorPos != old.anchorPos || formed.boundsMin != old.boundsMin || formed.boundsMax != old.boundsMax
         val moduleChanged = oldLive && formed != null &&
-            formed.getModuleFactoryPositions() != old.getModuleFactoryPositions()
+                formed.getModuleFactoryPositions() != old.getModuleFactoryPositions()
 
         if (oldLive && formed != null && !structureChanged) {
             old.clearModules()
@@ -152,7 +152,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         val old = processorCluster
         val oldLive = old != null && !old.isDestroyed
         val changed = !oldLive || formed == null ||
-            formed.anchorPos != old.anchorPos || formed.boundsMin != old.boundsMin || formed.boundsMax != old.boundsMax
+                formed.anchorPos != old.anchorPos || formed.boundsMin != old.boundsMin || formed.boundsMax != old.boundsMax
 
         if (oldLive && formed != null && !changed) {
             return

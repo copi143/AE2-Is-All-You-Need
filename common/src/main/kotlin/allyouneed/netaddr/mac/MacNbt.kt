@@ -3,7 +3,6 @@ package allyouneed.netaddr.mac
 import allyouneed.util.MODID
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.world.item.ItemStack
-import kotlin.collections.iterator
 
 /**
  * Item / settings NBT helpers for MAC export on wrench dismantle.

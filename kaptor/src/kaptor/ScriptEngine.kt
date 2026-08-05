@@ -2,10 +2,10 @@ package kaptor
 
 import kaptor.compiler.EventClassGenerator
 import kaptor.compiler.SchemaBuilder
+import kaptor.lsp.ScriptLanguageService
 import kaptor.runtime.ScriptEventBus
 import kaptor.runtime.ScriptManager
 import kaptor.runtime.ScriptStats
-import kaptor.lsp.ScriptLanguageService
 import java.nio.file.Path
 
 class ScriptEngine(private val config: ScriptEngineConfig = ScriptEngineConfig()) {

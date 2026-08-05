@@ -1,8 +1,8 @@
 package allyouneed.mixin.ae2;
 
-import appeng.helpers.patternprovider.PatternProviderLogic;
 import appeng.api.crafting.IPatternDetails;
 import appeng.api.stacks.KeyCounter;
+import appeng.helpers.patternprovider.PatternProviderLogic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

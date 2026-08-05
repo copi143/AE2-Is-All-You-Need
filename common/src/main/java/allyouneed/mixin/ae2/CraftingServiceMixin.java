@@ -20,7 +20,7 @@ import java.util.concurrent.Future;
 /**
  * Mixin to replace CraftingService.beginCraftingCalculation with our custom version
  * that uses ACraftingCalculation and AE2TaskScheduler for adaptive probability patterns.
- *
+ * <p>
  * Inventory/pattern snapshots are taken in the ACraftingCalculation constructor on this
  * (calling) thread; only pure computation is submitted to the shared background pool.
  */

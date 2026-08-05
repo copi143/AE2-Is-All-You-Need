@@ -70,11 +70,12 @@ class ItemStorageCellInventory(
         hasVoidUpgrade = upgrades.isInstalled(AEItems.VOID_CARD)
 
         maxItemsPerType = if (upgrades.isInstalled(AEItems.EQUAL_DISTRIBUTION_CARD)) {
-            val partitionKeyCount = if (!isFuzzy && partitionListMode == IncludeExclude.WHITELIST && !config.keySet().isEmpty()) {
-                config.keySet().size
-            } else {
-                maxItemTypes
-            }
+            val partitionKeyCount =
+                if (!isFuzzy && partitionListMode == IncludeExclude.WHITELIST && !config.keySet().isEmpty()) {
+                    config.keySet().size
+                } else {
+                    maxItemTypes
+                }
             val n = minOf(partitionKeyCount.toLong(), maxItemTypes.toLong())
             val totalStorage = (totalBytes - bytesPerType * n) * amountPerByte
             maxOf(0L, (totalStorage + n - 1) / n)
@@ -271,7 +272,7 @@ class ItemStorageCellInventory(
 
     fun canHoldNewItem(): Boolean =
         (getFreeBytes() > bytesPerType || (getFreeBytes() == bytesPerType && getUnusedItemCount() > 0)) &&
-            getRemainingItemTypes() > 0
+                getRemainingItemTypes() > 0
 
     fun isPreformatted(): Boolean = !partitionList.isEmpty
 

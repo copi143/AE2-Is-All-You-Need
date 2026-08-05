@@ -1,5 +1,11 @@
 package allyouneed.mixin.ae2;
 
+import allyouneed.api.AsyncChannelNodeHolder;
+import allyouneed.async.IAsyncChannelSink;
+import appeng.api.networking.IGrid;
+import appeng.me.GridNode;
+import appeng.me.pathfinding.PathingCalculation;
+import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -7,14 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
-
-import allyouneed.api.AsyncChannelNodeHolder;
-import allyouneed.async.IAsyncChannelSink;
-import appeng.api.networking.IGrid;
-import appeng.me.GridNode;
-import appeng.me.pathfinding.PathingCalculation;
 
 /**
  * When a formed async processing connector is granted a channel, it swallows all of its

@@ -7,7 +7,6 @@ import appeng.core.definitions.AEItems
 import appeng.core.localization.GuiText
 import appeng.util.ConfigInventory
 import appeng.util.prioritylist.IPartitionList
-import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.world.item.ItemStack
 

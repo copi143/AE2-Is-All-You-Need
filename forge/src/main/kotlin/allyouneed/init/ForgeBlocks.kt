@@ -1,16 +1,6 @@
 package allyouneed.forge.init
 
-import allyouneed.async.AsyncBlockKind
-import allyouneed.async.AsyncBlockRegistry
-import allyouneed.async.AsyncCraftingRegistration
-import allyouneed.async.AsyncRole
-import allyouneed.async.AsyncStructureBlock
-import allyouneed.async.AsyncStructureBlockEntity
-import allyouneed.async.AsyncStructureFrameBlock
-import allyouneed.async.AsyncStructureConnectorBlock
-import allyouneed.async.AsyncStructureConnectorBlockEntity
-import allyouneed.async.AsyncStructureControllerBlock
-import allyouneed.async.AsyncStructureInterfaceBlock
+import allyouneed.async.*
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
 import allyouneed.iodrive.MEIODriveRegistration
@@ -23,12 +13,12 @@ import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
 import allyouneed.pattern.machine.MachinePatternTerminalBlock
 import allyouneed.pattern.machine.MachinePatternTerminalBlockEntity
 import allyouneed.pattern.machine.MachinePatternTerminalRegistration
-import allyouneed.util.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
 import allyouneed.util.MODID
 import allyouneed.util.Services
+import allyouneed.util.rl
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import net.minecraft.world.item.BlockItem
@@ -114,7 +104,12 @@ object ForgeBlocks {
         ForgeItems.ITEMS.register("molecular_assembler") { MACHINE_ASSEMBLER_ITEM_INSTANCE }
 
     val MACHINE_ASSEMBLER_DEF: BlockDefinition<MachineAssemblerBlock> =
-        BlockDefinition("Molecular Assembler", "molecular_assembler".rl, MACHINE_ASSEMBLER_INSTANCE, MACHINE_ASSEMBLER_ITEM_INSTANCE).also {
+        BlockDefinition(
+            "Molecular Assembler",
+            "molecular_assembler".rl,
+            MACHINE_ASSEMBLER_INSTANCE,
+            MACHINE_ASSEMBLER_ITEM_INSTANCE
+        ).also {
             MainCreativeTab.add(it)
         }
 
@@ -145,7 +140,12 @@ object ForgeBlocks {
         ForgeItems.ITEMS.register("machine_pattern_terminal") { MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE }
 
     val MACHINE_PATTERN_TERMINAL_DEF: BlockDefinition<MachinePatternTerminalBlock> =
-        BlockDefinition("Machine Pattern Terminal", "machine_pattern_terminal".rl, MACHINE_PATTERN_TERMINAL_INSTANCE, MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE).also {
+        BlockDefinition(
+            "Machine Pattern Terminal",
+            "machine_pattern_terminal".rl,
+            MACHINE_PATTERN_TERMINAL_INSTANCE,
+            MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE
+        ).also {
             MainCreativeTab.add(it)
         }
 
@@ -242,9 +242,9 @@ object ForgeBlocks {
             for (kind in structureEntityKinds) {
                 @Suppress("UNCHECKED_CAST")
                 (
-                    asyncStructureInstances.getValue(kind)
-                        as appeng.block.AEBaseEntityBlock<AsyncStructureBlockEntity>
-                    ).setBlockEntity(AsyncStructureBlockEntity::class.java, type, null, null)
+                        asyncStructureInstances.getValue(kind)
+                                as appeng.block.AEBaseEntityBlock<AsyncStructureBlockEntity>
+                        ).setBlockEntity(AsyncStructureBlockEntity::class.java, type, null, null)
             }
             AsyncCraftingRegistration.setStructureBlockEntityType(type)
             type
@@ -259,9 +259,9 @@ object ForgeBlocks {
             for (kind in connectorKinds) {
                 @Suppress("UNCHECKED_CAST")
                 (
-                    asyncStructureInstances.getValue(kind)
-                        as appeng.block.AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>
-                    ).setBlockEntity(AsyncStructureConnectorBlockEntity::class.java, type, null, null)
+                        asyncStructureInstances.getValue(kind)
+                                as appeng.block.AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>
+                        ).setBlockEntity(AsyncStructureConnectorBlockEntity::class.java, type, null, null)
             }
             AsyncCraftingRegistration.setStructureConnectorBlockEntityType(type)
             type

@@ -8,7 +8,7 @@ import appeng.core.AEConfig
 import appeng.items.storage.StorageCellTooltipComponent
 import net.minecraft.world.inventory.tooltip.TooltipComponent
 import net.minecraft.world.item.ItemStack
-import java.util.Optional
+import java.util.*
 
 object ItemStorageCellHandler : ICellHandler {
     override fun isCell(stack: ItemStack): Boolean =

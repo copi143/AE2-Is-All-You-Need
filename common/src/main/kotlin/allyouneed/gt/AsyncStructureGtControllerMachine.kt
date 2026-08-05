@@ -1,13 +1,6 @@
 package allyouneed.gt
 
-import allyouneed.async.AsyncBlockKind
-import allyouneed.async.AsyncModuleCluster
-import allyouneed.async.AsyncProcessorCluster
-import allyouneed.async.AsyncStructureDetector
-import allyouneed.async.AsyncStructureEntityBlock
-import allyouneed.async.AsyncSwitchCluster
-import allyouneed.async.IAsyncChannelView
-import allyouneed.async.setStructuralFormed
+import allyouneed.async.*
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity

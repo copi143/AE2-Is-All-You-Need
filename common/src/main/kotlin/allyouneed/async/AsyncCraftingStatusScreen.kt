@@ -1,11 +1,11 @@
 package allyouneed.async
 
-import net.minecraft.ChatFormatting
-import net.minecraft.network.chat.Component
-import net.minecraft.world.entity.player.Inventory
 import appeng.client.gui.AEBaseScreen
 import appeng.client.gui.style.ScreenStyle
 import appeng.menu.AEBaseMenu
+import net.minecraft.ChatFormatting
+import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.player.Inventory
 
 /**
  * async 合成处理器的状态界面，对所有宿主通用（自有方块与 GTCEu 机器共用）。

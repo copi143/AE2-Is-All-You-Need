@@ -1,7 +1,7 @@
 package allyouneed.client.group
 
-import allyouneed.util.rl
 import allyouneed.util.MODID
+import allyouneed.util.rl
 import appeng.core.definitions.AEBlocks
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation

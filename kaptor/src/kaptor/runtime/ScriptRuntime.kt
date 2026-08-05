@@ -92,6 +92,7 @@ object ScriptRuntime {
                 @Suppress("UNCHECKED_CAST")
                 (a as Comparable<Any>).compareTo(b) < 0
             }
+
             else -> false
         }
     }
@@ -105,6 +106,7 @@ object ScriptRuntime {
                 @Suppress("UNCHECKED_CAST")
                 (a as Comparable<Any>).compareTo(b) <= 0
             }
+
             else -> false
         }
     }
@@ -118,6 +120,7 @@ object ScriptRuntime {
                 @Suppress("UNCHECKED_CAST")
                 (a as Comparable<Any>).compareTo(b) > 0
             }
+
             else -> false
         }
     }
@@ -131,6 +134,7 @@ object ScriptRuntime {
                 @Suppress("UNCHECKED_CAST")
                 (a as Comparable<Any>).compareTo(b) >= 0
             }
+
             else -> false
         }
     }

@@ -1,12 +1,7 @@
 package allyouneed.netaddr.mac
 
 import allyouneed.util.MODID
-import appeng.api.integrations.igtooltip.ClientRegistration
-import appeng.api.integrations.igtooltip.CommonRegistration
-import appeng.api.integrations.igtooltip.PartTooltips
-import appeng.api.integrations.igtooltip.TooltipBuilder
-import appeng.api.integrations.igtooltip.TooltipContext
-import appeng.api.integrations.igtooltip.TooltipProvider
+import appeng.api.integrations.igtooltip.*
 import appeng.api.integrations.igtooltip.providers.BodyProvider
 import appeng.api.integrations.igtooltip.providers.ServerDataProvider
 import appeng.api.parts.IPart

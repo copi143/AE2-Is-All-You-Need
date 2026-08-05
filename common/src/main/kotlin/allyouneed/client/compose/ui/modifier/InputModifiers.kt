@@ -25,7 +25,9 @@ class ScrollModifier(
 class ScrollState(initial: Int = 0) {
     var value: Int by mutableStateOf(initial)
     var maxValue: Int = 0
-    fun scroll(amount: Int) { value = (value + amount).coerceIn(0, maxValue) }
+    fun scroll(amount: Int) {
+        value = (value + amount).coerceIn(0, maxValue)
+    }
 }
 
 fun Modifier.verticalScroll(state: ScrollState): Modifier = this then ScrollModifier(state)

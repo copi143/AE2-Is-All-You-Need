@@ -4,8 +4,8 @@ import allyouneed.client.group.CreativeTabGroup
 import allyouneed.client.group.CreativeTabGroupRegistry
 import allyouneed.forge.init.ForgeBlocks
 import allyouneed.forge.init.ForgeItems
-import allyouneed.util.rl
 import allyouneed.util.MODID
+import allyouneed.util.rl
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.ItemStack

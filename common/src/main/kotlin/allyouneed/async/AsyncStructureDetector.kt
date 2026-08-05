@@ -226,6 +226,7 @@ object AsyncStructureDetector {
                     AsyncBlockKind.CABLE -> stack.add(neighbor)
                     AsyncBlockKind.ME_CONNECTOR, AsyncBlockKind.WAN_CONNECTOR, AsyncBlockKind.LAN_CONNECTOR ->
                         if (kind == target) return neighbor
+
                     else -> {}
                 }
             }

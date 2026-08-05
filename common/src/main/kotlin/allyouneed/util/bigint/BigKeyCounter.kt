@@ -6,7 +6,7 @@ import appeng.api.stacks.KeyCounter
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import java.math.BigInteger
-import java.util.Collections
+import java.util.*
 import java.util.function.Consumer
 
 /** Network-wide amount tally using [BigInteger] to avoid long overflow when summing cells. */

@@ -4,21 +4,21 @@ import allyouneed.api.AsyncChannelNodeHolder
 import allyouneed.async.AsyncStructureEntityBlock
 import allyouneed.async.IAsyncChannelSink
 import allyouneed.async.IAsyncChannelView
-import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
-import com.gregtechceu.gtceu.api.machine.MetaMachine
-import com.gregtechceu.gtceu.integration.ae2.machine.feature.IGridConnectedMachine
-import com.gregtechceu.gtceu.integration.ae2.machine.trait.GridNodeHolder
-import com.gregtechceu.gtceu.integration.ae2.utils.SerializableManagedGridNode
 import appeng.api.networking.GridFlags
 import appeng.api.networking.IGridMultiblock
 import appeng.api.networking.IGridNode
 import appeng.api.networking.IGridNodeListener
 import appeng.api.networking.pathing.ChannelMode
 import appeng.api.orientation.BlockOrientation
+import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
+import com.gregtechceu.gtceu.api.machine.MetaMachine
+import com.gregtechceu.gtceu.integration.ae2.machine.feature.IGridConnectedMachine
+import com.gregtechceu.gtceu.integration.ae2.machine.trait.GridNodeHolder
+import com.gregtechceu.gtceu.integration.ae2.utils.SerializableManagedGridNode
 import net.minecraft.core.Direction
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.block.Block
-import java.util.EnumSet
+import java.util.*
 
 /**
  * async 合成系统的 GTCEu 连接器（ME / WAN / LAN）。通过 [GridNodeHolder] 风格的

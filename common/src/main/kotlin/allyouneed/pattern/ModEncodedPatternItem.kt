@@ -1,7 +1,6 @@
 package allyouneed.pattern
 
 import appeng.crafting.pattern.EncodedPatternItem
-import net.minecraft.world.item.Item
 
 /**
  * Base class for all pattern items in this mod.

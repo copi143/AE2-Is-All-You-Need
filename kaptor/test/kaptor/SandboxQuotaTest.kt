@@ -3,16 +3,16 @@ package kaptor
 import kaptor.runtime.ScriptEventBus
 import kaptor.runtime.ScriptManager
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import kotlin.test.assertFailsWith
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 
 class SandboxQuotaTest {
     @TempDir
@@ -70,13 +70,17 @@ class SandboxQuotaTest {
 
     @Test
     fun `handler with small body does not exceed cost limit`() {
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("E") { event ->
                 val x = 1
                 val y = "hello"
                 val z = true
             }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         val entry = ScriptEventBus.getHandlersForType("E").first()
@@ -87,14 +91,18 @@ class SandboxQuotaTest {
 
     @Test
     fun `handler with moderate loop does not exceed cost limit`() {
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("E") { event ->
                 var i = 0
                 while (i < 10) {
                     i = i + 1
                 }
             }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         val entry = ScriptEventBus.getHandlersForType("E").first()
@@ -106,11 +114,15 @@ class SandboxQuotaTest {
     @Test
     fun `handler with 1000 val declarations exceeds cost limit`() {
         val body = (1..1000).joinToString("\n") { "    val x$it = 1" }
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("E") { event ->
 $body
             }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         val entry = ScriptEventBus.getHandlersForType("E").first()
@@ -121,11 +133,15 @@ $body
 
     @Test
     fun `sandbox is reset per dispatch and tracks cost`() {
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("E") { event ->
                 val x = 42
             }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertDoesNotThrow {

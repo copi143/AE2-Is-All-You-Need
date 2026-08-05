@@ -1,9 +1,9 @@
 package allyouneed.pattern.adaptive
 
+import appeng.api.inventories.InternalInventory
 import appeng.api.stacks.GenericStack
 import appeng.helpers.IPatternTerminalLogicHost
 import appeng.parts.encoding.PatternEncodingLogic
-import appeng.api.inventories.InternalInventory
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.util.Mth
 
@@ -40,7 +40,8 @@ class AdaptivePatternEncodingLogic(host: IPatternTerminalLogicHost) : PatternEnc
 
         mode = appeng.parts.encoding.EncodingMode.PROCESSING
 
-        val inputList = tag.getList(AdaptiveStatisticalPattern.NBT_KEY_INPUTS, net.minecraft.nbt.Tag.TAG_COMPOUND.toInt())
+        val inputList =
+            tag.getList(AdaptiveStatisticalPattern.NBT_KEY_INPUTS, net.minecraft.nbt.Tag.TAG_COMPOUND.toInt())
         val inputs = inputList.indices.mapNotNull { GenericStack.readTag(inputList.getCompound(it)) }
 
         val outputTag = tag.getCompound(AdaptiveStatisticalPattern.NBT_KEY_OUTPUT)

@@ -4,7 +4,7 @@ sealed interface IrNode {
     val cost: Int
 }
 
-data class IrScriptFile( val handlers: List<IrHandler> ) : IrNode {
+data class IrScriptFile(val handlers: List<IrHandler>) : IrNode {
     override val cost: Int get() = handlers.sumOf { it.cost }
 }
 
@@ -145,6 +145,7 @@ sealed interface IrInterpolationPart : IrNode
 data class IrLiteralPart(val text: String) : IrInterpolationPart {
     override val cost: Int = 1
 }
+
 data class IrExpressionPart(val expr: IrExpression) : IrInterpolationPart {
     override val cost: Int = expr.cost
 }

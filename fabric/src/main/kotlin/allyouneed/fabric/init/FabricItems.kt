@@ -6,8 +6,8 @@ import allyouneed.pattern.ModItems
 import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
-import allyouneed.util.rl
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
+import allyouneed.util.rl
 import appeng.api.ids.AECreativeTabIds
 import appeng.items.parts.PartItem
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents

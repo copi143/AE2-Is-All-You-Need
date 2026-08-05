@@ -33,7 +33,8 @@ abstract class ScriptHandlerBase {
                     val method = this.javaClass.getMethod(name, Any::class.java)
                     method.invoke(this, event)
                     found = true
-                } catch (_: NoSuchMethodException) {}
+                } catch (_: NoSuchMethodException) {
+                }
             }
             if (!found) {
                 throw ScriptLimitException("No handler for event type: $eventTypeName")

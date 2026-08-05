@@ -1,7 +1,7 @@
 package allyouneed.forge.script
 
-import kaptor.runtime.ScriptEventBus
 import allyouneed.util.MODID
+import kaptor.runtime.ScriptEventBus
 import net.minecraft.world.entity.player.Player
 import net.minecraftforge.event.TickEvent
 import net.minecraftforge.event.entity.player.PlayerEvent
@@ -81,6 +81,7 @@ object ForgeScriptEventBridge {
                 eventMap["itemStack"] = event.itemStack
                 eventMap["face"] = event.face
             }
+
             is PlayerInteractEvent.LeftClickBlock -> {
                 val player = event.entity
                 eventMap["player"] = player
@@ -88,6 +89,7 @@ object ForgeScriptEventBridge {
                 eventMap["level"] = player?.level()
                 eventMap["hand"] = event.hand
             }
+
             is PlayerInteractEvent.RightClickItem -> {
                 val player = event.entity
                 eventMap["player"] = player
@@ -95,9 +97,11 @@ object ForgeScriptEventBridge {
                 eventMap["hand"] = event.hand
                 eventMap["itemStack"] = event.itemStack
             }
+
             is PlayerEvent -> {
                 eventMap["player"] = event.entity
             }
+
             is TickEvent -> {
                 eventMap["phase"] = event.phase.name
             }

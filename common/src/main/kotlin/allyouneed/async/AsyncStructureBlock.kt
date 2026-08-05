@@ -1,5 +1,8 @@
 package allyouneed.async
 
+import allyouneed.async.AsyncStructureEntityBlock.Companion.FORMED
+import allyouneed.async.AsyncStructureEntityBlock.Companion.POWERED
+import allyouneed.async.AsyncStructureFrameBlock.Companion.CONNECTIONS
 import appeng.api.orientation.IOrientationStrategy
 import appeng.api.orientation.OrientationStrategies
 import appeng.block.AEBaseEntityBlock

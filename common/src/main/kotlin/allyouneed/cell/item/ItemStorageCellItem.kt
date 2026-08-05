@@ -19,7 +19,7 @@ import net.minecraft.world.inventory.tooltip.TooltipComponent
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.TooltipFlag
 import net.minecraft.world.level.Level
-import java.util.Optional
+import java.util.*
 
 /**
  * Item storage cell (1K - 256T). Long-based capacity following the vanilla

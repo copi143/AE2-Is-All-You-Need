@@ -129,15 +129,20 @@ object AsyncStructureGtPattern {
         builder.where(GLASS_REPLACE_CHAR, Predicates.blocks(machine).or(Predicates.blocks(glass)))
         when (type) {
             AsyncStructureType.SWITCH -> {
-                val wan = requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.WAN_CONNECTOR)) { "missing WAN_CONNECTOR" }
-                val lan = requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.LAN_CONNECTOR)) { "missing LAN_CONNECTOR" }
+                val wan =
+                    requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.WAN_CONNECTOR)) { "missing WAN_CONNECTOR" }
+                val lan =
+                    requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.LAN_CONNECTOR)) { "missing LAN_CONNECTOR" }
                 builder.where(SWITCH_CORE_CHAR, corePredicate(machine, glass, wan, 1, lan, 2))
             }
+
             AsyncStructureType.PROCESSOR -> {
                 val me = requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.ME_CONNECTOR)) { "missing ME_CONNECTOR" }
-                val lan = requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.LAN_CONNECTOR)) { "missing LAN_CONNECTOR" }
+                val lan =
+                    requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.LAN_CONNECTOR)) { "missing LAN_CONNECTOR" }
                 builder.where(PROCESSOR_SHELL_CHAR, corePredicate(machine, glass, me, 1, lan, 2))
             }
+
             AsyncStructureType.MODULE -> {}
         }
     }
@@ -165,8 +170,9 @@ object AsyncStructureGtPattern {
         // The type check short-circuits before inCore, which has no core bounds for MODULE.
         type == AsyncStructureType.SWITCH && AsyncStructures.inCore(type, x, y, z) -> SWITCH_CORE_CHAR
         type == AsyncStructureType.PROCESSOR &&
-            AsyncStructures.isOuterShellCell(x, y, z) &&
-            AsyncStructures.inCore(type, x, y, z) -> PROCESSOR_SHELL_CHAR
+                AsyncStructures.isOuterShellCell(x, y, z) &&
+                AsyncStructures.inCore(type, x, y, z) -> PROCESSOR_SHELL_CHAR
+
         else -> GLASS_REPLACE_CHAR
     }
 

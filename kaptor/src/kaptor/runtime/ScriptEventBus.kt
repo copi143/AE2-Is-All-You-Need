@@ -1,17 +1,9 @@
 package kaptor.runtime
 
-import kaptor.compiler.EventSchema
-import kaptor.ir.HookType
-import kaptor.ir.IrType
-import kaptor.ir.IrIntType
-import kaptor.ir.IrLongType
-import kaptor.ir.IrFloatType
-import kaptor.ir.IrDoubleType
-import kaptor.ir.IrBoolType
-import kaptor.ir.IrStringType
-import kaptor.ir.IrObjectType
 import kaptor.ScriptLogger
+import kaptor.compiler.EventSchema
 import kaptor.createLogger
+import kaptor.ir.*
 import java.util.concurrent.ConcurrentHashMap
 
 object ScriptEventBus {
@@ -31,7 +23,13 @@ object ScriptEventBus {
         val scriptName: String
     )
 
-    fun registerHandler(handler: ScriptHandlerBase, eventType: String, hookType: HookType, costLimit: Int, scriptName: String) {
+    fun registerHandler(
+        handler: ScriptHandlerBase,
+        eventType: String,
+        hookType: HookType,
+        costLimit: Int,
+        scriptName: String
+    ) {
         val entry = EventHandlerEntry(handler, eventType, hookType, costLimit, scriptName)
         when (hookType) {
             HookType.BEFORE -> beforeHandlers.computeIfAbsent(eventType) { mutableListOf() }.add(entry)
@@ -46,6 +44,7 @@ object ScriptEventBus {
             val iter = map.entries.iterator()
             while (iter.hasNext()) {
                 val e = iter.next()
+
                 @Suppress("UNCHECKED_CAST")
                 val list = e.value as? MutableList<EventHandlerEntry>
                 if (list != null) {
@@ -120,7 +119,7 @@ object ScriptEventBus {
             entry.handler.invokeHandler(entry.eventType, event)
             eventLogger.debug(
                 "Script ${entry.hookType} handler executed for '${entry.eventType}' from '${entry.scriptName}' " +
-                "(used ${sandbox.getCounter()}/${entry.costLimit} instructions)"
+                        "(used ${sandbox.getCounter()}/${entry.costLimit} instructions)"
             )
         } catch (e: ScriptLimitException) {
             eventLogger.warn(

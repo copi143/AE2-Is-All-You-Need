@@ -1,16 +1,16 @@
 package kaptor.runtime
 
+import kaptor.ScriptLogger
+import kaptor.SrcType
 import kaptor.compiler.CompiledScript
-import kaptor.compiler.ScriptCompiler
 import kaptor.compiler.ScriptCompileError
+import kaptor.compiler.ScriptCompiler
+import kaptor.createLogger
+import kaptor.lsp.ScriptLanguageService
+import kaptor.parser.ScriptParseError
 import kaptor.parser.antlr.KotlinLexer
 import kaptor.parser.antlr.KotlinParser
 import kaptor.parser.antlr.KotlinSubsetVisitor
-import kaptor.lsp.ScriptLanguageService
-import kaptor.parser.ScriptParseError
-import kaptor.ScriptLogger
-import kaptor.SrcType
-import kaptor.createLogger
 import org.antlr.v4.runtime.*
 import java.net.URLClassLoader
 import java.nio.file.*
@@ -244,6 +244,7 @@ object ScriptManager {
                                     reloadScript(fullPath)
                                 }
                             }
+
                             StandardWatchEventKinds.ENTRY_DELETE -> {
                                 val f = filePath.toString()
                                 if (f.endsWith(".kts") || f.endsWith(".kt")) {
@@ -273,7 +274,8 @@ object ScriptManager {
         watcherThread = null
         try {
             fileWatcher?.close()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
         fileWatcher = null
     }
 

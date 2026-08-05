@@ -1,5 +1,6 @@
 package allyouneed.async
 
+import allyouneed.async.AsyncStructureNotifier.SCAN_INTERVAL
 import net.minecraft.core.BlockPos
 import net.minecraft.server.TickTask
 import net.minecraft.server.level.ServerLevel
@@ -78,6 +79,7 @@ object AsyncStructureNotifier {
                             AsyncBlockKind.MODULE_INTERFACE,
                             AsyncBlockKind.SWITCH,
                             AsyncBlockKind.CONTROLLER -> be.requestRescan()
+
                             else -> {}
                         }
                     }

@@ -1,12 +1,5 @@
 package allyouneed.mixin.ae2;
 
-import java.util.Map;
-
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
 import allyouneed.netaddr.mac.MacHosts;
 import allyouneed.netaddr.mac.MacNbt;
 import appeng.api.parts.IPart;
@@ -17,6 +10,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.Map;
 
 @Mixin(value = PartPlacement.class, remap = false)
 public abstract class PartPlacementMixin {

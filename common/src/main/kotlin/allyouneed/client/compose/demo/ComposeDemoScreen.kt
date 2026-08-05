@@ -7,12 +7,7 @@ import allyouneed.client.compose.material.Text
 import allyouneed.client.compose.platform.ComposeScreen
 import allyouneed.client.compose.ui.layout.Column
 import allyouneed.client.compose.ui.layout.Row
-import allyouneed.client.compose.ui.modifier.Modifier
-import allyouneed.client.compose.ui.modifier.background
-import allyouneed.client.compose.ui.modifier.fillMaxSize
-import allyouneed.client.compose.ui.modifier.fillMaxWidth
-import allyouneed.client.compose.ui.modifier.padding
-import allyouneed.client.compose.ui.modifier.size
+import allyouneed.client.compose.ui.modifier.*
 import androidx.compose.runtime.*
 import net.minecraft.network.chat.Component
 

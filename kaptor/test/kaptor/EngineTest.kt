@@ -3,6 +3,7 @@ package kaptor
 import kaptor.runtime.ScriptEventBus
 import kaptor.runtime.ScriptManager
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -10,9 +11,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class EngineTest {
     @TempDir
@@ -94,9 +94,13 @@ class EngineTest {
 
     @Test
     fun `engine shutdown clears all handlers`() {
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("TestEvent") { event -> val x = event.name }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertTrue(ScriptEventBus.getRegisteredEventTypes().isNotEmpty())
         engine.shutdown()
@@ -123,11 +127,15 @@ class EngineTest {
 
     @Test
     fun `stats reflect loaded handlers`() {
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("A") { event -> val x = event.x }
             before("B") { event -> val y = event.y }
             after("C") { event -> val z = event.z }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(1, engine.getStats().loadedScripts)
         assertEquals(3, engine.getStats().totalHandlers)
@@ -136,12 +144,20 @@ class EngineTest {
 
     @Test
     fun `stats after loading multiple scripts`() {
-        Files.writeString(tempDir.resolve("a.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("a.kts"), script(
+                """
             on("E1") { event -> val x = event.x }
-        """))
-        Files.writeString(tempDir.resolve("b.kts"), script("""
+        """
+            )
+        )
+        Files.writeString(
+            tempDir.resolve("b.kts"), script(
+                """
             before("E2") { event -> val y = event.y }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(2, engine.getStats().loadedScripts)
         assertEquals(2, engine.getStats().totalHandlers)
@@ -159,9 +175,13 @@ class EngineTest {
 
     @Test
     fun `dispatch to unregistered event does not throw`() {
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("A") { event -> val x = event.x }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertDoesNotThrow {
             ScriptEventBus.dispatchEvent("NonExistent", emptyMap<String, Any>())
@@ -172,9 +192,13 @@ class EngineTest {
 
     @Test
     fun `unload script removes handlers`() {
-        Files.writeString(tempDir.resolve("h.kts"), script("""
+        Files.writeString(
+            tempDir.resolve("h.kts"), script(
+                """
             on("E") { event -> }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertTrue(ScriptManager.unloadScript("h"))
@@ -191,16 +215,24 @@ class EngineTest {
     @Test
     fun `reload after file change`() {
         val path = tempDir.resolve("h.kts")
-        Files.writeString(path, script("""
+        Files.writeString(
+            path, script(
+                """
             on("E1") { event -> }
-        """))
+        """
+            )
+        )
         engine.init(tempDir)
         assertEquals(1, engine.getStats().totalHandlers)
         assertEquals(setOf("E1"), engine.getStats().registeredEventTypes)
 
-        Files.writeString(path, script("""
+        Files.writeString(
+            path, script(
+                """
             on("E2") { event -> }
-        """))
+        """
+            )
+        )
         assertTrue(ScriptManager.reloadScript(path))
         assertEquals(1, engine.getStats().totalHandlers)
         assertEquals(setOf("E2"), engine.getStats().registeredEventTypes)

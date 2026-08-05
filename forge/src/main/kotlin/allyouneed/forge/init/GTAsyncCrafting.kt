@@ -5,8 +5,8 @@ import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncRole
 import allyouneed.gt.*
 import allyouneed.multiblock.AsyncStructureType
-import allyouneed.util.rl
 import allyouneed.util.MODID
+import allyouneed.util.rl
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import com.gregtechceu.gtceu.api.GTCEuAPI

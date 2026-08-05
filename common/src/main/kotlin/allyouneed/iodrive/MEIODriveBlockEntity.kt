@@ -2,6 +2,7 @@ package allyouneed.iodrive
 
 import appeng.api.config.Actionable
 import appeng.api.implementations.blockentities.IChestOrDrive
+import appeng.api.inventories.InternalInventory
 import appeng.api.networking.GridFlags
 import appeng.api.networking.IGrid
 import appeng.api.networking.IGridNode
@@ -17,7 +18,6 @@ import appeng.api.storage.cells.CellState
 import appeng.api.storage.cells.StorageCell
 import appeng.blockentity.grid.AENetworkInvBlockEntity
 import appeng.blockentity.inventory.AppEngCellInventory
-import appeng.api.inventories.InternalInventory
 import appeng.me.helpers.MachineSource
 import net.minecraft.core.BlockPos
 import net.minecraft.nbt.CompoundTag

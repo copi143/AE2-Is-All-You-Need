@@ -1,6 +1,5 @@
 package allyouneed.cell
 
-import allyouneed.util.rl
 import allyouneed.util.*
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
