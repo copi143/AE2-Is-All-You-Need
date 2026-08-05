@@ -1,4 +1,4 @@
-package allyouneed.integration.emi
+package allyouneed.client.integration.emi
 
 import dev.emi.emi.api.EmiEntrypoint
 import dev.emi.emi.api.EmiPlugin

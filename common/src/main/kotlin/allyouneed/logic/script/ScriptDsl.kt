@@ -1,4 +1,4 @@
-package allyouneed.script
+package allyouneed.logic.script
 
 import kaptor.ScriptEngine
 import kaptor.ScriptEngineConfig

@@ -7,6 +7,7 @@ import allyouneed.forge.init.ForgeBlocks
 import allyouneed.forge.init.ForgeItems
 import allyouneed.forge.init.ForgeMenus
 import allyouneed.forge.init.GTAsyncCrafting
+import allyouneed.logic.script.ScriptDsl
 import allyouneed.util.MODID
 import allyouneed.util.Services
 import allyouneed.util.logger
@@ -53,7 +54,7 @@ class ExampleMod {
         // Initialize the scripting system
         try {
             val configDir = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get()
-            allyouneed.script.ScriptDsl.init(configDir)
+            ScriptDsl.init(configDir)
             logger.info("Script system initialized")
         } catch (e: Exception) {
             logger.error("Failed to initialize script system", e)

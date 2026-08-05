@@ -1,4 +1,4 @@
-package allyouneed.integration.jei
+package allyouneed.client.integration.jei
 
 import mezz.jei.api.IModPlugin
 import mezz.jei.api.JeiPlugin

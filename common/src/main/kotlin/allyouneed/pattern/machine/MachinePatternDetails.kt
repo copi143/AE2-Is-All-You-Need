@@ -1,7 +1,7 @@
 package allyouneed.pattern.machine
 
-import allyouneed.machine.MachineType
-import allyouneed.machine.MachineTypeRegistry
+import allyouneed.logic.machine.MachineType
+import allyouneed.logic.machine.MachineTypeRegistry
 import appeng.api.crafting.IPatternDetails
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.AEKey

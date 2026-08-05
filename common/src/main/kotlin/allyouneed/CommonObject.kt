@@ -4,7 +4,7 @@ import allyouneed.cell.creative.CreativeMeCellHandler
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
-import allyouneed.machine.BuiltinMachineTypes
+import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders

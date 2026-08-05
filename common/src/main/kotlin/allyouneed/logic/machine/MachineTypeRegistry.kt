@@ -1,4 +1,4 @@
-package allyouneed.machine
+package allyouneed.logic.machine
 
 import net.minecraft.world.item.ItemStack
 

@@ -1,7 +1,7 @@
 package allyouneed.machineassembler
 
-import allyouneed.machine.MachineType
-import allyouneed.machine.MachineTypeRegistry
+import allyouneed.logic.machine.MachineType
+import allyouneed.logic.machine.MachineTypeRegistry
 import allyouneed.pattern.machine.MachinePatternDetails
 import appeng.api.config.Actionable
 import appeng.api.config.PowerMultiplier
@@ -10,7 +10,6 @@ import appeng.api.crafting.PatternDetailsHelper
 import appeng.api.implementations.IPowerChannelState
 import appeng.api.implementations.blockentities.ICraftingMachine
 import appeng.api.implementations.blockentities.PatternContainerGroup
-import appeng.api.inventories.ISegmentedInventory
 import appeng.api.inventories.InternalInventory
 import appeng.api.networking.IGridNode
 import appeng.api.networking.IGridNodeListener

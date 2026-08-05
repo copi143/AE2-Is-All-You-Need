@@ -1,6 +1,6 @@
 package allyouneed.machineassembler
 
-import allyouneed.machine.MachineTypeRegistry
+import allyouneed.logic.machine.MachineTypeRegistry
 import allyouneed.pattern.machine.MachinePatternItem
 import appeng.api.inventories.InternalInventory
 import appeng.api.stacks.AEItemKey

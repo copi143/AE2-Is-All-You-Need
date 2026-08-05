@@ -1,6 +1,6 @@
 package allyouneed.mixin.ae2;
 
-import allyouneed.mixin.ACraftingCalculation;
+import allyouneed.logic.crafting.ACraftingCalculation;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.CalculationStrategy;
 import appeng.api.networking.crafting.ICraftingPlan;

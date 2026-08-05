@@ -28,13 +28,13 @@
     "emi": [
       {
         "adapter": "kotlin",
-        "value": "allyouneed.integration.emi.MyEmiPlugin"
+        "value": "allyouneed.client.integration.emi.MyEmiPlugin"
       }
     ],
     "jei": [
       {
         "adapter": "kotlin",
-        "value": "allyouneed.integration.jei.MyJeiPlugin"
+        "value": "allyouneed.client.integration.jei.MyJeiPlugin"
       }
     ]
   },
