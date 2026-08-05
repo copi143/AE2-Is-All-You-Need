@@ -1,6 +1,6 @@
 package allyouneed.client.group
 
-import allyouneed.rl
+import allyouneed.util.rl
 import allyouneed.util.MODID
 import appeng.core.definitions.AEBlocks
 import net.minecraft.network.chat.Component

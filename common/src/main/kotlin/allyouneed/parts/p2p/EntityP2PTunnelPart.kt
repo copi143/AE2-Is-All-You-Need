@@ -1,6 +1,6 @@
 package allyouneed.parts.p2p
 
-import allyouneed.rl
+import allyouneed.util.rl
 import appeng.api.config.PowerUnits
 import appeng.api.parts.IPartItem
 import appeng.api.parts.IPartModel

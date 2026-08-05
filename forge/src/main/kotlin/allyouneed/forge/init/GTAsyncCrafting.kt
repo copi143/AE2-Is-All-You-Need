@@ -5,7 +5,7 @@ import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncRole
 import allyouneed.gt.*
 import allyouneed.multiblock.AsyncStructureType
-import allyouneed.rl
+import allyouneed.util.rl
 import allyouneed.util.MODID
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition

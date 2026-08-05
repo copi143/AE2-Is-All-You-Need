@@ -5,7 +5,7 @@ import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
 import allyouneed.pattern.machine.MachinePatternTerminalMenu
-import allyouneed.rl
+import allyouneed.util.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
 import net.minecraft.world.inventory.MenuType

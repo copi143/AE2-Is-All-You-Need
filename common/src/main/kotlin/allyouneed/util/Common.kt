@@ -2,6 +2,7 @@
 
 package allyouneed.util
 
+import net.minecraft.resources.ResourceLocation
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.helpers.NOPLogger
@@ -20,6 +21,12 @@ val debugLogger: Logger = if (Services.platform.isDev()) {
 } else {
     NOPLogger.NOP_LOGGER
 }
+
+fun String.rl(ns: String) = ResourceLocation(ns, this)
+val String.rl get() = this.rl(MODID)
+val String.rlMC get() = this.rl("minecraft")
+val String.rlAE get() = this.rl("ae2")
+val String.rlGT get() = this.rl("gtceu")
 
 data class Number(val bigInt: BigInteger) {
     val intOverflow = bigInt.bitLength() > 31

@@ -23,7 +23,7 @@ import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
 import allyouneed.pattern.machine.MachinePatternTerminalBlock
 import allyouneed.pattern.machine.MachinePatternTerminalBlockEntity
 import allyouneed.pattern.machine.MachinePatternTerminalRegistration
-import allyouneed.rl
+import allyouneed.util.rl
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
