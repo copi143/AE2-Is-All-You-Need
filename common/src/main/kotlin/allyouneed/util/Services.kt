@@ -3,9 +3,10 @@ package allyouneed.util
 import java.util.*
 
 object Services {
+    @JvmField
     val platform = load(PlatformHelper::class.java)
 
-    fun <T> load(clazz: Class<T>): T {
+    private fun <T> load(clazz: Class<T>): T {
         val loadedService = ServiceLoader.load(clazz).findFirst().orElseThrow {
             IllegalStateException("Failed to load service for ${clazz.name}")
         }
