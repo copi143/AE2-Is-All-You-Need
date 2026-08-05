@@ -44,7 +44,6 @@ mek = "1.20.1-10.4.16.80"
 minecraft = { group = "com.mojang", name = "minecraft", version.ref = "minecraft" }
 fabricLoader = { group = "net.fabricmc", name = "fabric-loader", version.ref = "fabricLoader" }
 fabricApi = { group = "net.fabricmc.fabric-api", name = "fabric-api", version.ref = "fabricApi" }
-forge = { group = "net.minecraftforge", name = "forge", version.ref = "forge" }
 flk = { group = "net.fabricmc", name = "fabric-language-kotlin", version.ref = "flk" }
 kff = { group = "thedarkcolour", name = "kotlinforforge", version.ref = "kff" }
 mixin = { group = "org.spongepowered", name = "mixin", version.ref = "mixin" }

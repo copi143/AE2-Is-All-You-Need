@@ -31,7 +31,7 @@ dependencies {
     // IMachineBlockEntity extends IForgeBlockEntity; fabric has no Forge classes, so pull the
     // Forge universal jar (compile-only) to resolve the hierarchy. The classifier artifact ships the
     // net.minecraftforge.* classes without the userdev zip.
-    compileOnly(libs.forge)
+    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
     modCompileOnly(libs.gtceu)
 
     val compose = libs.versions.compose.get()

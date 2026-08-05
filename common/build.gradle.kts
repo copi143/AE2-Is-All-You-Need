@@ -33,7 +33,7 @@ dependencies {
 
     // The moddev-generated minecraft jar does not carry the Forge extension interfaces
     // (net.minecraftforge.common.extensions.*) that GTCEu's IMachineBlockEntity extends.
-    compileOnly(libs.forge)
+    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
     modCompileOnly(libs.gtceu)
 
     // Mixin's IMixinConfigPlugin declares org.objectweb.asm.tree.ClassNode (and the shaded
