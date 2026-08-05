@@ -100,7 +100,7 @@ class ItemStorageCellInventory(
         return CellState.FULL
     }
 
-    override fun canFitInsideCell(): Boolean = storedAmounts.isEmpty
+    override fun canFitInsideCell(): Boolean = storedAmounts.isEmpty()
 
     override fun getDescription(): Component = stack.hoverName
 

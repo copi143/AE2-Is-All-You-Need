@@ -78,14 +78,15 @@ dependencies {
 
 //    modRuntimeOnly("dev.ftb.mods:ftb-quests-forge:${libs.versions.ftb.get()}")
 
-    modImplementation("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
-    modImplementation("dev.emi:emi-forge:${libs.versions.emi.get()}")
-    modImplementation("maven.modrinth:jade:11.13.3+forge")
+    modImplementation(libs.jei.forge)
+    modImplementation(libs.emi.forge)
+    modImplementation(libs.jade.forge)
 
-    modImplementation("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
-    modImplementation("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
+    modImplementation(libs.guideme)
+    modImplementation(libs.ae2.forge)
 
-    modImplementation("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+    modImplementation(libs.gtceu)
+
     modCompileOnly("mekanism:Mekanism:${libs.versions.mek.get()}:api")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:additions")
@@ -156,6 +157,10 @@ repositories {
     maven {
         name = "FTB Maven"
         url = uri("https://maven.ftb.dev/releases/")
+    }
+    maven {
+        name = "FirstDarkDev Maven"
+        url = uri("https://maven.firstdark.dev/snapshots")
     }
     mavenCentral()
 }

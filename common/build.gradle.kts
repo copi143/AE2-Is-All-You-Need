@@ -21,20 +21,20 @@ dependencies {
     compileOnly(libs.mixin)
     compileOnly(libs.compose.runtime)
     api(project(":kaptor"))
+    api(libs.kotlinx.coroutines.core)
 
 //    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
 
-    modCompileOnly("mezz.jei:jei-1.20.1-forge:${libs.versions.jei.get()}")
+    modCompileOnly(libs.jei.forge)
     modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")
 
-    modCompileOnly("org.appliedenergistics:guideme:${libs.versions.guideme.get()}")
-    modCompileOnly("appeng:appliedenergistics2-forge:${libs.versions.ae2.get()}")
-
-    modCompileOnly("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+    modCompileOnly(libs.guideme)
+    modCompileOnly(libs.ae2.forge)
 
     // The moddev-generated minecraft jar does not carry the Forge extension interfaces
     // (net.minecraftforge.common.extensions.*) that GTCEu's IMachineBlockEntity extends.
-    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
+    compileOnly(libs.forge)
+    modCompileOnly(libs.gtceu)
 
     // Mixin's IMixinConfigPlugin declares org.objectweb.asm.tree.ClassNode (and the shaded
     // mixin jar does not bundle ASM), so the plugin needs it on the compile classpath.
@@ -86,6 +86,10 @@ repositories {
     maven {
         name = "FTB Maven"
         url = uri("https://maven.ftb.dev/releases/")
+    }
+    maven {
+        name = "FirstDarkDev Maven"
+        url = uri("https://maven.firstdark.dev/snapshots")
     }
     mavenCentral()
 }

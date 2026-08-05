@@ -1,10 +1,11 @@
 [versions]
 java = "17"
-kotlin = "2.0.21"
+kotlin = "2.4.10"
 moddev = "2.0.52-beta"
 loom = "1.9-SNAPSHOT"
 dokka = "1.9.20"
 compose = "1.7.3"
+kotlinx-coroutines-core = "1.11.0"
 
 minecraft = "1.20.1"
 minecraftRange = "[1.20.1, 1.20.2)"
@@ -31,20 +32,37 @@ ftb = "2001.4.22"
 
 jei = "15.20.0.115"
 emi = "1.1.24+1.20.1"
+jade-fabric = "11.13.3+fabric"
+jade-forge = "11.13.3+forge"
 
 guideme = "20.1.7"
 ae2 = "15.4.10"
-gt = "7.5.3"
+gtceu = "7.5.3"
 mek = "1.20.1-10.4.16.80"
 
 [libraries]
 minecraft = { group = "com.mojang", name = "minecraft", version.ref = "minecraft" }
 fabricLoader = { group = "net.fabricmc", name = "fabric-loader", version.ref = "fabricLoader" }
 fabricApi = { group = "net.fabricmc.fabric-api", name = "fabric-api", version.ref = "fabricApi" }
+forge = { group = "net.minecraftforge", name = "forge", version.ref = "forge" }
 flk = { group = "net.fabricmc", name = "fabric-language-kotlin", version.ref = "flk" }
 kff = { group = "thedarkcolour", name = "kotlinforforge", version.ref = "kff" }
 mixin = { group = "org.spongepowered", name = "mixin", version.ref = "mixin" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinx-coroutines-core" }
+
+jei-fabric = { module = "mezz.jei:jei-1.20.1-fabric", version.ref = "jei" }
+jei-forge = { module = "mezz.jei:jei-1.20.1-forge", version.ref = "jei" }
+emi-fabric = { module = "dev.emi:emi-fabric", version.ref = "emi" }
+emi-forge = { module = "dev.emi:emi-forge", version.ref = "emi" }
+jade-fabric = { module = "maven.modrinth:jade", version.ref = "jade-fabric" }
+jade-forge = { module = "maven.modrinth:jade", version.ref = "jade-forge" }
+
+guideme = { module = "org.appliedenergistics:guideme", version.ref = "guideme" }
+ae2-fabric = { module = "appeng:appliedenergistics2-fabric", version.ref = "ae2" }
+ae2-forge = { module = "appeng:appliedenergistics2-forge", version.ref = "ae2" }
+
+gtceu = { module = "com.gregtechceu.gtceu:gtceu-1.20.1", version.ref = "gtceu" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

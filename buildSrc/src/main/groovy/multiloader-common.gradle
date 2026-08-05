@@ -62,7 +62,7 @@ configurations {
 }
 
 dependencies {
-    gtceujar("com.gregtechceu.gtceu:gtceu-${libs.versions.minecraft.get()}:${libs.versions.gt.get()}")
+    gtceujar(libs.gtceu)
 }
 
 def extractGtJarjar = tasks.register("extractGtJarjar", Sync) {
