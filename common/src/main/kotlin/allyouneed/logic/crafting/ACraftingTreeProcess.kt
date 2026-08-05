@@ -68,7 +68,7 @@ class ACraftingTreeProcess(
 
     @Throws(CraftBranchFailure::class, InterruptedException::class)
     fun request(inv: CraftingSimulationState, times: Long) {
-        this.job.handlePausing()
+        this.job.handlePaUSING()
 
         val containerItems = if (this.containerItems) KeyCounter() else null
 

@@ -15,7 +15,6 @@ import appeng.crafting.inv.CraftingSimulationState
 import appeng.crafting.inv.ICraftingInventory
 import net.minecraft.world.level.Level
 import java.util.*
-import java.util.List
 import java.util.stream.Collectors
 
 /**
@@ -23,7 +22,7 @@ import java.util.stream.Collectors
  * and scales their inputs by ceil(N/p) instead of using binomial distribution.
  */
 class ACraftingTreeNode(
-    cc: ICraftingService,
+    private val cc: ICraftingService,
     private val job: ACraftingCalculation,
     what: AEKey,
     private val amount: Long,
@@ -32,12 +31,12 @@ class ACraftingTreeNode(
 ) {
     val parentInput: IPatternDetails.IInput? = if (slot == -1) null else parent?.details?.inputs[slot]
     private val level: Level? = job.level
-    private val what: AEKey = findCraftedStack(cc, what)
+    private val what: AEKey = findCraftedStack(what)
     private val canEmit: Boolean = cc.canEmitFor(what)
     private var nodes: ArrayList<ACraftingTreeProcess>? = null
     private var adaptiveTotalRequested: Long = 0
 
-    private fun findCraftedStack(cc: ICraftingService, wat: AEKey): AEKey {
+    private fun findCraftedStack(wat: AEKey): AEKey {
         if (cc.canEmitFor(wat)) {
             return wat
         }
@@ -71,15 +70,9 @@ class ACraftingTreeNode(
         if (this.nodes == null) {
             this.nodes = ArrayList<ACraftingTreeProcess>()
 
-            val gridNode = this.job.simRequester.gridNode
-
-            if (gridNode != null) {
-                val craftingService = gridNode.grid.craftingService
-
-                for (details in wrapPatternsForNode(craftingService, this.what)) {
-                    if (this.parent == null || this.parent.notRecursive(details)) {
-                        this.nodes!!.add(ACraftingTreeProcess(craftingService, job, details, this))
-                    }
+            for (details in wrapPatternsForNode(cc, this.what)) {
+                if (this.parent == null || this.parent.notRecursive(details)) {
+                    this.nodes!!.add(ACraftingTreeProcess(cc, job, details, this))
                 }
             }
         }
@@ -128,7 +121,7 @@ class ACraftingTreeNode(
         var requestedAmount = requestedAmount
         this.adaptiveTotalRequested = requestedAmount * this.amount
 
-        this.job.handlePausing()
+        this.job.handlePaUSING()
 
         inv.addStackBytes(what, amount, requestedAmount)
 
@@ -240,7 +233,7 @@ class ACraftingTreeNode(
     }
 
     private fun getValidItemTemplates(inv: ICraftingInventory?): Iterable<InputTemplate> {
-        if (this.parentInput == null) return List.of<InputTemplate?>(InputTemplate(what, 1))
+        if (this.parentInput == null) return listOf(InputTemplate(what, 1))
         return CraftingCpuHelper.getValidItemTemplates(inv, this.parentInput, level)
     }
 

@@ -2,6 +2,8 @@
 
 > 面向本模组（`ae2isallyouneed`）开发：AE2 15.4.x 网络如何工作、节点如何标识、
 > 以及本模组如何在其上叠加 48-bit MAC。本仓库是 **AE2 附属模组**（Mixin），不是 fork。
+>
+> 合成计算 / 后台调度 / 库存快照见 **[Crafting-Calculation.md](./Crafting-Calculation.md)**。
 
 ---
 

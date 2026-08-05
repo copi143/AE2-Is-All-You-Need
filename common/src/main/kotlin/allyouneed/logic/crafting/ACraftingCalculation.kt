@@ -1,8 +1,10 @@
 package allyouneed.logic.crafting
 
+import allyouneed.logic.AE2TaskScheduler
 import appeng.api.networking.IGrid
 import appeng.api.networking.crafting.CalculationStrategy
 import appeng.api.networking.crafting.ICraftingPlan
+import appeng.api.networking.crafting.ICraftingService
 import appeng.api.networking.crafting.ICraftingSimulationRequester
 import appeng.api.stacks.AEKey
 import appeng.api.stacks.GenericStack
@@ -13,16 +15,19 @@ import appeng.crafting.CraftingCalculation
 import appeng.crafting.CraftingPlan
 import appeng.crafting.inv.ChildCraftingSimulationState
 import appeng.crafting.inv.CraftingSimulationState
-import appeng.crafting.inv.NetworkCraftingSimulationState
-import appeng.hooks.ticking.TickHandler
 import com.google.common.base.Stopwatch
 import net.minecraft.world.level.Level
 import org.jetbrains.annotations.Contract
 import java.util.concurrent.TimeUnit
 
 /**
- * Custom CraftingCalculation that uses ACraftingTreeNode/ACraftingTreeProcess
- * for adaptive probability patterns (ceil(N/p) scaling).
+ * Custom CraftingCalculation that:
+ * 1. Eagerly **value-copies** ME inventory ([MeInventorySnapshot]) and crafting patterns
+ *    ([CachedCraftingService]) in the constructor on the calling thread.
+ * 2. Runs tree computation on [AE2TaskScheduler] using only snapshotted data —
+ *    no live grid storage/pattern access after construction.
+ * 3. Does **not** register with TickHandler (full snapshot removes the need for the
+ *    original pause/simulateFor handshake).
  */
 class ACraftingCalculation(
     private val level: Level?,
@@ -32,20 +37,27 @@ class ACraftingCalculation(
     private val strategy: CalculationStrategy?
 ) : CraftingCalculation(level, grid, simRequester, output, strategy) {
     private val missing = KeyCounter()
-    private val monitor = Any()
-    private val watch: Stopwatch = Stopwatch.createUnstarted()
     private val output: AEKey = output.what()
     private val requestedAmount: Long = output.amount()
     private val attempts: MutableList<CraftAttempt>? =
-        if (AELog.isCraftingLogEnabled()) ArrayList<CraftAttempt>() else null
-    private val networkInv: NetworkCraftingSimulationState =
-        NetworkCraftingSimulationState(grid.storageService, simRequester.actionSource)
-    private val tree: ACraftingTreeNode = ACraftingTreeNode(grid.craftingService, this, this.output, 1, null, -1)
+        if (AELog.isCraftingLogEnabled()) ArrayList() else null
+
+    private val cachedPatterns: ICraftingService = CachedCraftingService(grid.craftingService)
+
+    private val networkInv: CopiedNetworkSimulationState =
+        CopiedNetworkSimulationState(
+            MeInventorySnapshot.copy(grid.storageService, simRequester.actionSource)
+        )
+
+    private val tree: ACraftingTreeNode = ACraftingTreeNode(cachedPatterns, this, this.output, 1, null, -1)
+
     private var simulate = false
-    private var running = false
+
+    @Volatile
     private var done = false
-    private var time = 5
+
     private var incTime = Int.MAX_VALUE
+
     private var overallSuccessProbability = 1.0
 
     fun addMissing(what: AEKey, amount: Long) {
@@ -53,12 +65,24 @@ class ACraftingCalculation(
     }
 
     override fun run(): ICraftingPlan {
+        val timer = Stopwatch.createStarted()
+        AELog.debug(
+            "ACraftingCalculation start: %dx%s on %s",
+            requestedAmount,
+            output,
+            Thread.currentThread().name,
+        )
         try {
-            TickHandler.instance().registerCraftingSimulation(this.level, this)
-            this.handlePausing()
-
             val plan: ICraftingPlan = computePlan()
             this.logCraftingJob(plan)
+            AELog.debug(
+                "ACraftingCalculation done: %dx%s in %d ms (%d bytes, sim=%s)",
+                plan.finalOutput().amount(),
+                plan.finalOutput().what(),
+                timer.elapsed(TimeUnit.MILLISECONDS),
+                plan.bytes(),
+                plan.simulation(),
+            )
             return plan
         } catch (ex: Exception) {
             AELog.info(ex, "Exception during crafting calculation.")
@@ -128,85 +152,41 @@ class ACraftingCalculation(
         return plan
     }
 
+    /**
+     * Cancellation checkpoint. Full inventory/pattern snapshots mean we no longer need
+     * the original monitor wait/notify pause for live grid updates.
+     */
     @Throws(InterruptedException::class)
-    fun handlePausing() {
+    fun handlePaUSING() {
         if (this.incTime > 100) {
             this.incTime = 0
-
-            synchronized(this.monitor) {
-                if (this.watch.elapsed(TimeUnit.MICROSECONDS) > this.time) {
-                    this.running = false
-                    this.watch.stop()
-                    (this.monitor as Object).notify()
-                }
-                if (!this.running) {
-                    AELog.craftingDebug("crafting job will now sleep")
-
-                    while (!this.running) {
-                        (this.monitor as Object).wait()
-                    }
-
-                    AELog.craftingDebug("crafting job now active")
-                }
-            }
-
             if (Thread.interrupted()) {
                 throw InterruptedException()
             }
+            Thread.yield()
         }
         this.incTime++
     }
 
     private fun finish() {
-        synchronized(this.monitor) {
-            this.running = false
-            this.done = true
-            (this.monitor as Object).notify()
-        }
+        this.done = true
     }
 
-    override fun isSimulation(): Boolean {
-        return this.simulate
-    }
+    override fun isSimulation(): Boolean = this.simulate
 
-    override fun getOutput(): AEKey {
-        return output
-    }
+    override fun getOutput(): AEKey = output
 
-    override fun getMissingItems(): KeyCounter {
-        return missing
-    }
+    override fun getMissingItems(): KeyCounter = missing
 
-    fun getLevel(): Level? {
-        return this.level
-    }
+    fun getLevel(): Level? = this.level
 
-    override fun simulateFor(micros: Int): Boolean {
-        this.time = micros
+    /**
+     * Not registered with TickHandler; kept for API compatibility if anything polls us.
+     * @return true while the job is still running
+     */
+    override fun simulateFor(micros: Int): Boolean = !this.done
 
-        synchronized(this.monitor) {
-            if (this.done) {
-                return false
-            }
-            this.watch.reset()
-            this.watch.start()
-            this.running = true
-
-            AELog.craftingDebug("main thread is now going to sleep")
-
-            (this.monitor as Object).notify()
-
-            while (this.running) {
-                try {
-                    this.monitor.wait()
-                } catch (ignored: InterruptedException) {
-                }
-            }
-            AELog.craftingDebug("main thread is now active")
-        }
-
-        return true
-    }
+    override fun hasMultiplePaths(): Boolean = this.tree.hasMultiplePaths()
 
     private fun logCraftingJob(plan: ICraftingPlan) {
         if (AELog.isCraftingLogEnabled()) {
@@ -242,10 +222,6 @@ class ACraftingCalculation(
 
             AELog.crafting(message.toString())
         }
-    }
-
-    override fun hasMultiplePaths(): Boolean {
-        return this.tree.hasMultiplePaths()
     }
 
     @JvmRecord
