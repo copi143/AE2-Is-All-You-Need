@@ -8,78 +8,39 @@ import kotlin.io.path.exists
 import kotlin.io.path.writeText
 
 data class CellEntry(
-    val id: String,
     val displayName: String,
     val color: String,
     val isCreative: Boolean = false,
     val isSelfPowered: Boolean = false,
-)
-
-private val cells = listOf(
-    CellEntry("1k_energy_cell", "Micro Energy Cell", AE2_COLORS[0].hex),
-    CellEntry("4k_energy_cell", "Simple Energy Cell", AE2_COLORS[1].hex),
-    CellEntry("16k_energy_cell", "Basic Energy Cell", AE2_COLORS[2].hex),
-    CellEntry("64k_energy_cell", "Normal Energy Cell", AE2_COLORS[3].hex),
-    CellEntry("256k_energy_cell", "Enhanced Energy Cell", AE2_COLORS[4].hex),
-    CellEntry("1m_energy_cell", "Advanced Energy Cell", AE2_COLORS[5].hex),
-    CellEntry("4m_energy_cell", "Reinforced Energy Cell", AE2_COLORS[6].hex),
-    CellEntry("16m_energy_cell", "Dense Energy Cell", AE2_COLORS[7].hex),
-    CellEntry("64m_energy_cell", "Hyper Energy Cell", AE2_COLORS[8].hex),
-    CellEntry("256m_energy_cell", "Ultra Energy Cell", AE2_COLORS[9].hex),
-    CellEntry("1g_energy_cell", "Ultimate Energy Cell", AE2_COLORS[10].hex),
-    CellEntry("4g_energy_cell", "Singular Energy Cell", AE2_COLORS[11].hex),
-    CellEntry("16g_energy_cell", "Quantum Energy Cell", AE2_COLORS[12].hex),
-    CellEntry("64g_energy_cell", "Stellar Energy Cell", AE2_COLORS[13].hex),
-    CellEntry("256g_energy_cell", "Cosmic Energy Cell", AE2_COLORS[14].hex),
-    CellEntry("1t_energy_cell", "1T Energy Cell", AE2_COLORS[15].hex),
-    CellEntry("4t_energy_cell", "4T Energy Cell", AE2_COLORS[16].hex),
-    CellEntry("16t_energy_cell", "16T Energy Cell", AE2_COLORS[17].hex),
-    CellEntry("64t_energy_cell", "64T Energy Cell", AE2_COLORS[18].hex),
-    CellEntry("256t_energy_cell", "256T Energy Cell", AE2_COLORS[19].hex),
-    // Self-powered: same tier colors + energy_cell_self_powered overlay
-    CellEntry("1k_self_powered_energy_cell", "1K Self-Powered Energy Cell", AE2_COLORS[0].hex, isSelfPowered = true),
-    CellEntry("4k_self_powered_energy_cell", "4K Self-Powered Energy Cell", AE2_COLORS[1].hex, isSelfPowered = true),
-    CellEntry("16k_self_powered_energy_cell", "16K Self-Powered Energy Cell", AE2_COLORS[2].hex, isSelfPowered = true),
-    CellEntry("64k_self_powered_energy_cell", "64K Self-Powered Energy Cell", AE2_COLORS[3].hex, isSelfPowered = true),
-    CellEntry("256k_self_powered_energy_cell", "256K Self-Powered Energy Cell", AE2_COLORS[4].hex, isSelfPowered = true),
-    CellEntry("1m_self_powered_energy_cell", "1M Self-Powered Energy Cell", AE2_COLORS[5].hex, isSelfPowered = true),
-    CellEntry("4m_self_powered_energy_cell", "4M Self-Powered Energy Cell", AE2_COLORS[6].hex, isSelfPowered = true),
-    CellEntry("16m_self_powered_energy_cell", "16M Self-Powered Energy Cell", AE2_COLORS[7].hex, isSelfPowered = true),
-    CellEntry("64m_self_powered_energy_cell", "64M Self-Powered Energy Cell", AE2_COLORS[8].hex, isSelfPowered = true),
-    CellEntry("256m_self_powered_energy_cell", "256M Self-Powered Energy Cell", AE2_COLORS[9].hex, isSelfPowered = true),
-    CellEntry("1g_self_powered_energy_cell", "1G Self-Powered Energy Cell", AE2_COLORS[10].hex, isSelfPowered = true),
-    CellEntry("4g_self_powered_energy_cell", "4G Self-Powered Energy Cell", AE2_COLORS[11].hex, isSelfPowered = true),
-    CellEntry("16g_self_powered_energy_cell", "16G Self-Powered Energy Cell", AE2_COLORS[12].hex, isSelfPowered = true),
-    CellEntry("64g_self_powered_energy_cell", "64G Self-Powered Energy Cell", AE2_COLORS[13].hex, isSelfPowered = true),
-    CellEntry("256g_self_powered_energy_cell", "256G Self-Powered Energy Cell", AE2_COLORS[14].hex, isSelfPowered = true),
-    CellEntry("1t_self_powered_energy_cell", "1T Self-Powered Energy Cell", AE2_COLORS[15].hex, isSelfPowered = true),
-    CellEntry("4t_self_powered_energy_cell", "4T Self-Powered Energy Cell", AE2_COLORS[16].hex, isSelfPowered = true),
-    CellEntry("16t_self_powered_energy_cell", "16T Self-Powered Energy Cell", AE2_COLORS[17].hex, isSelfPowered = true),
-    CellEntry("64t_self_powered_energy_cell", "64T Self-Powered Energy Cell", AE2_COLORS[18].hex, isSelfPowered = true),
-    CellEntry("256t_self_powered_energy_cell", "256T Self-Powered Energy Cell", AE2_COLORS[19].hex, isSelfPowered = true),
-    CellEntry("creative_energy_cell", "Creative Energy Cell", "#E040FB", isCreative = true),
-)
+) {
+    val id = displayName.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
+}
 
 val tiers = listOf(
     "1k", "4k", "16k", "64k", "256k",
     "1m", "4m", "16m", "64m", "256m",
     "1g", "4g", "16g", "64g", "256g",
     "1t", "4t", "16t", "64t", "256t",
-)
+).map { it.uppercase() }
 
-private val craftingStorages = run {
-    tiers.mapIndexed { i, tier ->
-        CellEntry("${tier}_crafting_storage", "${tier.uppercase()} Crafting Storage", AE2_COLORS[i].hex)
-    }.toMutableList().apply {
-        add(CellEntry("creative_crafting_storage", "Creative Crafting Storage", "#E040FB", isCreative = true))
-    }.toList()
-}
+private val energyCells = tiers.flatMapIndexed { i, tier ->
+    listOf(
+        CellEntry("$tier Energy Cell", AE2_COLORS[i].hex),
+        CellEntry("$tier Self-Powered Energy Cell", AE2_COLORS[i].hex, isSelfPowered = true),
+    )
+}.toMutableList().apply {
+    add(CellEntry("Creative Energy Cell", AE2_COLOR_CREATIVE.hex, isCreative = true))
+}.toList()
+
+private val craftingStorages = tiers.mapIndexed { i, tier ->
+    CellEntry("$tier Crafting Storage", AE2_COLORS[i].hex)
+}.toMutableList().apply {
+    add(CellEntry("Creative Crafting Storage", AE2_COLOR_CREATIVE.hex, isCreative = true))
+}.toList()
 
 // Item storage cell tiers, colored per AE2_COLORS like the other storage tiers.
-private val itemStorageCells = run {
-    tiers.mapIndexed { i, tier ->
-        CellEntry("${tier}_item_storage_cell", "${tier.uppercase()} Item Storage Cell", AE2_COLORS[i].hex)
-    }
+private val itemStorageCells = tiers.mapIndexed { i, tier ->
+    CellEntry("$tier Item Storage Cell", AE2_COLORS[i].hex)
 }
 
 /**
@@ -184,7 +145,7 @@ fun main(args: Array<String>) {
         translation("gui.$modId.mac_item", "MAC: %s")
         translation("config.jade.plugin_$modId.mac", "MAC Address")
 
-        for (cell in cells) {
+        for (cell in energyCells) {
             if (cell.isCreative) {
                 simpleBlock(cell.id, cell.displayName)
             } else {
@@ -210,6 +171,7 @@ fun main(args: Array<String>) {
                     faces = listOf("socket_up", "socket", "socket", "socket", "socket", "socket"),
                     formedFaces = listOf("socket_up_formed", "socket", "socket", "socket", "socket", "socket"),
                 )
+
                 else -> asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
             }
         }
@@ -246,7 +208,7 @@ fun main(args: Array<String>) {
         source(sourceTextures, "#98C2E7")
 
         // Energy cells: bg + fg(tint) + fullness/creative + optional self-powered badge
-        for (cell in cells) {
+        for (cell in energyCells) {
             val badge = if (cell.isSelfPowered) listOf("energy_cell_self_powered") else emptyList()
             if (cell.isCreative) {
                 // AE2-style vertical strip: fg cycles through AE2_GRADIENT with interpolation
@@ -491,8 +453,6 @@ fun main(args: Array<String>) {
     guiTexOut.createDirectories()
     val guiSrc = Path.of("common/resgen/textures/guis")
     guiSrc.resolve("machine_slot.png").copyTo(guiTexOut.resolve("machine_slot.png"), overwrite = true)
-    guiSrc.resolve("molecular_assembler.png")
-        .copyTo(guiTexOut.resolve("molecular_assembler.png"), overwrite = true)
-    guiSrc.resolve("async_crafting_status.png")
-        .copyTo(guiTexOut.resolve("async_crafting_status.png"), overwrite = true)
+    guiSrc.resolve("molecular_assembler.png").copyTo(guiTexOut.resolve("molecular_assembler.png"), overwrite = true)
+    guiSrc.resolve("async_crafting_status.png").copyTo(guiTexOut.resolve("async_crafting_status.png"), overwrite = true)
 }

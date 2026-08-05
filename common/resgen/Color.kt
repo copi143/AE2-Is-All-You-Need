@@ -11,6 +11,8 @@ class Color(r: Int, g: Int, b: Int) {
     val hex = String.format("#%02X%02X%02X", r, g, b)
 }
 
+val AE2_COLOR_CREATIVE = Color(224, 64, 251)
+
 val AE2_COLORS = run {
     val array = arrayListOf<Color>()
     for (i in 0..19) {

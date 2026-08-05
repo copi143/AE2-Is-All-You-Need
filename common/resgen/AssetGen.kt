@@ -3,11 +3,7 @@ package allyouneed.resgen
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
-import kotlin.io.path.exists
-import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
+import kotlin.io.path.*
 
 @DslMarker
 annotation class AssetGenDsl
@@ -252,12 +248,25 @@ class AssetGen(private val modId: String, private val output: Path, private val 
         val dirs = listOf("north", "south", "east", "west")
         val yaw = mapOf("north" to 0, "south" to 180, "east" to 90, "west" to 270)
         when {
-            hasPowered -> for (dir in dirs) for (formed in listOf("false", "true")) for (powered in listOf("false", "true")) {
-                addVariant("facing=$dir,formed=$formed,powered=$powered", if (formed == "false") name else "${name}_formed", yaw.getValue(dir))
+            hasPowered -> for (dir in dirs) for (formed in listOf("false", "true")) for (powered in listOf(
+                "false",
+                "true"
+            )) {
+                addVariant(
+                    "facing=$dir,formed=$formed,powered=$powered",
+                    if (formed == "false") name else "${name}_formed",
+                    yaw.getValue(dir)
+                )
             }
+
             hasFacing -> for (dir in dirs) for (formed in listOf("false", "true")) {
-                addVariant("facing=$dir,formed=$formed", if (formed == "false") name else "${name}_formed", yaw.getValue(dir))
+                addVariant(
+                    "facing=$dir,formed=$formed",
+                    if (formed == "false") name else "${name}_formed",
+                    yaw.getValue(dir)
+                )
             }
+
             else -> for (formed in listOf("false", "true")) {
                 addVariant("formed=$formed", if (formed == "false") name else "${name}_formed")
             }

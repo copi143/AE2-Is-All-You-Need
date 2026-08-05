@@ -233,6 +233,7 @@ class TextureGen(private val output: Path) {
                     "_$level" to ensureArgb(ImageIO.read(file.toFile()))
                 }
             }
+
             else -> {
                 val file = srcDir.resolve("${entry.topTemplate}.png")
                 if (!file.exists()) {
