@@ -1,4 +1,4 @@
-package allyouneed.machineassembler
+package allyouneed.parts.machineassembler
 
 import appeng.block.AEBaseEntityBlock
 import appeng.menu.MenuOpener
@@ -32,7 +32,10 @@ class MachineAssemblerBlock(props: Properties) : AEBaseEntityBlock<MachineAssemb
         builder.add(POWERED)
     }
 
-    override fun updateBlockStateFromBlockEntity(currentState: BlockState, be: MachineAssemblerBlockEntity): BlockState {
+    override fun updateBlockStateFromBlockEntity(
+        currentState: BlockState,
+        be: MachineAssemblerBlockEntity
+    ): BlockState {
         return currentState.setValue(POWERED, be.isPowered())
     }
 

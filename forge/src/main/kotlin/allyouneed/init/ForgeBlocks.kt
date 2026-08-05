@@ -14,9 +14,9 @@ import allyouneed.async.AsyncStructureInterfaceBlock
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
 import allyouneed.iodrive.MEIODriveRegistration
-import allyouneed.machineassembler.MachineAssemblerBlock
-import allyouneed.machineassembler.MachineAssemblerBlockEntity
-import allyouneed.machineassembler.MachineAssemblerRegistration
+import allyouneed.parts.machineassembler.MachineAssemblerBlock
+import allyouneed.parts.machineassembler.MachineAssemblerBlockEntity
+import allyouneed.parts.machineassembler.MachineAssemblerRegistration
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlock
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlockEntity
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration

@@ -1,4 +1,4 @@
-package allyouneed.machineassembler
+package allyouneed.parts.machineassembler
 
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntityType

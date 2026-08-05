@@ -10,8 +10,8 @@ import allyouneed.cell.item.ItemStorageCellItem
 import allyouneed.client.CraftingStorageModels
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
-import allyouneed.machineassembler.MachineAssemblerMenu
-import allyouneed.machineassembler.MachineAssemblerScreen
+import allyouneed.parts.machineassembler.MachineAssemblerMenu
+import allyouneed.parts.machineassembler.MachineAssemblerScreen
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalScreen
 import allyouneed.pattern.machine.MachinePatternTerminalMenu

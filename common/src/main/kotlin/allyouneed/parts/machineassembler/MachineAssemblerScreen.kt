@@ -1,4 +1,4 @@
-package allyouneed.machineassembler
+package allyouneed.parts.machineassembler
 
 import appeng.client.gui.implementations.UpgradeableScreen
 import appeng.client.gui.style.ScreenStyle

@@ -1,4 +1,4 @@
-package allyouneed.machineassembler
+package allyouneed.parts.machineassembler
 
 import allyouneed.logic.machine.MachineType
 import allyouneed.logic.machine.MachineTypeRegistry
@@ -54,11 +54,8 @@ class MachineAssemblerBlockEntity(
     blockEntityType: BlockEntityType<*>,
     pos: BlockPos,
     blockState: BlockState,
-) : AENetworkInvBlockEntity(blockEntityType, pos, blockState),
-    IUpgradeableObject,
-    IGridTickable,
-    ICraftingMachine,
-    IPowerChannelState {
+) : AENetworkInvBlockEntity(blockEntityType, pos, blockState), IUpgradeableObject,
+    IGridTickable, ICraftingMachine, IPowerChannelState {
 
     companion object {
         const val GRID_SLOTS = 9 + 1
@@ -75,8 +72,7 @@ class MachineAssemblerBlockEntity(
     private val patternInv = AppEngInternalInventory(this, PATTERN_SLOTS, 1)
     private val machineInv = AppEngInternalInventory(this, MACHINE_SLOTS, 1)
     private val gridInvExt: InternalInventory = FilteredInternalInventory(gridInv, CraftingGridFilter())
-    private val internalInv: InternalInventory =
-        CombinedInternalInventory(gridInv, patternInv, machineInv)
+    private val internalInv: InternalInventory = CombinedInternalInventory(gridInv, patternInv, machineInv)
     private val upgrades: IUpgradeInventory
 
     private var isPowered = false
@@ -89,9 +85,7 @@ class MachineAssemblerBlockEntity(
     private var reboot = true
 
     init {
-        mainNode
-            .setIdlePowerUsage(0.0)
-            .addService(IGridTickable::class.java, this)
+        mainNode.setIdlePowerUsage(0.0).addService(IGridTickable::class.java, this)
         upgrades = UpgradeInventories.forMachine(
             MachineAssemblerRegistration.block,
             getUpgradeSlots(),
@@ -257,7 +251,8 @@ class MachineAssemblerBlockEntity(
             if (level != null && myPlan == null) {
                 if (!myPattern.isEmpty) {
                     if (PatternDetailsHelper.decodePattern(myPattern, level, false) is MachinePatternDetails) {
-                        this.myPlan = PatternDetailsHelper.decodePattern(myPattern, level, false) as MachinePatternDetails
+                        this.myPlan =
+                            PatternDetailsHelper.decodePattern(myPattern, level, false) as MachinePatternDetails
                     }
                 }
 
@@ -378,18 +373,22 @@ class MachineAssemblerBlockEntity(
                 speed = 13
                 this.progress += this.userPower(elapsed, speed, 1.3)
             }
+
             2 -> {
                 speed = 17
                 this.progress += this.userPower(elapsed, speed, 1.7)
             }
+
             3 -> {
                 speed = 20
                 this.progress += this.userPower(elapsed, speed, 2.0)
             }
+
             4 -> {
                 speed = 25
                 this.progress += this.userPower(elapsed, speed, 2.5)
             }
+
             5 -> {
                 speed = 50
                 this.progress += this.userPower(elapsed, speed, 5.0)
@@ -435,8 +434,11 @@ class MachineAssemblerBlockEntity(
         if (this.gridInv.getStackInSlot(OUTPUT_SLOT).isEmpty) {
             for (x in 0 until GRID_SLOTS - 1) {
                 val held = this.gridInv.getStackInSlot(x)
-                if (!held.isEmpty
-                    && (this.myPlan == null || !this.myPlan!!.isItemValid(x, AEItemKey.of(held), this.level!!))
+                if (!held.isEmpty && (this.myPlan == null || !this.myPlan!!.isItemValid(
+                        x,
+                        AEItemKey.of(held),
+                        this.level!!
+                    ))
                 ) {
                     this.gridInv.setItemDirect(OUTPUT_SLOT, held)
                     this.gridInv.setItemDirect(x, ItemStack.EMPTY)

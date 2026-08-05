@@ -1,4 +1,4 @@
-package allyouneed.machineassembler
+package allyouneed.parts.machineassembler
 
 import allyouneed.logic.machine.MachineTypeRegistry
 import allyouneed.pattern.machine.MachinePatternItem
@@ -27,12 +27,13 @@ class MachineAssemblerMenu(
     id: Int,
     playerInv: Inventory,
     be: MachineAssemblerBlockEntity,
-) : UpgradeableMenu<MachineAssemblerBlockEntity>(TYPE, id, playerInv, be), IProgressProvider {
+) : UpgradeableMenu<MachineAssemblerBlockEntity>(TYPE, id, playerInv, be),
+    IProgressProvider {
 
     companion object {
-        val TYPE: MenuType<MachineAssemblerMenu> = MenuTypeBuilder
-            .create(::MachineAssemblerMenu, MachineAssemblerBlockEntity::class.java)
-            .build("machine_assembler")
+        val TYPE: MenuType<MachineAssemblerMenu> =
+            MenuTypeBuilder.create(::MachineAssemblerMenu, MachineAssemblerBlockEntity::class.java)
+                .build("machine_assembler")
 
         private const val MAX_CRAFT_PROGRESS = 100
     }
@@ -116,8 +117,9 @@ class MachineAssemblerPatternSlot(
 
         val slot = containerSlot
         val pattern = menu.host.getCurrentPattern()
-        return slot >= 0 && slot < MachineAssemblerBlockEntity.GRID_SLOTS - 1 &&
-            pattern != null && pattern.isSlotEnabled(slot)
+        return slot >= 0 && slot < MachineAssemblerBlockEntity.GRID_SLOTS - 1 && pattern != null && pattern.isSlotEnabled(
+            slot
+        )
     }
 
     override fun getBackgroundPos(): Point = Point(x - 1, y - 1)
@@ -131,7 +133,8 @@ class MachineAssemblerMachineSlot(inv: InternalInventory, invSlot: Int) : AppEng
 }
 
 /** Slot that only accepts encoded machine patterns. */
-class MachineAssemblerPatternItemSlot(inv: InternalInventory, invSlot: Int) : AppEngSlot(inv, invSlot) {
+class MachineAssemblerPatternItemSlot(inv: InternalInventory, invSlot: Int) :
+    AppEngSlot(inv, invSlot) {
     override fun mayPlace(stack: ItemStack): Boolean {
         return super.mayPlace(stack) && stack.item is MachinePatternItem
     }
