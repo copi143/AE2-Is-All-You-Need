@@ -4,8 +4,6 @@ kotlin = "2.4.10"
 moddev = "2.0.52-beta"
 loom = "1.9-SNAPSHOT"
 dokka = "1.9.20"
-compose = "1.7.3"
-kotlinx-coroutines-core = "1.11.0"
 
 minecraft = "1.20.1"
 minecraftRange = "[1.20.1, 1.20.2)"
@@ -26,7 +24,9 @@ fabricLoader = "0.16.9"
 fabricApi = "0.92.2+1.20.1"
 flk = "1.12.3+kotlin.2.0.21"
 
+kotlinx-coroutines-core = "1.11.0"
 mixin = "0.8.5"
+compose = "1.7.3"
 
 ftb = "2001.4.22"
 
@@ -46,9 +46,10 @@ fabricLoader = { group = "net.fabricmc", name = "fabric-loader", version.ref = "
 fabricApi = { group = "net.fabricmc.fabric-api", name = "fabric-api", version.ref = "fabricApi" }
 flk = { group = "net.fabricmc", name = "fabric-language-kotlin", version.ref = "flk" }
 kff = { group = "thedarkcolour", name = "kotlinforforge", version.ref = "kff" }
+
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinx-coroutines-core" }
 mixin = { group = "org.spongepowered", name = "mixin", version.ref = "mixin" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinx-coroutines-core" }
 
 jei-fabric = { module = "mezz.jei:jei-1.20.1-fabric", version.ref = "jei" }
 jei-forge = { module = "mezz.jei:jei-1.20.1-forge", version.ref = "jei" }

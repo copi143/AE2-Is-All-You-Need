@@ -18,10 +18,10 @@ neoForge {
 }
 
 dependencies {
+    api(libs.kotlinx.coroutines.core)
     compileOnly(libs.mixin)
     compileOnly(libs.compose.runtime)
     api(project(":kaptor"))
-    api(libs.kotlinx.coroutines.core)
 
 //    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
 
