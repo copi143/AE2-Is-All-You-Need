@@ -2,6 +2,10 @@ name: Build
 
 on:
   push:
+    branches: [1.20.1]
+    tags: ["*/*"]
+  pull_request:
+    branches: [1.20.1]
 
 jobs:
   build:
@@ -9,12 +13,62 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate Assets
+        run: ./gradlew generateAssets
+
+      - name: Upload Assets artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ae2isallyouneed-assets-1.20.1
+          path: common/res/assets
+          if-no-files-found: warn
+
       - name: Build with Gradle
         run: ./gradlew build
+
+      - name: Upload Fabric artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ae2isallyouneed-fabric-1.20.1
+          path: |
+            fabric/build/libs/ae2isallyouneed-*.jar
+            !fabric/build/libs/ae2isallyouneed-*-sources.jar
+            !fabric/build/libs/ae2isallyouneed-*-javadoc.jar
+          if-no-files-found: warn
+
+      - name: Upload Forge artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ae2isallyouneed-forge-1.20.1
+          path: |
+            forge/build/ae2isallyouneed-*.jar
+          if-no-files-found: warn
+
+      - name: Collect release artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          mkdir -p release
+          zip -r release/ae2isallyouneed-assets-1.20.1.zip common/res/assets
+          cp fabric/build/libs/ae2isallyouneed-*.jar release 2>/dev/null || true
+          cp forge/build/ae2isallyouneed-*.jar release 2>/dev/null || true
+          rm -f release/*-sources.jar release/*-javadoc.jar 2>/dev/null || true
+          ls -l release
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
