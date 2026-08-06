@@ -1,4 +1,4 @@
-package allyouneed.terminal.pseudopattern
+package allyouneed.pattern.pseudo
 
 import appeng.api.storage.ITerminalHost
 import appeng.menu.implementations.MenuTypeBuilder
@@ -14,7 +14,7 @@ class PseudoPatternTerminalMenu(
     id: Int,
     playerInventory: Inventory,
     host: ITerminalHost
-) : MEStorageMenu(TYPE, id, playerInventory, host, true) {
+) : appeng.menu.me.common.MEStorageMenu(TYPE, id, playerInventory, host, true) {
 
     companion object {
         val TYPE: MenuType<PseudoPatternTerminalMenu> = MenuTypeBuilder

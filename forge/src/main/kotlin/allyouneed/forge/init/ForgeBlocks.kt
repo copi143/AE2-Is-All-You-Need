@@ -14,9 +14,9 @@ import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
 import allyouneed.pattern.machine.MachinePatternTerminalBlock
 import allyouneed.pattern.machine.MachinePatternTerminalBlockEntity
 import allyouneed.pattern.machine.MachinePatternTerminalRegistration
-import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
-import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
-import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
+import allyouneed.pattern.pseudo.PseudoPatternTerminalBlock
+import allyouneed.pattern.pseudo.PseudoPatternTerminalBlockEntity
+import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalItem
 import allyouneed.util.MODID
 import allyouneed.util.rl
 import appeng.core.MainCreativeTab
@@ -224,11 +224,8 @@ object ForgeBlocks {
             ).build(null as com.mojang.datafixers.types.Type<*>?)
             for (kind in structureEntityKinds) {
                 @Suppress("UNCHECKED_CAST") (asyncStructureInstances.getValue(kind) as appeng.block.AEBaseEntityBlock<AsyncStructureBlockEntity>).setBlockEntity(
-                        AsyncStructureBlockEntity::class.java,
-                        type,
-                        null,
-                        null
-                    )
+                    AsyncStructureBlockEntity::class.java, type, null, null
+                )
             }
             AsyncCraftingRegistration.setStructureBlockEntityType(type)
             type
@@ -242,11 +239,8 @@ object ForgeBlocks {
             ).build(null as com.mojang.datafixers.types.Type<*>?)
             for (kind in connectorKinds) {
                 @Suppress("UNCHECKED_CAST") (asyncStructureInstances.getValue(kind) as appeng.block.AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>).setBlockEntity(
-                        AsyncStructureConnectorBlockEntity::class.java,
-                        type,
-                        null,
-                        null
-                    )
+                    AsyncStructureConnectorBlockEntity::class.java, type, null, null
+                )
             }
             AsyncCraftingRegistration.setStructureConnectorBlockEntityType(type)
             type

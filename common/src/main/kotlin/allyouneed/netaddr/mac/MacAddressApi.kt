@@ -1,21 +1,10 @@
 package allyouneed.netaddr.mac
 
-import allyouneed.api.IMacAddressHolder
-import allyouneed.api.IManagedMacAddressHolder
 import appeng.api.implementations.parts.ICablePart
-import appeng.api.networking.IGridNode
 import appeng.api.networking.IManagedGridNode
 import appeng.me.ManagedGridNode
 import appeng.me.helpers.IGridConnectedBlockEntity
 import appeng.parts.AEBasePart
-
-/** Extension: MAC of a live grid node, or [MacAddress.NONE]. */
-fun IGridNode.macAddress(): Long = if (this is IMacAddressHolder) macAddress else MacAddress.NONE
-
-/** Extension: MAC cached on a managed node, or [MacAddress.NONE]. */
-fun IManagedGridNode.macAddress(): Long = if (this is IManagedMacAddressHolder) macAddress else MacAddress.NONE
-
-fun Long.toMacString(): String = MacAddress.format(this)
 
 /**
  * Collect / apply MAC maps on common AE2 hosts for wrench export and place import.

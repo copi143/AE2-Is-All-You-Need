@@ -1,4 +1,4 @@
-package allyouneed.terminal.pseudopattern
+package allyouneed.pattern.pseudo
 
 import appeng.block.AEBaseEntityBlock
 import appeng.menu.MenuOpener
@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.BlockHitResult
 
-class PseudoPatternTerminalBlock(props: Properties) : AEBaseEntityBlock<PseudoPatternTerminalBlockEntity>(props) {
+class PseudoPatternTerminalBlock(props: Properties) : appeng.block.AEBaseEntityBlock<PseudoPatternTerminalBlockEntity>(props) {
 
     override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity {
         // We will register the BlockEntityType later; here we just create with a placeholder.

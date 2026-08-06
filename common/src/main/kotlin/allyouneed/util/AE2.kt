@@ -4,11 +4,13 @@ import allyouneed.api.AsyncChannelNodeHolder
 import allyouneed.api.BigCpuCapacity
 import allyouneed.api.GlobalIdHolder
 import allyouneed.api.IMacAddressHolder
+import allyouneed.api.IManagedMacAddressHolder
 import appeng.api.stacks.AEKey
 import appeng.api.upgrades.IUpgradeableItem
 import appeng.api.upgrades.Upgrades
 import appeng.core.definitions.ItemDefinition
 import appeng.me.GridNode
+import appeng.me.ManagedGridNode
 import appeng.me.cluster.implementations.CraftingCPUCluster
 
 fun IUpgradeableItem.registerSupportedUpgrade(item: ItemDefinition<*>, max: Int = 1, tooltipGroup: String? = null) {
@@ -50,3 +52,5 @@ val AEKey.globalId get() = (this as GlobalIdHolder).globalId
 fun AEKey.invalidateGlobalId() = (this as GlobalIdHolder).invalidateGlobalId()
 
 val GridNode.macAddress get() = (this as IMacAddressHolder).macAddress
+
+val ManagedGridNode.macAddress get() = (this as IManagedMacAddressHolder).macAddress

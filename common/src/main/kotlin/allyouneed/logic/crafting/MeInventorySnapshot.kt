@@ -1,6 +1,6 @@
 package allyouneed.logic.crafting
 
-import allyouneed.api.GlobalIdHolder
+import allyouneed.util.globalId
 import appeng.api.config.Actionable
 import appeng.api.config.FuzzyMode
 import appeng.api.networking.security.IActionSource
@@ -10,7 +10,6 @@ import appeng.api.stacks.KeyCounter
 import appeng.core.AEConfig
 import appeng.crafting.inv.CraftingSimulationState
 import com.google.common.collect.Iterables
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.jetbrains.annotations.Nullable
 
 /**
@@ -53,7 +52,7 @@ class CopiedNetworkSimulationState(private val list: KeyCounter) : CraftingSimul
     init {
         println("CopiedNetworkSimulationState")
         for (item in list) {
-            println("[${(item.key as GlobalIdHolder).globalId}] ${item.key.displayName.string}: ${item.longValue}")
+            println("[${item.key.globalId}] ${item.key.displayName.string}: ${item.longValue}")
         }
     }
 

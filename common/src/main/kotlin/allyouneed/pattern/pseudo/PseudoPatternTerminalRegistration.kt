@@ -1,4 +1,4 @@
-package allyouneed.terminal.pseudopattern
+package allyouneed.pattern.pseudo
 
 import net.minecraft.world.level.block.entity.BlockEntityType
 

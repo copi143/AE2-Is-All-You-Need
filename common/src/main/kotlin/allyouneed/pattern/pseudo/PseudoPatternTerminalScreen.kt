@@ -1,4 +1,4 @@
-package allyouneed.terminal.pseudopattern
+package allyouneed.pattern.pseudo
 
 import appeng.client.gui.me.common.MEStorageScreen
 import appeng.client.gui.style.ScreenStyle
@@ -15,7 +15,7 @@ class PseudoPatternTerminalScreen(
     playerInventory: Inventory,
     title: Component,
     style: ScreenStyle
-) : MEStorageScreen<PseudoPatternTerminalMenu>(menu, playerInventory, title, style) {
+) : appeng.client.gui.me.common.MEStorageScreen<PseudoPatternTerminalMenu>(menu, playerInventory, title, style) {
 
     // TODO: Render list of pseudo patterns discovered on the network and "push" actions.
     // The network inventory is accessible via menu.getHost().getInventory()

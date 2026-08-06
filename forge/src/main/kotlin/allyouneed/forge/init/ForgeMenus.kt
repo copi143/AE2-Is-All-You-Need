@@ -7,8 +7,8 @@ import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
 import allyouneed.pattern.machine.MachinePatternTerminalMenu
-import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
-import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
+import allyouneed.pattern.pseudo.PseudoPatternTerminalMenu
+import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.util.MODID
 import net.minecraft.world.inventory.MenuType
 import net.minecraftforge.eventbus.api.IEventBus

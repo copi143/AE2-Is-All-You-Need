@@ -366,7 +366,7 @@ class MachineAssemblerBlockEntity(
         }
 
         this.reboot = false
-        var speed = 10
+        var speed: Int
         when (this.upgrades.getInstalledUpgrades(AEItems.SPEED_CARD)) {
             0 -> this.progress += this.userPower(elapsed, 10, 1.0)
             1 -> {

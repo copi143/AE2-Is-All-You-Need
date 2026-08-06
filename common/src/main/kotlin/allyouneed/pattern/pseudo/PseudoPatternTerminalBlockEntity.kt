@@ -1,4 +1,4 @@
-package allyouneed.terminal.pseudopattern
+package allyouneed.pattern.pseudo
 
 import appeng.api.storage.ITerminalHost
 import appeng.api.storage.MEStorage
@@ -23,7 +23,7 @@ class PseudoPatternTerminalBlockEntity(
     type: BlockEntityType<*>,
     pos: BlockPos,
     state: BlockState
-) : AENetworkBlockEntity(type, pos, state), ITerminalHost {
+) : appeng.blockentity.grid.AENetworkBlockEntity(type, pos, state), ITerminalHost {
 
     private val configManager = ConfigManager { }
 

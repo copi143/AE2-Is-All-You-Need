@@ -17,10 +17,10 @@ import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalScreen
 import allyouneed.pattern.machine.MachinePatternTerminalMenu
 import allyouneed.pattern.machine.MachinePatternTerminalScreen
-import allyouneed.terminal.pseudopattern.PseudoPatternTerminalMenu
-import allyouneed.terminal.pseudopattern.PseudoPatternTerminalScreen
-import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
-import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalScreen
+import allyouneed.pattern.pseudo.PseudoPatternTerminalMenu
+import allyouneed.pattern.pseudo.PseudoPatternTerminalScreen
+import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
+import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalScreen
 import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
 import appeng.hooks.BuiltInModelHooks

@@ -151,15 +151,14 @@ class ACraftingTreeNode(
         buildChildPatterns()
         var totalRequestedItems = requestedAmount * this.amount
         if (this.nodes!!.size == 1) {
-            val pro = this.nodes!!.get(0)
+            val pro = this.nodes!![0]
             val craftedPerPattern = pro.getOutputCount(this.what)
 
             while (pro.possible && totalRequestedItems > 0) {
-                val times: Long
-                if (pro.limitsQuantity()) {
-                    times = 1
+                val times: Long = if (pro.limitsQuantity()) {
+                    1
                 } else {
-                    times = (totalRequestedItems + craftedPerPattern - 1) / craftedPerPattern
+                    (totalRequestedItems + craftedPerPattern - 1) / craftedPerPattern
                 }
                 pro.request(inv, times)
 

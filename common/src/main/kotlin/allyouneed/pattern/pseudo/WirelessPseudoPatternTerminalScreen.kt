@@ -1,4 +1,4 @@
-package allyouneed.terminal.pseudopattern
+package allyouneed.pattern.pseudo
 
 import appeng.client.gui.me.common.MEStorageScreen
 import appeng.client.gui.style.ScreenStyle
@@ -14,5 +14,5 @@ class WirelessPseudoPatternTerminalScreen(
     playerInventory: Inventory,
     title: Component,
     style: ScreenStyle
-) : MEStorageScreen<WirelessPseudoPatternTerminalMenu>(menu, playerInventory, title, style) {
+) : appeng.client.gui.me.common.MEStorageScreen<WirelessPseudoPatternTerminalMenu>(menu, playerInventory, title, style) {
 }

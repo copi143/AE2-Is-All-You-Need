@@ -6,7 +6,7 @@ import allyouneed.pattern.ModItems
 import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
-import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
+import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalItem
 import allyouneed.util.rl
 import appeng.api.ids.AECreativeTabIds
 import appeng.items.parts.PartItem

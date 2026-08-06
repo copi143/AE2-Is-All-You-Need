@@ -13,8 +13,8 @@ import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
 import allyouneed.pattern.machine.MachinePatternTerminalBlock
 import allyouneed.pattern.machine.MachinePatternTerminalBlockEntity
 import allyouneed.pattern.machine.MachinePatternTerminalRegistration
-import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
-import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
+import allyouneed.pattern.pseudo.PseudoPatternTerminalBlock
+import allyouneed.pattern.pseudo.PseudoPatternTerminalBlockEntity
 import allyouneed.util.rl
 import appeng.block.AEBaseEntityBlock
 import appeng.core.MainCreativeTab
@@ -79,8 +79,7 @@ object FabricBlocks {
             { pos, state -> AdaptivePatternTerminalBlockEntity(ADAPTIVE_PATTERN_TERMINAL_BE, pos, state) },
             ADAPTIVE_PATTERN_TERMINAL
         ).build()
-        @Suppress("UNCHECKED_CAST")
-        (ADAPTIVE_PATTERN_TERMINAL as AEBaseEntityBlock<AdaptivePatternTerminalBlockEntity>).setBlockEntity(
+        @Suppress("UNCHECKED_CAST") (ADAPTIVE_PATTERN_TERMINAL as AEBaseEntityBlock<AdaptivePatternTerminalBlockEntity>).setBlockEntity(
             AdaptivePatternTerminalBlockEntity::class.java, ADAPTIVE_PATTERN_TERMINAL_BE, null, null
         )
         AdaptivePatternTerminalRegistration.setBlockEntityType(ADAPTIVE_PATTERN_TERMINAL_BE)
@@ -98,11 +97,9 @@ object FabricBlocks {
         val machineAssemblerId = "molecular_assembler".rl
 
         MACHINE_ASSEMBLER_BE = FabricBlockEntityTypeBuilder.create(
-            { pos, state -> MachineAssemblerBlockEntity(MACHINE_ASSEMBLER_BE, pos, state) },
-            MACHINE_ASSEMBLER
+            { pos, state -> MachineAssemblerBlockEntity(MACHINE_ASSEMBLER_BE, pos, state) }, MACHINE_ASSEMBLER
         ).build()
-        @Suppress("UNCHECKED_CAST")
-        (MACHINE_ASSEMBLER as AEBaseEntityBlock<MachineAssemblerBlockEntity>).setBlockEntity(
+        @Suppress("UNCHECKED_CAST") (MACHINE_ASSEMBLER as AEBaseEntityBlock<MachineAssemblerBlockEntity>).setBlockEntity(
             MachineAssemblerBlockEntity::class.java, MACHINE_ASSEMBLER_BE, null, null
         )
         MachineAssemblerRegistration.setBlockEntityType(MACHINE_ASSEMBLER_BE)
@@ -124,8 +121,7 @@ object FabricBlocks {
             { pos, state -> MachinePatternTerminalBlockEntity(MACHINE_PATTERN_TERMINAL_BE, pos, state) },
             MACHINE_PATTERN_TERMINAL
         ).build()
-        @Suppress("UNCHECKED_CAST")
-        (MACHINE_PATTERN_TERMINAL as AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
+        @Suppress("UNCHECKED_CAST") (MACHINE_PATTERN_TERMINAL as AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
             MachinePatternTerminalBlockEntity::class.java, MACHINE_PATTERN_TERMINAL_BE, null, null
         )
         MachinePatternTerminalRegistration.setBlockEntityType(MACHINE_PATTERN_TERMINAL_BE)
@@ -136,10 +132,7 @@ object FabricBlocks {
         Registry.register(BuiltInRegistries.ITEM, machineTerminalId, machineTerminalItem)
 
         BlockDefinition(
-            "Machine Pattern Terminal",
-            machineTerminalId,
-            MACHINE_PATTERN_TERMINAL,
-            machineTerminalItem
+            "Machine Pattern Terminal", machineTerminalId, MACHINE_PATTERN_TERMINAL, machineTerminalItem
         ).also {
             MainCreativeTab.add(it)
         }
@@ -148,11 +141,9 @@ object FabricBlocks {
         val ioDriveId = "me_io_drive".rl
 
         ME_IO_DRIVE_BE = FabricBlockEntityTypeBuilder.create(
-            { pos, state -> MEIODriveBlockEntity(ME_IO_DRIVE_BE, pos, state) },
-            ME_IO_DRIVE
+            { pos, state -> MEIODriveBlockEntity(ME_IO_DRIVE_BE, pos, state) }, ME_IO_DRIVE
         ).build()
-        @Suppress("UNCHECKED_CAST")
-        (ME_IO_DRIVE as AEBaseEntityBlock<MEIODriveBlockEntity>).setBlockEntity(
+        @Suppress("UNCHECKED_CAST") (ME_IO_DRIVE as AEBaseEntityBlock<MEIODriveBlockEntity>).setBlockEntity(
             MEIODriveBlockEntity::class.java, ME_IO_DRIVE_BE, null, null
         )
         MEIODriveRegistration.setBlockEntityType(ME_IO_DRIVE_BE)
@@ -189,14 +180,20 @@ object FabricBlocks {
         AsyncCraftingRegistration.setStructureConnectorBlockEntityType(structureConnectorBE)
 
         for (kind in structureKinds) {
-            @Suppress("UNCHECKED_CAST")
-            (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureBlockEntity>)
-                .setBlockEntity(AsyncStructureBlockEntity::class.java, structureBE, null, null)
+            @Suppress("UNCHECKED_CAST") (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureBlockEntity>).setBlockEntity(
+                    AsyncStructureBlockEntity::class.java,
+                    structureBE,
+                    null,
+                    null
+                )
         }
         for (kind in connectorKinds) {
-            @Suppress("UNCHECKED_CAST")
-            (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>)
-                .setBlockEntity(AsyncStructureConnectorBlockEntity::class.java, structureConnectorBE, null, null)
+            @Suppress("UNCHECKED_CAST") (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>).setBlockEntity(
+                    AsyncStructureConnectorBlockEntity::class.java,
+                    structureConnectorBE,
+                    null,
+                    null
+                )
         }
 
         for (kind in AsyncBlockKind.entries) {

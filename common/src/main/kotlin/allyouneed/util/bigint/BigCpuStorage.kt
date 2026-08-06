@@ -1,6 +1,5 @@
 package allyouneed.util.bigint
 
-import allyouneed.api.BigCpuCapacity
 import allyouneed.util.IntegerFormat
 import allyouneed.util.bigStorage
 import allyouneed.util.isUnboundedCapacity
@@ -43,15 +42,14 @@ object BigCpuStorage {
     fun isUnbounded(cpu: ICraftingCPU?): Boolean = cpu is CraftingCPUCluster && isUnbounded(cpu)
 
     @JvmStatic
-    fun getClusterStorage(cluster: CraftingCPUCluster?): BigInteger {
-        cluster as BigCpuCapacity
+    fun getClusterStorage(cluster: CraftingCPUCluster): BigInteger {
         if (cluster.isUnboundedCapacity) return BigInteger.valueOf(Long.MAX_VALUE)
         return cluster.bigStorage
     }
 
     @JvmStatic
-    fun getClusterStorageLong(cluster: CraftingCPUCluster?): Long {
-        if (isUnbounded(cluster)) return Long.MAX_VALUE
+    fun getClusterStorageLong(cluster: CraftingCPUCluster): Long {
+        if (cluster.isUnboundedCapacity) return Long.MAX_VALUE
         return getClusterStorage(cluster).saturateToLong()
     }
 
@@ -85,7 +83,7 @@ object BigCpuStorage {
     }
 
     @JvmStatic
-    fun formatStorageLabel(cluster: CraftingCPUCluster?): String {
+    fun formatStorageLabel(cluster: CraftingCPUCluster): String {
         if (isUnbounded(cluster)) return "∞"
         return formatBinaryBytes(getClusterStorage(cluster))
     }
