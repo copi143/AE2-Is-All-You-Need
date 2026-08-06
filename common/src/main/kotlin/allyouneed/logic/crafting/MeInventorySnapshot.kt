@@ -1,5 +1,6 @@
 package allyouneed.logic.crafting
 
+import allyouneed.api.GlobalIdHolder
 import appeng.api.config.Actionable
 import appeng.api.config.FuzzyMode
 import appeng.api.networking.security.IActionSource
@@ -9,6 +10,7 @@ import appeng.api.stacks.KeyCounter
 import appeng.core.AEConfig
 import appeng.crafting.inv.CraftingSimulationState
 import com.google.common.collect.Iterables
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.jetbrains.annotations.Nullable
 
 /**
@@ -47,13 +49,20 @@ object MeInventorySnapshot {
  * [CraftingSimulationState] backed solely by a pre-copied [KeyCounter].
  * Holds no reference to [IStorageService] or any live grid object.
  */
-class CopiedNetworkSimulationState(
-    private val list: KeyCounter,
-) : CraftingSimulationState() {
+class CopiedNetworkSimulationState(private val list: KeyCounter) : CraftingSimulationState() {
+    init {
+        println("CopiedNetworkSimulationState")
+        for (item in list) {
+            println("[${(item.key as GlobalIdHolder).globalId}] ${item.key.displayName.string}: ${item.longValue}")
+        }
+    }
 
-    override fun simulateExtractParent(what: AEKey, amount: Long): Long =
-        minOf(list.get(what), amount)
+    override fun simulateExtractParent(what: AEKey, amount: Long): Long = minOf(list.get(what), amount)
 
     override fun findFuzzyParent(input: AEKey): Iterable<AEKey> =
         Iterables.transform(list.findFuzzy(input, FuzzyMode.IGNORE_ALL)) { it.key }
+}
+
+class InventorySnapshot {
+//    val map = Int2ObjectOpenHashMap
 }

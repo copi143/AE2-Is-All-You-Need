@@ -53,8 +53,8 @@ fun init() {
         CraftingStorage.blockEntityType,
     )
 
-    CommonObject.init()
-    CommonObject.commonSetup()
+    Main.init()
+    Main.commonSetup()
 
     P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)
 

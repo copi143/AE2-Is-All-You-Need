@@ -18,13 +18,13 @@
     "main": [
       {
         "adapter": "kotlin",
-        "value": "allyouneed.ExampleModKt::init"
+        "value": "allyouneed.FabricMainKt::init"
       }
     ],
     "client": [
       {
         "adapter": "kotlin",
-        "value": "allyouneed.ExampleModClientKt::initClient"
+        "value": "allyouneed.FabricClientKt::initClient"
       }
     ],
     "emi": [

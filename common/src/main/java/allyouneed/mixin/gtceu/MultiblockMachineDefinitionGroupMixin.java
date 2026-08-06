@@ -32,6 +32,7 @@ import java.util.function.Supplier;
  * {@code getMatchingShapes().get(0)}, so the first page must show one bay. This overwrite orders a
  * grouped dimension as {@code 1..max} followed by {@code 0}.
  */
+@SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(value = MultiblockMachineDefinition.class, remap = false)
 public abstract class MultiblockMachineDefinitionGroupMixin {
 
@@ -61,8 +62,7 @@ public abstract class MultiblockMachineDefinitionGroupMixin {
      * recursion advances by the group size; interior aisles of a group are never visited.
      */
     @Unique
-    private List<MultiblockShapeInfo> groupedDFS(BlockPattern pattern, List<MultiblockShapeInfo> pages,
-                                                 int[] repetition, int stepAisle) {
+    private List<MultiblockShapeInfo> groupedDFS(BlockPattern pattern, List<MultiblockShapeInfo> pages, int[] repetition, int stepAisle) {
         if (stepAisle >= pattern.aisleRepetitions.length) {
             pages.add(new MultiblockShapeInfo(pattern.getPreview(repetition)));
         } else {

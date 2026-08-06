@@ -3,6 +3,7 @@ package allyouneed.util.bigint
 import allyouneed.util.saturateToLong
 import appeng.api.stacks.AEKey
 import appeng.api.stacks.KeyCounter
+import it.unimi.dsi.fastutil.objects.Object2LongMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import java.math.BigInteger
@@ -10,7 +11,7 @@ import java.util.*
 import java.util.function.Consumer
 
 /** Network-wide amount tally using [BigInteger] to avoid long overflow when summing cells. */
-class BigKeyCounter {
+class BigKeyCounter : Iterable<Object2LongMap.Entry<AEKey>> {
     private val amounts = Object2ObjectOpenHashMap<AEKey, BigInteger>()
 
     fun clear() {
@@ -88,6 +89,10 @@ class BigKeyCounter {
         for (entry in amounts.object2ObjectEntrySet()) {
             out.add(entry.key, entry.value.saturateToLong())
         }
+    }
+
+    override fun iterator(): Iterator<Object2LongMap.Entry<AEKey>> {
+        TODO("Not yet implemented")
     }
 
     companion object {

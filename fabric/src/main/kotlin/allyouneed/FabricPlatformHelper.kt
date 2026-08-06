@@ -1,4 +1,4 @@
-package allyouneed.platform
+package allyouneed
 
 import allyouneed.util.PlatformHelper
 import net.fabricmc.loader.api.FabricLoader
@@ -6,11 +6,9 @@ import net.fabricmc.loader.api.FabricLoader
 class FabricPlatformHelper : PlatformHelper {
     override val name = "Fabric"
 
-    override fun isModLoaded(modId: String?): Boolean {
+    override fun isModLoaded(modId: String): Boolean {
         return FabricLoader.getInstance().isModLoaded(modId)
     }
 
-    override fun isDev(): Boolean {
-        return FabricLoader.getInstance().isDevelopmentEnvironment
-    }
+    override val isDev: Boolean = FabricLoader.getInstance().isDevelopmentEnvironment
 }

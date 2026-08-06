@@ -1,5 +1,6 @@
 package allyouneed.forge.init
 
+import allyouneed.Platform
 import allyouneed.async.*
 import allyouneed.iodrive.MEIODriveBlock
 import allyouneed.iodrive.MEIODriveBlockEntity
@@ -17,7 +18,6 @@ import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlock
 import allyouneed.terminal.pseudopattern.PseudoPatternTerminalBlockEntity
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalItem
 import allyouneed.util.MODID
-import allyouneed.util.Services
 import allyouneed.util.rl
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
@@ -91,8 +91,7 @@ object ForgeBlocks {
                 { pos, state -> MachineAssemblerBlockEntity(MACHINE_ASSEMBLER_BE.get(), pos, state) },
                 MACHINE_ASSEMBLER.get()
             ).build(null as com.mojang.datafixers.types.Type<*>?)
-            @Suppress("UNCHECKED_CAST")
-            (MACHINE_ASSEMBLER_INSTANCE as appeng.block.AEBaseEntityBlock<MachineAssemblerBlockEntity>).setBlockEntity(
+            @Suppress("UNCHECKED_CAST") (MACHINE_ASSEMBLER_INSTANCE as appeng.block.AEBaseEntityBlock<MachineAssemblerBlockEntity>).setBlockEntity(
                 MachineAssemblerBlockEntity::class.java, type, null, null
             )
             MachineAssemblerRegistration.setBlockEntityType(type)
@@ -103,15 +102,11 @@ object ForgeBlocks {
     val MACHINE_ASSEMBLER_ITEM: RegistryObject<BlockItem> =
         ForgeItems.ITEMS.register("molecular_assembler") { MACHINE_ASSEMBLER_ITEM_INSTANCE }
 
-    val MACHINE_ASSEMBLER_DEF: BlockDefinition<MachineAssemblerBlock> =
-        BlockDefinition(
-            "Molecular Assembler",
-            "molecular_assembler".rl,
-            MACHINE_ASSEMBLER_INSTANCE,
-            MACHINE_ASSEMBLER_ITEM_INSTANCE
-        ).also {
-            MainCreativeTab.add(it)
-        }
+    val MACHINE_ASSEMBLER_DEF: BlockDefinition<MachineAssemblerBlock> = BlockDefinition(
+        "Molecular Assembler", "molecular_assembler".rl, MACHINE_ASSEMBLER_INSTANCE, MACHINE_ASSEMBLER_ITEM_INSTANCE
+    ).also {
+        MainCreativeTab.add(it)
+    }
 
     // Machine Pattern Terminal
     val MACHINE_PATTERN_TERMINAL_INSTANCE = MachinePatternTerminalBlock(
@@ -128,8 +123,7 @@ object ForgeBlocks {
                 { pos, state -> MachinePatternTerminalBlockEntity(MACHINE_PATTERN_TERMINAL_BE.get(), pos, state) },
                 MACHINE_PATTERN_TERMINAL.get()
             ).build(null as com.mojang.datafixers.types.Type<*>?)
-            @Suppress("UNCHECKED_CAST")
-            (MACHINE_PATTERN_TERMINAL_INSTANCE as appeng.block.AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
+            @Suppress("UNCHECKED_CAST") (MACHINE_PATTERN_TERMINAL_INSTANCE as appeng.block.AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
                 MachinePatternTerminalBlockEntity::class.java, type, null, null
             )
             MachinePatternTerminalRegistration.setBlockEntityType(type)
@@ -139,36 +133,31 @@ object ForgeBlocks {
     val MACHINE_PATTERN_TERMINAL_ITEM: RegistryObject<BlockItem> =
         ForgeItems.ITEMS.register("machine_pattern_terminal") { MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE }
 
-    val MACHINE_PATTERN_TERMINAL_DEF: BlockDefinition<MachinePatternTerminalBlock> =
-        BlockDefinition(
-            "Machine Pattern Terminal",
-            "machine_pattern_terminal".rl,
-            MACHINE_PATTERN_TERMINAL_INSTANCE,
-            MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE
-        ).also {
-            MainCreativeTab.add(it)
-        }
+    val MACHINE_PATTERN_TERMINAL_DEF: BlockDefinition<MachinePatternTerminalBlock> = BlockDefinition(
+        "Machine Pattern Terminal",
+        "machine_pattern_terminal".rl,
+        MACHINE_PATTERN_TERMINAL_INSTANCE,
+        MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE
+    ).also {
+        MainCreativeTab.add(it)
+    }
 
     // ME IO Drive
     val ME_IO_DRIVE_INSTANCE = MEIODriveBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f))
     val ME_IO_DRIVE_ITEM_INSTANCE = BlockItem(ME_IO_DRIVE_INSTANCE, Item.Properties())
 
-    val ME_IO_DRIVE: RegistryObject<MEIODriveBlock> =
-        BLOCKS.register("me_io_drive") { ME_IO_DRIVE_INSTANCE }
+    val ME_IO_DRIVE: RegistryObject<MEIODriveBlock> = BLOCKS.register("me_io_drive") { ME_IO_DRIVE_INSTANCE }
 
-    val ME_IO_DRIVE_BE: RegistryObject<BlockEntityType<MEIODriveBlockEntity>> =
-        BLOCK_ENTITIES.register("me_io_drive") {
-            val type = BlockEntityType.Builder.of(
-                { pos, state -> MEIODriveBlockEntity(ME_IO_DRIVE_BE.get(), pos, state) },
-                ME_IO_DRIVE.get()
-            ).build(null as com.mojang.datafixers.types.Type<*>?)
-            @Suppress("UNCHECKED_CAST")
-            (ME_IO_DRIVE_INSTANCE as appeng.block.AEBaseEntityBlock<MEIODriveBlockEntity>).setBlockEntity(
-                MEIODriveBlockEntity::class.java, type, null, null
-            )
-            MEIODriveRegistration.setBlockEntityType(type)
-            type
-        }
+    val ME_IO_DRIVE_BE: RegistryObject<BlockEntityType<MEIODriveBlockEntity>> = BLOCK_ENTITIES.register("me_io_drive") {
+        val type = BlockEntityType.Builder.of(
+            { pos, state -> MEIODriveBlockEntity(ME_IO_DRIVE_BE.get(), pos, state) }, ME_IO_DRIVE.get()
+        ).build(null as com.mojang.datafixers.types.Type<*>?)
+        @Suppress("UNCHECKED_CAST") (ME_IO_DRIVE_INSTANCE as appeng.block.AEBaseEntityBlock<MEIODriveBlockEntity>).setBlockEntity(
+            MEIODriveBlockEntity::class.java, type, null, null
+        )
+        MEIODriveRegistration.setBlockEntityType(type)
+        type
+    }
 
     val ME_IO_DRIVE_ITEM: RegistryObject<BlockItem> =
         ForgeItems.ITEMS.register("me_io_drive") { ME_IO_DRIVE_ITEM_INSTANCE }
@@ -184,49 +173,43 @@ object ForgeBlocks {
     // blocks/items/BEs must be skipped to avoid a registry collision.
     // -------------------------------------------------------------------------------------------
 
-    private val hasGt: Boolean = Services.platform.isModLoaded("gtceu")
+    private val hasGt: Boolean = Platform.isModLoaded("gtceu")
 
     private val structureProps = BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
 
     /** Kinds owned by GTAsyncCrafting when GTCEu is loaded: the three controllers + three connectors. */
-    private val gtOwnedKinds: Set<AsyncBlockKind> =
-        if (hasGt) {
-            AsyncBlockKind.entries
-                .filter { it.role == AsyncRole.CONTROLLER || it.role == AsyncRole.CONNECTOR }
-                .toSet()
-        } else {
-            emptySet()
-        }
+    private val gtOwnedKinds: Set<AsyncBlockKind> = if (hasGt) {
+        AsyncBlockKind.entries.filter { it.role == AsyncRole.CONTROLLER || it.role == AsyncRole.CONNECTOR }.toSet()
+    } else {
+        emptySet()
+    }
 
-    private val asyncStructureKinds: List<AsyncBlockKind> =
-        AsyncBlockKind.entries.filter { it !in gtOwnedKinds }
+    private val asyncStructureKinds: List<AsyncBlockKind> = AsyncBlockKind.entries.filter { it !in gtOwnedKinds }
 
     /** Eagerly created block instances, registered below. Instances (not RegistryObjects) back the
      *  creative-tab definitions so that `<clinit>` never calls `RegistryObject.get()`. */
-    private val asyncStructureInstances: Map<AsyncBlockKind, Block> =
-        asyncStructureKinds.associateWith { kind ->
-            val block = when (kind) {
-                AsyncBlockKind.FRAME -> AsyncStructureFrameBlock(kind, structureProps)
-                else -> when (kind.role) {
-                    AsyncRole.CONTROLLER -> AsyncStructureControllerBlock(kind, structureProps)
-                    AsyncRole.CONNECTOR -> AsyncStructureConnectorBlock(kind, structureProps)
-                    AsyncRole.INTERFACE -> AsyncStructureInterfaceBlock(kind, structureProps)
-                    else -> AsyncStructureBlock(kind, structureProps)
-                }
+    private val asyncStructureInstances: Map<AsyncBlockKind, Block> = asyncStructureKinds.associateWith { kind ->
+        val block = when (kind) {
+            AsyncBlockKind.FRAME -> AsyncStructureFrameBlock(kind, structureProps)
+            else -> when (kind.role) {
+                AsyncRole.CONTROLLER -> AsyncStructureControllerBlock(kind, structureProps)
+                AsyncRole.CONNECTOR -> AsyncStructureConnectorBlock(kind, structureProps)
+                AsyncRole.INTERFACE -> AsyncStructureInterfaceBlock(kind, structureProps)
+                else -> AsyncStructureBlock(kind, structureProps)
             }
-            AsyncBlockRegistry.register(kind, block)
-            block
         }
+        AsyncBlockRegistry.register(kind, block)
+        block
+    }
 
     private val asyncStructureItemInstances: Map<AsyncBlockKind, BlockItem> =
         asyncStructureKinds.associateWith { kind ->
             BlockItem(asyncStructureInstances.getValue(kind), Item.Properties())
         }
 
-    val ASYNC_STRUCTURE_BLOCKS: Map<AsyncBlockKind, RegistryObject<Block>> =
-        asyncStructureKinds.associateWith { kind ->
-            BLOCKS.register(kind.id) { asyncStructureInstances.getValue(kind) }
-        }
+    val ASYNC_STRUCTURE_BLOCKS: Map<AsyncBlockKind, RegistryObject<Block>> = asyncStructureKinds.associateWith { kind ->
+        BLOCKS.register(kind.id) { asyncStructureInstances.getValue(kind) }
+    }
 
     val ASYNC_STRUCTURE_ITEMS: Map<AsyncBlockKind, RegistryObject<BlockItem>> =
         asyncStructureKinds.associateWith { kind ->
@@ -240,11 +223,12 @@ object ForgeBlocks {
                 *structureEntityKinds.map { asyncStructureInstances.getValue(it) }.toTypedArray(),
             ).build(null as com.mojang.datafixers.types.Type<*>?)
             for (kind in structureEntityKinds) {
-                @Suppress("UNCHECKED_CAST")
-                (
-                        asyncStructureInstances.getValue(kind)
-                                as appeng.block.AEBaseEntityBlock<AsyncStructureBlockEntity>
-                        ).setBlockEntity(AsyncStructureBlockEntity::class.java, type, null, null)
+                @Suppress("UNCHECKED_CAST") (asyncStructureInstances.getValue(kind) as appeng.block.AEBaseEntityBlock<AsyncStructureBlockEntity>).setBlockEntity(
+                        AsyncStructureBlockEntity::class.java,
+                        type,
+                        null,
+                        null
+                    )
             }
             AsyncCraftingRegistration.setStructureBlockEntityType(type)
             type
@@ -257,25 +241,25 @@ object ForgeBlocks {
                 *connectorKinds.map { asyncStructureInstances.getValue(it) }.toTypedArray(),
             ).build(null as com.mojang.datafixers.types.Type<*>?)
             for (kind in connectorKinds) {
-                @Suppress("UNCHECKED_CAST")
-                (
-                        asyncStructureInstances.getValue(kind)
-                                as appeng.block.AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>
-                        ).setBlockEntity(AsyncStructureConnectorBlockEntity::class.java, type, null, null)
+                @Suppress("UNCHECKED_CAST") (asyncStructureInstances.getValue(kind) as appeng.block.AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>).setBlockEntity(
+                        AsyncStructureConnectorBlockEntity::class.java,
+                        type,
+                        null,
+                        null
+                    )
             }
             AsyncCraftingRegistration.setStructureConnectorBlockEntityType(type)
             type
         }
 
-    val ASYNC_STRUCTURE_DEFS: Map<AsyncBlockKind, BlockDefinition<Block>> =
-        asyncStructureKinds.associateWith { kind ->
-            BlockDefinition(
-                kind.displayName,
-                kind.id.rl,
-                asyncStructureInstances.getValue(kind),
-                asyncStructureItemInstances.getValue(kind),
-            ).also { MainCreativeTab.add(it) }
-        }
+    val ASYNC_STRUCTURE_DEFS: Map<AsyncBlockKind, BlockDefinition<Block>> = asyncStructureKinds.associateWith { kind ->
+        BlockDefinition(
+            kind.displayName,
+            kind.id.rl,
+            asyncStructureInstances.getValue(kind),
+            asyncStructureItemInstances.getValue(kind),
+        ).also { MainCreativeTab.add(it) }
+    }
 
     private val structureEntityKinds: List<AsyncBlockKind>
         get() = asyncStructureKinds.filter { it.role == AsyncRole.CONTROLLER || it.role == AsyncRole.INTERFACE }

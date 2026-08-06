@@ -1,5 +1,6 @@
 package allyouneed.mixin.ae2;
 
+import allyouneed.api.BigCpuCapacity;
 import allyouneed.util.bigint.BigCpuStorage;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.ICraftingPlan;
@@ -29,11 +30,12 @@ public class CraftingCpuLogicMixin {
      * edge cases — override those by cancelling with success path skip is hard;
      * instead replace the comparison via forcing getAvailableStorage (separate redirect).
      */
+    @SuppressWarnings("ConstantValue")
     @Inject(method = "trySubmitJob", at = @At("HEAD"), cancellable = true)
     private void allyouneed$rejectTooSmall(IGrid grid, ICraftingPlan plan, IActionSource src, ICraftingRequester requester, CallbackInfoReturnable<ICraftingSubmitResult> cir) {
         // Only handle the size dimension here when unbounded / big path differs from long.
         // Busy/offline still handled by vanilla after we don't cancel.
-        if (BigCpuStorage.hasClusterEntry(cluster) || BigCpuStorage.isUnbounded(cluster)) {
+        if (BigCpuStorage.hasClusterEntry(cluster) || ((BigCpuCapacity) (Object) cluster).isUnboundedCapacity()) {
             if (!BigCpuStorage.canHold(cluster, plan.bytes())) {
                 cir.setReturnValue(CraftingSubmitResult.CPU_TOO_SMALL);
             }

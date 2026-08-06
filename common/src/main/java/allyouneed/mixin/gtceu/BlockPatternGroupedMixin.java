@@ -37,10 +37,7 @@ import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import org.apache.commons.lang3.ArrayUtils;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.*;
 
 import java.util.*;
 import java.util.function.BiPredicate;
@@ -85,19 +82,26 @@ import java.util.function.Consumer;
  *       (forming still allows 0).</li>
  * </ul>
  */
+@SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(value = BlockPattern.class, remap = false)
 public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
 
+    @Final
     @Shadow
     public int[][] aisleRepetitions;
+    @Final
     @Shadow
     protected TraceabilityPredicate[][][] blockMatches;
+    @Final
     @Shadow
     protected int fingerLength;
+    @Final
     @Shadow
     protected int thumbLength;
+    @Final
     @Shadow
     protected int palmLength;
+    @Final
     @Shadow
     protected int[] centerOffset;
     @Shadow
@@ -106,18 +110,15 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
     private int[] groupSizes;
 
     @Shadow
-    private static IntObjectPair<IItemHandler> getMatchStackWithHandler(List<ItemStack> candidates,
-                                                                        LazyOptional<IItemHandler> cap) {
+    private static IntObjectPair<IItemHandler> getMatchStackWithHandler(List<ItemStack> candidates, LazyOptional<IItemHandler> cap) {
         return null;
     }
 
     @Shadow
-    protected abstract BlockPos setActualRelativeOffset(int x, int y, int z, Direction facing,
-                                                        Direction upwardsFacing, boolean isFlipped);
+    protected abstract BlockPos setActualRelativeOffset(int x, int y, int z, Direction facing, Direction upwardsFacing, boolean isFlipped);
 
     @Shadow
-    private void resetFacing(BlockPos pos, BlockState blockState, Direction facing,
-                             BiPredicate<BlockPos, Direction> checker, Consumer<BlockState> consumer) {
+    private void resetFacing(BlockPos pos, BlockState blockState, Direction facing, BiPredicate<BlockPos, Direction> checker, Consumer<BlockState> consumer) {
     }
 
     @Override
@@ -139,8 +140,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
      * @reason 分组重复的模式匹配（见类文档）；其余为逐行移植。 / Grouped-repetition pattern matching (see class doc); otherwise a verbatim port.
      */
     @Overwrite
-    public boolean checkPatternAt(MultiblockState worldState, BlockPos centerPos, Direction frontFacing,
-                                  Direction upwardsFacing, boolean isFlipped, boolean savePredicate) {
+    public boolean checkPatternAt(MultiblockState worldState, BlockPos centerPos, Direction frontFacing, Direction upwardsFacing, boolean isFlipped, boolean savePredicate) {
         boolean findFirstAisle = false;
         int minZ = -centerOffset[4];
         worldState.clean();
@@ -160,8 +160,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                         for (int a = 0, x = -centerOffset[0]; a < this.palmLength; a++, x++) {
                             worldState.setError(null);
                             TraceabilityPredicate predicate = this.blockMatches[c + d][b][a];
-                            BlockPos pos = setActualRelativeOffset(x, y, sliceZ + d, frontFacing, upwardsFacing,
-                                    isFlipped).offset(centerPos.getX(), centerPos.getY(), centerPos.getZ());
+                            BlockPos pos = setActualRelativeOffset(x, y, sliceZ + d, frontFacing, upwardsFacing, isFlipped).offset(centerPos.getX(), centerPos.getY(), centerPos.getZ());
                             if (!worldState.update(pos, predicate)) {
                                 return false;
                             }
@@ -172,11 +171,9 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                                 }
                             }
                             boolean canPartShared = true;
-                            if (worldState.getTileEntity() instanceof IMachineBlockEntity machineBlockEntity &&
-                                    machineBlockEntity.getMetaMachine() instanceof IMultiPart part) {
+                            if (worldState.getTileEntity() instanceof IMachineBlockEntity machineBlockEntity && machineBlockEntity.getMetaMachine() instanceof IMultiPart part) {
                                 if (!predicate.isAny()) {
-                                    if (part.isFormed() && !part.canShared() &&
-                                            !part.hasController(worldState.controllerPos)) {
+                                    if (part.isFormed() && !part.canShared() && !part.hasController(worldState.controllerPos)) {
                                         canPartShared = false;
                                         worldState.setError(new PatternStringError("multiblocked.pattern.error.share"));
                                     } else {
@@ -185,15 +182,13 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                                 }
                             }
                             if (worldState.getBlockState().getBlock() instanceof ActiveBlock) {
-                                matchContext.getOrCreate("vaBlocks", LongOpenHashSet::new)
-                                        .add(worldState.getPos().asLong());
+                                matchContext.getOrCreate("vaBlocks", LongOpenHashSet::new).add(worldState.getPos().asLong());
                             }
                             if (!predicate.test(worldState) || !canPartShared) { // matching failed
                                 groupFailed = true;
                                 break;
                             }
-                            matchContext.getOrCreate("ioMap", Long2ObjectOpenHashMap::new).put(
-                                    worldState.getPos().asLong(), worldState.io);
+                            matchContext.getOrCreate("ioMap", Long2ObjectOpenHashMap::new).put(worldState.getPos().asLong(), worldState.io);
                         }
                         if (groupFailed) break;
                     }
@@ -373,8 +368,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
             }
             c += groupSize;
         }
-        BlockInfo[][][] result = (BlockInfo[][][]) java.lang.reflect.Array.newInstance(BlockInfo.class,
-                maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1);
+        BlockInfo[][][] result = (BlockInfo[][][]) java.lang.reflect.Array.newInstance(BlockInfo.class, maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1);
         int finalMinX = minX;
         int finalMinY = minY;
         int finalMinZ = minZ;
@@ -382,10 +376,8 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
             resetFacing(pos, info.getBlockState(), null, (p, f) -> {
                 BlockInfo blockInfo = blocks.get(p.relative(f));
                 if (blockInfo == null || blockInfo.getBlockState().getBlock() == Blocks.AIR) {
-                    if (blocks.get(pos).getBlockState().getBlock() instanceof com.gregtechceu.gtceu.api.block.MetaMachineBlock
-                            machineBlock) {
-                        if (machineBlock.newBlockEntity(BlockPos.ZERO,
-                                machineBlock.defaultBlockState()) instanceof IMachineBlockEntity machineBlockEntity) {
+                    if (blocks.get(pos).getBlockState().getBlock() instanceof com.gregtechceu.gtceu.api.block.MetaMachineBlock machineBlock) {
+                        if (machineBlock.newBlockEntity(BlockPos.ZERO, machineBlock.defaultBlockState()) instanceof IMachineBlockEntity machineBlockEntity) {
                             var machine = machineBlockEntity.getMetaMachine();
                             if (machine instanceof IMultiController) {
                                 return false;
@@ -431,8 +423,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                     for (int b = 0, y = -centerOffset[1]; b < this.thumbLength; b++, y++) {
                         for (int a = 0, x = -centerOffset[0]; a < this.palmLength; a++, x++) {
                             TraceabilityPredicate predicate = this.blockMatches[c + d][b][a];
-                            BlockPos pos = setActualRelativeOffset(x, y, z + d, facing, upwardsFacing, isFlipped)
-                                    .offset(centerPos.getX(), centerPos.getY(), centerPos.getZ());
+                            BlockPos pos = setActualRelativeOffset(x, y, z + d, facing, upwardsFacing, isFlipped).offset(centerPos.getX(), centerPos.getY(), centerPos.getZ());
                             worldState.update(pos, predicate);
                             if (!world.isEmptyBlock(pos)) {
                                 blocks.put(pos, world.getBlockState(pos));
@@ -445,8 +436,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                                 for (SimplePredicate limit : predicate.limited) {
                                     if (limit.minLayerCount > 0) {
                                         int curr = cacheLayer.getInt(limit);
-                                        if (curr < limit.minLayerCount &&
-                                                (limit.maxLayerCount == -1 || curr < limit.maxLayerCount)) {
+                                        if (curr < limit.minLayerCount && (limit.maxLayerCount == -1 || curr < limit.maxLayerCount)) {
                                             cacheLayer.addTo(limit, 1);
                                         } else {
                                             continue;
@@ -477,22 +467,18 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                                 }
                                 if (!find) { // no limited
                                     for (SimplePredicate limit : predicate.limited) {
-                                        if (limit.maxLayerCount != -1 &&
-                                                cacheLayer.getOrDefault(limit, Integer.MAX_VALUE) == limit.maxLayerCount) {
+                                        if (limit.maxLayerCount != -1 && cacheLayer.getOrDefault(limit, Integer.MAX_VALUE) == limit.maxLayerCount) {
                                             continue;
                                         }
-                                        if (limit.maxCount != -1 &&
-                                                cacheGlobal.getOrDefault(limit, Integer.MAX_VALUE) == limit.maxCount) {
+                                        if (limit.maxCount != -1 && cacheGlobal.getOrDefault(limit, Integer.MAX_VALUE) == limit.maxCount) {
                                             continue;
                                         }
                                         cacheLayer.addTo(limit, 1);
                                         cacheGlobal.addTo(limit, 1);
-                                        infos = ArrayUtils.addAll(infos,
-                                                limit.candidates == null ? null : limit.candidates.get());
+                                        infos = ArrayUtils.addAll(infos, limit.candidates == null ? null : limit.candidates.get());
                                     }
                                     for (SimplePredicate common : predicate.common) {
-                                        infos = ArrayUtils.addAll(infos,
-                                                common.candidates == null ? null : common.candidates.get());
+                                        infos = ArrayUtils.addAll(infos, common.candidates == null ? null : common.candidates.get());
                                     }
                                 }
 
@@ -512,8 +498,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                                 if (!player.isCreative()) {
                                     // The common module compiles against the vanilla Player, so reach
                                     // the Forge capability provider through the interface it implements.
-                                    var foundHandler = getMatchStackWithHandler(candidates,
-                                            ((ICapabilityProvider) player).getCapability(ForgeCapabilities.ITEM_HANDLER));
+                                    var foundHandler = getMatchStackWithHandler(candidates, ((ICapabilityProvider) player).getCapability(ForgeCapabilities.ITEM_HANDLER));
                                     if (foundHandler != null) {
                                         foundSlot = foundHandler.firstInt();
                                         handler = foundHandler.second();
@@ -530,8 +515,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                                 }
                                 if (found == null) continue;
                                 BlockItem itemBlock = (BlockItem) found.getItem();
-                                BlockPlaceContext context = new BlockPlaceContext(world, player, InteractionHand.MAIN_HAND,
-                                        found, BlockHitResult.miss(player.getEyePosition(0), Direction.UP, pos));
+                                BlockPlaceContext context = new BlockPlaceContext(world, player, InteractionHand.MAIN_HAND, found, BlockHitResult.miss(player.getEyePosition(0), Direction.UP, pos));
                                 InteractionResult interactionResult = itemBlock.place(context);
                                 if (interactionResult != InteractionResult.FAIL) {
                                     placeBlockPos.add(pos);
@@ -558,8 +542,7 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
                 if (block instanceof BlockState && placeBlockPos.contains(pos)) {
                     resetFacing(pos, (BlockState) block, frontFacing, (p, f) -> {
                         Object object = blocks.get(p.relative(f));
-                        return object == null ||
-                                (object instanceof BlockState && ((BlockState) object).getBlock() == Blocks.AIR);
+                        return object == null || (object instanceof BlockState && ((BlockState) object).getBlock() == Blocks.AIR);
                     }, state -> world.setBlock(pos, state, 3));
                 } else if (block instanceof MetaMachine machine) {
                     resetFacing(pos, machine.getBlockState(), frontFacing, (p, f) -> {

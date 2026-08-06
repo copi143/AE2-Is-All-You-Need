@@ -20,13 +20,7 @@ import java.math.BigInteger;
 @Mixin(value = MEInventoryUpdatePacket.class, remap = false)
 public abstract class MEInventoryUpdatePacketMixin {
 
-    @Redirect(
-            method = "writeEntry",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lappeng/menu/me/common/GridInventoryEntry;getStoredAmount()J"
-            )
-    )
+    @Redirect(method = "writeEntry", at = @At(value = "INVOKE", target = "Lappeng/menu/me/common/GridInventoryEntry;getStoredAmount()J"))
     private static long allyouneed$storedAmountForWrite(GridInventoryEntry entry) {
         if (BigAmounts.hasEntryAmount(entry)) {
             BigInteger big = BigAmounts.getEntryAmount(entry);
@@ -40,9 +34,7 @@ public abstract class MEInventoryUpdatePacketMixin {
 
     @Inject(method = "writeEntry", at = @At("RETURN"))
     private static void allyouneed$writeBigPayload(FriendlyByteBuf buffer, GridInventoryEntry entry, CallbackInfo ci) {
-        BigInteger big = BigAmounts.hasEntryAmount(entry)
-                ? BigAmounts.getEntryAmount(entry)
-                : BigInteger.valueOf(Math.max(0L, entry.getStoredAmount()));
+        BigInteger big = BigAmounts.hasEntryAmount(entry) ? BigAmounts.getEntryAmount(entry) : BigInteger.valueOf(Math.max(0L, entry.getStoredAmount()));
 
         // Only extend the packet when the long field is saturated at Long.MAX_VALUE
         if (big.bitLength() <= 63 && big.longValue() != Long.MAX_VALUE) {

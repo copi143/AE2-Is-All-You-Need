@@ -2,6 +2,7 @@
 
 package allyouneed.util
 
+import allyouneed.Platform
 import net.minecraft.resources.ResourceLocation
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -16,7 +17,7 @@ val LOGNAME = MODNAME.replace(" ", "")
 val logger: Logger = LoggerFactory.getLogger(LOGNAME)
 
 @JvmField
-val debugLogger: Logger = if (Services.platform.isDev()) {
+val debugLogger: Logger = if (Platform.isDev) {
     LoggerFactory.getLogger("$LOGNAME/Debug")
 } else {
     NOPLogger.NOP_LOGGER
@@ -41,8 +42,24 @@ data class Number(val bigInt: BigInteger) {
         fun powOfTwo(e: Int): Number {
             return Number(BigInteger.TWO.pow(e))
         }
+
+        @JvmStatic
+        fun powOfTen(e: Int): Number {
+            return Number(BigInteger.TEN.pow(e))
+        }
     }
 }
+
+val kilo = Number.powOfTen(3)
+val mega = Number.powOfTen(6)
+val giga = Number.powOfTen(9)
+val tera = Number.powOfTen(12)
+val peta = Number.powOfTen(15)
+val exa = Number.powOfTen(18)
+val zetta = Number.powOfTen(21)
+val yotta = Number.powOfTen(24)
+val ronna = Number.powOfTen(27)
+val quetta = Number.powOfTen(30)
 
 val kibi = Number.powOfTwo(10)
 val mebi = Number.powOfTwo(20)

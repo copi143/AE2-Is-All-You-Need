@@ -1,5 +1,7 @@
 package allyouneed.util
 
+import java.util.*
+
 interface PlatformHelper {
     /**
      * Gets the name of the current platform.
@@ -12,21 +14,19 @@ interface PlatformHelper {
      * @param modId The mod to check if it is loaded.
      * @return True if the mod is loaded, false otherwise.
      */
-    fun isModLoaded(modId: String?): Boolean
+    fun isModLoaded(modId: String): Boolean
 
-    /**
-     * Check if the game is currently in a development environment.
-     *
-     * @return True if in a development environment, false otherwise.
-     */
-    fun isDev(): Boolean
+    val isDev: Boolean
 
-    /**
-     * Gets the name of the environment type as a string.
-     *
-     * @return The name of the environment type.
-     */
-    fun getEnvironmentName(): String {
-        return if (isDev()) "development" else "production"
+    val envName get() = if (isDev) "development" else "production"
+
+    companion object {
+        private fun <T> load(clazz: Class<T>): T = ServiceLoader.load(clazz).findFirst().orElseThrow {
+            IllegalStateException("Failed to load service for ${clazz.name}")
+        }.also {
+            logger.debug("Loaded {} for service {}", it, clazz)
+        }
+
+        fun load(): PlatformHelper = load(PlatformHelper::class.java)
     }
 }

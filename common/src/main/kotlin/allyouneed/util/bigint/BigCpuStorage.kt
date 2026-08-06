@@ -2,6 +2,8 @@ package allyouneed.util.bigint
 
 import allyouneed.api.BigCpuCapacity
 import allyouneed.util.IntegerFormat
+import allyouneed.util.bigStorage
+import allyouneed.util.isUnboundedCapacity
 import allyouneed.util.saturateToLong
 import appeng.api.networking.crafting.ICraftingCPU
 import appeng.me.cluster.implementations.CraftingCPUCluster
@@ -11,24 +13,20 @@ import java.math.BigInteger
  * Helpers for [allyouneed.api.BigCpuCapacity] on [CraftingCPUCluster].
  * Capacity lives on the cluster instance (mixin fields), not a global map.
  */
-@Suppress("KotlinConstantConditions")
 object BigCpuStorage {
     @JvmStatic
-    fun clearCluster(cluster: CraftingCPUCluster?) {
-        cluster as BigCpuCapacity
+    fun clearCluster(cluster: CraftingCPUCluster) {
         cluster.bigStorage = BigInteger.ZERO
         cluster.isUnboundedCapacity = false
     }
 
     @JvmStatic
-    fun hasClusterEntry(cluster: CraftingCPUCluster?): Boolean {
-        cluster as BigCpuCapacity
+    fun hasClusterEntry(cluster: CraftingCPUCluster): Boolean {
         return cluster.isUnboundedCapacity || cluster.bigStorage.signum() > 0
     }
 
     @JvmStatic
-    fun addClusterBytes(cluster: CraftingCPUCluster?, bytes: BigInteger?, unbounded: Boolean) {
-        cluster as BigCpuCapacity
+    fun addClusterBytes(cluster: CraftingCPUCluster, bytes: BigInteger?, unbounded: Boolean) {
         if (unbounded) {
             cluster.isUnboundedCapacity = true
             cluster.bigStorage = BigInteger.valueOf(Long.MAX_VALUE)
@@ -39,7 +37,7 @@ object BigCpuStorage {
     }
 
     @JvmStatic
-    fun isUnbounded(cluster: CraftingCPUCluster?): Boolean = (cluster as BigCpuCapacity).isUnboundedCapacity
+    fun isUnbounded(cluster: CraftingCPUCluster): Boolean = cluster.isUnboundedCapacity
 
     @JvmStatic
     fun isUnbounded(cpu: ICraftingCPU?): Boolean = cpu is CraftingCPUCluster && isUnbounded(cpu)
@@ -74,15 +72,15 @@ object BigCpuStorage {
     }
 
     @JvmStatic
-    fun compareStorage(a: CraftingCPUCluster?, b: CraftingCPUCluster?): Int {
+    fun compareStorage(a: CraftingCPUCluster, b: CraftingCPUCluster): Int {
         val ua = isUnbounded(a)
         val ub = isUnbounded(b)
         if (ua != ub) return if (ua) 1 else -1
         if (ua) return 0
         val sa = if (hasClusterEntry(a)) getClusterStorage(a)
-        else BigInteger.valueOf(maxOf(0L, a?.availableStorage ?: 0L))
+        else BigInteger.valueOf(maxOf(0L, a.availableStorage))
         val sb = if (hasClusterEntry(b)) getClusterStorage(b)
-        else BigInteger.valueOf(maxOf(0L, b?.availableStorage ?: 0L))
+        else BigInteger.valueOf(maxOf(0L, b.availableStorage))
         return sa.compareTo(sb)
     }
 

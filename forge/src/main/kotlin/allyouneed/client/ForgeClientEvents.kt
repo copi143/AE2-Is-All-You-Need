@@ -1,5 +1,6 @@
-package allyouneed.forge.client
+package allyouneed.client
 
+import allyouneed.Platform
 import allyouneed.async.AsyncBlockKind
 import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncCraftingStatusMenu
@@ -7,7 +8,6 @@ import allyouneed.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellItem
-import allyouneed.client.CraftingStorageModels
 import allyouneed.gt.AsyncStructureGtStatusMenu
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
@@ -22,7 +22,6 @@ import allyouneed.terminal.pseudopattern.PseudoPatternTerminalScreen
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalMenu
 import allyouneed.terminal.pseudopattern.WirelessPseudoPatternTerminalScreen
 import allyouneed.util.MODID
-import allyouneed.util.Services
 import appeng.client.gui.style.StyleManager
 import appeng.hooks.BuiltInModelHooks
 import net.minecraft.client.gui.screens.MenuScreens
@@ -103,7 +102,7 @@ object ForgeClientEvents {
                 val style = StyleManager.loadStyleDoc("/screens/async_crafting_status.json")
                 AsyncCraftingStatusScreen(menu, inv, title, style)
             }
-            if (Services.platform.isModLoaded("gtceu")) {
+            if (Platform.isModLoaded("gtceu")) {
                 MenuScreens.register(AsyncStructureGtStatusMenu.TYPE) { menu, inv, title ->
                     val style = StyleManager.loadStyleDoc("/screens/async_crafting_status.json")
                     AsyncCraftingStatusScreen(menu, inv, title, style)
