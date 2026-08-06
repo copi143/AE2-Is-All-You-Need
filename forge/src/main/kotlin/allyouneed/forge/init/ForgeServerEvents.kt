@@ -2,6 +2,7 @@ package allyouneed.forge.init
 
 import allyouneed.cell.dimensional.DimensionalCellStore
 import allyouneed.netaddr.mac.MacAddressRegistry
+import allyouneed.util.id.KeyIdRegistry
 import allyouneed.util.MODID
 import net.minecraftforge.event.server.ServerAboutToStartEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
@@ -20,5 +21,6 @@ object ForgeServerEvents {
     fun onServerStopping(event: ServerStoppingEvent) {
         MacAddressRegistry.detach()
         DimensionalCellStore.detach()
+        KeyIdRegistry.clear()
     }
 }

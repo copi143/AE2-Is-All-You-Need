@@ -8,6 +8,7 @@ import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
 import allyouneed.netaddr.mac.MacAddressRegistry
 import allyouneed.util.MODID
+import allyouneed.util.id.KeyIdRegistry
 import allyouneed.util.logger
 import appeng.api.features.P2PTunnelAttunement
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
@@ -64,5 +65,6 @@ fun init() {
     ServerLifecycleEvents.SERVER_STOPPING.register {
         MacAddressRegistry.detach()
         DimensionalCellStore.detach()
+        KeyIdRegistry.clear()
     }
 }

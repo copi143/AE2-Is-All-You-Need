@@ -8,6 +8,7 @@
   "mixins": [
     "ae2.AEBaseBlockEntityMixin",
     "ae2.AEBaseEntityBlockMixin",
+    "ae2.AEKeyMixin",
     "ae2.CraftConfirmMenuMixin",
     "ae2.CraftingCPUClusterMixin",
     "ae2.CraftingCpuLogicMixin",
