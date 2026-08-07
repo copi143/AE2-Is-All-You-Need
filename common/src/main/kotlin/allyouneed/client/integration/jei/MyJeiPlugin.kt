@@ -4,6 +4,7 @@ import mezz.jei.api.IModPlugin
 import mezz.jei.api.JeiPlugin
 import mezz.jei.api.gui.handlers.IGuiContainerHandler
 import mezz.jei.api.registration.IGuiHandlerRegistration
+import mezz.jei.api.runtime.IJeiRuntime
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen
 import net.minecraft.client.renderer.Rect2i
 import net.minecraft.resources.ResourceLocation
@@ -20,6 +21,14 @@ class MyJeiPlugin : IModPlugin {
 
     override fun getPluginUid(): ResourceLocation {
         return ResourceLocation("allyouneed", "jei_plugin")
+    }
+
+    override fun onRuntimeAvailable(runtime: IJeiRuntime) {
+        JeiRuntimeStore.runtime = runtime
+    }
+
+    override fun onRuntimeUnavailable() {
+        JeiRuntimeStore.runtime = null
     }
 
     override fun registerGuiHandlers(registration: IGuiHandlerRegistration) {

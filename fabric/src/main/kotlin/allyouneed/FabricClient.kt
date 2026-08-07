@@ -7,6 +7,7 @@ import allyouneed.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellItem
+import allyouneed.client.itemdetail.ItemDetailsKeyBind
 import allyouneed.client.CraftingStorageModels
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
@@ -31,6 +32,7 @@ import net.minecraft.client.renderer.RenderType
 import net.minecraft.resources.ResourceLocation
 
 fun initClient() {
+    ItemDetailsKeyBind.init()
     ColorProviderRegistry.ITEM.register(
         { stack, tintIndex -> ItemStorageCellItem.getColor(stack, tintIndex) },
         *ItemStorageCell.entries.map { it.item.asItem() }.toTypedArray(),

@@ -117,6 +117,8 @@ fun main(args: Array<String>) {
 
     assetGen(modId, output, langDir) {
         translation("itemGroup.$modId", "AE2 Is All You Need")
+        translation("key.categories.$modId", "AE2 Is All You Need")
+        translation("key.$modId.item_details", "Open Item Details")
         translation("gui.$modId.group.all", "ALL")
         translation("gui.$modId.group.ae2", "AE2")
         translation("gui.$modId.adaptive_probability", "Probability (p)")

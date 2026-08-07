@@ -1,5 +1,7 @@
 {
   "itemGroup.ae2isallyouneed": "AE2 就是全部所需",
+  "key.categories.ae2isallyouneed": "AE2 就是全部所需",
+  "key.ae2isallyouneed.item_details": "打开物品详细信息",
   "gui.ae2isallyouneed.group.all": "全部",
   "gui.ae2isallyouneed.group.ae2": "AE2",
   "gui.ae2isallyouneed.adaptive_probability": "概率 (p)",

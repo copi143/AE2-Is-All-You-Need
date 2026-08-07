@@ -1,5 +1,6 @@
 package allyouneed.util
 
+import net.minecraft.client.KeyMapping
 import java.util.*
 
 interface PlatformHelper {
@@ -19,6 +20,17 @@ interface PlatformHelper {
     val isDev: Boolean
 
     val envName get() = if (isDev) "development" else "production"
+
+    /**
+     * Registers a client-side key binding so it shows up in the Controls screen.
+     * Must be called on the client before/at the loader's key-binding registration phase.
+     */
+    fun registerKeyBinding(key: KeyMapping)
+
+    /**
+     * Registers a handler that is invoked once per client tick, after the tick has ended.
+     */
+    fun onClientTick(handler: () -> Unit)
 
     companion object {
         private fun <T> load(clazz: Class<T>): T = ServiceLoader.load(clazz).findFirst().orElseThrow {
