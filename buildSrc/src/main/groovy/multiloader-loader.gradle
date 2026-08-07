@@ -15,6 +15,10 @@ configurations {
     commonResources {
         canBeResolved = true
     }
+    composeClasses {
+        canBeResolved = true
+        canBeConsumed = false
+    }
 }
 
 dependencies {
@@ -26,6 +30,19 @@ dependencies {
     commonJava project(path: ':common', configuration: 'commonJava')
     commonKotlin project(path: ':common', configuration: 'commonKotlin')
     commonResources project(path: ':common', configuration: 'commonResources')
+    // Compose runtime classes are merged straight into the loader jar by :common (no jar-in-jar), and
+    // the same resolved files feed the dev classpath.
+    composeClasses project(path: ':common', configuration: 'composeClasses')
+    // Dev runs use the merged class directory instead of the official jars, because ModLauncher's
+    // ModuleClassLoader cannot create modules for jars without an Automatic-Module-Name manifest
+    // attribute (official ui-desktop/foundation have none) and silently skips them.
+    runtimeOnly project(path: ':common', configuration: 'composeClasses')
+}
+
+tasks.named('jar', Jar) {
+    dependsOn(configurations.composeClasses)
+    from(configurations.composeClasses)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.named('compileJava', JavaCompile) {
@@ -43,6 +60,10 @@ tasks.named('compileKotlin') {
 processResources {
     dependsOn(configurations.commonResources)
     from(configurations.commonResources)
+    // Compose classes go to the exploded dev resources so runClient sees them exactly like the
+    // built jar does (the jar task merges the same configuration).
+    dependsOn(configurations.composeClasses)
+    from(configurations.composeClasses)
 }
 
 tasks.named('sourcesJar', Jar) {

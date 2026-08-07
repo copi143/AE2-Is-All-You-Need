@@ -34,10 +34,6 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
 }
 
-repositories {
-    mavenCentral()
-}
-
 val antlrOutDir = layout.buildDirectory.dir("generated-src/antlr/main")
 
 tasks.named("generateGrammarSource") { enabled = false }

@@ -22,6 +22,10 @@ dependencies {
     compileOnly(libs.mixin)
     compileOnly(libs.compose.runtime)
     api(project(":kaptor"))
+    val compose = libs.versions.compose.get()
+    api("org.jetbrains.compose.ui:ui-desktop:$compose")
+    api("org.jetbrains.compose.foundation:foundation-desktop:$compose")
+    api("org.jetbrains.compose.foundation:foundation-layout-desktop:$compose")
 
 //    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
 
@@ -43,55 +47,75 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation(libs.compose.runtime) // required by compose compiler plugin on test source set
+    val composeTest = libs.versions.compose.get()
+    testImplementation("org.jetbrains.compose.ui:ui-desktop:$composeTest")
+    testImplementation("org.jetbrains.compose.foundation:foundation-desktop:$composeTest")
+    testImplementation("org.jetbrains.compose.foundation:foundation-layout-desktop:$composeTest")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
+}
+
+configurations["testRuntimeClasspath"].exclude(
+    group = "org.jetbrains.compose.ui",
+    module = "ui-graphics-desktop",
+)
+
+dependencies {
+    testRuntimeOnly(files("${rootProject.projectDir}/graphicsrepl/build/libs/ui-graphics-desktop-noskiko.jar"))
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    dependsOn(":graphicsrepl:patchUiGraphics")
 }
 
-repositories {
-    maven {
-        name = "Modrinth"
-        url = uri("https://api.modrinth.com/maven")
+// Compose runtime bundle. Resolves the official desktop jars (minus skiko and the official
+// ui-graphics-desktop) plus the skiko-free replacement jar, and merges their classes into a single
+// directory that fabric/forge then merge straight into their mod jars (no jar-in-jar). The official
+// ui-desktop uber jar still bundles androidx.compose.ui.graphics; its classes are dropped here and
+// provided exclusively by the noskiko replacement jar to avoid a JPMS split-package at runtime.
+val composeRuntime = configurations.create("composeRuntime") {
+    isCanBeResolved = true
+    isCanBeConsumed = true
+    exclude(group = "org.jetbrains.skiko")
+    exclude(group = "org.jetbrains.compose.ui", module = "ui-graphics-desktop")
+    // KFF 4.12.0 (forge) / FLK (fabric) provide kotlin-stdlib, coroutines and atomicfu on the mod
+    // classloader; bundling them again causes JPMS split-package errors (e.g. kotlin.jdk7,
+    // kotlin.jvm.functions). KFF 4.12.0's bundled stdlib is new enough for compose 1.12.
+    exclude(group = "org.jetbrains.kotlin")
+    exclude(group = "org.jetbrains.kotlinx")
+}
+
+dependencies {
+    add(composeRuntime.name, "org.jetbrains.compose.ui:ui-desktop:${libs.versions.compose.get()}")
+    add(composeRuntime.name, "org.jetbrains.compose.foundation:foundation-desktop:${libs.versions.compose.get()}")
+    add(composeRuntime.name, "org.jetbrains.compose.foundation:foundation-layout-desktop:${libs.versions.compose.get()}")
+    add(composeRuntime.name, files("${rootProject.projectDir}/graphicsrepl/build/libs/ui-graphics-desktop-noskiko.jar"))
+}
+
+val unpackComposeClasses = tasks.register<Sync>("unpackComposeClasses") {
+    dependsOn(":graphicsrepl:patchUiGraphics", composeRuntime)
+    from(composeRuntime.map { file ->
+        if (file.isDirectory) {
+            file
+        } else if (file.name.startsWith("ui-desktop-")) {
+            zipTree(file).matching { exclude("androidx/compose/ui/graphics/**") }
+        } else {
+            zipTree(file)
+        }
+    })
+    into(layout.buildDirectory.dir("composeClasses"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+configurations.create("composeClasses") {
+    isCanBeResolved = false
+    isCanBeConsumed = true
+}
+
+artifacts {
+    add("composeClasses", layout.buildDirectory.dir("composeClasses").map { it.asFile }) {
+        builtBy(unpackComposeClasses)
     }
-    maven {
-        name = "TerraformersMC"
-        url = uri("https://maven.terraformersmc.com/")
-    }
-    maven {
-        name = "ModMaven"
-        url = uri("https://modmaven.dev/")
-    }
-    maven {
-        name = "GTCEu Maven"
-        url = uri("https://maven.gtceu.com")
-    }
-    maven {
-        name = "JetBrains Compose"
-        url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-    }
-    maven {
-        name = "Google Android"
-        url = uri("https://dl.google.com/dl/android/maven2/")
-    }
-    maven {
-        name = "IzzelAliz Maven"
-        url = uri("https://maven.izzel.io/releases/")
-    }
-    maven {
-        name = "Architectury Maven"
-        url = uri("https://maven.architectury.dev/")
-    }
-    maven {
-        name = "FTB Maven"
-        url = uri("https://maven.ftb.dev/releases/")
-    }
-    maven {
-        name = "FirstDarkDev Maven"
-        url = uri("https://maven.firstdark.dev/snapshots")
-    }
-    mavenCentral()
 }
 
 configurations {

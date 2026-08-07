@@ -17,7 +17,7 @@ forgeRange = "[47.1, 48)"
 ## This is the version of minecraft that the 'common' project uses, you can find a list of all versions here
 ## For Neo's MDG Legacy Plugin, this is the MCP version (https://files.minecraftforge.net/de/oceanlabs/mcp/mcp_config/index_1.20.1.html)
 neoForm = "1.20.1"
-kff = "4.11.0"
+kff = "4.12.0"
 kffRange = "[4, )"
 
 fabricLoader = "0.16.9"
@@ -26,7 +26,7 @@ flk = "1.12.3+kotlin.2.0.21"
 
 kotlinx-coroutines-core = "1.11.0"
 mixin = "0.8.5"
-compose = "1.7.3"
+compose = "1.12.0-beta03"
 
 ftb = "2001.4.22"
 

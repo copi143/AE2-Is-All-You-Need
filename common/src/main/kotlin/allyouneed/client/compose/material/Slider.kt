@@ -1,10 +1,18 @@
 package allyouneed.client.compose.material
 
-import allyouneed.client.compose.ui.draw.McDrawScope
-import allyouneed.client.compose.ui.layout.*
-import allyouneed.client.compose.ui.modifier.DrawModifier
-import allyouneed.client.compose.ui.modifier.Modifier
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun Slider(
@@ -14,36 +22,44 @@ fun Slider(
     range: ClosedFloatingPointRange<Float> = 0f..1f,
 ) {
     Layout(
-        modifier = modifier then SliderDrawModifier(value, range),
-        measurePolicy = SliderMeasurePolicy,
         content = {},
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectDragGestures { change, _ ->
+                    change.consume()
+                    val fraction =
+                        (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                    onValueChange(range.start + fraction * (range.endInclusive - range.start))
+                }
+            }
+            .drawBehind {
+                drawSlider(value, range)
+            },
+    ) { _, constraints: androidx.compose.ui.unit.Constraints ->
+        val w = constraints.constrainWidth(200.dp.roundToPx())
+        val h = constraints.constrainHeight(20.dp.roundToPx())
+        layout(w, h) {}
+    }
+}
+
+private fun DrawScope.drawSlider(value: Float, range: ClosedFloatingPointRange<Float>) {
+    val trackY = size.height / 2f
+    val fraction = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
+    val thumbX = fraction * size.width
+
+    drawRect(
+        color = Color(0xFF444444),
+        topLeft = Offset(0f, trackY - 2f),
+        size = Size(size.width, 4f),
     )
-}
-
-private object SliderMeasurePolicy : MeasurePolicy {
-    override fun measure(
-        scope: MeasureScope,
-        measurables: List<Measurable>,
-        constraints: Constraints,
-    ): MeasureResult {
-        val w = constraints.constrainWidth(200)
-        val h = constraints.constrainHeight(20)
-        return MeasureResult(w, h, emptyList()) {}
-    }
-}
-
-private class SliderDrawModifier(
-    private val value: Float,
-    private val range: ClosedFloatingPointRange<Float>,
-) : DrawModifier {
-    override fun draw(scope: McDrawScope, drawContent: () -> Unit) {
-        val w = scope.currentWidth
-        val h = scope.currentHeight
-        val trackY = h / 2 - 1
-        val thumbX = ((value - range.start) / (range.endInclusive - range.start) * (w - 8)).toInt()
-
-        scope.fillRect(0, trackY, w, 4, 0xFF444444.toInt())
-        scope.fillRect(0, trackY, thumbX + 4, 4, 0xFFAAAAAA.toInt())
-        scope.fillRect(thumbX, trackY - 2, 8, 8, 0xFFFFFFFF.toInt())
-    }
+    drawRect(
+        color = Color(0xFFAAAAAA),
+        topLeft = Offset(0f, trackY - 2f),
+        size = Size(thumbX, 4f),
+    )
+    drawRect(
+        color = Color.White,
+        topLeft = Offset(thumbX - 4f, trackY - 4f),
+        size = Size(8f, 8f),
+    )
 }

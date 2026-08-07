@@ -2,6 +2,8 @@ import org.gradle.internal.extensions.stdlib.capitalized
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 plugins {
     id("multiloader-loader")
@@ -10,7 +12,6 @@ plugins {
 }
 
 val modId: String by project
-val compose = libs.versions.compose.get()
 
 mixin {
     add(sourceSets.main.get(), "${modId}.refmap.json")
@@ -65,14 +66,13 @@ dependencies {
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
     // JiJ onto mod classloader. Non-transitive; skip kotlin-stdlib/coroutines (KFF) and antlr (Forge CP).
+    // Compose UI classes are merged straight into the mod jar via :common's composeClasses, not jarJar.
     jarJar(project(":kaptor"))
-    listOf(
-        "org.jetbrains.compose.runtime:runtime-desktop:$compose",
-        "androidx.collection:collection-jvm:1.4.0",
-        "org.jetbrains.kotlinx:atomicfu-jvm:0.23.2",
-    ).forEach { jarJar(it) }
 
-    // 这啥情况为啥必须 jarjar
+    // ModernUI-Core is jarJar'd so the dev (exploded) run can load it via Forge's META-INF/jarjar
+    // mechanism - it has no mods.toml and no Automatic-Module-Name, so ModLauncher silently skips it
+    // on the plain classpath. stripModernUiCore removes it again before packaging so the release jar
+    // does NOT embed it (players provide ModernUI themselves).
     jarJar("icyllis.modernui:ModernUI-Core:3.12.0")
     modRuntimeOnly("icyllis.modernui:ModernUI-Forge:1.20.1-3.12.0.1")
 
@@ -116,51 +116,36 @@ tasks.named("jarJar") {
     }
 }
 
-// runClient uses exploded sourceSet resources, not the built jar
+// runClient uses exploded sourceSet resources, not the built jar, so processResources keeps the full
+// jarJar payload (incl. ModernUI-Core) for dev. The release jar must NOT embed ModernUI-Core
+// (players provide ModernUI themselves), so it drops the core jar and replaces the metadata with a
+// clean copy (Forge resolves jarjar strictly through metadata.json -> jars[].path).
 tasks.named<ProcessResources>("processResources") {
     from(tasks.named("jarJar"))
 }
 
-repositories {
-    maven {
-        name = "Modrinth"
-        url = uri("https://api.modrinth.com/maven")
+val cleanJarJarMetadata = tasks.register("cleanJarJarMetadata") {
+    dependsOn("jarJar")
+    val out = layout.buildDirectory.file("generated/jarJarClean/META-INF/jarjar/metadata.clean.json")
+    outputs.file(out)
+    doLast {
+        val src = layout.buildDirectory.file("generated/jarJar/META-INF/jarjar/metadata.json").get().asFile
+        if (!src.isFile) throw GradleException("jarJar metadata not found: $src")
+        val data = JsonSlurper().parse(src) as Map<*, *>
+        val jars = (data["jars"] as? List<*>)?.filter { entry ->
+            val path = (entry as? Map<*, *>)?.get("path") as? String ?: ""
+            !path.contains("ModernUI-Core")
+        } ?: emptyList<Any>()
+        val f = out.get().asFile
+        f.parentFile.mkdirs()
+        f.writeText(JsonOutput.toJson(mapOf("jars" to jars)))
     }
-    maven {
-        name = "TerraformersMC"
-        url = uri("https://maven.terraformersmc.com/")
+}
+
+tasks.named<Jar>("jar") {
+    exclude("META-INF/jarjar/ModernUI-Core-*.jar")
+    exclude("META-INF/jarjar/metadata.json")
+    from(cleanJarJarMetadata) {
+        rename { "META-INF/jarjar/metadata.json" }
     }
-    maven {
-        name = "ModMaven"
-        url = uri("https://modmaven.dev/")
-    }
-    maven {
-        name = "GTCEu Maven"
-        url = uri("https://maven.gtceu.com")
-    }
-    maven {
-        name = "JetBrains Compose"
-        url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-    }
-    maven {
-        name = "Google Android"
-        url = uri("https://dl.google.com/dl/android/maven2/")
-    }
-    maven {
-        name = "IzzelAliz Maven"
-        url = uri("https://maven.izzel.io/releases/")
-    }
-    maven {
-        name = "Architectury Maven"
-        url = uri("https://maven.architectury.dev/")
-    }
-    maven {
-        name = "FTB Maven"
-        url = uri("https://maven.ftb.dev/releases/")
-    }
-    maven {
-        name = "FirstDarkDev Maven"
-        url = uri("https://maven.firstdark.dev/snapshots")
-    }
-    mavenCentral()
 }

@@ -36,4 +36,5 @@ plugins {
 include("common")
 include("fabric")
 include("forge")
+include("graphicsrepl")
 include("kaptor")

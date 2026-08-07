@@ -21,35 +21,6 @@ kotlin {
     jvmToolchain(Integer.parseInt(libs.versions.java.get()))
 }
 
-repositories {
-    mavenCentral()
-    exclusiveContent {
-        forRepositories(
-                maven {
-                    name = 'ParchmentMC'
-                    url = 'https://maven.parchmentmc.org/'
-                },
-                maven {
-                    name = "Forge"
-                    url = 'https://maven.minecraftforge.net'
-                }
-        )
-        filter { includeGroup('org.parchmentmc.data') }
-    }
-    maven {
-        name = 'BlameJared'
-        url = 'https://maven.blamejared.com'
-    }
-    maven {
-        name = "kotlinforforge"
-        url = uri("https://thedarkcolour.github.io/KotlinForForge/")
-    }
-    maven {
-        name = "GTCEu Maven"
-        url = uri("https://maven.gtceu.com")
-    }
-}
-
 // GTCEu bundles its real dependencies (LDLib, Registrate, configuration) as nested jars under
 // META-INF/jarjar/ inside the gtceu jar and publishes an empty POM, so the classes are invisible to
 // the compiler. Extract them so the common GT bridge (allyouneed.gt) can compile against them. This

@@ -1,46 +1,34 @@
 package allyouneed.client.compose.material
 
-import allyouneed.client.compose.ui.draw.McDrawScope
-import allyouneed.client.compose.ui.layout.*
-import allyouneed.client.compose.ui.modifier.DrawModifier
-import allyouneed.client.compose.ui.modifier.Modifier
+import allyouneed.client.compose.platform.McGraphics
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import net.minecraft.client.Minecraft
 
+/**
+ * Renders [text] with the Minecraft font. Layout uses official Compose constraints measured against
+ * the MC font metrics; painting bypasses the official text pipeline (which would pull in the skiko
+ * font stack) and draws straight onto [McGraphics]'s GuiGraphics inside the node's translated frame.
+ */
 @Composable
 fun Text(
     text: String,
     modifier: Modifier = Modifier,
     color: Int = 0xFFFFFFFF.toInt(),
 ) {
+    val font = Minecraft.getInstance().font
     Layout(
-        modifier = modifier then TextDrawModifier(text, color),
-        measurePolicy = TextMeasurePolicy(text),
         content = {},
-    )
-}
-
-private class TextDrawModifier(
-    private val text: String,
-    private val color: Int,
-) : DrawModifier {
-    override fun draw(scope: McDrawScope, drawContent: () -> Unit) {
-        scope.drawText(text, 0, 0, color)
-    }
-}
-
-private class TextMeasurePolicy(
-    private val text: String,
-) : MeasurePolicy {
-    private val font = Minecraft.getInstance().font
-
-    override fun measure(
-        scope: MeasureScope,
-        measurables: List<Measurable>,
-        constraints: Constraints,
-    ): MeasureResult {
+        modifier = modifier.drawBehind {
+            McGraphics.current?.drawString(font, text, 0, 0, color)
+        },
+    ) { _, constraints: androidx.compose.ui.unit.Constraints ->
         val w = constraints.constrainWidth(font.width(text))
         val h = constraints.constrainHeight(font.lineHeight)
-        return MeasureResult(w, h, emptyList()) {}
+        layout(w, h) {}
     }
 }

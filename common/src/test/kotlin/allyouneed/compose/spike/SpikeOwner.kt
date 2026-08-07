@@ -6,22 +6,16 @@
     "OVERRIDE_DEPRECATION",
 )
 
-package allyouneed.client.compose.platform
+package allyouneed.compose.spike
 
 import androidx.collection.MutableIntObjectMap
 import androidx.collection.mutableIntObjectMapOf
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Composition
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.MonotonicFrameClock
-import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.State
 import androidx.compose.runtime.retain.ForgetfulRetainedValuesStore
 import androidx.compose.runtime.retain.RetainedValuesStore
-import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.Autofill
-import androidx.compose.ui.autofill.AutofillManager
 import androidx.compose.ui.autofill.AutofillTree
 import androidx.compose.ui.draganddrop.DragAndDropManager
 import androidx.compose.ui.draganddrop.DragAndDropNode
@@ -29,6 +23,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusOwnerImpl
 import androidx.compose.ui.focus.PlatformFocusOwner
+import androidx.compose.ui.geometry.MutableRect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
@@ -36,50 +31,39 @@ import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.ReusableGraphicsLayerScope
 import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.pointer.PointerButton
-import androidx.compose.ui.input.pointer.PointerButtons
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.PointerInputEvent
-import androidx.compose.ui.input.pointer.PointerInputEventData
-import androidx.compose.ui.input.pointer.PointerInputEventProcessor
-import androidx.compose.ui.input.pointer.PointerKeyboardModifiers
-import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.input.pointer.PositionCalculator
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerIconService
+import androidx.compose.ui.input.pointer.PositionCalculator
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.layout.RootMeasurePolicy
 import androidx.compose.ui.modifier.ModifierLocalManager
+import androidx.compose.ui.semantics.EmptySemanticsModifier
+import androidx.compose.ui.spatial.ExecuteDelayed
 import androidx.compose.ui.node.LayoutNode
 import androidx.compose.ui.node.LayoutNodeDrawScope
 import androidx.compose.ui.node.MeasureAndLayoutDelegate
-import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.node.Owner
+import allyouneed.client.compose.platform.PassthroughLayer
+import androidx.compose.ui.node.OwnedLayer
 import androidx.compose.ui.node.OwnerSnapshotObserver
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.DefaultUiApplier
 import androidx.compose.ui.platform.DefaultViewConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.ui.platform.WindowInfo
-import androidx.compose.ui.semantics.EmptySemanticsModifier
 import androidx.compose.ui.semantics.SemanticsOwner
-import androidx.compose.ui.spatial.ExecuteDelayed
 import androidx.compose.ui.spatial.RectManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.Font
@@ -98,43 +82,31 @@ import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.viewinterop.InteropView
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.client.gui.screens.Screen
-import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.coroutineContext
 
 /**
- * Production [Owner] hosting the official androidx.compose.ui layout/measure/draw engine inside
- * Minecraft. The composable tree lives in an official [LayoutNode] root measured against the
- * screen bounds; rendering bridges the official Canvas commands into Minecraft's [GuiGraphics]
- * via [McCanvas] — no skiko, no offscreen surface.
+ * Spike: minimal host implementing the official [Owner] interface without any skiko dependency.
+ * Layout/measure/modifier handling is delegated to the official [MeasureAndLayoutDelegate].
  */
-internal class ComposeOwner(private val screen: Screen) : Owner {
+internal class SpikeOwner(
+    override var density: Density,
+    override var layoutDirection: LayoutDirection,
+) : Owner {
 
-    override var density: Density = Density(1f)
-    override var layoutDirection: LayoutDirection = LayoutDirection.Ltr
-
-    private lateinit var measureAndLayoutDelegate: MeasureAndLayoutDelegate
+    private val measureAndLayoutDelegate: MeasureAndLayoutDelegate
 
     override val root = LayoutNode().apply {
-        this.layoutDirection = this@ComposeOwner.layoutDirection
+        this.layoutDirection = this@SpikeOwner.layoutDirection
         measurePolicy = RootMeasurePolicy
     }
 
-    private val applier = DefaultUiApplier(root)
-    private val scope = CoroutineScope(MinecraftDispatcher + SupervisorJob() + ImmediateFrameClock)
-    private val recomposer = Recomposer(effectCoroutineContext = scope.coroutineContext)
-    private var composition: Composition? = null
+    init {
+        measureAndLayoutDelegate = MeasureAndLayoutDelegate(root)
+    }
 
     override val layoutNodes: MutableIntObjectMap<LayoutNode> = mutableIntObjectMapOf()
 
@@ -155,7 +127,6 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
             callback()
             return Unit
         }
-
         override fun removeDelayedExecution(token: Any) {}
     }
     override val rectManager = RectManager(layoutNodes, executeDelayed)
@@ -169,9 +140,9 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
     override val focusOwner = FocusOwnerImpl(platformFocusOwner, this)
 
     override val rootForTest: RootForTest = object : RootForTest {
-        override val density: Density get() = this@ComposeOwner.density
-        override val semanticsOwner: SemanticsOwner get() = this@ComposeOwner.semanticsOwner
-        override val textInputService: TextInputService get() = this@ComposeOwner.textInputService
+        override val density: Density get() = this@SpikeOwner.density
+        override val semanticsOwner: SemanticsOwner get() = this@SpikeOwner.semanticsOwner
+        override val textInputService: TextInputService get() = this@SpikeOwner.textInputService
         override fun sendKeyEvent(event: KeyEvent): Boolean = false
     }
 
@@ -205,7 +176,7 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
 
     override val graphicsContext: GraphicsContext = object : GraphicsContext {
         override fun createGraphicsLayer(): GraphicsLayer =
-            error("graphicsLayer {} is not supported by the Compose owner")
+            error("graphicsLayer {} is not supported by the Spike owner")
         override fun releaseGraphicsLayer(layer: GraphicsLayer) {}
     }
 
@@ -217,14 +188,13 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
             onCutRequested: (() -> Unit)?,
             onSelectAllRequested: (() -> Unit)?,
         ) {}
-
         override fun hide() {}
         override val status: TextToolbarStatus get() = TextToolbarStatus.Hidden
     }
 
     override val autofillTree = AutofillTree()
-    override val autofill: Autofill? = null
-    override val autofillManager: AutofillManager? = null
+    override val autofill: androidx.compose.ui.autofill.Autofill? = null
+    override val autofillManager: androidx.compose.ui.autofill.AutofillManager? = null
 
     private val stubPlatformTextInputService = object : PlatformTextInputService {
         override fun startInput(
@@ -233,7 +203,6 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
             onEditCommand: (List<EditCommand>) -> Unit,
             onImeActionPerformed: (ImeAction) -> Unit,
         ) {}
-
         override fun stopInput() {}
         override fun showSoftwareKeyboard() {}
         override fun hideSoftwareKeyboard() {}
@@ -252,7 +221,6 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
         override fun setIcon(value: PointerIcon?) {
             desiredIcon = value
         }
-
         private var desiredStylusHoverIcon: PointerIcon? = null
         override fun getStylusHoverIcon(): PointerIcon? = desiredStylusHoverIcon
         override fun setStylusHoverIcon(value: PointerIcon?) {
@@ -278,126 +246,10 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
 
     override val measureIteration: Long get() = measureAndLayoutDelegate.measureIteration
 
+    @Suppress("DEPRECATION")
     override val viewConfiguration: ViewConfiguration get() = createViewConfiguration(density)
 
-    override val coroutineContext: CoroutineContext = EmptyCoroutineContext
-
-    private val pointerInputEventProcessor = PointerInputEventProcessor(root)
-
-    private var mouseDown = false
-    private var hoverPosition: Offset? = null
-
-    // -------------------------------------------------------------------------------------------
-    // Content
-    // -------------------------------------------------------------------------------------------
-
-    fun setContent(content: @Composable () -> Unit) {
-        // init() is also invoked on window resize; never run a second Recomposer runner.
-        if (composition != null) return
-        composition = Composition(applier, recomposer).apply {
-            setContent {
-                CompositionLocalProvider(
-                    LocalDensity provides density,
-                    LocalLayoutDirection provides layoutDirection,
-                    LocalViewConfiguration provides createViewConfiguration(density),
-                    LocalInputModeManager provides inputModeManager,
-                ) {
-                    content()
-                }
-            }
-        }
-        scope.launch { recomposer.runRecomposeAndApplyChanges() }
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // Rendering
-    // -------------------------------------------------------------------------------------------
-
-    fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
-        SnapshotSync.requestApply()
-        measureAndLayoutDelegate.updateRootConstraints(
-            Constraints(maxWidth = screen.width, maxHeight = screen.height),
-        )
-        measureAndLayout()
-        dispatchMouseMove(mouseX.toFloat(), mouseY.toFloat())
-        McGraphics.current = graphics
-        try {
-            root.draw(McCanvas(graphics), null)
-        } finally {
-            McGraphics.current = null
-        }
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // Mouse input
-    // -------------------------------------------------------------------------------------------
-
-    fun onMouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
-        if (button != 0) return false
-        val position = Offset(mouseX.toFloat(), mouseY.toFloat())
-        mouseDown = true
-        return processPointerEvent(
-            buildPointerEvent(
-                eventType = PointerEventType.Press,
-                position = position,
-                down = true,
-                button = PointerButton.Primary,
-            ),
-        )
-    }
-
-    fun onMouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
-        if (button != 0 || !mouseDown) return false
-        mouseDown = false
-        val position = Offset(mouseX.toFloat(), mouseY.toFloat())
-        return processPointerEvent(
-            buildPointerEvent(
-                eventType = PointerEventType.Release,
-                position = position,
-                down = false,
-                button = PointerButton.Primary,
-            ),
-        )
-    }
-
-    fun onMouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
-        val position = Offset(mouseX.toFloat(), mouseY.toFloat())
-        return processPointerEvent(
-            buildPointerEvent(
-                eventType = PointerEventType.Scroll,
-                position = position,
-                down = mouseDown,
-                scrollDelta = Offset(0f, delta.toFloat()),
-            ),
-        )
-    }
-
-    private fun dispatchMouseMove(x: Float, y: Float) {
-        val position = Offset(x, y)
-        val inside = x in 0f..screen.width.toFloat() && y in 0f..screen.height.toFloat()
-        if (!inside) {
-            if (hoverPosition != null) {
-                hoverPosition = null
-                processPointerEvent(
-                    buildPointerEvent(PointerEventType.Exit, position, down = mouseDown),
-                )
-            }
-            return
-        }
-        val previous = hoverPosition
-        hoverPosition = position
-        val eventType = if (previous == null) PointerEventType.Enter else PointerEventType.Move
-        processPointerEvent(buildPointerEvent(eventType, position, down = mouseDown))
-    }
-
-    private fun processPointerEvent(event: PointerInputEvent): Boolean {
-        val result = pointerInputEventProcessor.process(event, IdentityPositionCalculator)
-        return result.value != 0
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // Owner
-    // -------------------------------------------------------------------------------------------
+    override val coroutineContext = EmptyCoroutineContext
 
     override fun onRequestMeasure(
         layoutNode: LayoutNode,
@@ -408,8 +260,7 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
         if (affectsLookahead) {
             measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest)
         } else {
-            // LayoutNode.attach fires requestRemeasure before measureAndLayoutDelegate is assigned.
-            if (::measureAndLayoutDelegate.isInitialized) measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest)
+            measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest)
         }
     }
 
@@ -489,11 +340,6 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
     private val endApplyChangesListeners = mutableListOf<() -> Unit>()
 
     override fun onEndApplyChanges() {
-        if (pendingSnapshotCallbacks.isNotEmpty()) {
-            val callbacks = pendingSnapshotCallbacks.toList()
-            pendingSnapshotCallbacks.clear()
-            callbacks.forEach { it() }
-        }
         val listeners = endApplyChangesListeners.toList()
         endApplyChangesListeners.clear()
         listeners.forEach { it() }
@@ -517,68 +363,16 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
 
     override suspend fun textInputSession(
         session: suspend PlatformTextInputSessionScope.() -> Nothing,
-    ): Nothing = error("text input is not supported by the Compose owner")
+    ): Nothing = error("text input is not supported by the Spike owner")
 
-    fun dispose() {
-        composition?.dispose()
-        recomposer.cancel()
-        scope.cancel()
-    }
-
-    // Attach after every property has been initialized: LayoutNode.attach reads owner.rectManager
-    // (declared further up), and MeasureAndLayoutDelegate needs root.owner already attached.
     init {
+        snapshotObserver.startObserving()
         root.attach(this)
-        measureAndLayoutDelegate = MeasureAndLayoutDelegate(root)
     }
-}
 
-private fun buildPointerEvent(
-    eventType: PointerEventType,
-    position: Offset,
-    down: Boolean,
-    button: PointerButton? = null,
-    scrollDelta: Offset = Offset.Zero,
-): PointerInputEvent {
-    val uptime = System.nanoTime() / 1_000_000L
-    return PointerInputEvent(
-        eventType = eventType,
-        uptime = uptime,
-        pointers = listOf(
-            PointerInputEventData(
-                id = PointerId(0),
-                uptime = uptime,
-                positionOnScreen = position,
-                position = position,
-                down = down,
-                pressure = if (down) 1f else 0f,
-                type = PointerType.Mouse,
-                activeHover = !down,
-                historical = emptyList(),
-                scrollDelta = scrollDelta,
-                scaleGestureFactor = 1f,
-                panGestureOffset = Offset.Zero,
-                originalEventPosition = position,
-            ),
-        ),
-        buttons = if (down) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
-        keyboardModifiers = PointerKeyboardModifiers(),
-        button = button,
-    )
-}
-
-/**
- * Hands the active [GuiGraphics] to composable draw modifiers that paint text with the Minecraft
- * font. Set around every [ComposeOwner.render] pass; text components read it from their
- * `drawBehind` scope and call GuiGraphics directly, bypassing the official text/skiko pipeline.
- */
-internal object McGraphics {
-    var current: GuiGraphics? = null
-}
-
-private object IdentityPositionCalculator : PositionCalculator {
-    override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
-    override fun localToScreen(localPosition: Offset): Offset = localPosition
+    fun setRootConstraints(constraints: Constraints) {
+        measureAndLayoutDelegate.updateRootConstraints(constraints)
+    }
 }
 
 private object McTypeface : Typeface {
@@ -588,33 +382,3 @@ private object McTypeface : Typeface {
 @Suppress("DEPRECATION")
 private fun createViewConfiguration(density: Density): ViewConfiguration = DefaultViewConfiguration(density)
 
-internal object SnapshotSync {
-    fun requestApply() {
-        Snapshot.sendApplyNotifications()
-    }
-}
-
-/**
- * Dispatches coroutines onto the Minecraft client (game) thread — the thread that owns
- * the UI. It replaces [kotlinx.coroutines.Dispatchers.Main], which requires a platform
- * provider (swing/android/javafx) that is not available inside Minecraft.
- */
-private object MinecraftDispatcher : CoroutineDispatcher() {
-    override fun isDispatchNeeded(context: CoroutineContext): Boolean =
-        !Minecraft.getInstance().isSameThread
-
-    override fun dispatch(context: CoroutineContext, block: Runnable) {
-        Minecraft.getInstance().execute(block)
-    }
-}
-
-/**
- * A frame clock that hands out frames synchronously. The Recomposer aligns work with
- * `parentFrameClock.withFrameNanos(...)`; the game loop drives recomposition via
- * [SnapshotSync.requestApply] every frame, so an immediate clock lets recompose+apply run
- * inline on the game thread during render, before the tree is measured and drawn.
- */
-private object ImmediateFrameClock : MonotonicFrameClock {
-    override suspend fun <R> withFrameNanos(onFrame: (Long) -> R): R =
-        onFrame(System.nanoTime())
-}
