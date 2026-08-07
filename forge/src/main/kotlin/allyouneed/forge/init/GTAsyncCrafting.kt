@@ -3,7 +3,7 @@ package allyouneed.forge.init
 import allyouneed.async.AsyncBlockKind
 import allyouneed.async.AsyncBlockRegistry
 import allyouneed.async.AsyncRole
-import allyouneed.gt.*
+import allyouneed.gtceu.*
 import allyouneed.multiblock.AsyncStructureType
 import allyouneed.util.MODID
 import allyouneed.util.rl

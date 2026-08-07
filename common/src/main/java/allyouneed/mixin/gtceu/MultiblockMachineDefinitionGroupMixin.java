@@ -1,6 +1,6 @@
 package allyouneed.mixin.gtceu;
 
-import allyouneed.gt.IGroupedBlockPattern;
+import allyouneed.gtceu.IGroupedBlockPattern;
 import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition;
 import com.gregtechceu.gtceu.api.pattern.BlockPattern;
 import com.gregtechceu.gtceu.api.pattern.MultiblockShapeInfo;

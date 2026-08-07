@@ -1,4 +1,4 @@
-package allyouneed.gt
+package allyouneed.gtceu
 
 import allyouneed.async.*
 import appeng.menu.MenuOpener

@@ -8,7 +8,7 @@ import allyouneed.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellItem
-import allyouneed.gt.AsyncStructureGtStatusMenu
+import allyouneed.gtceu.AsyncStructureGtStatusMenu
 import allyouneed.iodrive.MEIODriveMenu
 import allyouneed.iodrive.MEIODriveScreen
 import allyouneed.parts.machineassembler.MachineAssemblerMenu

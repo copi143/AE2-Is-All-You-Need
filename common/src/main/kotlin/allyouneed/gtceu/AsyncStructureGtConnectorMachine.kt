@@ -1,4 +1,4 @@
-package allyouneed.gt
+package allyouneed.gtceu
 
 import allyouneed.api.AsyncChannelNodeHolder
 import allyouneed.async.AsyncStructureEntityBlock

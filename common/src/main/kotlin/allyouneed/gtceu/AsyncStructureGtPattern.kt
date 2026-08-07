@@ -1,4 +1,4 @@
-package allyouneed.gt
+package allyouneed.gtceu
 
 import allyouneed.async.AsyncBlockKind
 import allyouneed.async.AsyncBlockRegistry

@@ -12,11 +12,8 @@ import net.minecraft.world.level.block.state.BlockState
 /**
  * Energy cell that passively regenerates [getAEMaxPower] / 1024 AE per game tick until full.
  */
-class SelfPoweredEnergyCellBlockEntity(
-    type: BlockEntityType<*>,
-    pos: BlockPos,
-    state: BlockState,
-) : EnergyCellBlockEntity(type, pos, state) {
+class SelfPoweredEnergyCellBlockEntity(type: BlockEntityType<*>, pos: BlockPos, state: BlockState) :
+    EnergyCellBlockEntity(type, pos, state) {
 
     override fun getTickingRequest(node: IGridNode): TickingRequest {
         // Always awake, every tick (parent sleeps after neighbor updates).
