@@ -1,0 +1,19 @@
+[package]
+name = "kaptor_native"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+name = "kaptor_native"
+
+[dependencies]
+wasmtime = { version = "47", default-features = false, features = ["cranelift", "runtime"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "debuginfo"
+panic = "abort"
