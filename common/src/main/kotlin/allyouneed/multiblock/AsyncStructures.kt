@@ -336,13 +336,18 @@ object AsyncStructures {
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * y = 1 处的上层地板。一个完整矩形，带框架环和机器内部；核心底面积是
-     * “无关”（被核心盖住）。扩展舱追加在核心后方，每个舱位在局部 x = 5 和
-     * x = 13 处提供两个模块接口（Z）。
+     * y = 1 处的上层地板。地板是实心的：除框架列、模块接口（Z）和塔行外全部是
+     * 机器方块；核心底面积被核心盖住，但按 README（“地板是实心的，标 X 的地方
+     * 也是机器方块”）仍填机器方块。扩展舱追加在核心后方，每舱 6 格，从近到远
+     * 依次为：塔、分隔行、舱内、Z 舱内、舱内、分隔行（与 README 从后向前绘制的
+     * 图一致），在局部 x = 5 与 x = 13 处各提供一个模块接口（Z）。
      *
-     * The upper floor at y = 1. A full rectangle with a frame ring and machine interior; the core
-     * footprint is "don't care" (it is covered by the core). Extension bays are appended behind the
-     * core, each providing two module interfaces (Z) at local x = 5 and x = 13.
+     * The upper floor at y = 1. The floor is solid: machine everywhere except the frame columns,
+     * the module interfaces (Z) and the tower rows. The core footprint is covered by the core but is
+     * still machine per the README ("the floor is solid; the X cells are machine blocks too").
+     * Extension bays are appended behind the core, each six cells deep, near to far: tower, split
+     * row, bay interior, Z interior, bay interior, split row (matching the README's back-to-front
+     * drawing), providing two module interfaces (Z) at local x = 5 and x = 13.
      */
     private fun upperFloorCell(type: AsyncStructureType, extensions: Int, x: Int, z: Int): AsyncBlockKind? {
         val d = depth(type, extensions)
@@ -351,36 +356,18 @@ object AsyncStructures {
         if (x !in 1..17 || z < upperZ1 || z > upperZ2) return null
         if (x == 1 || x == 17 || z == upperZ1 || z == upperZ2) return AsyncBlockKind.FRAME
 
-        val cz1 = 3
-        val cz2 = if (type == AsyncStructureType.SWITCH) 7 else 15
-        if (x in 3..15 && z in cz1..cz2) return null
+        val bayStart = if (type == AsyncStructureType.SWITCH) 9 else 17
+        if ((z - bayStart) / EXTENSION_DEPTH !in 0 until extensions) return AsyncBlockKind.MACHINE
 
-        // The base closing B row (z = cz2 + 1) precedes the first bay, whose opening row is the
-        // split B row (frame columns at x = 1, 9, 17) per the README floor layout.
-        val bayStart = cz2 + 2
-        if (z < bayStart) return AsyncBlockKind.MACHINE
-
-        val inBay = (z - bayStart) / EXTENSION_DEPTH in 0 until extensions
-        if (!inBay) return AsyncBlockKind.MACHINE
-
-        val row = (z - bayStart) % EXTENSION_DEPTH
-        return when (row) {
-            0, 4 -> if (x == 1 || x == 9 || x == 17) AsyncBlockKind.FRAME else AsyncBlockKind.MACHINE
-            1, 3 -> when (x) {
-                1, 9, 17 -> AsyncBlockKind.FRAME
-                2, 8, 10, 16 -> AsyncBlockKind.MACHINE
-                else -> null
-            }
-
-            2 -> when (x) {
+        return when ((z - bayStart) % EXTENSION_DEPTH) {
+            0 -> if (x == 1 || x == 17) AsyncBlockKind.FRAME else AsyncBlockKind.TOWER
+            3 -> when (x) {
                 5, 13 -> AsyncBlockKind.MODULE_INTERFACE
                 1, 9, 17 -> AsyncBlockKind.FRAME
-                2, 8, 10, 16 -> AsyncBlockKind.MACHINE
-                else -> null
+                else -> AsyncBlockKind.MACHINE
             }
 
-            5 -> if (x == 1 || x == 17) AsyncBlockKind.FRAME else AsyncBlockKind.TOWER
-            else -> null
+            else -> if (x == 1 || x == 9 || x == 17) AsyncBlockKind.FRAME else AsyncBlockKind.MACHINE
         }
     }
 }
