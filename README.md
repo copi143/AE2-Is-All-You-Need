@@ -6,6 +6,16 @@
 
 > 提及容量数字时请注意 [SI 词头](https://zh.wikipedia.org/wiki/%E5%9B%BD%E9%99%85%E5%8D%95%E4%BD%8D%E5%88%B6%E8%AF%8D%E5%A4%B4) 与 [IEC 词头](https://zh.wikipedia.org/wiki/%E4%BA%8C%E9%80%B2%E4%BD%8D%E5%89%8D%E7%BD%AE%E8%A9%9E) 的区别。
 
+---
+
+> [!WARNING]
+> 已知问题：
+>
+> - Fabric 无法正常启动
+> - 多方块结构成型检测异常
+
+---
+
 ## 模组关系
 
 ### 必选依赖
@@ -27,13 +37,14 @@
 - `Mekanism` *TODO*
 - `Create` *TODO*
 
+### 第三方库
+
+- `org.jetbrains.kotlin.*`
+- `org.jetbrains.compose.*`
+
 ### 注入资源
 
 - `FTB Quests` *TODO*
-
-### 已知问题
-
-- Fabric 无法正常启动
 
 ### 感谢
 
@@ -46,6 +57,10 @@
 - `GregTechCEu Modern`
 - `BuildCraft`
 - `PackagedAuto`
+
+## 辅助功能
+
+- [x] `V` 键查看物品/方块详细信息
 
 ## 修改列表
 
