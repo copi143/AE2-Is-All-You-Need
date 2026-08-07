@@ -32,6 +32,7 @@
     "gtceu.BlockPatternGroupedMixin",
     "gtceu.MultiblockMachineDefinitionGroupMixin",
     "minecraft.ChunkMapAccessor",
+    "minecraft.LightningRodMixin",
     "minecraft.ServerChunkCacheAccessor"
   ],
   "client": [
