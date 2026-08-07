@@ -21,21 +21,18 @@ object DetailsStyling {
     private val KEY_STYLE: Style = Style.EMPTY.withColor(COLOR_KEY)
 
     /** Section heading, e.g. "▸ 基本信息". */
-    fun section(text: String): Component =
-        Component.literal("▸ $text").withStyle(SECTION_STYLE)
+    fun section(text: String): Component = Component.literal("▸ $text").withStyle(SECTION_STYLE)
 
     /** "label: value" line, label grey and value white. */
-    fun kv(label: String, value: Any): Component =
-        Component.literal(label).withStyle(LABEL_STYLE)
-            .append(Component.literal(value.toString()).withStyle(VALUE_STYLE))
+    fun kv(label: String, value: Any): Component = Component.literal(label).withStyle(LABEL_STYLE)
+        .append(Component.literal(value.toString()).withStyle(VALUE_STYLE))
 
     /** Plain coloured line. */
     fun line(text: String, color: Int = COLOR_VALUE): Component =
         Component.literal(text).withStyle(Style.EMPTY.withColor(color))
 
     /** A tag entry like `#minecraft:logs`, shown green. */
-    fun tag(text: String): Component =
-        Component.literal("#$text").withStyle(KEY_STYLE)
+    fun tag(text: String): Component = Component.literal("#$text").withStyle(KEY_STYLE)
 
     /** Formats a float without trailing zeros. */
     fun formatFloat(value: Float): String {

@@ -51,14 +51,19 @@ class ItemDetails(val stack: ItemStack) {
             add(kv("物品类：", stack.item.javaClass.name))
             add(kv("方块类：", block.javaClass.name))
             add(kv("方块实体：", if (block is EntityBlock) "有" else "无"))
-            add(kv("硬度：", runCatching { state.getDestroySpeed(null, BlockPos.ZERO) }.getOrNull()?.let(::formatFloat) ?: "—"))
+            add(
+                kv(
+                    "硬度：",
+                    runCatching { state.getDestroySpeed(null, BlockPos.ZERO) }.getOrNull()?.let(::formatFloat) ?: "—"
+                )
+            )
             add(kv("爆炸抗性：", formatFloat(block.getExplosionResistance())))
             add(kv("摩擦系数：", formatFloat(block.getFriction())))
             add(kv("跳跃系数：", formatFloat(block.getJumpFactor())))
             add(kv("移动系数：", formatFloat(block.getSpeedFactor())))
-            add(kv("光照等级：", runCatching { state.getLightEmission() }.getOrNull() ?: "—"))
+            add(kv("光照等级：", runCatching { state.lightEmission }.getOrNull() ?: "—"))
             add(kv("声音音量/音调：", runCatching {
-                val s = state.getSoundType()
+                val s = state.soundType
                 "${formatFloat(s.getVolume())}/${formatFloat(s.getPitch())}"
             }.getOrNull() ?: "—"))
             add(kv("是否空气：", if (state.isAir) "是" else "否"))
@@ -77,8 +82,7 @@ class ItemDetails(val stack: ItemStack) {
     }
 
     private fun describeProperty(prop: Property<*>): String {
-        @Suppress("UNCHECKED_CAST")
-        val typed = prop as Property<Comparable<*>>
+        @Suppress("UNCHECKED_CAST") val typed = prop as Property<Comparable<*>>
         return typed.possibleValues.joinToString(" | ") { typed.getName(it) }
     }
 

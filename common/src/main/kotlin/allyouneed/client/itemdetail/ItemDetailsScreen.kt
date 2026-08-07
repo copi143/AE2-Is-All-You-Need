@@ -62,16 +62,16 @@ open class ItemDetailsScreen(
         left = (width - ItemDetailsLayout.WIDTH) / 2
         top = (height - ItemDetailsLayout.HEIGHT) / 2
         addRenderableWidget(
-            Button.builder(Component.literal("✕"), { onClose() })
-                .bounds(left + ItemDetailsLayout.WIDTH - ItemDetailsLayout.PADDING - 14, top + ItemDetailsLayout.PADDING, 14, 14)
-                .build()
+            Button.builder(Component.literal("✕"), { onClose() }).bounds(
+                left + ItemDetailsLayout.WIDTH - ItemDetailsLayout.PADDING - 14, top + ItemDetailsLayout.PADDING, 14, 14
+            ).build()
         )
         recomputeMaxScroll()
     }
 
     protected open fun recomputeMaxScroll() {
-        contentHeightPx = details.sections.sumOf { (1 + it.lines.size) * ItemDetailsLayout.LINE_HEIGHT }
-            + (details.sections.size - 1) * ItemDetailsLayout.SECTION_GAP
+        contentHeightPx =
+            details.sections.sumOf { (1 + it.lines.size) * ItemDetailsLayout.LINE_HEIGHT } + (details.sections.size - 1) * ItemDetailsLayout.SECTION_GAP
         maxScroll = max(0, contentHeightPx - ItemDetailsLayout.CONTENT_HEIGHT)
     }
 
@@ -95,10 +95,23 @@ open class ItemDetailsScreen(
         guiGraphics.renderOutline(left, top, ItemDetailsLayout.WIDTH, ItemDetailsLayout.HEIGHT, 0xFFFFFFFF.toInt())
 
         renderHeaderItem(guiGraphics, mouseX, mouseY, left + ItemDetailsLayout.PADDING, top + ItemDetailsLayout.PADDING)
-        guiGraphics.drawString(font, details.title, left + ItemDetailsLayout.TITLE_X, top + ItemDetailsLayout.PADDING + 4, COLOR_VALUE, true)
+        guiGraphics.drawString(
+            font,
+            details.title,
+            left + ItemDetailsLayout.TITLE_X,
+            top + ItemDetailsLayout.PADDING + 4,
+            COLOR_VALUE,
+            true
+        )
 
-        guiGraphics.fill(contentLeft, contentTop, contentRight, contentBottom, 0x66000000.toInt())
-        guiGraphics.renderOutline(contentLeft, contentTop, ItemDetailsLayout.CONTENT_WIDTH, ItemDetailsLayout.CONTENT_HEIGHT, 0xFF333333.toInt())
+        guiGraphics.fill(contentLeft, contentTop, contentRight, contentBottom, 0x66000000)
+        guiGraphics.renderOutline(
+            contentLeft,
+            contentTop,
+            ItemDetailsLayout.CONTENT_WIDTH,
+            ItemDetailsLayout.CONTENT_HEIGHT,
+            0xFF333333.toInt()
+        )
 
         renderContent(guiGraphics, mouseX, mouseY, partialTick)
 
@@ -137,8 +150,20 @@ open class ItemDetailsScreen(
         val barHeight = max(16, (trackHeight * trackHeight / (trackHeight + maxScroll)))
         val travel = trackHeight - barHeight
         val barY = contentTop + if (maxScroll == 0) 0 else (travel * scroll / maxScroll)
-        guiGraphics.fill(contentLeft + ItemDetailsLayout.CONTENT_WIDTH - 4, contentTop, contentRight, contentBottom, 0xAA444444.toInt())
-        guiGraphics.fill(contentLeft + ItemDetailsLayout.CONTENT_WIDTH - 3, barY, contentRight - 1, barY + barHeight, 0xFFAAAAAA.toInt())
+        guiGraphics.fill(
+            contentLeft + ItemDetailsLayout.CONTENT_WIDTH - 4,
+            contentTop,
+            contentRight,
+            contentBottom,
+            0xAA444444.toInt()
+        )
+        guiGraphics.fill(
+            contentLeft + ItemDetailsLayout.CONTENT_WIDTH - 3,
+            barY,
+            contentRight - 1,
+            barY + barHeight,
+            0xFFAAAAAA.toInt()
+        )
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {

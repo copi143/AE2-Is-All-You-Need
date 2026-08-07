@@ -10,7 +10,6 @@ import net.minecraft.world.item.ItemStack
  * EMI when present, JEI as a fallback, otherwise the vanilla renderer.
  */
 object ItemDetailsScreenFactory {
-
     private val emiAvailable = runCatching { Class.forName("dev.emi.emi.api.EmiApi") }.isSuccess
     private val jeiAvailable = runCatching { Class.forName("mezz.jei.api.JeiPlugin") }.isSuccess
 

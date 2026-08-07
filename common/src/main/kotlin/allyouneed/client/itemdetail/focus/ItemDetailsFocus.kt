@@ -3,6 +3,7 @@ package allyouneed.client.itemdetail.focus
 import net.minecraft.client.Minecraft
 import net.minecraft.core.Direction
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
 import net.minecraft.world.phys.BlockHitResult
 
 /**
@@ -43,8 +44,8 @@ object ItemDetailsFocus {
 
     private fun emiIngredientToItemStack(ingredient: Any?): ItemStack? {
         if (ingredient == null) return null
-        runCatching { ingredient::class.java.getMethod("getItemStack").invoke(ingredient) as? ItemStack }
-            .getOrNull()?.let { return it }
+        runCatching { ingredient::class.java.getMethod("getItemStack").invoke(ingredient) as? ItemStack }.getOrNull()
+            ?.let { return it }
         val getStacks = runCatching { ingredient::class.java.getMethod("getEmiStacks") }.getOrNull() ?: return null
         val stacks = getStacks.invoke(ingredient) as? List<*> ?: return null
         val first = stacks.firstOrNull() ?: return null
@@ -56,9 +57,9 @@ object ItemDetailsFocus {
     //      JeiRuntime.getBookmarkOverlay().getItemStackUnderMouse()
     // ------------------------------------------------------------------
     private fun jeiHovered(): ItemStack? = try {
-        val runtime = Class.forName("allyouneed.client.integration.jei.JeiRuntimeStore")
-            .getMethod("getRuntime").invoke(null)
-            ?: return null
+        val runtime =
+            Class.forName("allyouneed.client.integration.jei.JeiRuntimeStore").getMethod("getRuntime").invoke(null)
+                ?: return null
         val runtimeClass = runtime::class.java
 
         val overlay = runtimeClass.getMethod("getIngredientListOverlay").invoke(runtime)
@@ -73,7 +74,8 @@ object ItemDetailsFocus {
 
         val bookmark = runCatching { runtimeClass.getMethod("getBookmarkOverlay").invoke(runtime) }.getOrNull()
         if (bookmark != null) {
-            val stack = runCatching { bookmark::class.java.getMethod("getItemStackUnderMouse").invoke(bookmark) }.getOrNull()
+            val stack =
+                runCatching { bookmark::class.java.getMethod("getItemStackUnderMouse").invoke(bookmark) }.getOrNull()
             if (stack is ItemStack) return stack
         }
         null
@@ -92,13 +94,13 @@ object ItemDetailsFocus {
         val pos = blockHit.blockPos
         val state = level.getBlockState(pos)
         val item = state.block.asItem()
-        if (item == net.minecraft.world.item.Items.AIR) {
+        if (item == Items.AIR) {
             // try the block behind an attached state (signs, torches, buttons...)
-            for (dir in Direction.values()) {
+            for (dir in Direction.entries) {
                 val behind = pos.relative(dir)
                 val behindState = level.getBlockState(behind)
                 val behindItem = behindState.block.asItem()
-                if (behindItem != net.minecraft.world.item.Items.AIR) {
+                if (behindItem != Items.AIR) {
                     return behindItem.defaultInstance
                 }
             }
