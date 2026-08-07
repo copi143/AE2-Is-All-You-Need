@@ -336,7 +336,7 @@ class KotlinSubsetVisitor(
                 else -> BinaryOperator.EQUALS
             }
             val resultType = resolveEqualityType(lt, rt)
-            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, resultType, 1)
+            left = IrBinaryExpression(left, binOp, right, resultType, 1)
             i++
         }
         return left
@@ -356,7 +356,7 @@ class KotlinSubsetVisitor(
                 op.GE() != null -> BinaryOperator.GREATER_EQUAL
                 else -> BinaryOperator.LESS
             }
-            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, IrBoolType, 1)
+            left = IrBinaryExpression(left, binOp, right, IrBoolType, 1)
             i++
         }
         return left
@@ -433,7 +433,7 @@ class KotlinSubsetVisitor(
             val rt = inferType(right as IrExpression)
             val binOp = if (op.ADD() != null) BinaryOperator.PLUS else BinaryOperator.MINUS
             val resultType = resolveBinaryOpType(lt, rt, binOp)
-            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, resultType, 1)
+            left = IrBinaryExpression(left, binOp, right, resultType, 1)
             i++
         }
         return left
@@ -453,7 +453,7 @@ class KotlinSubsetVisitor(
                 else -> BinaryOperator.MULTIPLY
             }
             val resultType = resolveBinaryOpType(lt, rt, binOp)
-            left = IrBinaryExpression(left as IrExpression, binOp, right as IrExpression, resultType, 1)
+            left = IrBinaryExpression(left, binOp, right, resultType, 1)
             i++
         }
         return left

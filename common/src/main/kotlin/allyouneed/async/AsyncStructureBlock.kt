@@ -53,12 +53,14 @@ open class AsyncStructureBlock(
         builder.add(AsyncStructureEntityBlock.FORMED)
     }
 
+    @Suppress("DEPRECATION")
     @Deprecated("Deprecated in Java")
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
         super.onPlace(state, level, pos, oldState, isMoving)
         notifyStructureChanged(level, pos)
     }
 
+    @Suppress("DEPRECATION")
     @Deprecated("Deprecated in Java")
     override fun onRemove(state: BlockState, level: Level, pos: BlockPos, newState: BlockState, isMoving: Boolean) {
         super.onRemove(state, level, pos, newState, isMoving)
@@ -107,6 +109,7 @@ class AsyncStructureFrameBlock(
         builder.add(CONNECTIONS)
     }
 
+    @Suppress("DEPRECATION")
     @Deprecated("Deprecated in Java")
     override fun onPlace(state: BlockState, level: Level, pos: BlockPos, oldState: BlockState, isMoving: Boolean) {
         super.onPlace(state, level, pos, oldState, isMoving)
@@ -115,6 +118,7 @@ class AsyncStructureFrameBlock(
         }
     }
 
+    @Suppress("DEPRECATION")
     @Deprecated("Deprecated in Java")
     override fun neighborChanged(
         state: BlockState,
@@ -218,6 +222,8 @@ abstract class AsyncStructureEntityBlock<T : AEBaseBlockEntity>(
         builder.add(FORMED)
     }
 
+    @Suppress("DEPRECATION")
+    @Deprecated("Deprecated in Java")
     override fun neighborChanged(
         state: BlockState,
         level: Level,

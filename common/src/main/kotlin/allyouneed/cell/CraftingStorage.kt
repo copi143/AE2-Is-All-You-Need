@@ -97,6 +97,7 @@ enum class CraftingStorage(size: Double = -1.0) : ICraftingUnitType {
 
             val blocks = entries.map { it.define.block() }.toTypedArray()
             val typeRef = AtomicReference<BlockEntityType<CraftingBlockEntity>>()
+            @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             typeRef.set(
                 BlockEntityType.Builder.of(
                     { pos, state -> CraftingBlockEntity(typeRef.get(), pos, state) },

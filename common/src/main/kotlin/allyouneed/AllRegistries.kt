@@ -37,6 +37,7 @@ object AllRegistries {
             blocks += it.define
         }
         ItemStorageCell.entries.forEach {
+            @Suppress("UNCHECKED_CAST")
             items += it.item as ItemDefinition<Item>
         }
 

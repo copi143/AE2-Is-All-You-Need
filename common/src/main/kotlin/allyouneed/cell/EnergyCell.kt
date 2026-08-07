@@ -119,6 +119,7 @@ enum class EnergyCell(
         when {
             this == Creative -> {
                 val typeRef = AtomicReference<BlockEntityType<*>>()
+                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
                 typeRef.set(BlockEntityType.Builder.of({ pos, state ->
                     CreativeEnergyCellBlockEntity(
                         typeRef.get() as BlockEntityType<CreativeEnergyCellBlockEntity>, pos, state
@@ -148,6 +149,7 @@ enum class EnergyCell(
 
             else -> {
                 val typeRef = AtomicReference<BlockEntityType<*>>()
+                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
                 typeRef.set(BlockEntityType.Builder.of({ pos, state ->
                     EnergyCellBlockEntity(typeRef.get() as BlockEntityType<EnergyCellBlockEntity>, pos, state)
                 }, block).build(null as Type<*>?))
@@ -177,6 +179,7 @@ enum class EnergyCell(
 
             val blocks = entries.filter { it.selfPowered }.map { it.define.block() }.toTypedArray()
             val typeRef = AtomicReference<BlockEntityType<SelfPoweredEnergyCellBlockEntity>>()
+            @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             typeRef.set(
                 BlockEntityType.Builder.of(
                     { pos, state -> SelfPoweredEnergyCellBlockEntity(typeRef.get(), pos, state) },

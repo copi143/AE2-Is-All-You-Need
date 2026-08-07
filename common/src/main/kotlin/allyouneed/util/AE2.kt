@@ -1,3 +1,5 @@
+@file:Suppress("CAST_NEVER_SUCCEEDS")
+
 package allyouneed.util
 
 import allyouneed.api.AsyncChannelNodeHolder
