@@ -1,7 +1,6 @@
 package allyouneed.pattern.machine
 
 import allyouneed.logic.machine.MachineType
-import allyouneed.logic.machine.MachineTypeRegistry
 import appeng.api.inventories.InternalInventory
 import appeng.api.stacks.GenericStack
 import appeng.helpers.IPatternTerminalLogicHost
@@ -22,17 +21,17 @@ class MachinePatternEncodingLogic(host: IPatternTerminalLogicHost) : PatternEnco
         private set
 
     val virtualMachineType: MachineType?
-        get() = MachineTypeRegistry.byId(virtualMachineTypeId)
+        get() = MachineType.byId(virtualMachineTypeId)
 
     fun setVirtualMachineType(id: String) {
-        if (MachineTypeRegistry.byId(id) != null && id != virtualMachineTypeId) {
+        if (MachineType.byId(id) != null && id != virtualMachineTypeId) {
             virtualMachineTypeId = id
             saveChanges()
         }
     }
 
     private fun firstMachineId(): String =
-        MachineTypeRegistry.getAll().firstOrNull()?.id ?: ""
+        MachineType.getAll().firstOrNull()?.id ?: ""
 
     override fun onChangeInventory(inv: InternalInventory, slot: Int) {
         super.onChangeInventory(inv, slot)
@@ -49,7 +48,7 @@ class MachinePatternEncodingLogic(host: IPatternTerminalLogicHost) : PatternEnco
         val tag = pattern.tag ?: return
         if (!tag.contains(MachinePatternTags.MACHINE_TYPE, Tag.TAG_STRING.toInt())) return
         val typeId = tag.getString(MachinePatternTags.MACHINE_TYPE)
-        if (MachineTypeRegistry.byId(typeId) == null) return
+        if (MachineType.byId(typeId) == null) return
 
         mode = EncodingMode.PROCESSING
         virtualMachineTypeId = typeId
@@ -89,7 +88,7 @@ class MachinePatternEncodingLogic(host: IPatternTerminalLogicHost) : PatternEnco
         super.readFromNBT(tag)
         if (tag.contains(MachinePatternTags.MACHINE_TYPE, Tag.TAG_STRING.toInt())) {
             val id = tag.getString(MachinePatternTags.MACHINE_TYPE)
-            if (MachineTypeRegistry.byId(id) != null) {
+            if (MachineType.byId(id) != null) {
                 virtualMachineTypeId = id
             }
         }

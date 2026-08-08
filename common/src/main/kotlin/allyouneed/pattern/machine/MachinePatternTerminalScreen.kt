@@ -26,7 +26,7 @@ class MachinePatternTerminalScreen(
         super.updateBeforeRender()
         val machine = menu.selectedMachine
         if (machine != null) {
-            setTextContent("machine_slot_label", Component.literal(machine.name))
+            setTextContent("machine_slot_label", machine.name)
         }
     }
 }
@@ -46,7 +46,7 @@ private class MachineSlotWidget(
         if (isHovered) {
             val lines = mutableListOf<Component>()
             lines += if (machine != null) {
-                Component.literal(machine.name)
+                machine.name
             } else {
                 Component.translatable("gui.ae2isallyouneed.machine_slot_no_machine")
             }

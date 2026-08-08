@@ -131,5 +131,10 @@
   "gui.ae2isallyouneed.mac": "MAC：%s",
   "gui.ae2isallyouneed.mac_named": "MAC（%s）：%s",
   "gui.ae2isallyouneed.mac_item": "MAC：%s",
-  "config.jade.plugin_ae2isallyouneed.mac": "MAC 地址"
+  "config.jade.plugin_ae2isallyouneed.mac": "MAC 地址",
+  "gui.ae2isallyouneed.machine.crafting": "合成",
+  "gui.ae2isallyouneed.machine.smelting": "熔炼",
+  "gui.ae2isallyouneed.machine.blasting": "高炉冶炼",
+  "gui.ae2isallyouneed.machine.smoking": "烟熏",
+  "gui.ae2isallyouneed.machine.example_custom": "示例自定义机器"
 }

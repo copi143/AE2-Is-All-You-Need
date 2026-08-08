@@ -111,12 +111,16 @@ fun main(args: Array<String>) {
 
     val modId = "ae2isallyouneed"
     val output = Path.of("common/res").resolve("assets/$modId")
+    val dataOutput = Path.of("common/res").resolve("data/$modId")
     val sourceTextures = Path.of("common/resgen/textures")
     val langDir = Path.of("common/resgen/lang")
 
     val asyncStructureBlocks = loadAsyncBlockSet()
 
-    assetGen(modId, output, langDir) {
+    assetGen(modId, output, langDir, dataOutput) {
+        // Machine assembler: recipe-category → accepted machine items (optional mods ignored)
+        machineItemTags()
+
         translation("itemGroup.$modId", "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.CATEGORY_ID, "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.KEY_ID, "Open Item Details")
@@ -147,6 +151,12 @@ fun main(args: Array<String>) {
         translation("gui.$modId.mac_named", "MAC (%s): %s")
         translation("gui.$modId.mac_item", "MAC: %s")
         translation("config.jade.plugin_$modId.mac", "MAC Address")
+
+        translation("gui.$modId.machine.crafting", "Crafting")
+        translation("gui.$modId.machine.smelting", "Smelting")
+        translation("gui.$modId.machine.blasting", "Blasting")
+        translation("gui.$modId.machine.smoking", "Smoking")
+        translation("gui.$modId.machine.example_custom", "Example Custom")
 
         for (cell in energyCells) {
             if (cell.isCreative) {

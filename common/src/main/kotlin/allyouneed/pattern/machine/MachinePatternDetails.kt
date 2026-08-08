@@ -1,7 +1,6 @@
 package allyouneed.pattern.machine
 
 import allyouneed.logic.machine.MachineType
-import allyouneed.logic.machine.MachineTypeRegistry
 import appeng.api.crafting.IPatternDetails
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.AEKey
@@ -20,14 +19,19 @@ object MachinePatternTags {
 }
 
 /**
- * An encoded machine pattern. Unlike AE2's built-in patterns it deliberately does NOT implement
- * [appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern], so the vanilla molecular assembler
- * refuses it and only our machine assembler can execute it.
+ * 已编码的机器样板。刻意不实现 [appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern]，
+ * 使原版分子装配器拒绝执行，仅本模组装配室可运行。
+ *
+ * An encoded machine pattern. Deliberately does NOT implement
+ * [appeng.blockentity.crafting.IMolecularAssemblerSupportedPattern], so the vanilla molecular
+ * assembler refuses it and only our machine assembler can execute it.
  */
 class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails {
 
     private val machineTypeId: String
+    /** 始终查当前 live 实例，避免重载后幽灵引用。Always resolves live instance. */
     val machineType: MachineType?
+        get() = MachineType.byId(machineTypeId)
     private val sparseInputs: Array<GenericStack?>
     private val output: GenericStack
     private val inputs: Array<IPatternDetails.IInput>
@@ -35,7 +39,6 @@ class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails
     init {
         val tag = definition.tag ?: throw IllegalStateException("Machine pattern without tag")
         machineTypeId = tag.getString(MachinePatternTags.MACHINE_TYPE)
-        machineType = MachineTypeRegistry.byId(machineTypeId)
 
         sparseInputs = readArray(tag, MachinePatternTags.INPUTS)
         output = GenericStack.readTag(tag.getCompound(MachinePatternTags.OUTPUT))
@@ -76,13 +79,20 @@ class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails
 
     // --- Machine assembler integration ---
 
-    /** Resolves the output for the currently filled 3x3 assembler grid, or empty if nothing matches. */
+    /**
+     * 根据当前 3×3 装配网格解析产物；无匹配则空。
+     * Resolves output for the filled 3x3 assembler grid, or empty if nothing matches.
+     */
     fun assemble(container: CraftingContainer, level: Level): ItemStack {
         val type = machineType ?: return ItemStack.EMPTY
+        // 手动数据包配方优先，再绑定配方源（见 MachineType.resolve）
         return type.resolve(level, container) ?: ItemStack.EMPTY
     }
 
-    /** Whether the given item is acceptable in the given assembler grid slot. */
+    /**
+     * 指定装配网格槽是否接受该物品。
+     * Whether the given item is acceptable in the given assembler grid slot.
+     */
     fun isItemValid(slot: Int, key: AEItemKey?, level: Level): Boolean {
         if (slot >= sparseInputs.size) {
             return key == null
@@ -95,12 +105,18 @@ class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails
         }
     }
 
-    /** Whether the given assembler grid slot is used by this machine. */
+    /**
+     * 指定装配网格槽是否被本机器使用。
+     * Whether the given assembler grid slot is used by this machine.
+     */
     fun isSlotEnabled(slot: Int): Boolean {
         return slot < (machineType?.inputSlots ?: 0)
     }
 
-    /** Fills the assembler grid from the pushed inputs. */
+    /**
+     * 用推入的输入填充装配网格。
+     * Fills the assembler grid from the pushed inputs.
+     */
     fun fillCraftingGrid(table: Array<KeyCounter>, setGrid: (Int, ItemStack) -> Unit) {
         for (i in table.indices) {
             var placed = false
@@ -123,6 +139,7 @@ class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails
         val type = machineType ?: return List(container.containerSize) { ItemStack.EMPTY }
         return type.remainders(level, container)
     }
+
 
     private class Input(private val stack: GenericStack) : IPatternDetails.IInput {
         private val template: Array<GenericStack> = arrayOf(GenericStack(stack.what(), 1))

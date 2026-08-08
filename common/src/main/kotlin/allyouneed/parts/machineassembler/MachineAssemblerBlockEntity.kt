@@ -1,7 +1,6 @@
 package allyouneed.parts.machineassembler
 
 import allyouneed.logic.machine.MachineType
-import allyouneed.logic.machine.MachineTypeRegistry
 import allyouneed.pattern.machine.MachinePatternDetails
 import appeng.api.config.Actionable
 import appeng.api.config.PowerMultiplier
@@ -96,12 +95,27 @@ class MachineAssemblerBlockEntity(
 
     private fun getUpgradeSlots(): Int = 5
 
-    fun installedMachine(): MachineType? = MachineTypeRegistry.byItem(machineInv.getStackInSlot(0))
+    fun installedMachineStack(): ItemStack = machineInv.getStackInSlot(0)
+
+    /**
+     * Category implied by the machine slot item. When a forced plan is active, prefer that
+     * plan's category if the installed item still accepts it (one item may match several types).
+     */
+    fun installedMachine(): MachineType? {
+        val stack = installedMachineStack()
+        if (stack.isEmpty) return null
+        val planType = myPlan?.machineType
+        // planType 经 getter 取 live；accepts 内含 valid 检查
+        if (planType != null && planType.accepts(stack)) {
+            return planType
+        }
+        return MachineType.byItem(stack)
+    }
 
     override fun getCraftingMachineInfo(): PatternContainerGroup {
         val machineType = installedMachine()
         val name = if (machineType != null) {
-            Component.literal(machineType.name)
+            machineType.name
         } else if (hasCustomName()) {
             customName
         } else {
@@ -134,9 +148,11 @@ class MachineAssemblerBlockEntity(
             val isEmpty = this.gridInv.isEmpty && this.patternInv.isEmpty
 
             if (isEmpty && patternDetails is MachinePatternDetails) {
-                val pattern = patternDetails as MachinePatternDetails
-                val installed = installedMachine()
-                if (installed == null || pattern.machineType != installed) {
+                val pattern = patternDetails
+                val required = pattern.machineType ?: return false
+                val machineStack = installedMachineStack()
+                // Match by recipe category capability, not concrete machine identity.
+                if (!required.accepts(machineStack)) {
                     return false
                 }
 

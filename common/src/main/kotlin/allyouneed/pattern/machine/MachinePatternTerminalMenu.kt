@@ -1,7 +1,6 @@
 package allyouneed.pattern.machine
 
 import allyouneed.logic.machine.MachineType
-import allyouneed.logic.machine.MachineTypeRegistry
 import allyouneed.pattern.ModItems
 import appeng.api.crafting.PatternDetailsHelper
 import appeng.api.stacks.AEItemKey
@@ -34,18 +33,18 @@ class MachinePatternTerminalMenu(
     private val encodingLogic = host!!.logic as MachinePatternEncodingLogic
 
     @GuiSync(90)
-    var selectedMachineIndex: Int = MachineTypeRegistry.indexById(encodingLogic.virtualMachineTypeId)
+    var selectedMachineIndex: Int = MachineType.indexById(encodingLogic.virtualMachineTypeId)
         private set
 
     val selectedMachine: MachineType?
-        get() = MachineTypeRegistry.getAll().getOrNull(selectedMachineIndex)
+        get() = MachineType.getAll().getOrNull(selectedMachineIndex)
 
     init {
         registerClientAction(ACTION_SET_MACHINE, Int::class.java) { setMachineIndex(it) }
     }
 
     fun cycleMachine() {
-        val machines = MachineTypeRegistry.getAll()
+        val machines = MachineType.getAll()
         if (machines.size <= 1) {
             return
         }
@@ -53,7 +52,7 @@ class MachinePatternTerminalMenu(
     }
 
     fun setMachineIndex(index: Int) {
-        val machines = MachineTypeRegistry.getAll()
+        val machines = MachineType.getAll()
         if (machines.isEmpty()) {
             return
         }
@@ -68,7 +67,7 @@ class MachinePatternTerminalMenu(
 
     override fun broadcastChanges() {
         super.broadcastChanges()
-        val idx = MachineTypeRegistry.indexById(encodingLogic.virtualMachineTypeId)
+        val idx = MachineType.indexById(encodingLogic.virtualMachineTypeId)
         if (idx >= 0) {
             selectedMachineIndex = idx
         }
@@ -81,9 +80,9 @@ class MachinePatternTerminalMenu(
             val tag = encodedStack.tag
             if (tag != null) {
                 val id = tag.getString(MachinePatternTags.MACHINE_TYPE)
-                if (MachineTypeRegistry.byId(id) != null) {
+                if (MachineType.byId(id) != null) {
                     encodingLogic.setVirtualMachineType(id)
-                    selectedMachineIndex = MachineTypeRegistry.indexById(id)
+                    selectedMachineIndex = MachineType.indexById(id)
                 }
             }
         }

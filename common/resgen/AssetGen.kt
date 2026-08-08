@@ -9,12 +9,19 @@ import kotlin.io.path.*
 annotation class AssetGenDsl
 
 @AssetGenDsl
-class AssetGen(private val modId: String, private val output: Path, private val langDir: Path? = null) {
+class AssetGen(
+    private val modId: String,
+    private val output: Path,
+    private val langDir: Path? = null,
+    /** Root for datapack resources (`data/<modid>/...`). Defaults to sibling of assets root. */
+    private val dataOutput: Path? = null,
+) {
 
     private val gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
     private val blockStates = mutableListOf<GeneratedFile>()
     private val blockModels = mutableListOf<GeneratedFile>()
     private val itemModels = mutableListOf<GeneratedFile>()
+    private val dataFiles = mutableListOf<GeneratedFile>()
     private val translations = linkedMapOf<String, String>()
 
     fun cubeAll(name: String, texture: String = "block/$name") {
@@ -29,6 +36,34 @@ class AssetGen(private val modId: String, private val output: Path, private val 
 
     fun translation(key: String, value: String) {
         translations[key] = value
+    }
+
+    /**
+     * 写入物品标签 `data/<modId>/tags/items/<path>.json`。
+     * [required] 为普通字符串；[optional] 为 `{ "id": "...", "required": false }`，缺失模组不导致加载失败。
+     *
+     * Writes an item tag under `data/<modId>/tags/items/<path>.json`.
+     * [required] entries are plain strings; [optional] use optional id objects so missing mods do not fail load.
+     */
+    fun itemTag(
+        path: String,
+        required: List<String> = emptyList(),
+        optional: List<String> = emptyList(),
+        replace: Boolean = false,
+    ) {
+        val json = JsonObject().apply {
+            addProperty("replace", replace)
+            add("values", com.google.gson.JsonArray().apply {
+                for (id in required) add(id)
+                for (id in optional) {
+                    add(JsonObject().apply {
+                        addProperty("id", id)
+                        addProperty("required", false)
+                    })
+                }
+            })
+        }
+        dataFiles += GeneratedFile("tags/items/$path.json", json)
     }
 
     fun item(name: String, displayName: String, texture: String = "item/$name") {
@@ -368,6 +403,16 @@ class AssetGen(private val modId: String, private val output: Path, private val 
             path.writeText(gson.toJson(file.json))
         }
 
+        val dataRoot = dataOutput ?: output.parent?.parent?.resolve("data")?.resolve(modId)
+        if (dataRoot != null && dataFiles.isNotEmpty()) {
+            for (file in dataFiles) {
+                val path = dataRoot.resolve(file.relativePath)
+                path.parent.createDirectories()
+                path.writeText(gson.toJson(file.json))
+            }
+            println("[data] wrote ${dataFiles.size} tag file(s) to $dataRoot")
+        }
+
         val langOut = output.resolve("lang")
         langOut.createDirectories()
 
@@ -411,8 +456,14 @@ class AssetGen(private val modId: String, private val output: Path, private val 
     private data class GeneratedFile(val relativePath: String, val json: JsonObject)
 }
 
-fun assetGen(modId: String, output: Path, langDir: Path? = null, init: AssetGen.() -> Unit) {
-    AssetGen(modId, output, langDir).apply(init).generate()
+fun assetGen(
+    modId: String,
+    output: Path,
+    langDir: Path? = null,
+    dataOutput: Path? = null,
+    init: AssetGen.() -> Unit,
+) {
+    AssetGen(modId, output, langDir, dataOutput).apply(init).generate()
 }
 
 // ---------------------------------------------------------------------------------------------

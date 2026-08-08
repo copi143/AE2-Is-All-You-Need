@@ -151,12 +151,60 @@ $256 \text{Ti}$ 物品压成一个压缩奇点！
 
 ### 机器样板 (Machine Pattern)
 
-`分子装配室` 经过了大幅升级，已经不只能处理工作台配方了，其可以处理任何注册的机器的配方，但需要将机器塞入分子装配室的机器槽位中。
+`分子装配室` 可执行**配方类别**（`RecipeType`）而非某一具体机器方块。编码样板时选择类别（合成 / 熔炼 / 高炉 / 烟熏…）；装配室机器槽放入任意被该类别接受的物品即可。
 
-两种配方注册方式：
+机器物品匹配**仅服务端权威**（绝不依赖 JEI/EMI 客户端运行时），按 OR 组合：
 
-- [ ] 注册配方类别，自动从 `JEI` / `EMI` 拉取
-- [ ] 手动创建配方组并添加配方
+1. **内置默认物品**（工作台、熔炉、高炉、烟熏炉）
+2. **本模组 tag** `ae2isallyouneed:machines/<类别>`（整合包可追加）
+3. **约定 tag**（其它 mod / loader 已填则自动生效）：如 `forge:furnaces`、`c:furnaces` 等
+
+> 服务端即使安装了 JEI/EMI 也不会用它们做匹配：查看器 API 是客户端向的，不能作为权威来源。跨 mod 机器请进约定 tag 或本模组 tag。
+
+- [x] 按 `RecipeType` 注册类别（crafting / smelting / blasting / smoking）
+- [x] 默认物品 + 本模组 tag + 约定 tag（服务端）
+- [x] 数据包扩展：`machine_types` / `machine_recipes`（手动配方优先，再回退配方源）
+- [ ] JEI/EMI 一键填入编码终端（仅 UX，不参与匹配）
+- [ ] 非 Container 配方适配器（GT 等）
+
+#### 数据包格式 (Datapack Format)
+
+路径（任意命名空间）/ Paths (any namespace):
+
+- `data/<ns>/machines/types/` — 新增/覆盖机器类别 / add or override machine types
+- `data/<ns>/machines/recipes/` — 手动配方 / manual recipes
+
+匹配顺序 / Match order：**手动配方 → `recipe_source`**（如 `minecraft:smelting`）。
+
+类型里 **`machines` 与 `tags` 同时 OR**。  
+默认自动 tag：`id`=`ns:foo` → `ns:machines/foo`（`"auto_tag": false` 可关）。
+
+```jsonc
+// machines/types/example.json
+// auto tag: ae2isallyouneed:machines/example_custom
+{
+  "id": "ae2isallyouneed:example_custom",
+  "machines": ["minecraft:lodestone"],
+  "tags": [],
+  "recipe_source": null
+}
+
+// machines/recipes/foo.json — 精确 item（BigStack）优先于原版熔炼
+{
+  "machine_type": "minecraft:smelting",
+  "inputs": [{ "item": "minecraft:cobblestone" }],
+  "outputs": [{ "item": "minecraft:diamond", "count": 1 }]
+}
+
+// 通配 tag：输入用 Ingredient，输出仍是确定 BigStack
+{
+  "machine_type": "minecraft:smelting",
+  "inputs": [{ "tag": "minecraft:logs", "count": 1 }],
+  "outputs": [{ "item": "minecraft:charcoal", "count": 2 }]
+}
+```
+
+输入规格见 [BigIngredient]：`item`→精确 `BigStack`，`tag`/多物品→通配；**输出不能通配**。
 
 #### 概率修正
 

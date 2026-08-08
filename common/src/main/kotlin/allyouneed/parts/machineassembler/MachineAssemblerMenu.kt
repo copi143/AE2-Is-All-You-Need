@@ -1,6 +1,6 @@
 package allyouneed.parts.machineassembler
 
-import allyouneed.logic.machine.MachineTypeRegistry
+import allyouneed.logic.machine.MachineType
 import allyouneed.pattern.machine.MachinePatternItem
 import appeng.api.inventories.InternalInventory
 import appeng.api.stacks.AEItemKey
@@ -125,10 +125,10 @@ class MachineAssemblerPatternSlot(
     override fun getBackgroundPos(): Point = Point(x - 1, y - 1)
 }
 
-/** Slot that accepts items recognized as a machine. */
+/** Slot that accepts items recognized as a machine for any registered recipe category. */
 class MachineAssemblerMachineSlot(inv: InternalInventory, invSlot: Int) : AppEngSlot(inv, invSlot) {
     override fun mayPlace(stack: ItemStack): Boolean {
-        return super.mayPlace(stack) && MachineTypeRegistry.byItem(stack) != null
+        return super.mayPlace(stack) && MachineType.acceptsAny(stack)
     }
 }
 
