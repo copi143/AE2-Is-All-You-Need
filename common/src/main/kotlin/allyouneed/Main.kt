@@ -1,5 +1,8 @@
 package allyouneed
 
+import allyouneed.aekey.EnergyKey
+import allyouneed.aekey.ManaKey
+import allyouneed.aekey.ManaType
 import allyouneed.cell.creative.CreativeMeCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
 import allyouneed.cell.item.ItemStorageCell
@@ -11,6 +14,7 @@ import allyouneed.pattern.ModPatternDecoders
 import allyouneed.util.*
 import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
+import appeng.api.stacks.AEKeyTypes
 import appeng.api.storage.StorageCells
 import appeng.core.definitions.AEItems
 import appeng.core.localization.GuiText
@@ -36,6 +40,8 @@ object Main {
      * Must run during common setup (after AE2 init). Registers cell handlers etc.
      */
     fun commonSetup() {
+        AEKeyTypes.register(EnergyKey.Type)
+        AEKeyTypes.register(ManaKey.Type)
         StorageCells.addCellHandler(CreativeMeCellHandler)
         StorageCells.addCellHandler(DimensionalCellHandler)
         StorageCells.addCellHandler(ItemStorageCellHandler)

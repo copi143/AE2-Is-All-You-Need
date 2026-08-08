@@ -1,5 +1,6 @@
 package allyouneed.cell
 
+import allyouneed.aekey.EnergyKey
 import allyouneed.util.*
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
@@ -85,9 +86,9 @@ enum class EnergyCell(
     val blockSupplier = if (size < 0) {
         Supplier<Block> { CreativeEnergyCellBlock() }
     } else if (selfPowered) {
-        Supplier<Block> { EnergyCellBlock(size * 64.0, size * 4.0, size.floatingExp * 10 + 1000) }
+        Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10 + 1000) }
     } else {
-        Supplier<Block> { EnergyCellBlock(size * 64.0, size * 4.0, size.floatingExp * 10) }
+        Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10) }
     }
 
     val itemFactory = if (size < 0) null else BiFunction<Block, Item.Properties, BlockItem> { block, props ->
@@ -119,8 +120,7 @@ enum class EnergyCell(
         when {
             this == Creative -> {
                 val typeRef = AtomicReference<BlockEntityType<*>>()
-                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-                typeRef.set(BlockEntityType.Builder.of({ pos, state ->
+                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(BlockEntityType.Builder.of({ pos, state ->
                     CreativeEnergyCellBlockEntity(
                         typeRef.get() as BlockEntityType<CreativeEnergyCellBlockEntity>, pos, state
                     )
@@ -149,8 +149,7 @@ enum class EnergyCell(
 
             else -> {
                 val typeRef = AtomicReference<BlockEntityType<*>>()
-                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-                typeRef.set(BlockEntityType.Builder.of({ pos, state ->
+                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(BlockEntityType.Builder.of({ pos, state ->
                     EnergyCellBlockEntity(typeRef.get() as BlockEntityType<EnergyCellBlockEntity>, pos, state)
                 }, block).build(null as Type<*>?))
                 blockEntityType = typeRef.get()
@@ -179,8 +178,7 @@ enum class EnergyCell(
 
             val blocks = entries.filter { it.selfPowered }.map { it.define.block() }.toTypedArray()
             val typeRef = AtomicReference<BlockEntityType<SelfPoweredEnergyCellBlockEntity>>()
-            @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-            typeRef.set(
+            @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(
                 BlockEntityType.Builder.of(
                     { pos, state -> SelfPoweredEnergyCellBlockEntity(typeRef.get(), pos, state) },
                     *blocks,
