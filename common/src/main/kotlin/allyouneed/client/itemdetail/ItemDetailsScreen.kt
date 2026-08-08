@@ -39,7 +39,7 @@ open class ItemDetailsScreen(
             }
         }
 
-        private fun consumeReturnScreen(): Screen? {
+        internal fun consumeReturnScreen(): Screen? {
             val s = returnScreen
             returnScreen = null
             return s

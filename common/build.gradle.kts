@@ -20,12 +20,18 @@ neoForge {
 dependencies {
     api(libs.kotlinx.coroutines.core)
     compileOnly(libs.mixin)
-    compileOnly(libs.compose.runtime)
     api(project(":kaptor"))
-    val compose = libs.versions.compose.get()
-    api("org.jetbrains.compose.ui:ui-desktop:$compose")
-    api("org.jetbrains.compose.foundation:foundation-desktop:$compose")
-    api("org.jetbrains.compose.foundation:foundation-layout-desktop:$compose")
+    @Suppress("AvoidDuplicateDependencies") listOf(
+        libs.compose.runtime,
+        libs.compose.ui,
+        libs.compose.foundation,
+        libs.compose.foundation.layout,
+        libs.compose.animation,
+        libs.compose.material,
+    ).forEach {
+        api(it)
+        testImplementation(it)
+    }
 
 //    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
 
@@ -44,14 +50,9 @@ dependencies {
     // mixin jar does not bundle ASM), so the plugin needs it on the compile classpath.
     compileOnly("org.ow2.asm:asm-tree:9.8")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation(libs.compose.runtime) // required by compose compiler plugin on test source set
-    val composeTest = libs.versions.compose.get()
-    testImplementation("org.jetbrains.compose.ui:ui-desktop:$composeTest")
-    testImplementation("org.jetbrains.compose.foundation:foundation-desktop:$composeTest")
-    testImplementation("org.jetbrains.compose.foundation:foundation-layout-desktop:$composeTest")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.test)
+    testRuntimeOnly(libs.junit.launcher)
 }
 
 configurations["testRuntimeClasspath"].exclude(
@@ -86,10 +87,14 @@ val composeRuntime = configurations.create("composeRuntime") {
 }
 
 dependencies {
-    add(composeRuntime.name, "org.jetbrains.compose.ui:ui-desktop:${libs.versions.compose.get()}")
-    add(composeRuntime.name, "org.jetbrains.compose.foundation:foundation-desktop:${libs.versions.compose.get()}")
-    add(composeRuntime.name, "org.jetbrains.compose.foundation:foundation-layout-desktop:${libs.versions.compose.get()}")
-    add(composeRuntime.name, files("${rootProject.projectDir}/graphicsrepl/build/libs/ui-graphics-desktop-noskiko.jar"))
+    composeRuntime.name.let {
+        add(it, "org.jetbrains.compose.ui:ui-desktop:${libs.versions.compose.get()}")
+        add(it, "org.jetbrains.compose.foundation:foundation-desktop:${libs.versions.compose.get()}")
+        add(it, "org.jetbrains.compose.foundation:foundation-layout-desktop:${libs.versions.compose.get()}")
+        add(it, "org.jetbrains.compose.animation:animation-desktop:${libs.versions.compose.get()}")
+        add(it, "org.jetbrains.compose.material:material-desktop:${libs.versions.compose.get()}")
+        add(it, files("${rootProject.projectDir}/graphicsrepl/build/libs/ui-graphics-desktop-noskiko.jar"))
+    }
 }
 
 val unpackComposeClasses = tasks.register<Sync>("unpackComposeClasses") {

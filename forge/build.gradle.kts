@@ -61,7 +61,6 @@ neoForge {
 sourceSets.main.get().resources { srcDir("src/generated/resources") }
 
 dependencies {
-    compileOnly(libs.compose.runtime)
     modImplementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 

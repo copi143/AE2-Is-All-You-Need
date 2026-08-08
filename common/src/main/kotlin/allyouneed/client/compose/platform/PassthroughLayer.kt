@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.IntSize
 /**
  * Zero-offscreen layer: instead of rendering content into a GPU/offscreen surface, the drawing
  * block is invoked directly against the [Canvas] passed to [drawLayer] (a [McCanvas] bridging to
- * Minecraft's [net.minecraft.client.gui.GuiGraphics]). Layer properties such as clipping and alpha
- * are ignored; only the layer position is honoured, so the official placement output maps 1:1 to
- * screen coordinates.
+ * Minecraft's [net.minecraft.client.gui.GuiGraphics]). Layer properties are honoured as far as the
+ * immediate-mode canvas allows: position/translation, scale, rotation and alpha (alpha applied via
+ * [McCanvas.withAlpha], transform via pose save/scale/rotate). Clipping is ignored.
  */
 class PassthroughLayer(
     private var drawBlock: (canvas: Canvas, parentLayer: GraphicsLayer?) -> Unit,
@@ -31,8 +31,21 @@ class PassthroughLayer(
 ) : OwnedLayer {
     private var position: IntOffset = IntOffset.Zero
     private var size: IntSize = IntSize.Zero
+    private var layerAlpha: Float = 1f
+    private var scaleX: Float = 1f
+    private var scaleY: Float = 1f
+    private var rotationZ: Float = 0f
+    private var translationX: Float = 0f
+    private var translationY: Float = 0f
 
-    override fun updateLayerProperties(scope: ReusableGraphicsLayerScope) {}
+    override fun updateLayerProperties(scope: ReusableGraphicsLayerScope) {
+        layerAlpha = scope.alpha
+        scaleX = scope.scaleX
+        scaleY = scope.scaleY
+        rotationZ = scope.rotationZ
+        translationX = scope.translationX
+        translationY = scope.translationY
+    }
 
     override fun isInLayer(position: Offset): Boolean = true
 
@@ -45,13 +58,31 @@ class PassthroughLayer(
     }
 
     override fun drawLayer(canvas: Canvas, parentLayer: GraphicsLayer?) {
-        if (position != IntOffset.Zero) {
+        val hasTransform = position != IntOffset.Zero ||
+            scaleX != 1f || scaleY != 1f || rotationZ != 0f ||
+            translationX != 0f || translationY != 0f
+        if (hasTransform) {
             canvas.save()
-            canvas.translate(position.x.toFloat(), position.y.toFloat())
-            drawBlock(canvas, parentLayer)
+            canvas.translate(position.x.toFloat() + translationX, position.y.toFloat() + translationY)
+            if (scaleX != 1f || scaleY != 1f || rotationZ != 0f) {
+                // graphicsLayer scales/rotates around the layer centre by default.
+                canvas.translate(size.width / 2f, size.height / 2f)
+                canvas.rotate(rotationZ)
+                canvas.scale(scaleX, scaleY)
+                canvas.translate(-size.width / 2f, -size.height / 2f)
+            }
+            drawWithAlpha(canvas, parentLayer)
             canvas.restore()
         } else {
+            drawWithAlpha(canvas, parentLayer)
+        }
+    }
+
+    private fun drawWithAlpha(canvas: Canvas, parentLayer: GraphicsLayer?) {
+        if (layerAlpha >= 1f || canvas !is McCanvas) {
             drawBlock(canvas, parentLayer)
+        } else {
+            canvas.withAlpha(layerAlpha) { drawBlock(canvas, parentLayer) }
         }
     }
 

@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composition
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MonotonicFrameClock
 import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.retain.ForgetfulRetainedValuesStore
 import androidx.compose.runtime.retain.RetainedValuesStore
 import androidx.compose.runtime.snapshots.Snapshot
@@ -102,16 +105,20 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.viewinterop.InteropView
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.resume
+import kotlin.math.roundToInt
 
 /**
  * Production [Owner] hosting the official androidx.compose.ui layout/measure/draw engine inside
@@ -132,7 +139,10 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
     }
 
     private val applier = DefaultUiApplier(root)
-    private val scope = CoroutineScope(MinecraftDispatcher + SupervisorJob() + ImmediateFrameClock)
+
+    /** Suspendable frame clock driven by the game's render loop (see [FrameClock.onNewFrame]). */
+    private val frameClock = FrameClock()
+    private val scope = CoroutineScope(MinecraftDispatcher + SupervisorJob() + frameClock)
     private val recomposer = Recomposer(effectCoroutineContext = scope.coroutineContext)
     private var composition: Composition? = null
 
@@ -284,8 +294,27 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
 
     private val pointerInputEventProcessor = PointerInputEventProcessor(root)
 
+    val tooltipHost = TooltipHost()
+
+    /** Whole-UI zoom factor applied around every render pass (see [setUiScaleFactor]). */
+    var uiScale by mutableFloatStateOf(1f)
+
+    fun setUiScaleFactor(scale: Float) {
+        uiScale = scale.coerceIn(MIN_UI_SCALE, MAX_UI_SCALE)
+    }
+
+    fun onScreenResize() {
+        // A window resize may change the GUI-scaled size without changing root constraints in a
+        // way that triggers a measure; force the whole tree to re-measure against the new bounds.
+        if (::measureAndLayoutDelegate.isInitialized) measureAndLayoutDelegate.requestRemeasure(root, forced = true)
+    }
+
     private var mouseDown = false
+    private var activeButton: PointerButton? = null
     private var hoverPosition: Offset? = null
+
+    /** Logical root-space mouse position for the current frame, updated every render. */
+    val mousePosition = MousePosition(IntOffset.Zero)
 
     // -------------------------------------------------------------------------------------------
     // Content
@@ -301,6 +330,9 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
                     LocalLayoutDirection provides layoutDirection,
                     LocalViewConfiguration provides createViewConfiguration(density),
                     LocalInputModeManager provides inputModeManager,
+                    LocalTooltipHost provides tooltipHost,
+                    LocalUiScale provides uiScale,
+                    LocalMousePosition provides mousePosition,
                 ) {
                     content()
                 }
@@ -314,15 +346,21 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
     // -------------------------------------------------------------------------------------------
 
     fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+        // Drive suspendable animations (Recomposer loop + animation effects) with this frame.
+        frameClock.onNewFrame()
+        val scale = uiScale
         SnapshotSync.requestApply()
         measureAndLayoutDelegate.updateRootConstraints(
-            Constraints(maxWidth = screen.width, maxHeight = screen.height),
+            Constraints(maxWidth = (screen.width / scale).toInt(), maxHeight = (screen.height / scale).toInt()),
         )
         measureAndLayout()
-        dispatchMouseMove(mouseX.toFloat(), mouseY.toFloat())
+        dispatchMouseMove(mouseX / scale, mouseY / scale)
         McGraphics.current = graphics
         try {
+            graphics.pose().pushPose()
+            graphics.pose().scale(scale, scale, 1f)
             root.draw(McCanvas(graphics), null)
+            graphics.pose().popPose()
         } finally {
             McGraphics.current = null
         }
@@ -333,35 +371,43 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
     // -------------------------------------------------------------------------------------------
 
     fun onMouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
-        if (button != 0) return false
-        val position = Offset(mouseX.toFloat(), mouseY.toFloat())
+        if (button != 0 && button != 1) return false
+        val pointerButton = if (button == 0) PointerButton.Primary else PointerButton.Secondary
+        activeButton = pointerButton
         mouseDown = true
+        val position = Offset((mouseX / uiScale).toFloat(), (mouseY / uiScale).toFloat())
+        mousePosition.position = IntOffset(position.x.roundToInt(), position.y.roundToInt())
         return processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Press,
                 position = position,
                 down = true,
-                button = PointerButton.Primary,
+                button = pointerButton,
+                primary = pointerButton == PointerButton.Primary,
             ),
         )
     }
 
     fun onMouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
-        if (button != 0 || !mouseDown) return false
+        val pointerButton = activeButton ?: return false
         mouseDown = false
-        val position = Offset(mouseX.toFloat(), mouseY.toFloat())
+        activeButton = null
+        val position = Offset((mouseX / uiScale).toFloat(), (mouseY / uiScale).toFloat())
+        mousePosition.position = IntOffset(position.x.roundToInt(), position.y.roundToInt())
         return processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Release,
                 position = position,
                 down = false,
-                button = PointerButton.Primary,
+                button = pointerButton,
+                primary = pointerButton == PointerButton.Primary,
             ),
         )
     }
 
     fun onMouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
-        val position = Offset(mouseX.toFloat(), mouseY.toFloat())
+        val position = Offset((mouseX / uiScale).toFloat(), (mouseY / uiScale).toFloat())
+        mousePosition.position = IntOffset(position.x.roundToInt(), position.y.roundToInt())
         return processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Scroll,
@@ -374,7 +420,8 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
 
     private fun dispatchMouseMove(x: Float, y: Float) {
         val position = Offset(x, y)
-        val inside = x in 0f..screen.width.toFloat() && y in 0f..screen.height.toFloat()
+        mousePosition.position = IntOffset(x.roundToInt(), y.roundToInt())
+        val inside = x in 0f..(screen.width / uiScale).toFloat() && y in 0f..(screen.height / uiScale).toFloat()
         if (!inside) {
             if (hoverPosition != null) {
                 hoverPosition = null
@@ -406,7 +453,7 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
         scheduleMeasureAndLayout: Boolean,
     ) {
         if (affectsLookahead) {
-            measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forceRequest)
+            measureAndLayoutDelegate.requestLookaheadRemeasure(layoutNode, forced = forceRequest)
         } else {
             // LayoutNode.attach fires requestRemeasure before measureAndLayoutDelegate is assigned.
             if (::measureAndLayoutDelegate.isInitialized) measureAndLayoutDelegate.requestRemeasure(layoutNode, forceRequest)
@@ -539,6 +586,7 @@ private fun buildPointerEvent(
     down: Boolean,
     button: PointerButton? = null,
     scrollDelta: Offset = Offset.Zero,
+    primary: Boolean = true,
 ): PointerInputEvent {
     val uptime = System.nanoTime() / 1_000_000L
     return PointerInputEvent(
@@ -561,7 +609,11 @@ private fun buildPointerEvent(
                 originalEventPosition = position,
             ),
         ),
-        buttons = if (down) PointerButtons(isPrimaryPressed = true) else PointerButtons(),
+        buttons = when {
+            !down -> PointerButtons()
+            primary -> PointerButtons(isPrimaryPressed = true)
+            else -> PointerButtons(isSecondaryPressed = true)
+        },
         keyboardModifiers = PointerKeyboardModifiers(),
         button = button,
     )
@@ -609,12 +661,30 @@ private object MinecraftDispatcher : CoroutineDispatcher() {
 }
 
 /**
- * A frame clock that hands out frames synchronously. The Recomposer aligns work with
- * `parentFrameClock.withFrameNanos(...)`; the game loop drives recomposition via
- * [SnapshotSync.requestApply] every frame, so an immediate clock lets recompose+apply run
- * inline on the game thread during render, before the tree is measured and drawn.
+ * A [MonotonicFrameClock] aligned to the game's render loop. [withFrameNanos] suspends until the
+ * next [ComposeOwner.render] pass, which resumes all waiters via [onNewFrame] on the game thread.
+ * This is what makes compose animations (animate*AsState, Animatable, AnimatedVisibility...) advance
+ * one step per rendered frame instead of completing instantly.
  */
-private object ImmediateFrameClock : MonotonicFrameClock {
-    override suspend fun <R> withFrameNanos(onFrame: (Long) -> R): R =
-        onFrame(System.nanoTime())
+private class FrameClock : MonotonicFrameClock {
+    private val awaiters = mutableListOf<CancellableContinuation<Long>>()
+
+    override suspend fun <R> withFrameNanos(onFrame: (Long) -> R): R {
+        val frameTime = suspendCancellableCoroutine<Long> { continuation ->
+            awaiters += continuation
+            continuation.invokeOnCancellation { awaiters.remove(continuation) }
+        }
+        return onFrame(frameTime)
+    }
+
+    fun onNewFrame() {
+        if (awaiters.isEmpty()) return
+        val frameTime = System.nanoTime()
+        val pending = awaiters.toList()
+        awaiters.clear()
+        for (continuation in pending) continuation.resume(frameTime)
+    }
 }
+
+private const val MIN_UI_SCALE = 0.5f
+private const val MAX_UI_SCALE = 4f

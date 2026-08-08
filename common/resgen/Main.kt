@@ -1,5 +1,6 @@
 package allyouneed.resgen
 
+import allyouneed.client.itemdetail.ItemDetailsKeyBind
 import com.google.gson.JsonParser
 import java.nio.file.Path
 import kotlin.io.path.copyTo
@@ -103,7 +104,7 @@ private fun loadAsyncBlockSet(): List<AsyncBlockDef> {
 
 fun main(args: Array<String>) {
     if (args.isNotEmpty()) {
-        println("Arguments: ${args.joinToString()}")
+        println("Arguments: ${args.joinToString(" ")}")
         println("Error: No arguments are expected, as this is a simple asset generator.")
         return
     }
@@ -117,8 +118,8 @@ fun main(args: Array<String>) {
 
     assetGen(modId, output, langDir) {
         translation("itemGroup.$modId", "AE2 Is All You Need")
-        translation("key.categories.$modId", "AE2 Is All You Need")
-        translation("key.$modId.item_details", "Open Item Details")
+        translation(ItemDetailsKeyBind.CATEGORY_ID, "AE2 Is All You Need")
+        translation(ItemDetailsKeyBind.KEY_ID, "Open Item Details")
         translation("gui.$modId.group.all", "ALL")
         translation("gui.$modId.group.ae2", "AE2")
         translation("gui.$modId.adaptive_probability", "Probability (p)")

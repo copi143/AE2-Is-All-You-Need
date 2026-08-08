@@ -38,7 +38,30 @@ import kotlin.math.sin
  */
 class McCanvas(private val graphics: GuiGraphics) : Canvas {
 
-    private fun argb(paint: Paint): Int = paint.color.toArgb()
+    private var alphaMultiplier: Float = 1f
+
+    /** Runs [block] with all subsequent drawing commands alpha-multiplied by [alpha]. */
+    fun withAlpha(alpha: Float, block: () -> Unit) {
+        if (alpha >= 1f) {
+            block()
+            return
+        }
+        val previous = alphaMultiplier
+        alphaMultiplier = previous * alpha
+        try {
+            block()
+        } finally {
+            alphaMultiplier = previous
+        }
+    }
+
+    private fun withAlpha(color: Int): Int {
+        if (alphaMultiplier >= 1f) return color
+        val a = ((color ushr 24) and 0xFF) * alphaMultiplier
+        return (color and 0x00FFFFFF) or ((a.toInt().coerceIn(0, 0xFF)) shl 24)
+    }
+
+    private fun argb(paint: Paint): Int = withAlpha(paint.color.toArgb())
 
     private fun strokeWidth(paint: Paint): Float = max(paint.strokeWidth, 1f)
 
