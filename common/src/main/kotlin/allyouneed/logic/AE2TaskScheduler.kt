@@ -1,7 +1,8 @@
 package allyouneed.logic
 
 import allyouneed.logic.AE2TaskScheduler.submit
-import appeng.core.AELog
+import allyouneed.util.MarkedLogger
+import org.slf4j.MarkerFactory
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -20,9 +21,9 @@ import java.util.concurrent.atomic.AtomicLong
  * @see docs/Crafting-Calculation.md
  */
 object AE2TaskScheduler {
+    val logger = MarkedLogger(allyouneed.util.logger, MarkerFactory.getMarker("Task"))
 
-    val parallelism: Int =
-        (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+    val parallelism: Int = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 
     private val threadSeq = AtomicInteger(0)
     private val submitted = AtomicLong(0)
@@ -35,7 +36,7 @@ object AE2TaskScheduler {
         Thread(r, "AE2AYN-Worker-${threadSeq.incrementAndGet()}").apply {
             isDaemon = true
             uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { t, e ->
-                AELog.error(e, "Uncaught exception in " + t.name)
+                logger.error("Uncaught exception in ${t.name}", e)
             }
         }
     }
@@ -53,22 +54,17 @@ object AE2TaskScheduler {
     @JvmStatic
     fun <T> submit(task: Callable<T>): CompletableFuture<T> {
         val id = submitted.incrementAndGet()
-        AELog.debug(
-            "AE2TaskScheduler: submit #%d (active≈%d, pool=%d)",
-            id,
-            activeTaskCount(),
-            parallelism,
-        )
+        logger.debug("submit #$id (active≈$activeTaskCount, pool=$parallelism)")
 
         val future = CompletableFuture.supplyAsync({
             try {
                 val result = task.call()
                 completed.incrementAndGet()
-                AELog.debug("AE2TaskScheduler: complete #%d", id)
+                logger.debug("complete #$id")
                 result
             } catch (e: Throwable) {
                 failed.incrementAndGet()
-                AELog.info(e, "AE2TaskScheduler: task #$id failed")
+                logger.info("task #$id failed", e)
                 throw e
             }
         }, pool)
@@ -81,22 +77,16 @@ object AE2TaskScheduler {
     @JvmStatic
     fun submit(task: Runnable): CompletableFuture<Void> {
         val id = submitted.incrementAndGet()
-        AELog.debug(
-            "AE2TaskScheduler: submit #%d runnable (active≈%d, pool=%d)",
-            id,
-            activeTaskCount(),
-            parallelism,
-        )
-        @Suppress("UNCHECKED_CAST")
-        val future = CompletableFuture.supplyAsync({
+        logger.debug("submit #$id runnable (active≈$activeTaskCount, pool=${parallelism})")
+        @Suppress("UNCHECKED_CAST") val future = CompletableFuture.supplyAsync({
             try {
                 task.run()
                 completed.incrementAndGet()
-                AELog.debug("AE2TaskScheduler: complete #%d", id)
+                logger.debug("complete #$id")
                 null as Void?
             } catch (e: Throwable) {
                 failed.incrementAndGet()
-                AELog.info(e, "AE2TaskScheduler: task #$id failed")
+                logger.info("task #$id failed", e)
                 throw e
             }
         }, pool) as CompletableFuture<Void>
@@ -106,21 +96,20 @@ object AE2TaskScheduler {
     }
 
     @JvmStatic
-    fun <T> submit(task: () -> T): CompletableFuture<T> =
-        submit(Callable { task() })
+    fun <T> submit(task: () -> T): CompletableFuture<T> = submit(Callable { task() })
 
     /**
      * Approximate number of tasks that have been submitted but not yet finished
      * (completed or failed). Not exact under concurrent updates.
      */
     @JvmStatic
-    fun activeTaskCount(): Int = inFlight.size
+    val activeTaskCount: Int get() = inFlight.size
 
     @JvmStatic
-    fun submittedCount(): Long = submitted.get()
+    val submittedCount: Long get() = submitted.get()
 
     @JvmStatic
-    fun completedCount(): Long = completed.get()
+    val completedCount: Long get() = completed.get()
 
     /** Cancel all in-flight tasks (interrupts workers). Pool stays alive for new work. */
     @JvmStatic

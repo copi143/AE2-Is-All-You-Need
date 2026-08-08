@@ -6,6 +6,7 @@ import allyouneed.Platform
 import net.minecraft.resources.ResourceLocation
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.MarkerFactory
 import org.slf4j.helpers.NOPLogger
 import java.math.BigInteger
 
@@ -18,7 +19,7 @@ val logger: Logger = LoggerFactory.getLogger(LOGNAME)
 
 @JvmField
 val debugLogger: Logger = if (Platform.isDev) {
-    LoggerFactory.getLogger("$LOGNAME/Debug")
+    MarkedLogger(logger, MarkerFactory.getMarker("Debug"))
 } else {
     NOPLogger.NOP_LOGGER
 }
