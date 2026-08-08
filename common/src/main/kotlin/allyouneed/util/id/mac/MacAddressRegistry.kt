@@ -1,4 +1,4 @@
-package allyouneed.netaddr.mac
+package allyouneed.util.id.mac
 
 import allyouneed.api.IMacAddressHolder
 import allyouneed.api.IManagedMacAddressHolder

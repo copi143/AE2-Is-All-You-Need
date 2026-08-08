@@ -1,4 +1,4 @@
-package allyouneed.netaddr.mac
+package allyouneed.util.id.mac
 
 import allyouneed.util.MODID
 import appeng.api.integrations.igtooltip.*

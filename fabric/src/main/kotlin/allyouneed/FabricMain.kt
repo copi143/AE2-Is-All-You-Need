@@ -8,7 +8,7 @@ import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
 import allyouneed.logic.machine.MachineTypeReloadListener
 import allyouneed.logic.machine.ManualMachineRecipeReloadListener
-import allyouneed.netaddr.mac.MacAddressRegistry
+import allyouneed.util.id.mac.MacAddressRegistry
 import allyouneed.util.MODID
 import allyouneed.util.id.KeyIdRegistry
 import allyouneed.util.logger

@@ -1,7 +1,7 @@
 package allyouneed.mixin.ae2;
 
-import allyouneed.netaddr.mac.MacHosts;
-import allyouneed.netaddr.mac.MacNbt;
+import allyouneed.util.id.mac.MacHosts;
+import allyouneed.util.id.mac.MacNbt;
 import appeng.api.parts.IPart;
 import appeng.api.parts.IPartItem;
 import appeng.parts.PartPlacement;

@@ -2,10 +2,10 @@ package allyouneed.mixin.ae2;
 
 import allyouneed.api.AsyncChannelNodeHolder;
 import allyouneed.api.IMacAddressHolder;
-import allyouneed.netaddr.mac.MacAddress;
-import allyouneed.netaddr.mac.MacAddressRegistry;
-import allyouneed.netaddr.mac.MacNbt;
-import allyouneed.netaddr.mac.MacPolicy;
+import allyouneed.util.id.mac.MacAddress;
+import allyouneed.util.id.mac.MacAddressRegistry;
+import allyouneed.util.id.mac.MacNbt;
+import allyouneed.util.id.mac.MacPolicy;
 import appeng.api.networking.IGridNode;
 import appeng.me.GridNode;
 import net.minecraft.nbt.CompoundTag;

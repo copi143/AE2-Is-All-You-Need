@@ -3,9 +3,9 @@ package allyouneed.forge.init
 import allyouneed.cell.dimensional.DimensionalCellStore
 import allyouneed.logic.machine.MachineTypeReloadListener
 import allyouneed.logic.machine.ManualMachineRecipeReloadListener
-import allyouneed.netaddr.mac.MacAddressRegistry
-import allyouneed.util.id.KeyIdRegistry
 import allyouneed.util.MODID
+import allyouneed.util.id.KeyIdRegistry
+import allyouneed.util.id.mac.MacAddressRegistry
 import net.minecraftforge.event.AddReloadListenerEvent
 import net.minecraftforge.event.server.ServerAboutToStartEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
