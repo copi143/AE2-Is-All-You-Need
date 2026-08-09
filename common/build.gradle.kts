@@ -139,6 +139,17 @@ configurations {
     }
 }
 
+sourceSets.main {
+    java.srcDir("src")
+    kotlin.srcDir("src")
+    resources.srcDirs("res", "resources")
+}
+
+sourceSets.test {
+    kotlin.srcDir("test")
+    resources.srcDirs("res", "resources")
+}
+
 sourceSets.create("resgen") {
     compileClasspath += sourceSets.main.get().output
     kotlin.srcDir("resgen")
@@ -161,9 +172,6 @@ sourceSets.create("resgen") {
         "resgenImplementation"("com.github.ajalt.colormath:colormath:3.6.1")
         "resgenImplementation"("com.google.code.gson:gson:2.10.1")
         "resgenImplementation"(libs.compose.runtime)
-    }
-    sourceSets.main {
-        resources.srcDir("res")
     }
 }
 
