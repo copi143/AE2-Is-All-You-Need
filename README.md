@@ -24,7 +24,7 @@
 文档状态：
 
 - [Async-Crafting-MultiBlock](docs/Async-Crafting-MultiBlock.md) 纯手写
-- [Robot](docs/Robot.md) 纯手写
+- [Robot](docs/Robot.md) 半手写半AIGC
 - [AE2-Network](docs/AE2-Network.md) 纯AIGC
 - [Compose-Framework](docs/Compose-Framework.md) 纯AIGC
 - [Crafting-Calculation](docs/Crafting-Calculation.md) 纯AIGC
