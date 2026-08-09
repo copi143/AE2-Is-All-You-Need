@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 package allyouneed.util.id.mac
 
 import allyouneed.util.MODID
