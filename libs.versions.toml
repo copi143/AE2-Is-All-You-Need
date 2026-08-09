@@ -32,7 +32,9 @@ kotlinx-coroutines-core = "1.11.0"
 mixin = "0.8.5"
 compose = "1.12.0-beta03"
 
-ftb = "2001.4.22"
+mui-core = "3.12.0"
+mui = "1.20.1-3.12.0.1"
+ftbq = "2001.4.22"
 
 jei = "15.20.0.115"
 emi = "1.1.24+1.20.1"
@@ -63,6 +65,10 @@ compose-foundation-layout = { module = "org.jetbrains.compose.foundation:foundat
 compose-animation = { module = "org.jetbrains.compose.animation:animation-desktop", version.ref = "compose" }
 compose-material = { module = "org.jetbrains.compose.material:material-desktop", version.ref = "compose" }
 
+mui-core = { module = "icyllis.modernui:ModernUI-Core", version.ref = "mui-core" }
+mui = { module = "icyllis.modernui:ModernUI-Forge", version.ref = "mui" }
+ftbq = { module = "dev.ftb.mods:ftb-quests-forge", version.ref = "ftbq" }
+
 jei-fabric = { module = "mezz.jei:jei-1.20.1-fabric", version.ref = "jei" }
 jei-forge = { module = "mezz.jei:jei-1.20.1-forge", version.ref = "jei" }
 emi-fabric = { module = "dev.emi:emi-fabric", version.ref = "emi" }
@@ -75,6 +81,7 @@ ae2-fabric = { module = "appeng:appliedenergistics2-fabric", version.ref = "ae2"
 ae2-forge = { module = "appeng:appliedenergistics2-forge", version.ref = "ae2" }
 
 gtceu = { module = "com.gregtechceu.gtceu:gtceu-1.20.1", version.ref = "gtceu" }
+mek = { module = "mekanism:Mekanism", version.ref = "mek" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

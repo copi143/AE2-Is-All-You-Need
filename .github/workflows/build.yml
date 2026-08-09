@@ -53,7 +53,9 @@ jobs:
         with:
           name: ae2isallyouneed-forge-1.20.1
           path: |
-            forge/build/ae2isallyouneed-*.jar
+            forge/build/libs/ae2isallyouneed-*.jar
+            !forge/build/libs/ae2isallyouneed-*-sources.jar
+            !forge/build/libs/ae2isallyouneed-*-javadoc.jar
           if-no-files-found: warn
 
       - name: Collect release artifacts
@@ -62,7 +64,7 @@ jobs:
           mkdir -p release
           zip -r release/ae2isallyouneed-assets-1.20.1.zip common/res/assets
           cp fabric/build/libs/ae2isallyouneed-*.jar release 2>/dev/null || true
-          cp forge/build/ae2isallyouneed-*.jar release 2>/dev/null || true
+          cp forge/build/libs/ae2isallyouneed-*.jar release 2>/dev/null || true
           rm -f release/*-sources.jar release/*-javadoc.jar 2>/dev/null || true
           ls -l release
 

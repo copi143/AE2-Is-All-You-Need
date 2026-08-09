@@ -1,4 +1,5 @@
 plugins {
+    kotlin("kapt")
     id("multiloader-common")
     alias(libs.plugins.moddev)
     alias(libs.plugins.kotlin.compose)

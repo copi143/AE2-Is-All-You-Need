@@ -60,6 +60,10 @@ legacyForge {
     }
 }
 
+kapt {
+    keepJavacAnnotationProcessors = true
+}
+
 sourceSets.main.get().resources { srcDir("src/generated/resources") }
 
 dependencies {
@@ -74,10 +78,10 @@ dependencies {
     // mechanism - it has no mods.toml and no Automatic-Module-Name, so ModLauncher silently skips it
     // on the plain classpath. stripModernUiCore removes it again before packaging so the release jar
     // does NOT embed it (players provide ModernUI themselves).
-    jarJar("icyllis.modernui:ModernUI-Core:3.12.0")
-    modRuntimeOnly("icyllis.modernui:ModernUI-Forge:1.20.1-3.12.0.1")
+    jarJar(libs.mui.core)
+    modRuntimeOnly(libs.mui)
 
-//    modRuntimeOnly("dev.ftb.mods:ftb-quests-forge:${libs.versions.ftb.get()}")
+//    modRuntimeOnly(libs.ftbq)
 
     modImplementation(libs.jei.forge)
     modImplementation(libs.emi.forge)
@@ -88,11 +92,11 @@ dependencies {
 
     modImplementation(libs.gtceu)
 
-    modCompileOnly("mekanism:Mekanism:${libs.versions.mek.get()}:api")
-    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}")
-    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:additions")
-    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:generators")
-    modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:tools")
+    modCompileOnly(variantOf(libs.mek) { classifier("api") })
+    modRuntimeOnly(libs.mek)
+    modRuntimeOnly(variantOf(libs.mek) { classifier("additions") })
+    modRuntimeOnly(variantOf(libs.mek) { classifier("generators") })
+    modRuntimeOnly(variantOf(libs.mek) { classifier("tools") })
     testImplementation(kotlin("test"))
 }
 
