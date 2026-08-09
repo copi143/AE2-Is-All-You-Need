@@ -1,16 +1,17 @@
 package allyouneed.util
 
-import allyouneed.util.IntegerFormat.MetricPrefix
+import allyouneed.util.MetricFormat.MetricPrefix
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class IntegerFormatTest {
+class MetricFormatTest {
 
-    private val si = IntegerFormat.SI
-    private val iec = IntegerFormat.IEC
+    private val si = MetricFormat.SI
+    private val iec = MetricFormat.IEC
 
     // ── SI basics ────────────────────────────────────────────────
 
@@ -55,14 +56,14 @@ class IntegerFormatTest {
     // ── façades ──────────────────────────────────────────────────
 
     @Test
-    fun `IntegerFormat facade methods match si and iec`() {
-        assertEquals(IntegerFormat.si(4).format(12_345), IntegerFormat.siFormat(12_345L, 4))
+    fun `MetricFormat facade methods match si and iec`() {
+        assertEquals(MetricFormat.si(4).format(12_345), MetricFormat.siFormat(12_345L, 4))
         assertEquals(
-            IntegerFormat.si(3).format(BigInteger.valueOf(999_999)),
-            IntegerFormat.siFormat(BigInteger.valueOf(999_999), 3)
+            MetricFormat.si(3).format(BigInteger.valueOf(999_999)),
+            MetricFormat.siFormat(BigInteger.valueOf(999_999), 3)
         )
-        assertEquals(IntegerFormat.IEC.format(0), IntegerFormat.iecFormat(0))
-        assertEquals(IntegerFormat.IEC.format(1024), IntegerFormat.iecFormat(1024))
+        assertEquals(MetricFormat.IEC.format(0), MetricFormat.iecFormat(0))
+        assertEquals(MetricFormat.IEC.format(1024), MetricFormat.iecFormat(1024))
     }
 
     @Test
@@ -75,23 +76,20 @@ class IntegerFormatTest {
 
     @Test
     fun `threshold delays promotion`() {
-        val fmt = IntegerFormat(
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.of("", "k", "M")!!,
             threshold = 1500,
             allowOmitDecimal = true,
         )
-        // 1000 still below 1500 → stay at base unit as 1000
         assertEquals("1000", fmt.format(1000))
-        // 1000k = 1_000_000: at k-level value is 1000 (<1500) so "1000k"
         assertEquals("1000k", fmt.format(1_000_000))
-        // 1500k = 1_500_000 → promote to 1.5M
         assertEquals("1.5M", fmt.format(1_500_000))
     }
 
     @Test
     fun `threshold 500 promotes early`() {
-        val fmt = IntegerFormat(
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.of("", "k", "M")!!,
             threshold = 500,
@@ -101,34 +99,27 @@ class IntegerFormatTest {
         assertEquals("1k", fmt.format(1000))
     }
 
-    // ── allowPlus ────────────────────────────────────────────────
+    // ── largerUnlimited ──────────────────────────────────────────
 
     @Test
-    fun `allowPlus encodes overflow levels`() {
-        // Sequential levels: "" → k → M → G; beyond G uses G+n
-        val fmt = IntegerFormat(
+    fun `largerUnlimited encodes overflow levels`() {
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.of("", "k", "M", "G")!!,
-            allowPlus = true,
             allowOmitDecimal = true,
         )
-        // 1e9 = 1G
         assertEquals("1G", fmt.format(BigInteger.TEN.pow(9)))
-        // 1e12 = 1T = 1G+1
         assertEquals("1G+1", fmt.format(BigInteger.TEN.pow(12)))
-        // 1e15 = 1P = 1G+2
         assertEquals("1G+2", fmt.format(BigInteger.TEN.pow(15)))
     }
 
     @Test
-    fun `without allowPlus stays on last unit`() {
-        val fmt = IntegerFormat(
+    fun `without largerUnlimited stays on last unit`() {
+        val fmt = MetricFormat(
             base = 1000,
-            mp = MetricPrefix.of("", "k", "M", "G")!!,
-            allowPlus = false,
+            mp = MetricPrefix.of(null, "", "k", "M", "G", null)!!,
             allowOmitDecimal = true,
         )
-        // 1T → 1000G
         assertEquals("1000G", fmt.format(BigInteger.TEN.pow(12)))
     }
 
@@ -136,7 +127,7 @@ class IntegerFormatTest {
 
     @Test
     fun `width limits output length`() {
-        val fmt = IntegerFormat.si(4)
+        val fmt = MetricFormat.si(4)
         val out = fmt.format(1_234_567)
         assertTrue(out.length <= 4, "got '$out' len=${out.length}")
         assertTrue(out != "ERR", "should fit in width 4, got ERR")
@@ -144,22 +135,22 @@ class IntegerFormatTest {
 
     @Test
     fun `width too small returns errDisplay`() {
-        val fmt = IntegerFormat(
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.EMPTY,
             width = 2,
             errDisplay = "E!",
         )
-        assertEquals("E!", fmt.format(999)) // "999" is 3 chars
+        assertEquals("E!", fmt.format(999))
     }
 
     @Test
     fun `init rejects display longer than width`() {
         assertThrows<IllegalArgumentException> {
-            IntegerFormat(1000, MetricPrefix.EMPTY, width = 2, errDisplay = "ERR")
+            MetricFormat(1000, MetricPrefix.EMPTY, width = 2, errDisplay = "ERR")
         }
         assertThrows<IllegalArgumentException> {
-            IntegerFormat(1000, MetricPrefix.EMPTY, width = 2, min = BigInteger.ZERO, minDisplay = "MIN")
+            MetricFormat(1000, MetricPrefix.EMPTY, width = 2, min = BigInteger.ZERO, minDisplay = "MIN")
         }
     }
 
@@ -167,7 +158,7 @@ class IntegerFormatTest {
 
     @Test
     fun `min and max clamps to display`() {
-        val fmt = IntegerFormat(
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.of("", "k")!!,
             min = BigInteger.TEN,
@@ -204,16 +195,14 @@ class IntegerFormatTest {
 
     @Test
     fun `positive sign consumes width`() {
-        val fmt = IntegerFormat(
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.EMPTY,
             width = 3,
             showPositiveSign = true,
             errDisplay = "ER",
         )
-        // body width 2 → 99 ok as +99
         assertEquals("+99", fmt.format(99))
-        // 100 needs body "100" (3) > 2
         assertEquals("ER", fmt.format(100))
     }
 
@@ -221,19 +210,17 @@ class IntegerFormatTest {
 
     @Test
     fun `allowOmitDecimal strips trailing zeros`() {
-        val with = IntegerFormat(1000, MetricPrefix.of("", "k")!!, allowOmitDecimal = true)
-        val without = IntegerFormat(1000, MetricPrefix.of("", "k")!!, allowOmitDecimal = false, maxDecimalPlaces = 2)
+        val with = MetricFormat(1000, MetricPrefix.of("", "k")!!, allowOmitDecimal = true)
+        val without = MetricFormat(1000, MetricPrefix.of("", "k")!!, allowOmitDecimal = false, maxDecimalPlaces = 2)
         assertEquals("1k", with.format(1000))
-        // 1100 → 1.1k either way when omit trims
         assertEquals("1.1k", with.format(1100))
         val raw = without.format(1000)
-        // exact 1000 has zero remainder → no decimal regardless
         assertEquals("1k", raw)
     }
 
     @Test
     fun `allow omit leading zero`() {
-        val fmt = IntegerFormat(
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.of("", "k")!!,
             threshold = 500,
@@ -247,15 +234,13 @@ class IntegerFormatTest {
 
     @Test
     fun `rounding carry can promote unit`() {
-        // 999.5k with HalfUp 0 decimal places → 1000k → 1M
-        val fmt = IntegerFormat(
+        val fmt = MetricFormat(
             base = 1000,
             mp = MetricPrefix.of("", "k", "M")!!,
             maxDecimalPlaces = 0,
-            rounding = IntegerFormat.Rounding.HalfUp,
+            rounding = MetricFormat.Rounding.HalfUp,
             allowOmitDecimal = true,
         )
-        // 999_500 → 999.5k → rounds to 1000k → 1M
         assertEquals("1M", fmt.format(999_500))
     }
 
@@ -267,13 +252,50 @@ class IntegerFormatTest {
         assertEquals(si.format(12345), si.format(BigInteger.valueOf(12345)))
     }
 
+    // ── rational path ────────────────────────────────────────────
+
+    @Test
+    fun `rational demotes to smaller prefix`() {
+        val fmt = MetricFormat(
+            base = 1000,
+            mp = MetricPrefix.SI,
+            allowOmitDecimal = true,
+        )
+        assertEquals("1m", fmt.format(BigDecimal("0.001")))
+        assertEquals("500m", fmt.format(BigInteger.ONE, BigInteger.valueOf(2)))
+        assertEquals("1.5", fmt.format(BigDecimal("1.5")))
+    }
+
+    @Test
+    fun `double routes through rational or integer fast path`() {
+        assertEquals("1.5k", si.format(1500.0))
+        assertEquals("ERR", si.format(Double.NaN))
+        assertEquals("500m", si.format(0.5))
+    }
+
+    @Test
+    fun `BigRational equals integer format when whole`() {
+        assertEquals(si.format(1500), si.format(MetricFormat.BigRational.of(1500)))
+        assertEquals(si.format(1500), si.format(BigInteger.valueOf(1500), BigInteger.ONE))
+    }
+
+    // ── formatParts ──────────────────────────────────────────────
+
+    @Test
+    fun `formatParts splits number and unit`() {
+        assertEquals("1.5" to "k", si.formatParts(1500))
+        assertEquals("999" to "", si.formatParts(999))
+        assertEquals("1" to "Ki", iec.formatParts(1024))
+        assertEquals("1" to "m", si.formatParts(BigDecimal("0.001")))
+        assertEquals("-1.5" to "k", si.copy(allowNegative = true).formatParts(-1500))
+        assertEquals("ERR" to "", si.formatParts(-1))
+        assertEquals(si.format(12_345_678), si.formatParts(12_345_678).let { it.first + it.second })
+    }
+
     // ── MetricPrefix ─────────────────────────────────────────────
 
     @Test
     fun `metric prefix`() {
-        println(MetricPrefix.SI)
-        println(MetricPrefix.IEC)
-        println(MetricPrefix.of(""))
         assertEquals(null, MetricPrefix.of("A", "A", ""))
         assertEquals("m", MetricPrefix.SI.level(-1))
         assertEquals("M", MetricPrefix.SI.level(2))
@@ -297,5 +319,4 @@ class IntegerFormatTest {
         assertEquals(null, test3.level(1))
         assertEquals(null, test3.level(2))
     }
-
 }

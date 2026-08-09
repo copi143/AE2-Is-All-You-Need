@@ -1,7 +1,7 @@
 package allyouneed.mixin.client.ae2;
 
 import allyouneed.util.CommonKt;
-import allyouneed.util.IntegerFormat;
+import allyouneed.util.MetricFormat;
 import allyouneed.util.bigint.BigAmounts;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
@@ -52,9 +52,9 @@ public abstract class MEStorageScreenMixin {
                 int width = format == AmountFormat.SLOT_LARGE_FONT ? 3 : 4;
                 if (key.getAmountPerUnit() > 1) {
                     BigInteger units = big.divide(BigInteger.valueOf(key.getAmountPerUnit()));
-                    return IntegerFormat.siFormat(units, width);
+                    return MetricFormat.siFormat(units, width);
                 }
-                return IntegerFormat.siFormat(big, width);
+                return MetricFormat.siFormat(big, width);
             }
         }
         return key.formatAmount(amount, format);

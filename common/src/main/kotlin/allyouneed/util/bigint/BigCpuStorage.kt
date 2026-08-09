@@ -1,6 +1,6 @@
 package allyouneed.util.bigint
 
-import allyouneed.util.IntegerFormat
+import allyouneed.util.MetricFormat
 import allyouneed.util.bigStorage
 import allyouneed.util.isUnboundedCapacity
 import allyouneed.util.saturateToLong
@@ -91,6 +91,6 @@ object BigCpuStorage {
     @JvmStatic
     fun formatBinaryBytes(bytes: BigInteger?): String {
         if (bytes == null || bytes.signum() <= 0) return "0"
-        return IntegerFormat.iecFormat(bytes)
+        return MetricFormat.iecFormat(bytes)
     }
 }

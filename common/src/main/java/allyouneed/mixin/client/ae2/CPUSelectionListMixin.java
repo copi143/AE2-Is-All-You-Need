@@ -1,6 +1,6 @@
 package allyouneed.mixin.client.ae2;
 
-import allyouneed.util.IntegerFormat;
+import allyouneed.util.MetricFormat;
 import appeng.client.gui.widgets.CPUSelectionList;
 import appeng.menu.me.crafting.CraftingStatusMenu;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,6 +18,6 @@ public class CPUSelectionListMixin {
             cir.setReturnValue("∞");
             return;
         }
-        cir.setReturnValue(IntegerFormat.iecFormat(storage));
+        cir.setReturnValue(MetricFormat.iecFormat(storage));
     }
 }
