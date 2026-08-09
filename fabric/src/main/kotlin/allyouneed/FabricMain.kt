@@ -64,6 +64,7 @@ fun init() {
     )
 
     Main.init()
+    Main.registerAEKeyTypes()
     Main.commonSetup()
 
     P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)

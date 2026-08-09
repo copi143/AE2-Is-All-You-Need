@@ -10,7 +10,9 @@ import allyouneed.forge.init.GTAsyncCrafting
 import allyouneed.logic.script.ScriptDsl
 import allyouneed.util.MODID
 import allyouneed.util.logger
+import net.minecraft.resources.ResourceLocation
 import net.minecraftforge.fml.common.Mod
+import net.minecraftforge.registries.RegisterEvent
 import thedarkcolour.kotlinforforge.forge.MOD_BUS
 
 @Mod(MODID)
@@ -35,6 +37,15 @@ class ForgeMain {
 
         AllRegistries.items.forEach { entry ->
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
+        }
+
+        // AE2 key types must be registered during the ae2:keytypes registry's RegisterEvent, before
+        // Forge freezes that registry. FMLCommonSetupEvent (Main.commonSetup) is already too late:
+        // ForgeRegistry.register throws "The object ... is being added too late".
+        MOD_BUS.addListener { event: RegisterEvent ->
+            if (event.registryKey == ResourceLocation("ae2", "keytypes")) {
+                Main.registerAEKeyTypes()
+            }
         }
 
         // Use KotlinForForge's MOD_BUS instead of FMLJavaModLoadingContext

@@ -37,11 +37,19 @@ object Main {
     }
 
     /**
+     * Registers the custom AEKeyTypes. Must run before AE2's keytype registry freezes: on Forge
+     * during the ae2:keytypes RegisterEvent (FMLCommonSetupEvent is already too late), on Fabric
+     * during the mod initializer.
+     */
+    fun registerAEKeyTypes() {
+        AEKeyTypes.register(EnergyKey.Type)
+        AEKeyTypes.register(ManaKey.Type)
+    }
+
+    /**
      * Must run during common setup (after AE2 init). Registers cell handlers etc.
      */
     fun commonSetup() {
-        AEKeyTypes.register(EnergyKey.Type)
-        AEKeyTypes.register(ManaKey.Type)
         StorageCells.addCellHandler(CreativeMeCellHandler)
         StorageCells.addCellHandler(DimensionalCellHandler)
         StorageCells.addCellHandler(ItemStorageCellHandler)
