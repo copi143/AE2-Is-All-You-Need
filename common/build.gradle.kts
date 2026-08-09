@@ -147,7 +147,7 @@ sourceSets.main {
 
 sourceSets.test {
     kotlin.srcDir("test")
-    resources.srcDirs("res", "resources")
+    resources.srcDirs("resources")
 }
 
 sourceSets.create("resgen") {
