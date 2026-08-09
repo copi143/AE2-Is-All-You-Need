@@ -23,72 +23,69 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
-enum class EnergyCell(
-    name: String,
-    size: Double = -1.0,
-    val selfPowered: Boolean = false,
-) {
-    Micro("Micro Energy Cell", 1.0.Ki), //
-    Simple("Simple Energy Cell", 4.0.Ki), //
-    Basic("Basic Energy Cell", 16.0.Ki), //
-    Normal("Normal Energy Cell", 64.0.Ki), //
-    Enhanced("Enhanced Energy Cell", 256.0.Ki), //
-    Advanced("Advanced Energy Cell", 1.0.Mi), //
-    Reinforced("Reinforced Energy Cell", 4.0.Mi), //
-    Dense("Dense Energy Cell", 16.0.Mi), //
-    Hyper("Hyper Energy Cell", 64.0.Mi), //
-    Ultra("Ultra Energy Cell", 256.0.Mi), //
-    Ultimate("Ultimate Energy Cell", 1.0.Gi), //
-    Singular("Singular Energy Cell", 4.0.Gi), //
-    Quantum("Quantum Energy Cell", 16.0.Gi), //
-    Stellar("Stellar Energy Cell", 64.0.Gi), //
-    Cosmic("Cosmic Energy Cell", 256.0.Gi), //
-    T1("1T Energy Cell", 1.0.Ti), //
-    T4("4T Energy Cell", 4.0.Ti), //
-    T16("16T Energy Cell", 16.0.Ti), //
-    T64("64T Energy Cell", 64.0.Ti), //
-    T256("256T Energy Cell", 256.0.Ti), //
+enum class EnergyCell(size: Double = -1.0) {
+    K1(1.0.Ki), //
+    K4(4.0.Ki), //
+    K16(16.0.Ki), //
+    K64(64.0.Ki), //
+    K256(256.0.Ki), //
+    M1(1.0.Mi), //
+    M4(4.0.Mi), //
+    M16(16.0.Mi), //
+    M64(64.0.Mi), //
+    M256(256.0.Mi), //
+    G1(1.0.Gi), //
+    G4(4.0.Gi), //
+    G16(16.0.Gi), //
+    G64(64.0.Gi), //
+    G256(256.0.Gi), //
+    T1(1.0.Ti), //
+    T4(4.0.Ti), //
+    T16(16.0.Ti), //
+    T64(64.0.Ti), //
+    T256(256.0.Ti), //
 
-    SpMicro("1K Self-Powered Energy Cell", 1.0.Ki, selfPowered = true), //
-    SpSimple("4K Self-Powered Energy Cell", 4.0.Ki, selfPowered = true), //
-    SpBasic("16K Self-Powered Energy Cell", 16.0.Ki, selfPowered = true), //
-    SpNormal("64K Self-Powered Energy Cell", 64.0.Ki, selfPowered = true), //
-    SpEnhanced("256K Self-Powered Energy Cell", 256.0.Ki, selfPowered = true), //
-    SpAdvanced("1M Self-Powered Energy Cell", 1.0.Mi, selfPowered = true), //
-    SpReinforced("4M Self-Powered Energy Cell", 4.0.Mi, selfPowered = true), //
-    SpDense("16M Self-Powered Energy Cell", 16.0.Mi, selfPowered = true), //
-    SpHyper("64M Self-Powered Energy Cell", 64.0.Mi, selfPowered = true), //
-    SpUltra("256M Self-Powered Energy Cell", 256.0.Mi, selfPowered = true), //
-    SpUltimate("1G Self-Powered Energy Cell", 1.0.Gi, selfPowered = true), //
-    SpSingular("4G Self-Powered Energy Cell", 4.0.Gi, selfPowered = true), //
-    SpQuantum("16G Self-Powered Energy Cell", 16.0.Gi, selfPowered = true), //
-    SpStellar("64G Self-Powered Energy Cell", 64.0.Gi, selfPowered = true), //
-    SpCosmic("256G Self-Powered Energy Cell", 256.0.Gi, selfPowered = true), //
-    SpT1("1T Self-Powered Energy Cell", 1.0.Ti, selfPowered = true), //
-    SpT4("4T Self-Powered Energy Cell", 4.0.Ti, selfPowered = true), //
-    SpT16("16T Self-Powered Energy Cell", 16.0.Ti, selfPowered = true), //
-    SpT64("64T Self-Powered Energy Cell", 64.0.Ti, selfPowered = true), //
-    SpT256("256T Self-Powered Energy Cell", 256.0.Ti, selfPowered = true), //
+    SpK1(1.0.Ki), //
+    SpK4(4.0.Ki), //
+    SpK16(16.0.Ki), //
+    SpK64(64.0.Ki), //
+    SpK256(256.0.Ki), //
+    SpM1(1.0.Mi), //
+    SpM4(4.0.Mi), //
+    SpM16(16.0.Mi), //
+    SpM64(64.0.Mi), //
+    SpM256(256.0.Mi), //
+    SpG1(1.0.Gi), //
+    SpG4(4.0.Gi), //
+    SpG16(16.0.Gi), //
+    SpG64(64.0.Gi), //
+    SpG256(256.0.Gi), //
+    SpT1(1.0.Ti), //
+    SpT4(4.0.Ti), //
+    SpT16(16.0.Ti), //
+    SpT64(64.0.Ti), //
+    SpT256(256.0.Ti), //
 
-    Creative("Creative Energy Cell"); //
+    Creative; //
 
-    val blockName: String = name
-
-    val blockId: ResourceLocation = run {
-        if (!(size > 0)) {
-            return@run name.lowercase().replace(" ", "_").rl
-        }
+    private val prefix = if (size < 0) {
+        null
+    } else {
         assert(size.toBits() and 0x00fffff_ffffffff == 0L)
-        val suffix = if (selfPowered) "self_powered_energy_cell" else "energy_cell"
-        formatScaledUnit(size.floatingExp, suffix).rl
+        formatScaledUnit(size.floatingExp)
     }
 
-    val blockSupplier = if (size < 0) {
-        Supplier<Block> { CreativeEnergyCellBlock() }
-    } else if (selfPowered) {
-        Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10 + 1000) }
-    } else {
-        Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10) }
+    val blockName: String = (prefix?.uppercase() ?: "Creative") + " Energy Cell"
+    val isSelfPowered: Boolean = name.startsWith("Sp")
+    val isCreative: Boolean = size < 0
+
+    val blockId: ResourceLocation =
+        ((prefix ?: "creative") + (if (isSelfPowered) "_self_powered" else "") + "_Energy_cell").rl
+
+    val blockSupplier = when {
+        isCreative -> Supplier<Block> { CreativeEnergyCellBlock() }
+        isSelfPowered -> Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10 + 1000) }
+        else -> Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10) }
     }
 
     val itemFactory = if (size < 0) null else BiFunction<Block, Item.Properties, BlockItem> { block, props ->
@@ -135,7 +132,7 @@ enum class EnergyCell(
                 AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
             }
 
-            selfPowered -> {
+            isSelfPowered -> {
                 // Shared BE type registered once via registerSelfPoweredBEType()
                 blockEntityType = selfPoweredBlockEntityType
                 (block as AEBaseEntityBlock<SelfPoweredEnergyCellBlockEntity>).setBlockEntity(
@@ -176,7 +173,7 @@ enum class EnergyCell(
             if (selfPoweredRegistered) return
             selfPoweredRegistered = true
 
-            val blocks = entries.filter { it.selfPowered }.map { it.define.block() }.toTypedArray()
+            val blocks = entries.filter { it.isSelfPowered }.map { it.define.block() }.toTypedArray()
             val typeRef = AtomicReference<BlockEntityType<SelfPoweredEnergyCellBlockEntity>>()
             @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(
                 BlockEntityType.Builder.of(

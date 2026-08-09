@@ -20,26 +20,27 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
 
 enum class CraftingStorage(size: Double = -1.0) : ICraftingUnitType {
-    Micro(1.0.Ki), //
-    Simple(4.0.Ki), //
-    Basic(16.0.Ki), //
-    Normal(64.0.Ki), //
-    Enhanced(256.0.Ki), //
-    Advanced(1.0.Mi), //
-    Reinforced(4.0.Mi), //
-    Dense(16.0.Mi), //
-    Hyper(64.0.Mi), //
-    Ultra(256.0.Mi), //
-    Ultimate(1.0.Gi), //
-    Singular(4.0.Gi), //
-    Quantum(16.0.Gi), //
-    Stellar(64.0.Gi), //
-    Cosmic(256.0.Gi), //
+    K1(1.0.Ki), //
+    K4(4.0.Ki), //
+    K16(16.0.Ki), //
+    K64(64.0.Ki), //
+    K256(256.0.Ki), //
+    M1(1.0.Mi), //
+    M4(4.0.Mi), //
+    M16(16.0.Mi), //
+    M64(64.0.Mi), //
+    M256(256.0.Mi), //
+    G1(1.0.Gi), //
+    G4(4.0.Gi), //
+    G16(16.0.Gi), //
+    G64(64.0.Gi), //
+    G256(256.0.Gi), //
     T1(1.0.Ti), //
     T4(4.0.Ti), //
     T16(16.0.Ti), //
     T64(64.0.Ti), //
     T256(256.0.Ti), //
+
     Creative; //
 
     private val prefix = if (size < 0) {
@@ -97,8 +98,7 @@ enum class CraftingStorage(size: Double = -1.0) : ICraftingUnitType {
 
             val blocks = entries.map { it.define.block() }.toTypedArray()
             val typeRef = AtomicReference<BlockEntityType<CraftingBlockEntity>>()
-            @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-            typeRef.set(
+            @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(
                 BlockEntityType.Builder.of(
                     { pos, state -> CraftingBlockEntity(typeRef.get(), pos, state) },
                     *blocks,

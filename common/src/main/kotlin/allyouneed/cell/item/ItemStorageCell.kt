@@ -11,21 +11,21 @@ import net.minecraft.world.item.Item
  * `item_storage_cell` design but with long-based capacity.
  */
 enum class ItemStorageCell(size: Double = -1.0) {
-    Micro(1.0.Ki), //
-    Simple(4.0.Ki), //
-    Basic(16.0.Ki), //
-    Normal(64.0.Ki), //
-    Enhanced(256.0.Ki), //
-    Advanced(1.0.Mi), //
-    Reinforced(4.0.Mi), //
-    Dense(16.0.Mi), //
-    Hyper(64.0.Mi), //
-    Ultra(256.0.Mi), //
-    Ultimate(1.0.Gi), //
-    Singular(4.0.Gi), //
-    Quantum(16.0.Gi), //
-    Stellar(64.0.Gi), //
-    Cosmic(256.0.Gi), //
+    K1(1.0.Ki), //
+    K4(4.0.Ki), //
+    K16(16.0.Ki), //
+    K64(64.0.Ki), //
+    K256(256.0.Ki), //
+    M1(1.0.Mi), //
+    M4(4.0.Mi), //
+    M16(16.0.Mi), //
+    M64(64.0.Mi), //
+    M256(256.0.Mi), //
+    G1(1.0.Gi), //
+    G4(4.0.Gi), //
+    G16(16.0.Gi), //
+    G64(64.0.Gi), //
+    G256(256.0.Gi), //
     T1(1.0.Ti), //
     T4(4.0.Ti), //
     T16(16.0.Ti), //
@@ -44,7 +44,7 @@ enum class ItemStorageCell(size: Double = -1.0) {
     val sizeBytes: Long = size.toLong()
 
     /** Bytes reserved per distinct item type. AE2 scales this with tier: 8 bytes per KB. */
-    val bytesPerType: Long = (sizeBytes / 1024) * 8
+    val bytesPerType: Long = sizeBytes / 1024 * 8
 
     /** Total item capacity: 8 items per byte. */
     val maxItems: Long = sizeBytes * 8

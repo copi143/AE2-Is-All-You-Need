@@ -27,7 +27,7 @@ class ForgeMain {
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
         }
 
-        EnergyCell.entries.filter { !it.selfPowered }.forEach { cell ->
+        EnergyCell.entries.filter { !it.isSelfPowered }.forEach { cell ->
             ForgeBlocks.BLOCK_ENTITIES.register(cell.blockId.path) { cell.blockEntityType }
         }
         ForgeBlocks.BLOCK_ENTITIES.register("self_powered_energy_cell") { EnergyCell.selfPoweredBlockEntityType }

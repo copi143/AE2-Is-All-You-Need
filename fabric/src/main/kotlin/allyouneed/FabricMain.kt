@@ -41,7 +41,7 @@ fun init() {
         val id = ResourceLocation(MODID, cell.blockId.path)
         Registry.register(BuiltInRegistries.BLOCK, id, block)
         Registry.register(BuiltInRegistries.ITEM, id, cell.define.asItem())
-        if (!cell.selfPowered) {
+        if (!cell.isSelfPowered) {
             Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, cell.blockEntityType)
         }
     }

@@ -20,7 +20,7 @@ import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil
 fun GuiGraphics.renderMcTooltip(font: Font, tooltip: List<ClientTooltipComponent>, x: Int, y: Int) {
     if (tooltip.isEmpty()) return
     val width = tooltip.maxOf { it.getWidth(font) }
-    val height = tooltip.sumOf { it.getHeight() }
+    val height = tooltip.sumOf { it.height }
     pose().pushPose()
     drawManaged { TooltipRenderUtil.renderTooltipBackground(this, x, y, width, height, 400) }
     pose().translate(0f, 0f, 400f)
@@ -29,12 +29,12 @@ fun GuiGraphics.renderMcTooltip(font: Font, tooltip: List<ClientTooltipComponent
     var lineY = y
     for ((index, component) in tooltip.withIndex()) {
         component.renderText(font, x, lineY, matrix, buffer)
-        lineY += component.getHeight() + if (index == 0) 2 else 0
+        lineY += component.height + if (index == 0) 2 else 0
     }
     lineY = y
     for ((index, component) in tooltip.withIndex()) {
         component.renderImage(font, x, lineY, this)
-        lineY += component.getHeight() + if (index == 0) 2 else 0
+        lineY += component.height + if (index == 0) 2 else 0
     }
     buffer.endBatch()
     pose().popPose()
