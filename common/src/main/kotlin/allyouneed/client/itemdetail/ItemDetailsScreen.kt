@@ -1,5 +1,6 @@
 package allyouneed.client.itemdetail
 
+import allyouneed.client.compose.platform.ComposeContainerScreen
 import allyouneed.client.itemdetail.styling.DetailsStyling.COLOR_SECTION
 import allyouneed.client.itemdetail.styling.DetailsStyling.COLOR_VALUE
 import net.minecraft.client.Minecraft
@@ -81,7 +82,7 @@ open class ItemDetailsScreen(
         super.onClose()
         val previous = consumeReturnScreen() ?: return
         if (previous === this) return
-        if (previous is AbstractContainerScreen<*>) {
+        if (previous is AbstractContainerScreen<*> && previous !is ComposeContainerScreen<*>) {
             val player = Minecraft.getInstance().player ?: return
             if (previous.getMenu() !== player.containerMenu) return
         }

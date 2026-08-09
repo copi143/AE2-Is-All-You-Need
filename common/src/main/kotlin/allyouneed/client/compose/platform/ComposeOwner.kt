@@ -114,7 +114,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.client.gui.screens.Screen
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.resume
@@ -122,11 +121,17 @@ import kotlin.math.roundToInt
 
 /**
  * Production [Owner] hosting the official androidx.compose.ui layout/measure/draw engine inside
- * Minecraft. The composable tree lives in an official [LayoutNode] root measured against the
- * screen bounds; rendering bridges the official Canvas commands into Minecraft's [GuiGraphics]
- * via [McCanvas] — no skiko, no offscreen surface.
+ * Minecraft. The composable tree lives in an official [LayoutNode] root measured against the layer's
+ * logical size (from [sizeProvider]); rendering bridges the official Canvas commands into
+ * Minecraft's [GuiGraphics] via [McCanvas] — no skiko, no offscreen surface.
+ *
+ * The owner is decoupled from any [net.minecraft.client.gui.screens.Screen]: a [ComposeLayer] drives
+ * it for a full-screen screen or for a sub-region embedded inside an arbitrary existing screen. All
+ * pointer input is in **layer-local logical** coordinates; the current mouse position exposed to the
+ * tree ([mousePosition]) is in **global logical** coordinates (local + [uiOrigin]) so it stays
+ * comparable with `positionInWindow()`.
  */
-internal class ComposeOwner(private val screen: Screen) : Owner {
+internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
 
     override var density: Density = Density(1f)
     override var layoutDirection: LayoutDirection = LayoutDirection.Ltr
@@ -296,6 +301,12 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
 
     val tooltipHost = TooltipHost()
 
+    /** Per-frame callbacks (smooth-scroll stepping etc.); advanced at the start of [render]. */
+    val frameCallbacks = FrameCallbackHost()
+
+    /** Logical-space origin of this layer inside the window, added to `positionInWindow()`. */
+    var uiOrigin: Offset = Offset.Zero
+
     /** Whole-UI zoom factor applied around every render pass (see [setUiScaleFactor]). */
     var uiScale by mutableFloatStateOf(1f)
 
@@ -313,8 +324,15 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
     private var activeButton: PointerButton? = null
     private var hoverPosition: Offset? = null
 
-    /** Logical root-space mouse position for the current frame, updated every render. */
+    /** Logical root-space mouse position for the current frame, updated every render / input event. */
     val mousePosition = MousePosition(IntOffset.Zero)
+
+    private fun updateMousePosition(local: Offset) {
+        mousePosition.position = IntOffset(
+            (local.x + uiOrigin.x).roundToInt(),
+            (local.y + uiOrigin.y).roundToInt(),
+        )
+    }
 
     // -------------------------------------------------------------------------------------------
     // Content
@@ -333,6 +351,7 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
                     LocalTooltipHost provides tooltipHost,
                     LocalUiScale provides uiScale,
                     LocalMousePosition provides mousePosition,
+                    LocalFrameCallbacks provides frameCallbacks,
                 ) {
                     content()
                 }
@@ -349,15 +368,20 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
         // Drive suspendable animations (Recomposer loop + animation effects) with this frame.
         frameClock.onNewFrame()
         val scale = uiScale
+        // Per-frame callbacks (e.g. scroll-state smoothing) run before the snapshot apply / measure
+        // / draw of the same frame, so animation refresh rate == game frame rate, no coroutine lag.
+        frameCallbacks.advance()
         SnapshotSync.requestApply()
+        val size = sizeProvider()
         measureAndLayoutDelegate.updateRootConstraints(
-            Constraints(maxWidth = (screen.width / scale).toInt(), maxHeight = (screen.height / scale).toInt()),
+            Constraints(maxWidth = size.width, maxHeight = size.height),
         )
         measureAndLayout()
-        dispatchMouseMove(mouseX / scale, mouseY / scale)
+        dispatchMouseMove(mouseX / scale - uiOrigin.x, mouseY / scale - uiOrigin.y)
         McGraphics.current = graphics
         try {
             graphics.pose().pushPose()
+            graphics.pose().translate(uiOrigin.x * scale, uiOrigin.y * scale, 0f)
             graphics.pose().scale(scale, scale, 1f)
             root.draw(McCanvas(graphics), null)
             graphics.pose().popPose()
@@ -367,16 +391,16 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
     }
 
     // -------------------------------------------------------------------------------------------
-    // Mouse input
+    // Mouse input (layer-local logical coordinates)
     // -------------------------------------------------------------------------------------------
 
-    fun onMouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
+    fun onMouseClicked(x: Float, y: Float, button: Int): Boolean {
         if (button != 0 && button != 1) return false
         val pointerButton = if (button == 0) PointerButton.Primary else PointerButton.Secondary
         activeButton = pointerButton
         mouseDown = true
-        val position = Offset((mouseX / uiScale).toFloat(), (mouseY / uiScale).toFloat())
-        mousePosition.position = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+        val position = Offset(x, y)
+        updateMousePosition(position)
         return processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Press,
@@ -388,12 +412,12 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
         )
     }
 
-    fun onMouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
+    fun onMouseReleased(x: Float, y: Float, button: Int): Boolean {
         val pointerButton = activeButton ?: return false
         mouseDown = false
         activeButton = null
-        val position = Offset((mouseX / uiScale).toFloat(), (mouseY / uiScale).toFloat())
-        mousePosition.position = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+        val position = Offset(x, y)
+        updateMousePosition(position)
         return processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Release,
@@ -405,9 +429,9 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
         )
     }
 
-    fun onMouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
-        val position = Offset((mouseX / uiScale).toFloat(), (mouseY / uiScale).toFloat())
-        mousePosition.position = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+    fun onMouseScrolled(x: Float, y: Float, delta: Double): Boolean {
+        val position = Offset(x, y)
+        updateMousePosition(position)
         return processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Scroll,
@@ -420,8 +444,9 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
 
     private fun dispatchMouseMove(x: Float, y: Float) {
         val position = Offset(x, y)
-        mousePosition.position = IntOffset(x.roundToInt(), y.roundToInt())
-        val inside = x in 0f..(screen.width / uiScale).toFloat() && y in 0f..(screen.height / uiScale).toFloat()
+        updateMousePosition(position)
+        val size = sizeProvider()
+        val inside = x in 0f..size.width.toFloat() && y in 0f..size.height.toFloat()
         if (!inside) {
             if (hoverPosition != null) {
                 hoverPosition = null
@@ -488,9 +513,9 @@ internal class ComposeOwner(private val screen: Screen) : Owner {
         snapshotObserver.clear(node)
     }
 
-    override fun calculatePositionInWindow(localPosition: Offset): Offset = localPosition
+    override fun calculatePositionInWindow(localPosition: Offset): Offset = localPosition + uiOrigin
 
-    override fun calculateLocalPosition(positionInWindow: Offset): Offset = positionInWindow
+    override fun calculateLocalPosition(positionInWindow: Offset): Offset = positionInWindow - uiOrigin
 
     override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
 
@@ -617,15 +642,6 @@ private fun buildPointerEvent(
         keyboardModifiers = PointerKeyboardModifiers(),
         button = button,
     )
-}
-
-/**
- * Hands the active [GuiGraphics] to composable draw modifiers that paint text with the Minecraft
- * font. Set around every [ComposeOwner.render] pass; text components read it from their
- * `drawBehind` scope and call GuiGraphics directly, bypassing the official text/skiko pipeline.
- */
-internal object McGraphics {
-    var current: GuiGraphics? = null
 }
 
 private object IdentityPositionCalculator : PositionCalculator {
