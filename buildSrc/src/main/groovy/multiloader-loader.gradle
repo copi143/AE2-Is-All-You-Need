@@ -76,6 +76,10 @@ tasks.named('sourcesJar', Jar) {
     from(configurations.commonKotlin)
     dependsOn(configurations.commonResources)
     from(configurations.commonResources)
+    // common/res is a generated, gitignored source dir: sourcesJar consumes it via commonResources,
+    // so declare the same dependency as processResources to satisfy Gradle's implicit-dependency
+    // validation and guarantee up-to-date assets.
+    dependsOn(':common:generateAssets')
 }
 
 // Use dokka to generate javadoc for both Java and Kotlin sources
