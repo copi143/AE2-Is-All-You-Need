@@ -80,7 +80,7 @@ enum class EnergyCell(size: Double = -1.0) {
     val isCreative: Boolean = size < 0
 
     val blockId: ResourceLocation =
-        ((prefix ?: "creative") + (if (isSelfPowered) "_self_powered" else "") + "_Energy_cell").rl
+        ((prefix ?: "creative") + (if (isSelfPowered) "_self_powered" else "") + "_energy_cell").rl
 
     val blockSupplier = when {
         isCreative -> Supplier<Block> { CreativeEnergyCellBlock() }
