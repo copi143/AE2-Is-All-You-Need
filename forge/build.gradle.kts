@@ -1,32 +1,34 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
-import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
 
 plugins {
+    kotlin("kapt")
     id("multiloader-loader")
     alias(libs.plugins.moddev)
-    alias(libs.plugins.kotlinCompose)
+    alias(libs.plugins.kotlin.compose)
 }
 
-val modId: String by project
+val modId = project.property("modId") as String
 
 mixin {
-    add(sourceSets.main.get(), "${modId}.refmap.json")
-    config("${modId}.mixins.json")
-    config("${modId}.forge.mixins.json")
+    add(sourceSets.main.get(), "$modId.refmap.json")
+    config("$modId.mixins.json")
+    config("$modId.forge.mixins.json")
 }
+
 tasks.jar {
     manifest {
-        attributes["MixinConfigs"] = "${modId}.mixins.json,${modId}.forge.mixins.json"
+        attributes["MixinConfigs"] = "$modId.mixins.json,$modId.forge.mixins.json"
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-neoForge {
-    version = libs.versions.forge
+legacyForge {
+    version = libs.versions.forge.get()
     // Automatically enable neoforge AccessTransformers if the file exists
     val at = project(":common").file("src/main/resources/META-INF/accesstransformer.cfg")
     if (at.exists()) {
@@ -61,7 +63,7 @@ neoForge {
 sourceSets.main.get().resources { srcDir("src/generated/resources") }
 
 dependencies {
-    modImplementation(libs.kff)
+    implementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
     // JiJ onto mod classloader. Non-transitive; skip kotlin-stdlib/coroutines (KFF) and antlr (Forge CP).
@@ -91,6 +93,7 @@ dependencies {
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:additions")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:generators")
     modRuntimeOnly("mekanism:Mekanism:${libs.versions.mek.get()}:tools")
+    testImplementation(kotlin("test"))
 }
 
 // Drop module-info so atomicfu does not require a separate kotlin.stdlib module (KFF provides Kotlin).
@@ -147,4 +150,7 @@ tasks.named<Jar>("jar") {
     from(cleanJarJarMetadata) {
         rename { "META-INF/jarjar/metadata.json" }
     }
+}
+repositories {
+    mavenCentral()
 }

@@ -1,11 +1,11 @@
 plugins {
     id("multiloader-common")
     alias(libs.plugins.moddev)
-    alias(libs.plugins.kotlinCompose)
+    alias(libs.plugins.kotlin.compose)
 }
 
-neoForge {
-    neoFormVersion = libs.versions.neoForm
+legacyForge {
+    mcpVersion = libs.versions.neoForm.get()
     // Automatically enable AccessTransformers if the file exists
     val at = file("src/main/resources/META-INF/accesstransformer.cfg")
     if (at.exists()) {
@@ -150,6 +150,8 @@ sourceSets.create("resgen") {
         mainClass.set("allyouneed.resgen.MainKt")
         javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
         workingDir = rootProject.layout.projectDirectory.asFile
+        inputs.dir(layout.projectDirectory.dir("resgen"))
+        outputs.dir(layout.projectDirectory.dir("res"))
     }
     tasks.jar {
         dependsOn(it.classesTaskName)

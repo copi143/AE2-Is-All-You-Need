@@ -3,6 +3,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "AE2-Is-All-You-Need"
 
 pluginManagement {
+    // includeBuild("build-logic")
     repositories {
         gradlePluginPortal()
         mavenCentral()
@@ -19,6 +20,9 @@ pluginManagement {
             }
         }
     }
+    plugins {
+        kotlin("kapt") version "2.4.10"
+    }
 }
 
 dependencyResolutionManagement {
@@ -30,7 +34,7 @@ dependencyResolutionManagement {
 }
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 include("common")

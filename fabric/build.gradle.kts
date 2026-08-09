@@ -1,7 +1,7 @@
 plugins {
     id("multiloader-loader")
     alias(libs.plugins.loom)
-    alias(libs.plugins.kotlinCompose)
+    alias(libs.plugins.kotlin.compose)
 }
 
 val modId: String by project

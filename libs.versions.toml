@@ -1,7 +1,9 @@
 [versions]
 java = "17"
 kotlin = "2.4.10"
-moddev = "2.0.52-beta"
+# kotlin-dsl = "6.7.6"
+# dokka = "2.2.0"
+moddev = "2.0.143"
 loom = "1.9-SNAPSHOT"
 dokka = "1.9.20"
 
@@ -76,7 +78,8 @@ gtceu = { module = "com.gregtechceu.gtceu:gtceu-1.20.1", version.ref = "gtceu" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# kotlin-dsl = { id = "org.gradle.kotlin.kotlin-dsl", version.ref = "kotlin-dsl" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 moddev = { id = "net.neoforged.moddev.legacyforge", version.ref = "moddev" }
 loom = { id = "fabric-loom", version.ref = "loom" }

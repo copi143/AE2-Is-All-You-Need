@@ -60,6 +60,9 @@ tasks.named('compileKotlin') {
 processResources {
     dependsOn(configurations.commonResources)
     from(configurations.commonResources)
+    // common/res is a generated, gitignored source dir: always regenerate it before packaging so
+    // build/jar/run* pick up the latest assets even on a fresh clone.
+    dependsOn(':common:generateAssets')
     // Compose classes go to the exploded dev resources so runClient sees them exactly like the
     // built jar does (the jar task merges the same configuration).
     dependsOn(configurations.composeClasses)
