@@ -47,6 +47,7 @@ loom {
         accessWidenerPath.set(aw)
     }
     mixin {
+        useLegacyMixinAp = true
         defaultRefmapName.set("${modId}.refmap.json")
     }
     runs {

@@ -4,7 +4,7 @@ kotlin = "2.4.10"
 # kotlin-dsl = "6.7.6"
 # dokka = "2.2.0"
 moddev = "2.0.143"
-loom = "1.9-SNAPSHOT"
+loom = "1.17.12"
 dokka = "1.9.20"
 
 minecraft = "1.20.1"
@@ -23,7 +23,7 @@ kff = "4.12.0"
 kffRange = "[4, )"
 
 fabricLoader = "0.16.9"
-fabricApi = "0.92.2+1.20.1"
+fabricApi = "0.92.11+1.20.1"
 flk = "1.12.3+kotlin.2.0.21"
 
 junit = "5.10.5"
@@ -89,4 +89,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 # kotlin-dsl = { id = "org.gradle.kotlin.kotlin-dsl", version.ref = "kotlin-dsl" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 moddev = { id = "net.neoforged.moddev.legacyforge", version.ref = "moddev" }
-loom = { id = "fabric-loom", version.ref = "loom" }
+loom = { id = "net.fabricmc.fabric-loom-remap", version.ref = "loom" }
