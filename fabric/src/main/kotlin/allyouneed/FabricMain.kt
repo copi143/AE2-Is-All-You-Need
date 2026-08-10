@@ -8,10 +8,11 @@ import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
 import allyouneed.logic.machine.MachineTypeReloadListener
 import allyouneed.logic.machine.ManualMachineRecipeReloadListener
-import allyouneed.util.id.mac.MacAddressRegistry
 import allyouneed.util.MODID
 import allyouneed.util.id.KeyIdRegistry
+import allyouneed.util.id.mac.MacAddressRegistry
 import allyouneed.util.logger
+import allyouneed.util.rl
 import appeng.api.features.P2PTunnelAttunement
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
@@ -47,7 +48,7 @@ fun init() {
     }
     Registry.register(
         BuiltInRegistries.BLOCK_ENTITY_TYPE,
-        ResourceLocation(MODID, "self_powered_energy_cell"),
+        "self_powered_energy_cell".rl,
         EnergyCell.selfPoweredBlockEntityType,
     )
 
@@ -59,7 +60,7 @@ fun init() {
     }
     Registry.register(
         BuiltInRegistries.BLOCK_ENTITY_TYPE,
-        ResourceLocation(MODID, "crafting_storage"),
+        "crafting_storage".rl,
         CraftingStorage.blockEntityType,
     )
 

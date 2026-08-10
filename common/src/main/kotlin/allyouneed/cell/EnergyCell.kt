@@ -1,6 +1,6 @@
 package allyouneed.cell
 
-import allyouneed.aekey.EnergyKey
+import allyouneed.logic.aekey.EnergyKey
 import allyouneed.util.*
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem

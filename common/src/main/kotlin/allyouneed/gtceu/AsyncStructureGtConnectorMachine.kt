@@ -30,12 +30,8 @@ import java.util.*
  * as the host structure is formed. The connector is linked to its host structure's controller by
  * the controller's detector.
  */
-abstract class AsyncStructureGtConnectorMachine(
-    holder: IMachineBlockEntity,
-) : MetaMachine(holder),
-    IGridConnectedMachine,
-    IAsyncChannelSink,
-    IAsyncChannelView {
+abstract class AsyncStructureGtConnectorMachine(holder: IMachineBlockEntity) : MetaMachine(holder),
+    IGridConnectedMachine, IAsyncChannelSink, IAsyncChannelView {
 
     private val gridNodeHolder: AsyncStructureGridNodeTrait = AsyncStructureGridNodeTrait(this)
 
@@ -102,8 +98,7 @@ abstract class AsyncStructureGtConnectorMachine(
         get() = gridNodeHolder.getMainNode().isOnline
 
     override val swallowedChannels: Int
-        get() = (gridNodeHolder.getMainNode().node as? AsyncChannelNodeHolder)
-            ?.asyncSwallowedChannels ?: 0
+        get() = (gridNodeHolder.getMainNode().node as? AsyncChannelNodeHolder)?.asyncSwallowedChannels ?: 0
 
     override val isInfiniteChannelMode: Boolean
         get() = gridNodeHolder.getMainNode().node?.grid?.pathingService?.channelMode == ChannelMode.INFINITE
@@ -150,8 +145,7 @@ class AsyncStructureGridNodeTrait(
         val host = connector.getHostController() ?: return nodes.iterator()
         val level = machine.level ?: return nodes.iterator()
         for (pos in host.connectorPositions()) {
-            val node = (MetaMachine.getMachine(level, pos) as? AsyncStructureGtConnectorMachine)
-                ?.getMainNode()?.node
+            val node = (MetaMachine.getMachine(level, pos) as? AsyncStructureGtConnectorMachine)?.getMainNode()?.node
             if (node != null) {
                 nodes.add(node)
             }

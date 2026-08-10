@@ -1,8 +1,7 @@
 package allyouneed
 
-import allyouneed.aekey.EnergyKey
-import allyouneed.aekey.ManaKey
-import allyouneed.aekey.ManaType
+import allyouneed.logic.aekey.EnergyKey
+import allyouneed.logic.aekey.ManaKey
 import allyouneed.cell.creative.CreativeMeCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
 import allyouneed.cell.item.ItemStorageCell

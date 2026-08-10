@@ -9,6 +9,7 @@ import appeng.api.networking.crafting.ICraftingSimulationRequester;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.me.service.CraftingService;
+import kotlin.jvm.functions.Function0;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -44,6 +45,6 @@ public abstract class CraftingServiceMixin {
         final ACraftingCalculation job = new ACraftingCalculation(
                 level, this.grid, simRequester, new GenericStack(what, amount), strategy);
 
-        return AE2TaskScheduler.submit(job::run);
+        return AE2TaskScheduler.submit((Function0<? extends ICraftingPlan>) job::run);
     }
 }

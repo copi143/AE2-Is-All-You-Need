@@ -1,4 +1,4 @@
-package allyouneed.aekey
+package allyouneed.logic.aekey
 
 import kotlin.math.roundToInt
 

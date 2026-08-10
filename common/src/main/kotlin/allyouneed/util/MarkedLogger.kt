@@ -2,8 +2,9 @@ package allyouneed.util
 
 import org.slf4j.Logger
 import org.slf4j.Marker
+import org.slf4j.MarkerFactory
 
-@Suppress("unused", "JavaDefaultMethodsNotOverriddenByDelegation")
+@Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
 class MarkedLogger(private val target: Logger, private val attached: Marker) : Logger by target {
     override fun isTraceEnabled(): Boolean = target.isTraceEnabled(attached)
     override fun trace(msg: String) = target.trace(attached, msg)
@@ -39,4 +40,8 @@ class MarkedLogger(private val target: Logger, private val attached: Marker) : L
     override fun error(format: String, arg1: Any?, arg2: Any?) = target.error(attached, format, arg1, arg2)
     override fun error(format: String, vararg arguments: Any?) = target.error(attached, format, *arguments)
     override fun error(msg: String, t: Throwable) = target.error(attached, msg, t)
+
+    companion object {
+        fun Logger.marked(name: String) = MarkedLogger(this, MarkerFactory.getMarker(name))
+    }
 }

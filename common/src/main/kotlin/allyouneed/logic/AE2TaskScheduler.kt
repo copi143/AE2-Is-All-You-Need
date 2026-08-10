@@ -1,8 +1,6 @@
 package allyouneed.logic
 
-import allyouneed.logic.AE2TaskScheduler.submit
-import allyouneed.util.MarkedLogger
-import org.slf4j.MarkerFactory
+import allyouneed.util.MarkedLogger.Companion.marked
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -21,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong
  * @see docs/Crafting-Calculation.md
  */
 object AE2TaskScheduler {
-    val logger = MarkedLogger(allyouneed.util.logger, MarkerFactory.getMarker("Task"))
+    private val logger = allyouneed.util.logger.marked("Task")
 
     val parallelism: Int = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 
@@ -43,22 +41,18 @@ object AE2TaskScheduler {
 
     private val pool: ExecutorService = Executors.newFixedThreadPool(parallelism, threadFactory)
 
-    /** Java-friendly executor (same pool). */
-    @JvmField
-    val executor: Executor = pool
-
     /**
      * Submit a callable. Returns a [CompletableFuture] that completes with the result.
      * [CompletableFuture.cancel] with `mayInterruptIfRunning=true` interrupts the worker thread.
      */
     @JvmStatic
-    fun <T> submit(task: Callable<T>): CompletableFuture<T> {
+    fun <T> submit(task: () -> T): CompletableFuture<T> {
         val id = submitted.incrementAndGet()
         logger.debug("submit #$id (active≈$activeTaskCount, pool=$parallelism)")
 
         val future = CompletableFuture.supplyAsync({
             try {
-                val result = task.call()
+                val result = task()
                 completed.incrementAndGet()
                 logger.debug("complete #$id")
                 result
@@ -75,28 +69,10 @@ object AE2TaskScheduler {
     }
 
     @JvmStatic
-    fun submit(task: Runnable): CompletableFuture<Void> {
-        val id = submitted.incrementAndGet()
-        logger.debug("submit #$id runnable (active≈$activeTaskCount, pool=${parallelism})")
-        @Suppress("UNCHECKED_CAST") val future = CompletableFuture.supplyAsync({
-            try {
-                task.run()
-                completed.incrementAndGet()
-                logger.debug("complete #$id")
-                null as Void?
-            } catch (e: Throwable) {
-                failed.incrementAndGet()
-                logger.info("task #$id failed", e)
-                throw e
-            }
-        }, pool) as CompletableFuture<Void>
-        inFlight.add(future)
-        future.whenComplete { _, _ -> inFlight.remove(future) }
-        return future
-    }
+    fun submit(task: Runnable): CompletableFuture<Unit> = submit { task.run() }
 
     @JvmStatic
-    fun <T> submit(task: () -> T): CompletableFuture<T> = submit(Callable { task() })
+    fun <T> submit(task: Callable<T>): CompletableFuture<T> = submit { task.call() }
 
     /**
      * Approximate number of tasks that have been submitted but not yet finished
