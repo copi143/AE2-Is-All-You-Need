@@ -9,8 +9,8 @@ import allyouneed.cell.CraftingStorage
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellItem
 import allyouneed.gtceu.AsyncStructureGtStatusMenu
-import allyouneed.iodrive.MEIODriveMenu
-import allyouneed.iodrive.MEIODriveScreen
+import allyouneed.parts.iodrive.MEIODriveMenu
+import allyouneed.parts.iodrive.MEIODriveScreen
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.parts.machineassembler.MachineAssemblerScreen
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu

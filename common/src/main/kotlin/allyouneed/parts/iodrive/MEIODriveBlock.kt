@@ -1,4 +1,4 @@
-package allyouneed.iodrive
+package allyouneed.parts.iodrive
 
 import appeng.block.AEBaseEntityBlock
 import appeng.menu.MenuOpener
@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.BlockHitResult
 
-class MEIODriveBlock(props: Properties) : AEBaseEntityBlock<MEIODriveBlockEntity>(props) {
+class MEIODriveBlock(props: Properties) : appeng.block.AEBaseEntityBlock<MEIODriveBlockEntity>(props) {
 
     override fun newBlockEntity(pos: BlockPos, state: BlockState): BlockEntity {
         return MEIODriveBlockEntity(

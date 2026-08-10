@@ -1,4 +1,4 @@
-package allyouneed.iodrive
+package allyouneed.parts.iodrive
 
 import net.minecraft.world.level.block.entity.BlockEntityType
 

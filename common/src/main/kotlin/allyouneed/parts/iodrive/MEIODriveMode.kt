@@ -1,4 +1,4 @@
-package allyouneed.iodrive
+package allyouneed.parts.iodrive
 
 enum class MEIODriveMode(val label: String) {
     PAUSED("Paused"),

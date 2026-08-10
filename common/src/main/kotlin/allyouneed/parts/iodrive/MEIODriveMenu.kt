@@ -1,4 +1,4 @@
-package allyouneed.iodrive
+package allyouneed.parts.iodrive
 
 import appeng.menu.AEBaseMenu
 import appeng.menu.SlotSemantics
@@ -11,7 +11,7 @@ class MEIODriveMenu(
     id: Int,
     playerInventory: Inventory,
     host: MEIODriveBlockEntity,
-) : AEBaseMenu(TYPE, id, playerInventory, host) {
+) : appeng.menu.AEBaseMenu(TYPE, id, playerInventory, host) {
 
     init {
         val inv = host.getInternalInventory()

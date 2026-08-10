@@ -1,9 +1,9 @@
 package allyouneed.fabric.init
 
 import allyouneed.async.*
-import allyouneed.iodrive.MEIODriveBlock
-import allyouneed.iodrive.MEIODriveBlockEntity
-import allyouneed.iodrive.MEIODriveRegistration
+import allyouneed.parts.iodrive.MEIODriveBlock
+import allyouneed.parts.iodrive.MEIODriveBlockEntity
+import allyouneed.parts.iodrive.MEIODriveRegistration
 import allyouneed.parts.machineassembler.MachineAssemblerBlock
 import allyouneed.parts.machineassembler.MachineAssemblerBlockEntity
 import allyouneed.parts.machineassembler.MachineAssemblerRegistration
@@ -181,19 +181,19 @@ object FabricBlocks {
 
         for (kind in structureKinds) {
             @Suppress("UNCHECKED_CAST") (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureBlockEntity>).setBlockEntity(
-                    AsyncStructureBlockEntity::class.java,
-                    structureBE,
-                    null,
-                    null
-                )
+                AsyncStructureBlockEntity::class.java,
+                structureBE,
+                null,
+                null
+            )
         }
         for (kind in connectorKinds) {
             @Suppress("UNCHECKED_CAST") (asyncStructureInstance(kind) as AEBaseEntityBlock<AsyncStructureConnectorBlockEntity>).setBlockEntity(
-                    AsyncStructureConnectorBlockEntity::class.java,
-                    structureConnectorBE,
-                    null,
-                    null
-                )
+                AsyncStructureConnectorBlockEntity::class.java,
+                structureConnectorBE,
+                null,
+                null
+            )
         }
 
         for (kind in AsyncBlockKind.entries) {

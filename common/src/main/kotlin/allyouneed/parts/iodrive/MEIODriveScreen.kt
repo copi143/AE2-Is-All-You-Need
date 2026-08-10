@@ -1,4 +1,4 @@
-package allyouneed.iodrive
+package allyouneed.parts.iodrive
 
 import appeng.client.gui.AEBaseScreen
 import appeng.client.gui.style.ScreenStyle
@@ -10,7 +10,7 @@ class MEIODriveScreen(
     playerInventory: Inventory,
     title: Component,
     style: ScreenStyle,
-) : AEBaseScreen<MEIODriveMenu>(menu, playerInventory, title, style) {
+) : appeng.client.gui.AEBaseScreen<MEIODriveMenu>(menu, playerInventory, title, style) {
 
     init {
         widgets.addOpenPriorityButton()

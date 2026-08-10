@@ -1,4 +1,4 @@
-package allyouneed.iodrive
+package allyouneed.parts.iodrive
 
 import appeng.api.config.Actionable
 import appeng.api.implementations.blockentities.IChestOrDrive
@@ -30,7 +30,7 @@ class MEIODriveBlockEntity(
     type: BlockEntityType<*>,
     pos: BlockPos,
     state: BlockState,
-) : AENetworkInvBlockEntity(type, pos, state),
+) : appeng.blockentity.grid.AENetworkInvBlockEntity(type, pos, state),
     IChestOrDrive,
     IStorageProvider,
     IGridTickable {

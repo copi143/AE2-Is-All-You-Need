@@ -2,9 +2,9 @@ package allyouneed.forge.init
 
 import allyouneed.Platform
 import allyouneed.async.*
-import allyouneed.iodrive.MEIODriveBlock
-import allyouneed.iodrive.MEIODriveBlockEntity
-import allyouneed.iodrive.MEIODriveRegistration
+import allyouneed.parts.iodrive.MEIODriveBlock
+import allyouneed.parts.iodrive.MEIODriveBlockEntity
+import allyouneed.parts.iodrive.MEIODriveRegistration
 import allyouneed.parts.machineassembler.MachineAssemblerBlock
 import allyouneed.parts.machineassembler.MachineAssemblerBlockEntity
 import allyouneed.parts.machineassembler.MachineAssemblerRegistration

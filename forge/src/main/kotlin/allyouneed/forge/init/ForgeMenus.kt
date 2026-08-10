@@ -3,7 +3,7 @@ package allyouneed.forge.init
 import allyouneed.Platform
 import allyouneed.async.AsyncCraftingStatusMenu
 import allyouneed.gtceu.AsyncStructureGtStatusMenu
-import allyouneed.iodrive.MEIODriveMenu
+import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
 import allyouneed.pattern.machine.MachinePatternTerminalMenu
