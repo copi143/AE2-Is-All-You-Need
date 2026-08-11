@@ -61,7 +61,3 @@ class CopiedNetworkSimulationState(private val list: KeyCounter) : CraftingSimul
     override fun findFuzzyParent(input: AEKey): Iterable<AEKey> =
         Iterables.transform(list.findFuzzy(input, FuzzyMode.IGNORE_ALL)) { it.key }
 }
-
-class InventorySnapshot {
-//    val map = Int2ObjectOpenHashMap
-}

@@ -25,9 +25,7 @@ import java.util.concurrent.Future
  * - [getFuzzyCraftable] (via local craftable [KeyCounter])
  * - [getCraftables]
  */
-class CachedCraftingService(
-    live: ICraftingService,
-) : ICraftingService {
+class CachedCraftingService(live: ICraftingService) : ICraftingService {
 
     private val patterns: Map<AEKey, List<IPatternDetails>>
     private val emittables: Set<AEKey>
@@ -65,11 +63,9 @@ class CachedCraftingService(
         )
     }
 
-    override fun getCraftingFor(whatToCraft: AEKey): Collection<IPatternDetails> =
-        patterns[whatToCraft] ?: emptyList()
+    override fun getCraftingFor(whatToCraft: AEKey): Collection<IPatternDetails> = patterns[whatToCraft] ?: emptyList()
 
-    override fun canEmitFor(someItem: AEKey): Boolean =
-        emittables.contains(someItem)
+    override fun canEmitFor(someItem: AEKey): Boolean = emittables.contains(someItem)
 
     override fun getFuzzyCraftable(whatToCraft: AEKey, filter: AEKeyFilter): AEKey? {
         for (entry in craftableFuzzyIndex.findFuzzy(whatToCraft, FuzzyMode.IGNORE_ALL)) {
@@ -81,8 +77,7 @@ class CachedCraftingService(
         return null
     }
 
-    override fun isCraftable(whatToCraft: AEKey): Boolean =
-        patterns.containsKey(whatToCraft)
+    override fun isCraftable(whatToCraft: AEKey): Boolean = patterns.containsKey(whatToCraft)
 
     override fun getCraftables(filter: AEKeyFilter): Set<AEKey> {
         val result = HashSet<AEKey>()

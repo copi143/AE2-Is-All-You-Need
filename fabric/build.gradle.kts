@@ -17,6 +17,8 @@ dependencies {
 
     modImplementation(libs.flk)
 
+    include(libs.ojalgo)
+
 //    modRuntimeOnly("dev.ftb.mods:ftb-quests-fabric:${libs.versions.ftb.get()}")
 
     modImplementation(libs.jei.fabric)
@@ -37,7 +39,6 @@ dependencies {
     implementation(project(":kaptor"))
     implementation(libs.compose.runtime)
     include(project(":kaptor"))
-    // Compose UI classes are merged straight into the mod jar via :common's composeClasses, not include.
     include("org.antlr:antlr4-runtime:4.9.1")
 }
 

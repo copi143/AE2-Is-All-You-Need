@@ -31,6 +31,7 @@ junit-launcher = "1.10.0"
 kotlinx-coroutines-core = "1.11.0"
 mixin = "0.8.5"
 compose = "1.12.0-beta03"
+ojalgo = "57.1.0"
 
 mui-core = "3.12.0"
 mui = "1.20.1-3.12.0.1"
@@ -64,6 +65,7 @@ compose-foundation = { module = "org.jetbrains.compose.foundation:foundation-des
 compose-foundation-layout = { module = "org.jetbrains.compose.foundation:foundation-layout-desktop", version.ref = "compose" }
 compose-animation = { module = "org.jetbrains.compose.animation:animation-desktop", version.ref = "compose" }
 compose-material = { module = "org.jetbrains.compose.material:material-desktop", version.ref = "compose" }
+ojalgo = { module = "org.ojalgo:ojalgo", version.ref = "ojalgo" }
 
 mui-core = { module = "icyllis.modernui:ModernUI-Core", version.ref = "mui-core" }
 mui = { module = "icyllis.modernui:ModernUI-Forge", version.ref = "mui" }

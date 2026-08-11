@@ -74,6 +74,8 @@ dependencies {
     // Compose UI classes are merged straight into the mod jar via :common's composeClasses, not jarJar.
     jarJar(project(":kaptor"))
 
+    jarJar(libs.ojalgo)
+
     // ModernUI-Core is jarJar'd so the dev (exploded) run can load it via Forge's META-INF/jarjar
     // mechanism - it has no mods.toml and no Automatic-Module-Name, so ModLauncher silently skips it
     // on the plain classpath. stripModernUiCore removes it again before packaging so the release jar

@@ -19,16 +19,17 @@ legacyForge {
 }
 
 dependencies {
-    api(libs.kotlinx.coroutines.core)
     compileOnly(libs.mixin)
+    api(libs.kotlinx.coroutines.core)
     api(project(":kaptor"))
-    @Suppress("AvoidDuplicateDependencies") listOf(
+    listOf(
         libs.compose.runtime,
         libs.compose.ui,
         libs.compose.foundation,
         libs.compose.foundation.layout,
         libs.compose.animation,
         libs.compose.material,
+        libs.ojalgo,
     ).forEach {
         api(it)
         testImplementation(it)
@@ -172,6 +173,7 @@ sourceSets.create("resgen") {
         "resgenImplementation"("com.github.ajalt.colormath:colormath:3.6.1")
         "resgenImplementation"("com.google.code.gson:gson:2.10.1")
         "resgenImplementation"(libs.compose.runtime)
+        "resgenImplementation"(libs.ojalgo)
     }
 }
 

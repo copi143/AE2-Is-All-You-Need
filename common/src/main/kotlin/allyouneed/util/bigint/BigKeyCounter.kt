@@ -3,7 +3,6 @@ package allyouneed.util.bigint
 import allyouneed.util.saturateToLong
 import appeng.api.stacks.AEKey
 import appeng.api.stacks.KeyCounter
-import it.unimi.dsi.fastutil.objects.Object2LongMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import java.math.BigInteger
@@ -11,10 +10,11 @@ import java.util.*
 import java.util.function.Consumer
 
 /** Network-wide amount tally using [BigInteger] to avoid long overflow when summing cells. */
-class BigKeyCounter : Iterable<Object2LongMap.Entry<AEKey>> {
-    private val amounts = Object2ObjectOpenHashMap<AEKey, BigInteger>()
+class BigKeyCounter(
+    private val amounts: Object2ObjectOpenHashMap<AEKey, BigInteger> = Object2ObjectOpenHashMap<AEKey, BigInteger>()
+) : Object2ObjectMap<AEKey, BigInteger> by amounts {
 
-    fun clear() {
+    override fun clear() {
         amounts.clear()
     }
 
@@ -35,30 +35,22 @@ class BigKeyCounter : Iterable<Object2LongMap.Entry<AEKey>> {
     }
 
     fun addAll(other: BigKeyCounter) {
-        for (entry in other.amounts.object2ObjectEntrySet()) {
-            add(entry.key, entry.value)
+        for ((key, value) in other.amounts.object2ObjectEntrySet()) {
+            add(key, value)
         }
     }
 
-    fun set(key: AEKey, amount: BigInteger?) {
-        if (amount == null || amount.signum() == 0) {
+    fun set(key: AEKey, amount: BigInteger) {
+        if (amount.signum() == 0) {
             amounts.remove(key)
         } else {
             amounts[key] = amount
         }
     }
 
-    fun get(key: AEKey): BigInteger = amounts.getOrDefault(key, BigInteger.ZERO)
+    override fun get(key: AEKey): BigInteger = amounts.getOrDefault(key, BigInteger.ZERO)
 
     fun getSaturatedLong(key: AEKey): Long = get(key).saturateToLong()
-
-    fun isEmpty(): Boolean = amounts.isEmpty()
-
-    fun size(): Int = amounts.size
-
-    fun keySet(): Set<AEKey> = Collections.unmodifiableSet(amounts.keys)
-
-    fun entries(): Object2ObjectMap.FastEntrySet<AEKey, BigInteger> = amounts.object2ObjectEntrySet()
 
     fun removeZeros() {
         amounts.object2ObjectEntrySet().removeIf { it.value.signum() == 0 }
@@ -89,10 +81,6 @@ class BigKeyCounter : Iterable<Object2LongMap.Entry<AEKey>> {
         for (entry in amounts.object2ObjectEntrySet()) {
             out.add(entry.key, entry.value.saturateToLong())
         }
-    }
-
-    override fun iterator(): Iterator<Object2LongMap.Entry<AEKey>> {
-        TODO("Not yet implemented")
     }
 
     companion object {
