@@ -1,6 +1,8 @@
 package allyouneed.logic.crafting
 
 import allyouneed.logic.AE2TaskScheduler
+import allyouneed.util.bigint.BigStack
+import allyouneed.util.logger
 import appeng.api.networking.IGrid
 import appeng.api.networking.crafting.CalculationStrategy
 import appeng.api.networking.crafting.ICraftingPlan
@@ -39,15 +41,13 @@ class ACraftingCalculation(
     private val missing = KeyCounter()
     private val output: AEKey = output.what()
     private val requestedAmount: Long = output.amount()
-    private val attempts: MutableList<CraftAttempt>? =
-        if (AELog.isCraftingLogEnabled()) ArrayList() else null
+    private val attempts: MutableList<CraftAttempt>? = if (AELog.isCraftingLogEnabled()) ArrayList() else null
 
     private val cachedPatterns: ICraftingService = CachedCraftingService(grid.craftingService)
 
-    private val networkInv: CopiedNetworkSimulationState =
-        CopiedNetworkSimulationState(
-            MeInventorySnapshot.copy(grid.storageService, simRequester.actionSource)
-        )
+    private val networkInv: CopiedNetworkSimulationState = CopiedNetworkSimulationState(
+        MeInventorySnapshot.copy(grid.storageService, simRequester.actionSource)
+    )
 
     private val tree: ACraftingTreeNode = ACraftingTreeNode(cachedPatterns, this, this.output, 1, null, -1)
 
@@ -59,6 +59,17 @@ class ACraftingCalculation(
     private var incTime = Int.MAX_VALUE
 
     private var overallSuccessProbability = 1.0
+
+    init {
+        try {
+            logger.info("ACraftingCalculation Testing")
+            if (level != null) {
+                CraftingInventorySnapshot(level, grid, BigStack.from(output))
+            }
+        } catch (e: Throwable) {
+            logger.warn("CraftingInventorySnapshot Testing failed", e)
+        }
+    }
 
     fun addMissing(what: AEKey, amount: Long) {
         missing.add(what, amount)

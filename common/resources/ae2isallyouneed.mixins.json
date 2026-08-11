@@ -16,7 +16,6 @@
     "ae2.CraftingServiceMixin",
     "ae2.CraftingStatusMenuMixin",
     "ae2.DelegatingMEInventoryAccessor",
-    "ae2.FuzzySearchAccessor",
     "ae2.GridInventoryEntryMixin",
     "ae2.GridNodeMixin",
     "ae2.IPartMixin",

@@ -1,79 +1,103 @@
 package allyouneed.logic.crafting
 
-import allyouneed.api.BigStackSource
-import allyouneed.util.bigint.BigKeyCounter
 import allyouneed.util.bigint.BigStack
+import allyouneed.util.debugLogger
+import allyouneed.util.logger
 import appeng.api.crafting.IPatternDetails
 import appeng.api.networking.IGrid
 import appeng.api.stacks.AEKey
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
+import net.minecraft.world.level.Level
 
 /**
  * - [goal] 最终的合成目标
  */
-class CraftingInventorySnapshot(grid: IGrid, val goal: BigStack) {
+class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
     val keyIndex = Object2IntOpenHashMap<AEKey>()
     val resources = ArrayList<Resource>()
     val patterns = ArrayList<IPatternDetails>()
-    val recipeIndex = Object2IntOpenHashMap<Pair<List<Int>, List<Int>>>()
+    val recipeIndex = Object2IntOpenHashMap<RecipeKey>()
     val recipes = ArrayList<Recipe>()
 
-    private class Solver(grid: IGrid) {
-        val cs = grid.craftingService
-        val ss = grid.storageService
-        val counter = BigKeyCounter().apply {
-            if (!BigStackSource.collectBigStacks(ss.inventory, this)) {
-                this.addAll(ss.cachedInventory)
-            }
-        }
+    private class Solver(val level: Level, val grid: IGrid) {
+        val snapshot = InventorySnapshot(grid)
     }
 
-    private fun Solver.addPattern(pattern: IPatternDetails) {
+    private fun Solver.addPattern(resource: Resource, pattern: IPatternDetails) {
+        debugLogger.info("addPattern $pattern")
         val id = patterns.size
         patterns.add(pattern)
-        for (source in pattern.inputs) {
-            val key = source.possibleInputs[0].what.dropSecondary()
-            val usedKey = source.getRemainingKey(key)
-            if (usedKey != null) {
-                usedKey == key
-            }
-//            add(source)
+        val pr = PatternRecipe.fuzzy(level, snapshot, pattern)
+        println("PatternRecipe:")
+        if (pr.isEmpty()) {
+            println("    No recipe found")
+            return
         }
-        for (target in pattern.outputs) {
-            add(target.what)
+        for (r in pr) {
+            println("    $r")
+            val recipe = addRecipe(
+                id,
+                r.sources.mapTo(ArrayList()) { addKey(it.what).id },
+                r.targets.mapTo(ArrayList()) { addKey(it.what).id },
+                r.catalysts.mapTo(ArrayList()) { addKey(it.stack.what).id },
+            )
+            resource.recipes.add(recipe)
         }
     }
 
-    private fun Solver.addRecipe(pattern: Int, sources: ArrayList<Int>, targets: ArrayList<Int>): Recipe {
+    private fun Solver.addRecipe(
+        pattern: Int,
+        sources: ArrayList<Int>,
+        targets: ArrayList<Int>,
+        catalysts: ArrayList<Int>,
+    ): Recipe {
         val r = recipeIndex.getOrDefault(Pair(sources, targets), -1)
         if (r >= 0) {
             val recipe = recipes[r]
             if (pattern >= 0) recipe.pattern.add(pattern)
             return recipe
         }
+        debugLogger.info("addRecipe $sources $targets")
         val id = recipes.size
-        val recipe = Recipe(id, ArrayList(), sources, targets)
+        val recipe = Recipe(id, ArrayList(), sources, targets, catalysts)
         recipes.add(recipe)
-        recipeIndex[Pair(sources, targets)] = id
+        recipeIndex[RecipeKey(sources, targets, catalysts)] = id
         recipe.pattern.add(pattern)
         return recipe
     }
 
-    private fun Solver.add(key: AEKey) {
-        keyIndex.getOrDefault(key, -1) < 0 || return
+    private fun Solver.addKey(key: AEKey): Resource {
+        val k = keyIndex.getOrDefault(key, -1)
+        if (k >= 0) return resources[k]
+        debugLogger.info("addKey $key")
         val id = resources.size
-        resources.add(Resource(BigStack(key, counter.get(key))))
+        resources.add(Resource(id, BigStack(key, snapshot.stored[key])))
         keyIndex[key] = id
-        if (cs.canEmitFor(key)) {
-            addRecipe(-1, emptySource, arrayListOf(id))
-        } else for (pattern in cs.getCraftingFor(key)) {
-            addPattern(pattern)
+        if (grid.craftingService.canEmitFor(key)) {
+            addRecipe(-1, arrayListOf(), arrayListOf(id), arrayListOf())
+        } else for (pattern in grid.craftingService.getCraftingFor(key)) {
+            addPattern(resources[id], pattern)
         }
+        return resources[id]
     }
 
     init {
-        Solver(grid).add(goal.key)
+        logger.info("CraftingInventorySnapshot Testing")
+        Solver(level, grid).addKey(goal.key)
+        logger.info("CraftingInventorySnapshot End")
     }
+
+    class Resource(
+        val id: Int,
+        val stack: BigStack,
+        val recipes: ArrayList<Recipe> = ArrayList(),
+    )
+
+    class RecipeKey(
+        val sources: ArrayList<Int>,
+        val targets: ArrayList<Int>,
+        val catalysts: ArrayList<Int>,
+    )
 
     /**
      * 由于 AE 的模糊匹配逻辑，一个 [IPatternDetails] 可以对应多个实际的 [Recipe]。
@@ -87,12 +111,6 @@ class CraftingInventorySnapshot(grid: IGrid, val goal: BigStack) {
         val pattern: ArrayList<Int>,
         val sources: ArrayList<Int>,
         val targets: ArrayList<Int>,
-        val catalysts: ArrayList<Int> = ArrayList(),
+        val catalysts: ArrayList<Int>,
     )
-
-    class Resource(val stack: BigStack, val recipes: ArrayList<Recipe> = ArrayList())
-
-    companion object {
-        private val emptySource = ArrayList<Int>()
-    }
 }

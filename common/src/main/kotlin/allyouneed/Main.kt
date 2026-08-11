@@ -1,11 +1,12 @@
 package allyouneed
 
-import allyouneed.logic.aekey.EnergyKey
-import allyouneed.logic.aekey.ManaKey
 import allyouneed.cell.creative.CreativeMeCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellHandler
+import allyouneed.logic.aekey.EnergyKey
+import allyouneed.logic.aekey.ManaKey
+import allyouneed.logic.aekey.VirtualKey
 import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModItems
@@ -43,6 +44,7 @@ object Main {
     fun registerAEKeyTypes() {
         AEKeyTypes.register(EnergyKey.Type)
         AEKeyTypes.register(ManaKey.Type)
+        AEKeyTypes.register(VirtualKey.Type)
     }
 
     /**
