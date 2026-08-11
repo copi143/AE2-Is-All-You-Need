@@ -24,15 +24,15 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
     }
 
     private fun Solver.addPattern(resource: Resource, pattern: IPatternDetails) {
-        debugLogger.info("addPattern $pattern")
-        val id = patterns.size
-        patterns.add(pattern)
         val pr = PatternRecipe.fuzzy(level, snapshot, pattern)
         println("PatternRecipe:")
         if (pr.isEmpty()) {
             println("    No recipe found")
             return
         }
+        debugLogger.info("addPattern $pattern")
+        val id = patterns.size
+        patterns.add(pattern)
         for (r in pr) {
             println("    $r")
             val recipe = addRecipe(
@@ -41,7 +41,10 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
                 r.targets.mapTo(ArrayList()) { addKey(it.what).id },
                 r.catalysts.mapTo(ArrayList()) { addKey(it.stack.what).id },
             )
-            resource.recipes.add(recipe)
+            if (recipe.id !in resource.recipeIds) {
+                resource.recipeIds.add(recipe.id)
+                resource.recipes.add(recipe)
+            }
         }
     }
 
@@ -87,13 +90,12 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
         logger.info("CraftingInventorySnapshot End")
     }
 
-    class Resource(
-        val id: Int,
-        val stack: BigStack,
-        val recipes: ArrayList<Recipe> = ArrayList(),
-    )
+    class Resource(val id: Int, val stack: BigStack) {
+        val recipes: ArrayList<Recipe> = ArrayList()
+        val recipeIds: HashSet<Int> = HashSet()
+    }
 
-    class RecipeKey(
+    data class RecipeKey(
         val sources: ArrayList<Int>,
         val targets: ArrayList<Int>,
         val catalysts: ArrayList<Int>,
