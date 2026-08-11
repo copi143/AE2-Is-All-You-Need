@@ -54,7 +54,7 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
         targets: ArrayList<Int>,
         catalysts: ArrayList<Int>,
     ): Recipe {
-        val r = recipeIndex.getOrDefault(Pair(sources, targets), -1)
+        val r = recipeIndex.getOrDefault(RecipeKey(sources, targets, catalysts), -1)
         if (r >= 0) {
             val recipe = recipes[r]
             if (pattern >= 0) recipe.pattern.add(pattern)
