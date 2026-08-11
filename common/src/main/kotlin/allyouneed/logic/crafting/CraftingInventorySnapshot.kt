@@ -25,21 +25,20 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
 
     private fun Solver.addPattern(resource: Resource, pattern: IPatternDetails) {
         val pr = PatternRecipe.fuzzy(level, snapshot, pattern)
-        println("PatternRecipe:")
         if (pr.isEmpty()) {
-            println("    No recipe found")
+            debugLogger.info("addPattern $pattern: no usable fuzzy variant")
             return
         }
         debugLogger.info("addPattern $pattern")
         val id = patterns.size
         patterns.add(pattern)
         for (r in pr) {
-            println("    $r")
+            debugLogger.info("    $r")
             val recipe = addRecipe(
                 id,
-                r.sources.mapTo(ArrayList()) { addKey(it.what).id },
-                r.targets.mapTo(ArrayList()) { addKey(it.what).id },
-                r.catalysts.mapTo(ArrayList()) { addKey(it.stack.what).id },
+                r.sources.mapTo(ArrayList()) { ItemRef(addKey(it.what).id, it.amount) },
+                r.targets.mapTo(ArrayList()) { ItemRef(addKey(it.what).id, it.amount) },
+                r.catalysts.mapTo(ArrayList()) { CatalystRef(addKey(it.stack.what).id, it.stack.amount, it.lossy) },
             )
             if (recipe.id !in resource.recipeIds) {
                 resource.recipeIds.add(recipe.id)
@@ -50,9 +49,9 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
 
     private fun Solver.addRecipe(
         pattern: Int,
-        sources: ArrayList<Int>,
-        targets: ArrayList<Int>,
-        catalysts: ArrayList<Int>,
+        sources: ArrayList<ItemRef>,
+        targets: ArrayList<ItemRef>,
+        catalysts: ArrayList<CatalystRef>,
     ): Recipe {
         val r = recipeIndex.getOrDefault(RecipeKey(sources, targets, catalysts), -1)
         if (r >= 0) {
@@ -77,7 +76,7 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
         resources.add(Resource(id, BigStack(key, snapshot.stored[key])))
         keyIndex[key] = id
         if (grid.craftingService.canEmitFor(key)) {
-            addRecipe(-1, arrayListOf(), arrayListOf(id), arrayListOf())
+            addRecipe(-1, arrayListOf(), arrayListOf(ItemRef(id, 1)), arrayListOf())
         } else for (pattern in grid.craftingService.getCraftingFor(key)) {
             addPattern(resources[id], pattern)
         }
@@ -85,9 +84,12 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
     }
 
     init {
-        logger.info("CraftingInventorySnapshot Testing")
         Solver(level, grid).addKey(goal.key)
-        logger.info("CraftingInventorySnapshot End")
+        logger.info(
+            "CraftingInventorySnapshot: goal %s, %d items, %d recipes, %d patterns".format(
+                goal, resources.size, recipes.size, patterns.size
+            )
+        )
     }
 
     class Resource(val id: Int, val stack: BigStack) {
@@ -95,10 +97,21 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
         val recipeIds: HashSet<Int> = HashSet()
     }
 
+    /**
+     * 配方中一个物品的引用，携带数量。
+     */
+    data class ItemRef(val id: Int, val amount: Long)
+
+    /**
+     * 催化剂引用。 [lossy] 为 true 表示 [PatternRecipe.WTF.SlowlyConsumed]（慢耗工具），
+     * false 表示 [PatternRecipe.WTF.Constant]（完全不消耗）。
+     */
+    data class CatalystRef(val id: Int, val amount: Long, val lossy: Boolean)
+
     data class RecipeKey(
-        val sources: ArrayList<Int>,
-        val targets: ArrayList<Int>,
-        val catalysts: ArrayList<Int>,
+        val sources: ArrayList<ItemRef>,
+        val targets: ArrayList<ItemRef>,
+        val catalysts: ArrayList<CatalystRef>,
     )
 
     /**
@@ -111,8 +124,8 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
     class Recipe(
         val id: Int,
         val pattern: ArrayList<Int>,
-        val sources: ArrayList<Int>,
-        val targets: ArrayList<Int>,
-        val catalysts: ArrayList<Int>,
+        val sources: ArrayList<ItemRef>,
+        val targets: ArrayList<ItemRef>,
+        val catalysts: ArrayList<CatalystRef>,
     )
 }

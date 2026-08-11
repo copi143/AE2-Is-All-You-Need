@@ -1,33 +1,27 @@
 package allyouneed.logic.crafting
 
-import allyouneed.logic.AE2TaskScheduler
 import allyouneed.util.bigint.BigStack
 import allyouneed.util.logger
 import appeng.api.networking.IGrid
 import appeng.api.networking.crafting.CalculationStrategy
 import appeng.api.networking.crafting.ICraftingPlan
-import appeng.api.networking.crafting.ICraftingService
 import appeng.api.networking.crafting.ICraftingSimulationRequester
 import appeng.api.stacks.AEKey
 import appeng.api.stacks.GenericStack
 import appeng.api.stacks.KeyCounter
 import appeng.core.AELog
-import appeng.crafting.CraftBranchFailure
 import appeng.crafting.CraftingCalculation
 import appeng.crafting.CraftingPlan
-import appeng.crafting.inv.ChildCraftingSimulationState
-import appeng.crafting.inv.CraftingSimulationState
 import com.google.common.base.Stopwatch
 import net.minecraft.world.level.Level
-import org.jetbrains.annotations.Contract
 import java.util.concurrent.TimeUnit
 
 /**
  * Custom CraftingCalculation that:
- * 1. Eagerly **value-copies** ME inventory ([MeInventorySnapshot]) and crafting patterns
- *    ([CachedCraftingService]) in the constructor on the calling thread.
- * 2. Runs tree computation on [AE2TaskScheduler] using only snapshotted data —
- *    no live grid storage/pattern access after construction.
+ * 1. Eagerly snapshots ME inventory and crafting patterns into [CraftingInventorySnapshot]
+ *    in the constructor on the calling thread.
+ * 2. Solves the crafting plan with ojalgo MIP ([MipCraftingPlanner]) on [AE2TaskScheduler]
+ *    using only snapshotted data — no live grid storage/pattern access after construction.
  * 3. Does **not** register with TickHandler (full snapshot removes the need for the
  *    original pause/simulateFor handshake).
  */
@@ -36,44 +30,29 @@ class ACraftingCalculation(
     grid: IGrid,
     @JvmField val simRequester: ICraftingSimulationRequester,
     output: GenericStack,
-    private val strategy: CalculationStrategy?
+    private val strategy: CalculationStrategy?,
 ) : CraftingCalculation(level, grid, simRequester, output, strategy) {
     private val missing = KeyCounter()
     private val output: AEKey = output.what()
     private val requestedAmount: Long = output.amount()
-    private val attempts: MutableList<CraftAttempt>? = if (AELog.isCraftingLogEnabled()) ArrayList() else null
 
-    private val cachedPatterns: ICraftingService = CachedCraftingService(grid.craftingService)
-
-    private val networkInv: CopiedNetworkSimulationState = CopiedNetworkSimulationState(
-        MeInventorySnapshot.copy(grid.storageService, simRequester.actionSource)
-    )
-
-    private val tree: ACraftingTreeNode = ACraftingTreeNode(cachedPatterns, this, this.output, 1, null, -1)
+    private val snapshot: CraftingInventorySnapshot? = if (level != null) {
+        try {
+            CraftingInventorySnapshot(level, grid, BigStack.from(GenericStack(this.output, this.requestedAmount)))
+        } catch (e: Throwable) {
+            logger.error("Failed to snapshot crafting inventory", e)
+            null
+        }
+    } else null
 
     private var simulate = false
 
-    @Volatile
-    private var done = false
-
-    private var incTime = Int.MAX_VALUE
+    private var multiplePaths = false
 
     private var overallSuccessProbability = 1.0
 
-    init {
-        try {
-            logger.info("ACraftingCalculation Testing")
-            if (level != null) {
-                CraftingInventorySnapshot(level, grid, BigStack.from(output))
-            }
-        } catch (e: Throwable) {
-            logger.warn("CraftingInventorySnapshot Testing failed", e)
-        }
-    }
-
-    fun addMissing(what: AEKey, amount: Long) {
-        missing.add(what, amount)
-    }
+    @Volatile
+    private var done = false
 
     override fun run(): ICraftingPlan {
         val timer = Stopwatch.createStarted()
@@ -103,80 +82,33 @@ class ACraftingCalculation(
         }
     }
 
-    @Throws(InterruptedException::class)
     private fun computePlan(): ICraftingPlan {
-        val fullAmountPlan: CraftingPlan? = runCraftAttempt(false, requestedAmount)
-        if (fullAmountPlan != null) {
-            return fullAmountPlan
+        val snap = snapshot
+        if (snap == null) {
+            throw IllegalStateException("No crafting inventory snapshot available")
         }
 
-        if (strategy == CalculationStrategy.CRAFT_LESS) {
-            var successfulAmount: Long = 0
-            var successfulPlan: ICraftingPlan? = null
-            var increment = requestedAmount.takeHighestOneBit()
-            while (increment > 0) {
-                val testAmount = successfulAmount + increment
-                if (testAmount < requestedAmount) {
-                    val plan: CraftingPlan? = runCraftAttempt(false, testAmount)
-                    if (plan != null) {
-                        successfulAmount = testAmount
-                        successfulPlan = plan
-                    }
-                }
-                increment /= 2
-            }
+        val planner = MipCraftingPlanner(snap, level, output, requestedAmount)
+        val mip = planner.plan()
 
-            if (successfulPlan != null) {
-                return successfulPlan
-            }
+        this.simulate = mip.simulation
+        this.multiplePaths = mip.multiplePaths
+        for (entry in mip.missingItems) {
+            missing.add(entry.key, entry.longValue)
         }
 
-        return runCraftAttempt(true, requestedAmount)!!
-    }
-
-    @Contract("true, _ -> !null")
-    @Throws(InterruptedException::class)
-    private fun runCraftAttempt(simulate: Boolean, amount: Long): CraftingPlan? {
-        this.simulate = simulate
-
-        val timer = Stopwatch.createStarted()
-
-        val craftingInventory = ChildCraftingSimulationState(networkInv)
-        craftingInventory.ignore(this.output)
-
-        try {
-            this.tree.request(craftingInventory, amount, null)
-        } catch (failure: CraftBranchFailure) {
-            if (AELog.isCraftingLogEnabled()) {
-                this.attempts!!.add(CraftAttempt("$amount failed", timer))
-            }
-            return null
-        }
-        craftingInventory.addBytes((this.tree.nodeCount * 8).toDouble())
-
-        val plan = CraftingSimulationState.buildCraftingPlan(craftingInventory, this, amount)
-        this.overallSuccessProbability = this.tree.successProbability
-        if (AELog.isCraftingLogEnabled()) {
-            val type = if (simulate) "simulated" else "succeeded"
-            this.attempts!!.add(CraftAttempt("%d %s (%d bytes)".format(amount, type, plan.bytes()), timer))
-        }
+        val plan = CraftingPlan(
+            GenericStack(output, mip.finalAmount),
+            mip.bytes,
+            mip.simulation,
+            mip.multiplePaths,
+            mip.usedItems,
+            mip.emittedItems,
+            mip.missingItems,
+            mip.patternTimes,
+        )
+        this.overallSuccessProbability = if (mip.simulation) 0.0 else 1.0
         return plan
-    }
-
-    /**
-     * Cancellation checkpoint. Full inventory/pattern snapshots mean we no longer need
-     * the original monitor wait/notify pause for live grid updates.
-     */
-    @Throws(InterruptedException::class)
-    fun handlePaUSING() {
-        if (this.incTime > 100) {
-            this.incTime = 0
-            if (Thread.interrupted()) {
-                throw InterruptedException()
-            }
-            Thread.yield()
-        }
-        this.incTime++
     }
 
     private fun finish() {
@@ -197,7 +129,7 @@ class ACraftingCalculation(
      */
     override fun simulateFor(micros: Int): Boolean = !this.done
 
-    override fun hasMultiplePaths(): Boolean = this.tree.hasMultiplePaths()
+    override fun hasMultiplePaths(): Boolean = this.multiplePaths
 
     private fun logCraftingJob(plan: ICraftingPlan) {
         if (AELog.isCraftingLogEnabled()) {
@@ -215,26 +147,13 @@ class ACraftingCalculation(
                 actionSourceName = "[unknown source]"
             }
 
-            val message = StringBuilder()
-            message.append(
-                "AdaptiveCraftingCalculation issued by %s requesting [%dx%s] breakdown:\n".format(
-                    actionSourceName, this.requestedAmount, this.output
+            AELog.crafting(
+                "AdaptiveCraftingCalculation issued by %s requesting [%dx%s] -> final plan %d (%d bytes), sim=%b, success=%.4f".format(
+                    actionSourceName, this.requestedAmount, this.output,
+                    plan.finalOutput().amount(), plan.bytes(),
+                    plan.simulation(), this.overallSuccessProbability,
                 )
             )
-            for (attempt in this.attempts!!) {
-                message.append(
-                    " - %s in %d ms\n".format(
-                        attempt.description, attempt.stopwatch!!.elapsed(TimeUnit.MILLISECONDS)
-                    )
-                )
-            }
-            message.append(" - final plan: %d (%d bytes)".format(plan.finalOutput().amount(), plan.bytes()))
-            message.append("\n - overall success probability: %.4f".format(this.overallSuccessProbability))
-
-            AELog.crafting(message.toString())
         }
     }
-
-    @JvmRecord
-    private data class CraftAttempt(val description: String?, val stopwatch: Stopwatch?)
 }

@@ -83,7 +83,7 @@ data class PatternRecipe(
         }
 
         fun fuzzy(level: Level?, snapshot: InventorySnapshot, pattern: IPatternDetails): List<PatternRecipe> {
-            fun PR() = PatternRecipe().apply {
+            fun makePatternRecipe() = PatternRecipe().apply {
                 pattern.outputs.forEach { output ->
                     this.processOutput(output)
                 }
@@ -107,7 +107,7 @@ data class PatternRecipe(
             if (size > 4096) throw LooksLikeDosAttack("cartesianProduct size: $size")
 
             return cartesianProduct(inputs).map { sub ->
-                val pr = PR()
+                val pr = makePatternRecipe()
                 sub.forEach { (input, stack, wtf) ->
                     when (wtf) {
                         CompletelyConsumed -> pr.sources.add(stack)
