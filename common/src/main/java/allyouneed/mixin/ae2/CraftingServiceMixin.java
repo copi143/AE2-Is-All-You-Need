@@ -1,6 +1,6 @@
 package allyouneed.mixin.ae2;
 
-import allyouneed.logic.AE2TaskScheduler;
+import allyouneed.logic.TaskScheduler;
 import allyouneed.logic.crafting.ACraftingCalculation;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.CalculationStrategy;
@@ -45,6 +45,6 @@ public abstract class CraftingServiceMixin {
         final ACraftingCalculation job = new ACraftingCalculation(
                 level, this.grid, simRequester, new GenericStack(what, amount), strategy);
 
-        return AE2TaskScheduler.submit((Function0<? extends ICraftingPlan>) job::run);
+        return TaskScheduler.submit((Function0<? extends ICraftingPlan>) job::run);
     }
 }

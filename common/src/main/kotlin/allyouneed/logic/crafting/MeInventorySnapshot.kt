@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable
  * with background threads. This helper iterates that view on the calling thread and
  * writes independent key/amount pairs into a fresh counter (value copy, not a reference).
  *
- * Must be called on the server/main thread **before** submitting work to [allyouneed.logic.AE2TaskScheduler].
+ * Must be called on the server/main thread **before** submitting work to [allyouneed.logic.TaskScheduler].
  */
 object MeInventorySnapshot {
     @JvmStatic

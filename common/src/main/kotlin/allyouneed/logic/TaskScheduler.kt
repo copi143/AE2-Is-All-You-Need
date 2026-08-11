@@ -1,6 +1,7 @@
 package allyouneed.logic
 
 import allyouneed.util.MarkedLogger.Companion.marked
+import allyouneed.util.logger
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -18,8 +19,8 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @see docs/Crafting-Calculation.md
  */
-object AE2TaskScheduler {
-    private val logger = allyouneed.util.logger.marked("Task")
+object TaskScheduler {
+    private val log = logger.marked("Task")
 
     val parallelism: Int = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
 
@@ -34,7 +35,7 @@ object AE2TaskScheduler {
         Thread(r, "AE2AYN-Worker-${threadSeq.incrementAndGet()}").apply {
             isDaemon = true
             uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { t, e ->
-                logger.error("Uncaught exception in ${t.name}", e)
+                log.error("Uncaught exception in ${t.name}", e)
             }
         }
     }
@@ -48,17 +49,17 @@ object AE2TaskScheduler {
     @JvmStatic
     fun <T> submit(task: () -> T): CompletableFuture<T> {
         val id = submitted.incrementAndGet()
-        logger.debug("submit #$id (active≈$activeTaskCount, pool=$parallelism)")
+        log.debug("submit #$id (active≈$activeTaskCount, pool=$parallelism)")
 
         val future = CompletableFuture.supplyAsync({
             try {
                 val result = task()
                 completed.incrementAndGet()
-                logger.debug("complete #$id")
+                log.debug("complete #$id")
                 result
             } catch (e: Throwable) {
                 failed.incrementAndGet()
-                logger.info("task #$id failed", e)
+                log.info("task #$id failed", e)
                 throw e
             }
         }, pool)

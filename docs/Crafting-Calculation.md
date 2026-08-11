@@ -79,7 +79,7 @@ job != null && job.isDone()
 
 硬性约定：
 
-> **提交到 `AE2TaskScheduler` 之前，必须在调用线程完成 ME 库存与合成样板的值拷贝。  
+> **提交到 `TaskScheduler` 之前，必须在调用线程完成 ME 库存与合成样板的值拷贝。  
 > 后台任务禁止持有/访问 live `IStorageService` / live `ICraftingService`。**
 
 ---
@@ -88,7 +88,7 @@ job != null && job.isDone()
 
 | 类 | 路径 | 职责 |
 | --- | --- | --- |
-| `AE2TaskScheduler` | `allyouneed.logic` | 全局后台池，并行度 `max(1, cores/2)`；`CompletableFuture` |
+| `TaskScheduler` | `allyouneed.logic` | 全局后台池，并行度 `max(1, cores/2)`；`CompletableFuture` |
 | `MeInventorySnapshot` | `logic.crafting` | 从 storage 值拷贝到新 `KeyCounter` |
 | `CopiedNetworkSimulationState` | 同上 | 仅持有拷贝后的 `KeyCounter`，无 storage 引用 |
 | `CachedCraftingService` | 同上 | **构造时**快照全部 craftable/emittable/pattern；后台只读缓存 |
@@ -97,7 +97,7 @@ job != null && job.isDone()
 
 ---
 
-## 5. `AE2TaskScheduler` 设计要点
+## 5. `TaskScheduler` 设计要点
 
 - **不要**用 `Dispatchers.Default` 跑长时间阻塞合成（Forge ClassLoader / 公共池问题）。
 - 使用 `Executors.newFixedThreadPool(parallelism)`，守护线程名 `AE2AYN-Worker-n`。
@@ -120,7 +120,7 @@ AE2 原版方法在源码中为 `handlePausing`，部分映射/历史代码写�
 
 ## 7. 排查清单
 
-1. 日志是否有 `AE2TaskScheduler` / `ACraftingCalculation` 的 start/end？
+1. 日志是否有 `TaskScheduler` / `ACraftingCalculation` 的 start/end？
 2. `Future.isDone()` 是否永远 false？（调度/死锁）还是 complete 后 UI 仍无 plan？（发包/摘要）
 3. 后台线程栈是否卡在 grid/storage/world？
 4. 取消任务后是否 `Thread.interrupted` 被 `handlePaUSING` 响应？
