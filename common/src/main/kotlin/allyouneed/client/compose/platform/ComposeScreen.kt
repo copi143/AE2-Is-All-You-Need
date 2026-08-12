@@ -66,6 +66,16 @@ abstract class ComposeScreen(title: Component) : Screen(title) {
         return super.mouseReleased(mouseX, mouseY, button)
     }
 
+    override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
+        if (layer.onKeyPressed(keyCode, scanCode, modifiers)) return true
+        return super.keyPressed(keyCode, scanCode, modifiers)
+    }
+
+    override fun charTyped(codePoint: Char, modifiers: Int): Boolean {
+        if (layer.onCharTyped(codePoint.code, modifiers)) return true
+        return super.charTyped(codePoint, modifiers)
+    }
+
     override fun onClose() {
         layer.dispose()
         super.onClose()

@@ -1,6 +1,7 @@
 package minecraftx.compose.demo
 
 import minecraftx.compose.material.ItemSlot
+import minecraftx.compose.material.McTextField
 import minecraftx.compose.foundation.McLine
 import minecraftx.compose.foundation.McScrollBox
 import minecraftx.compose.material.McScrollbar
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.TextFieldValue
 import minecraftx.compose.theme.DarkColorScheme
 import minecraftx.compose.theme.LightColorScheme
 import minecraftx.compose.theme.McTheme
@@ -243,6 +245,31 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                     }
                 }
             }
+
+            Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
+            // McTextField 输入框演示:像浏览器一样支持"开启输入法"与"关闭输入法(纯 ASCII)"两种模式。
+            // IME 模式文本走 Screen.charTyped(直接按键与 IME 提交文本都会到达);ASCII 模式忽略
+            // charTyped,按键用 US 布局 shift 表映射。编辑键(退格/方向键/Home/End/Ctrl+A)两模式通用。
+            Text("McTextField (IME on/off):", color = 0xFFCCCCCC.toInt())
+            var imeText by remember { mutableStateOf(TextFieldValue("")) }
+            McTextField(
+                value = imeText,
+                onValueChange = { imeText = it },
+                imeEnabled = true,
+                width = 276,
+                modifier = Modifier.padding(vertical = 2.dp),
+                placeholder = "输入法模式:点我,IME 可直接输中文",
+            )
+            var asciiText by remember { mutableStateOf(TextFieldValue("")) }
+            McTextField(
+                value = asciiText,
+                onValueChange = { asciiText = it },
+                imeEnabled = false,
+                width = 276,
+                modifier = Modifier.padding(vertical = 2.dp),
+                placeholder = "纯 ASCII 模式:忽略输入法(Shift 映射符号)",
+            )
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 

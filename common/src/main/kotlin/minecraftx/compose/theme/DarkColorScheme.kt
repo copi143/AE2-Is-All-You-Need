@@ -15,6 +15,7 @@ object DarkColorScheme : McColorScheme
  */
 object LightColorScheme : McColorScheme {
     override val textPrimary: Color get() = Color(0xFF202020)
+    override val textSecondary: Color get() = Color(0xFF707070)
 
     override val panelBackground: Color get() = Color(0xFFE8E8E8)
     override val panelBorder: Color get() = Color(0xFF808080)
@@ -28,6 +29,12 @@ object LightColorScheme : McColorScheme {
     override val slotBackground: Color get() = Color(0x66909090)
     override val slotBorder: Color get() = Color(0xFF707070)
     override val slotHoverOverlay: Color get() = Color(0x55FFFFFF)
+
+    override val inputBackground: Color get() = Color(0xFFF8F8F8)
+    override val inputBorder: Color get() = Color(0xFF909090)
+    override val inputBorderFocused: Color get() = Color(0xFF202020)
+    override val textCaret: Color get() = Color(0xFF202020)
+    override val textSelection: Color get() = Color(0x804040FF)
 
     override val scrollbarTrack: Color get() = Color(0x44A0A0A0)
     override val scrollbarBar: Color get() = Color(0xFF606060)

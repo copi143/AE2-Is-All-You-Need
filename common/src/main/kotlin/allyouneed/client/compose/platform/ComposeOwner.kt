@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.DefaultViewConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalTextInputService
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -92,11 +93,6 @@ import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.Typeface
 import androidx.compose.ui.text.font.createFontFamilyResolver
-import androidx.compose.ui.text.input.EditCommand
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.ImeOptions
-import androidx.compose.ui.text.input.PlatformTextInputService
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TextInputService
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.unit.Constraints
@@ -241,20 +237,10 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     override val autofill: Autofill? = null
     override val autofillManager: AutofillManager? = null
 
-    private val stubPlatformTextInputService = object : PlatformTextInputService {
-        override fun startInput(
-            value: TextFieldValue,
-            imeOptions: ImeOptions,
-            onEditCommand: (List<EditCommand>) -> Unit,
-            onImeActionPerformed: (ImeAction) -> Unit,
-        ) {}
+    /** Bridges Minecraft's raw key events into [EditCommand]s for the active [McTextField]. */
+    val mcTextInputService = McTextInputService()
 
-        override fun stopInput() {}
-        override fun showSoftwareKeyboard() {}
-        override fun hideSoftwareKeyboard() {}
-        override fun updateState(oldValue: TextFieldValue?, newValue: TextFieldValue) {}
-    }
-    override val textInputService: TextInputService by lazy { TextInputService(stubPlatformTextInputService) }
+    override val textInputService: TextInputService by lazy { TextInputService(mcTextInputService) }
 
     override val softwareKeyboardController: SoftwareKeyboardController = object : SoftwareKeyboardController {
         override fun show() {}
@@ -352,6 +338,8 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
                     LocalUiScale provides uiScale,
                     LocalMousePosition provides mousePosition,
                     LocalFrameCallbacks provides frameCallbacks,
+                    LocalMcTextInputService provides mcTextInputService,
+                    LocalTextInputService provides textInputService,
                 ) {
                     content()
                 }
@@ -466,6 +454,18 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         val result = pointerInputEventProcessor.process(event, IdentityPositionCalculator)
         return result.value != 0
     }
+
+    // -------------------------------------------------------------------------------------------
+    // Keyboard input
+    // -------------------------------------------------------------------------------------------
+
+    /** Forwards a raw key-press to the active text input session; true when a field consumed it. */
+    fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
+        mcTextInputService.onKeyPressed(keyCode, modifiers)
+
+    /** Forwards a committed character (direct key or IME) to the active text input session. */
+    fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =
+        mcTextInputService.onCharTyped(codePoint, modifiers)
 
     // -------------------------------------------------------------------------------------------
     // Owner
@@ -593,6 +593,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
 
     fun dispose() {
         composition?.dispose()
+        mcTextInputService.stopInput()
         recomposer.cancel()
         scope.cancel()
     }

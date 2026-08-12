@@ -68,6 +68,12 @@ class MousePosition(var position: IntOffset) {
 
 val LocalMousePosition = compositionLocalOf<MousePosition> { error("No MousePosition provided") }
 
+/**
+ * The layer's [McTextInputService], provided by the [ComposeOwner]. [McTextField] uses it to
+ * register itself as the active input session and to receive translated [androidx.compose.ui.text.input.EditCommand]s.
+ */
+val LocalMcTextInputService = compositionLocalOf<McTextInputService> { error("No McTextInputService provided") }
+
 /** Reads the [FrameCallbackHost] of the enclosing layer (registering a per-frame callback). */
 @Composable
 fun rememberFrameCallback(callback: () -> Unit) {

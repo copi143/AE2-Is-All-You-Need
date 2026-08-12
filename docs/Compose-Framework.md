@@ -20,6 +20,7 @@ common/src/main/kotlin/allyouneed/client/compose/
     ├── ScrollState.kt           # target/display 双值平滑滚动 + rememberScrollState（帧回调驱动）
     ├── McGraphics.kt            # 当前 GuiGraphics 的公开持有者（渲染桥接）
     ├── McCanvas.kt              # Canvas → GuiGraphics 指令桥（含 flush / scissor 透传）
+    ├── McTextInputService.kt    # 文本输入桥：无 IME（服务端）时的原生键盘码 → EditCommand 映射
     └── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
 
 # 界面定义层（minecraftx.compose.*，全部基于基础兼容层构建）
@@ -34,6 +35,7 @@ common/src/main/kotlin/minecraftx/compose/
 │   ├── McText.kt                # 统一文本组件（Component/String 重载 + 像素级 scissor 裁剪）
 │   ├── McPanel.kt               # 带边框面板 + McCloseButton（colors 参数主题化）
 │   ├── McScrollbar.kt / McTooltip.kt
+│   ├── McTextField.kt           # ★ 可输入文本框（imeEnabled / 光标 / 回车 / 剪贴板）
 │   └── ItemSlot.kt / EmiSlotRenderer.kt / VanillaSlotRenderer.kt
 ├── foundation/                  # 与主题无关的布局基元
 │   ├── McVirtualColumn.kt       # 虚拟化滚动文本列（不可见行不组合）+ Modifier.mcScroll
@@ -146,9 +148,34 @@ class MyScreen : Screen(...) {
 | `ItemSlot(stack, modifier, interactive, colors)` | 物品堆叠预览，EMI/vanilla 渲染器旁路，槽位配色来自主题 |
 | `McScrollBox(contentW, contentH, modifier, scrollable, clip, autoScroll)` | 通用 overflow 容器：内容钳制/裁剪/滚动/滚动条四态，见 §4.1；滚动条配色来自主题 |
 | `McTooltip(lines, modifier, ...)` | Compose 布局+渲染 tooltip（vanilla `renderMcTooltip` 的框架对偶版），见 §4.2；配色来自主题 |
+| `McTextField(value, onValueChange, modifier, singleLine, imeEnabled, placeholder, colors)` | 可输入文本框，见 §4.4；配色来自主题 |
 
 滚动语义：`scrollBy`（滚轮）动 target、`seek`（拖拽）同时写 display/target 即时生效；
 `display` 指数收敛到 target（`smoothingTime=0.06s`），静止时零写入。
+
+### 4.4 `McTextField` —— 文本框
+
+框架的文本框**不**走 `LocalSoftwareKeyboardController` / `LocalTextInputService` 的 suspend
+IME 会话（Minecraft 内没有 Android IME），而是由 `McTextInputService` 直接消费原生键盘事件：
+
+- **imeEnabled=true（默认）**：独占键盘（Ctrl+W 开搜索、F3、Esc 等 vanilla 快捷键在焦点期间
+  全部拦截），`onKeyPressed` 的字符交回给 `onCharTyped`（保留中文输入法 / MC 键盘布局）
+  插入。焦点关闭（回车/点击外部/退出屏幕）后恢复 vanilla 快捷键。
+- **imeEnabled=false**：只消费自己映射的字符，F3 等 **vanilla 快捷键照常生效**；
+  此时文本严格按 **US 键盘布局** 映射（Shift+`1`=`!`、Shift+`=`=`+` 等），不经过 MC 键盘布局。
+- 编辑键：方向键/Home/End（含 Shift 选区）、Backspace、Delete、Ctrl+A/C/V/X、回车
+  （单行触发 `ImeAction.Done`，多行插入换行）。
+- 光标渲染：插入点绘制两态闪烁（无选区时按 `System.currentTimeMillis` 亮灭，透明合成，
+  blend 开启），有选区时半透明高亮。
+- 输入默认居中、仅绘制可视片段；内容超出时水平滚动，光标位置自动滚入视野。
+- 键盘转发路径：`ComposeScreen`/`ComposeContainerScreen` 的 `keyPressed/keyReleased/charTyped`
+  → `ComposeLayer` → `ComposeOwner.onKeyPressed/onCharTyped` → 焦点节点的 `McTextField`。
+- **无 skiko 依赖**：官方桌面 jar 里 `BackspaceCommand`（折叠光标）与 `MoveCursorCommand` 的
+  `applyTo` 会调用 skiko 的 `org.jetbrains.skia.BreakIterator`，而框架不加载 skiko native。
+  因此服务层**从不**发射这两个命令的 skiko 路径：折叠光标 Backspace 先发
+  `SetSelectionCommand(prev, cursor)` 造出选区，让 `BackspaceCommand` 走纯 JVM 的删选区分支；
+  方向键移动直接算好目标用 `SetSelectionCommand` 表达。字符边界统一用
+  `java.text.BreakIterator.getCharacterInstance()` 计算（纯 JDK）。
 
 ### 4.1 `McScrollBox` —— 通用 overflow 容器
 
@@ -207,8 +234,8 @@ McTheme(colorScheme = if (dark) DarkColorScheme else LightColorScheme) {
 McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
 ```
 
-- `McColorScheme` 是语义颜色契约（面板背景/边框、槽位、滚动条、tooltip、文本主色……），
-  接口默认值即暗色主题；自定义主题只需 override 有差异的槽。
+- `McColorScheme` 是语义颜色契约（面板背景/边框、槽位、滚动条、tooltip、文本主色、
+  输入框背景/边框/光标……），接口默认值即暗色主题；自定义主题只需 override 有差异的槽。
 - 未包裹 `McTheme` 的组件回落到 `DarkColorScheme`，现有屏幕外观不变（向后兼容）。
 - `McTheme` 用 `staticCompositionLocalOf`：切换 scheme 会整体重组合子树，全屏换肤即此语义。
 - 颜色以 `Color`（ULong ARGB）承载；落进 `GuiGraphics.drawString` 的文本用
@@ -231,7 +258,8 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
    锚点按 `mouse * uiScale`（全局逻辑 → 屏幕 px），全屏/内嵌一致。
    默认走 **vanilla 渲染**（`renderMcTooltip`，EMI/ItemSlot 用）；需要参与 Compose 布局的
    版本用 `McTooltip`（§4.2），二者内容同源，管线互斥。
-6. **suspend 文本输入**：`textInputSession` 抛错，Text 输入暂不支持。
+6. **文本输入**：`textInputSession` 等 suspend 输入 API 暂不支持（Minecraft 无 Android IME）；
+   输入走 `McTextInputService` 的原生键盘事件直通（§4.4）。
 
 ---
 
@@ -239,10 +267,13 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
 
 - 单元测试（JVM，不依赖 Minecraft/Forge）：
   - `compose/platform/ScrollStateTest`：滚动收敛/钳制/即时 seek/静止零写入（注入时钟）。
+  - `compose/platform/McTextInputServiceTest`：ASCII 移位表映射 / IME 插入 / 编辑键 /
+    选区 / 多行回车 / 会话生命周期（断言发出的 `EditCommand`，无需 MC 依赖）。
   - `compose/spike/*`：官方 Owner 冒烟 + 指针悬停命中测试（`PointerHoverSpikeTest`）。
 - 编译/打包：`:common:compileKotlin`、`:common:test`、`:fabric:build`、`:forge:jar`。
-- 实机：K 打开 demo（官方按钮/滑条/动画 + 框架滚动面板 + McScrollBox 容器 + 双 tooltip；
-  整页以 McScrollBox flow 模式滚动，内容超屏不再溢出），L 打开内嵌面板，
+- 实机：K 打开 demo（官方按钮/滑条/动画 + 框架滚动面板 + McScrollBox 容器 + 双 tooltip +
+  IME 开/关两个文本框：中文输入、选区/光标、Ctrl+A/V、回车失焦；整页以 McScrollBox flow 模式
+  滚动，内容超屏不再溢出），L 打开内嵌面板，
   V 打开 item-details 屏（Compose 渲染，滚动/拖拽滚动条/关闭按钮，小屏下面板收缩、内容区自动滚动）。
 
 ---
@@ -257,4 +288,6 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
 | 返回栈留在遗留 vanilla `ItemDetailsScreen` | 重构以框架抽取为目标，不改动已验证的屏幕流转行为 |
 | `Density(1f)`，1dp=1逻辑px | 让 item-details 原有逻辑像素常量（ItemDetailsLayout）可直接复用，杜绝双重缩放 |
 | 裁剪统一走硬件 scissor（`drawClipped`/`McScrollBox.scissorClip`） | 从实时 pose 推导屏幕矩形，随缩放保持像素对齐；不依赖 graphicsLayer 离屏 |
+| 文本输入走原生键盘事件直通（`McTextInputService`）而非 suspend IME 会话 | MC 无 Android IME；`keyPressed/charTyped` 在游戏线程同步可达，语义与 `GuiEditBox` 对齐 |
+| 不发射 `MoveCursorCommand` / 折叠光标 `BackspaceCommand`，用 `SetSelectionCommand`+`BreakIterator` 表达移动与删除 | 这两个命令的 `applyTo` 依赖 skiko `BreakIterator`（`NoClassDefFoundError`）；字符边界改用纯 JDK `java.text.BreakIterator`，选区先造好即可复用官方纯删选区分支 |
 | item-details 小屏自适应（BoxWithConstraints 钳制面板 + 动态重算 maxScroll） | 缩放窗口/小屏时面板收缩到可用尺寸而非被切掉，内容区高度变化后自动重新钳制滚动偏移 |

@@ -15,6 +15,9 @@ interface McColorScheme {
     /** Primary text color (lines, titles, values). */
     val textPrimary: Color get() = Color(0xFFFFFFFF)
 
+    /** Secondary text color (hints, placeholders, muted labels). */
+    val textSecondary: Color get() = Color(0xFF808080)
+
     /** Panel chrome: background fill and 1px border. */
     val panelBackground: Color get() = Color(0xC0101010)
     val panelBorder: Color get() = Color.White
@@ -31,6 +34,13 @@ interface McColorScheme {
     val slotBackground: Color get() = Color(0x66808080)
     val slotBorder: Color get() = Color(0xFF8B8B8B)
     val slotHoverOverlay: Color get() = Color(0x80FFFFFF)
+
+    /** Text field chrome: fill, idle and focused borders, caret and selection highlight. */
+    val inputBackground: Color get() = Color(0xAA181818)
+    val inputBorder: Color get() = Color(0xFF6E6E6E)
+    val inputBorderFocused: Color get() = Color(0xFFFFFFFF)
+    val textCaret: Color get() = Color(0xFFFFFFFF)
+    val textSelection: Color get() = Color(0x804040FF)
 
     /** Vertical scrollbar track and bar. */
     val scrollbarTrack: Color get() = Color(0xAA444444)

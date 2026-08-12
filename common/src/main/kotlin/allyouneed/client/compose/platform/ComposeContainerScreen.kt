@@ -77,6 +77,16 @@ abstract class ComposeContainerScreen<T : AbstractContainerMenu>(
         return super.mouseReleased(mouseX, mouseY, button)
     }
 
+    override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
+        if (layer.onKeyPressed(keyCode, scanCode, modifiers)) return true
+        return super.keyPressed(keyCode, scanCode, modifiers)
+    }
+
+    override fun charTyped(codePoint: Char, modifiers: Int): Boolean {
+        if (layer.onCharTyped(codePoint.code, modifiers)) return true
+        return super.charTyped(codePoint, modifiers)
+    }
+
     override fun onClose() {
         layer.dispose()
         // 等价于 Screen.onClose(setScreen(null)),但跳过 AbstractContainerScreen 的

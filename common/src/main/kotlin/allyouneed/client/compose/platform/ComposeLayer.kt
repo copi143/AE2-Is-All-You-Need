@@ -107,6 +107,14 @@ class ComposeLayer {
         return owner.onMouseScrolled(local.x, local.y, delta)
     }
 
+    /** Forwards a key-press (GLFW keyCode/scanCode/modifiers); true when a text field consumed it. */
+    fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
+        owner.onKeyPressed(keyCode, scanCode, modifiers)
+
+    /** Forwards a committed character (direct key or IME); true when a text field consumed it. */
+    fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =
+        owner.onCharTyped(codePoint, modifiers)
+
     private fun toLocal(x: Double, y: Double): Offset {
         val scale = uiScale
         return Offset((x / scale - origin.x).toFloat(), (y / scale - origin.y).toFloat())
