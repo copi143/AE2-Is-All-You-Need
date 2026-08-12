@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.material
 
 import allyouneed.client.compose.platform.ScrollState
 import androidx.compose.foundation.background
@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.theme.McTheme
 import kotlin.math.max
 
 /**
@@ -32,8 +33,8 @@ fun McScrollbar(
     modifier: Modifier = Modifier,
     trackWidth: androidx.compose.ui.unit.Dp = 4.dp,
     barWidth: androidx.compose.ui.unit.Dp = 2.dp,
-    trackColor: Color = Color(0xAA444444),
-    barColor: Color = Color(0xFFAAAAAA),
+    trackColor: Color = McTheme.colors.scrollbarTrack,
+    barColor: Color = McTheme.colors.scrollbarBar,
 ) {
     BoxWithConstraints(modifier) {
         if (state.maxScroll <= 0f) return@BoxWithConstraints

@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.material
 
 import allyouneed.client.compose.platform.McGraphics
 import androidx.compose.runtime.Composable
@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
+import minecraftx.compose.theme.McTheme
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphics
@@ -30,7 +31,7 @@ import kotlin.math.min
 fun McText(
     text: Component,
     modifier: Modifier = Modifier,
-    color: Int = 0xFFFFFFFF.toInt(),
+    color: Int = McTheme.colors.textPrimary.value.toInt(),
     maxWidth: Int = Int.MAX_VALUE,
     clipFrame: Rect? = null,
 ) {
@@ -50,7 +51,7 @@ fun McText(
 
 /** String convenience overload of [McText]. */
 @Composable
-fun Text(text: String, modifier: Modifier = Modifier, color: Int = 0xFFFFFFFF.toInt()) {
+fun Text(text: String, modifier: Modifier = Modifier, color: Int = McTheme.colors.textPrimary.value.toInt()) {
     McText(Component.literal(text), modifier, color)
 }
 

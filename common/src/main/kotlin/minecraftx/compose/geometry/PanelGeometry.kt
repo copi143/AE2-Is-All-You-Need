@@ -1,4 +1,4 @@
-package allyouneed.client.compose.geometry
+package minecraftx.compose.geometry
 
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntSize

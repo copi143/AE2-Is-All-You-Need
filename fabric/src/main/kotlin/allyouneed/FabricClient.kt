@@ -7,7 +7,7 @@ import allyouneed.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellItem
-import allyouneed.client.itemdetail.ItemDetailsKeyBind
+import minecraftx.compose.itemdetail.ItemDetailsKeyBind
 import allyouneed.client.CraftingStorageModels
 import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.iodrive.MEIODriveScreen

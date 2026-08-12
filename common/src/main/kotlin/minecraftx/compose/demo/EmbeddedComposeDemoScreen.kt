@@ -1,12 +1,12 @@
-package allyouneed.client.compose.demo
+package minecraftx.compose.demo
 
-import allyouneed.client.compose.material.ItemSlot
-import allyouneed.client.compose.material.McCloseButton
-import allyouneed.client.compose.material.McLine
-import allyouneed.client.compose.material.McPanel
-import allyouneed.client.compose.material.McScrollbar
-import allyouneed.client.compose.material.McText
-import allyouneed.client.compose.material.McVirtualColumn
+import minecraftx.compose.material.ItemSlot
+import minecraftx.compose.material.McCloseButton
+import minecraftx.compose.foundation.McLine
+import minecraftx.compose.material.McPanel
+import minecraftx.compose.material.McScrollbar
+import minecraftx.compose.material.McText
+import minecraftx.compose.foundation.McVirtualColumn
 import allyouneed.client.compose.platform.ComposeLayer
 import allyouneed.client.compose.platform.rememberScrollState
 import androidx.compose.runtime.Composable

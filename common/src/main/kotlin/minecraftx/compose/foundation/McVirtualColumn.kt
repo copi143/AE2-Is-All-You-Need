@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.foundation
 
 import allyouneed.client.compose.platform.ScrollState
 import androidx.compose.foundation.layout.Box
@@ -10,17 +10,20 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.material.McText
+import minecraftx.compose.theme.McTheme
 import net.minecraft.network.chat.Component
 
 /**
  * A single pre-positioned text line for [McVirtualColumn]: [y] is the absolute logical Y (before
- * applying the scroll offset), [x] the left indent and [color] the paint fallback.
+ * applying the scroll offset), [x] the left indent and [color] the paint fallback. When [color] is
+ * null the active theme's [McTheme.colors] primary text color is used.
  */
 data class McLine(
     val text: Component,
     val x: Int,
     val y: Int,
-    val color: Int = 0xFFFFFFFF.toInt(),
+    val color: Int? = null,
 )
 
 /**
@@ -43,13 +46,14 @@ fun McVirtualColumn(
 ) {
     Box(modifier.mcScroll(state)) {
         val offset = state.display
+        val defaultColor = McTheme.colors.textPrimary.value.toInt()
         for (line in lines) {
             val y = line.y - offset
             if (y >= -lineHeight.toFloat() && y < viewportHeight.toFloat()) {
                 McText(
                     text = line.text,
                     modifier = Modifier.offset(line.x.dp, y.dp),
-                    color = line.color,
+                    color = line.color ?: defaultColor,
                     maxWidth = viewportWidth - line.x,
                     clipFrame = Rect(
                         -line.x.toFloat(),

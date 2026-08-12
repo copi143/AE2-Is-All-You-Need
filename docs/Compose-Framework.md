@@ -9,30 +9,43 @@
 ## 1. 架构总览
 
 ```
+# 基础兼容层（保留在 allyouneed 下，仅依赖 MC + androidx.compose.ui）
 common/src/main/kotlin/allyouneed/client/compose/
-├── platform/
-│   ├── ComposeOwner.kt          # 官方 Owner 实现：Recomposer 帧时钟 + LayoutNode 根 + 输入桥接
-│   ├── ComposeLayer.kt          # ★ 嵌入面：任意 vanilla Screen 内嵌/全屏托管一个 Compose 子树
-│   ├── ComposeScreen.kt         # 全屏 Screen 薄适配器（内部持有一个全屏 ComposeLayer）
-│   ├── ComposeApi.kt            # TooltipHost / MousePosition / FrameCallbackHost / Local* 共享 API
-│   ├── ScrollState.kt           # target/display 双值平滑滚动 + rememberScrollState（帧回调驱动）
-│   ├── McGraphics.kt            # 当前 GuiGraphics 的公开持有者（渲染桥接）
-│   ├── McCanvas.kt              # Canvas → GuiGraphics 指令桥（含 flush / scissor 透传）
-│   └── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
-├── material/
+└── platform/
+    ├── ComposeOwner.kt          # 官方 Owner 实现：Recomposer 帧时钟 + LayoutNode 根 + 输入桥接
+    ├── ComposeLayer.kt          # ★ 嵌入面：任意 vanilla Screen 内嵌/全屏托管一个 Compose 子树
+    ├── ComposeScreen.kt         # 全屏 Screen 薄适配器（内部持有一个全屏 ComposeLayer）
+    ├── ComposeContainerScreen.kt# 容器型全屏屏（EMI 返回栈兼容）
+    ├── ComposeApi.kt            # TooltipHost / MousePosition / FrameCallbackHost / Local* 共享 API
+    ├── ScrollState.kt           # target/display 双值平滑滚动 + rememberScrollState（帧回调驱动）
+    ├── McGraphics.kt            # 当前 GuiGraphics 的公开持有者（渲染桥接）
+    ├── McCanvas.kt              # Canvas → GuiGraphics 指令桥（含 flush / scissor 透传）
+    └── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
+
+# 界面定义层（minecraftx.compose.*，全部基于基础兼容层构建）
+common/src/main/kotlin/minecraftx/compose/
+├── theme/
+│   ├── McTheme.kt               # CompositionLocal 提供者 + McTheme.colors/typography/shapes 访问
+│   ├── McColorScheme.kt         # 语义颜色契约（接口默认值 = 暗色主题）
+│   ├── McTypography.kt / McShapes.kt
+│   ├── DarkColorScheme.kt       # 默认暗色主题
+│   └── LightColorScheme.kt      # 亮色主题（多主题控件 = 切换 McColorScheme）
+├── material/                    # 主题化控件（读取 McTheme.colors，可单节点覆盖）
 │   ├── McText.kt                # 统一文本组件（Component/String 重载 + 像素级 scissor 裁剪）
-│   ├── McPanel.kt               # 带边框面板 + McCloseButton
-│   ├── McScrollbar.kt           # 点击跳转 + 拖拽 1:1 的滚动条
+│   ├── McPanel.kt               # 带边框面板 + McCloseButton（colors 参数主题化）
+│   ├── McScrollbar.kt / McTooltip.kt
+│   └── ItemSlot.kt / EmiSlotRenderer.kt / VanillaSlotRenderer.kt
+├── foundation/                  # 与主题无关的布局基元
 │   ├── McVirtualColumn.kt       # 虚拟化滚动文本列（不可见行不组合）+ Modifier.mcScroll
-│   └── ItemSlot.kt              # 物品堆叠预览（EMI/vanilla 渲染，旁路 Compose 树）
+│   └── McScrollBox.kt           # 通用 overflow 容器
 ├── geometry/
 │   └── PanelGeometry.kt         # centeredRect / inset 纯函数
-├── itemdetail/                  # item-details 屏幕（框架的真实使用示例）
+├── itemdetail/                  # item-details 屏幕（框架的真实使用示例，主题感知）
 │   ├── ItemDetails.kt / ItemDetailsLayout.kt / ItemDetailsScreenFactory.kt
 │   ├── ComposeItemDetailsScreen.kt   # ★ 完全由框架组件搭建的屏幕
 │   └── ItemDetailsScreen.kt          # 遗留纯 vanilla 屏（保留不动，返回栈宿主）
 └── demo/
-    ├── ComposeDemoScreen.kt          # 按 K 打开：官方组件 + 框架组件混用测试页
+    ├── ComposeDemoScreen.kt          # 按 K 打开：官方组件 + 框架组件混用 + 主题切换
     └── EmbeddedComposeDemoScreen.kt  # 按 L 打开：vanilla Screen 内嵌 ComposeLayer 面板
 ```
 
@@ -123,16 +136,16 @@ class MyScreen : Screen(...) {
 
 | 组件 | 说明 |
 | --- | --- |
-| `McText(Component|String, color, modifier, maxWidth, clipFrame)` | 统一文本；`clipFrame` 给逻辑矩形 → scissor 像素裁剪（半行平滑滚动必需） |
-| `McPanel(width, height, background, border) { BoxScope }` | 固定尺寸带边框面板，内容在 BoxScope 内 |
-| `McCloseButton(onClose)` | 14×14 ✕ 关闭按钮 |
-| `McVirtualColumn(lines, state, viewportW/H, lineHeight)` | 虚拟化文本列：不可见行不组合；容器带 `mcScroll` 滚轮 |
+| `McText(Component|String, color, modifier, maxWidth, clipFrame)` | 统一文本；`clipFrame` 给逻辑矩形 → scissor 像素裁剪（半行平滑滚动必需）；`color` 默认取 `McTheme.colors.textPrimary` |
+| `McPanel(width, height, colors) { BoxScope }` | 固定尺寸带边框面板，背景/边框来自主题（`colors` 可单节点覆盖） |
+| `McCloseButton(onClose, colors)` | ✕ 关闭按钮（默认 14×14），主题化 |
+| `McVirtualColumn(lines, state, viewportW/H, lineHeight)` | 虚拟化文本列：不可见行不组合；容器带 `mcScroll` 滚轮；`McLine.color` 为 null 时取主题主色 |
 | `Modifier.mcScroll(state)` | 滚轮 → `state.scrollBy(-dy*WHEEL_STEP)`，官方命中测试路由；消费增量以支持嵌套滚动 |
-| `McScrollbar(state)` | 点击跳转 + 拖拽 1:1（`seek`），紧贴虚拟列使用 |
+| `McScrollbar(state, trackColor, barColor)` | 点击跳转 + 拖拽 1:1（`seek`），颜色默认取自主题 |
 | `rememberScrollState(maxScroll)` | 平滑滚动状态，自动向 FrameCallbackHost 注册 `advance` |
-| `ItemSlot(stack, modifier, interactive)` | 物品堆叠预览，EMI/vanilla 渲染器旁路 |
-| `McScrollBox(contentW, contentH, modifier, scrollable, clip, autoScroll)` | 通用 overflow 容器：内容钳制/裁剪/滚动/滚动条四态，见 §4.1 |
-| `McTooltip(lines, modifier, ...)` | Compose 布局+渲染 tooltip（vanilla `renderMcTooltip` 的框架对偶版），见 §4.2 |
+| `ItemSlot(stack, modifier, interactive, colors)` | 物品堆叠预览，EMI/vanilla 渲染器旁路，槽位配色来自主题 |
+| `McScrollBox(contentW, contentH, modifier, scrollable, clip, autoScroll)` | 通用 overflow 容器：内容钳制/裁剪/滚动/滚动条四态，见 §4.1；滚动条配色来自主题 |
+| `McTooltip(lines, modifier, ...)` | Compose 布局+渲染 tooltip（vanilla `renderMcTooltip` 的框架对偶版），见 §4.2；配色来自主题 |
 
 滚动语义：`scrollBy`（滚轮）动 target、`seek`（拖拽）同时写 display/target 即时生效；
 `display` 指数收敛到 target（`smoothingTime=0.06s`），静止时零写入。
@@ -177,6 +190,29 @@ McVirtualColumn / 内层 McScrollBox）不会一次滚两处：内层按叶子�
 演示（K 键）：`ItemSlot` 悬停显示 **vanilla 浮动 tooltip**，右侧悬停框显示跟随鼠标的
 **Compose 浮动 tooltip**（`McTooltip` 以 `pointerInput` Enter/Move/Exit 更新 `IntOffset`
 状态，根层叠加定位）。
+
+### 4.3 多主题控件
+
+所有 `material/*` 控件的配色默认取自 `McTheme.colors`（一个 `McColorScheme`），因此换肤 =
+切换 scheme，且可全局或局部生效：
+
+```kotlin
+// 全局：包住整屏内容（demo 的 K 屏用按钮在 Dark/Light 间切换）
+var dark by remember { mutableStateOf(true) }
+McTheme(colorScheme = if (dark) DarkColorScheme else LightColorScheme) {
+    McPanel(width = 200.dp, height = 100.dp) { McText("Hello") }
+}
+
+// 局部：单个节点用别的配色
+McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
+```
+
+- `McColorScheme` 是语义颜色契约（面板背景/边框、槽位、滚动条、tooltip、文本主色……），
+  接口默认值即暗色主题；自定义主题只需 override 有差异的槽。
+- 未包裹 `McTheme` 的组件回落到 `DarkColorScheme`，现有屏幕外观不变（向后兼容）。
+- `McTheme` 用 `staticCompositionLocalOf`：切换 scheme 会整体重组合子树，全屏换肤即此语义。
+- 颜色以 `Color`（ULong ARGB）承载；落进 `GuiGraphics.drawString` 的文本用
+  `color.value.toInt()` 转回 `Int`（`0xAARRGGBB`，与 MC 一致）。
 
 ---
 

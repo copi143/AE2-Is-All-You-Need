@@ -1,7 +1,7 @@
-package allyouneed.client.itemdetail
+package minecraftx.compose.itemdetail
 
 import allyouneed.Platform
-import allyouneed.client.itemdetail.focus.ItemDetailsFocus
+import minecraftx.compose.itemdetail.focus.ItemDetailsFocus
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft

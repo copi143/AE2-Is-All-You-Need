@@ -1,8 +1,8 @@
-package allyouneed.client.itemdetail
+package minecraftx.compose.itemdetail
 
 import allyouneed.client.compose.platform.ComposeContainerScreen
-import allyouneed.client.itemdetail.styling.DetailsStyling.COLOR_SECTION
-import allyouneed.client.itemdetail.styling.DetailsStyling.COLOR_VALUE
+import minecraftx.compose.itemdetail.styling.DetailsStyling.COLOR_SECTION
+import minecraftx.compose.itemdetail.styling.DetailsStyling.COLOR_VALUE
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button

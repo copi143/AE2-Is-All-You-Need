@@ -1,4 +1,4 @@
-package allyouneed.client.itemdetail
+package minecraftx.compose.itemdetail
 
 /**
  * Shared geometry for the item-details screen. The panel is a fixed rectangle

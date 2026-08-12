@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.material
 
 import allyouneed.client.compose.platform.LocalMousePosition
 import allyouneed.client.compose.platform.LocalTooltipHost
@@ -26,6 +26,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.theme.McColorScheme
+import minecraftx.compose.theme.McTheme
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
@@ -54,6 +56,7 @@ fun ItemSlot(
     modifier: Modifier = Modifier,
     interactive: Boolean = false,
     onSlotClicked: ((button: Int, clickType: ClickType) -> Unit)? = null,
+    colors: McColorScheme = McTheme.colors,
 ) {
     val renderer = remember { SlotRenderers.get() }
     val tooltipHost = LocalTooltipHost.current
@@ -121,14 +124,14 @@ fun ItemSlot(
             }
             .drawBehind {
                 val graphics = McGraphics.current ?: return@drawBehind
-                drawRect(color = Color(0x66808080))
-                drawRect(color = Color(0xFF8B8B8B), style = Stroke(1f))
+                drawRect(color = colors.slotBackground)
+                drawRect(color = colors.slotBorder, style = Stroke(1f))
                 renderer.drawStack(graphics, stack, 1, 1)
                 val p = mouse.inDensity(density)
                 if (p.x in nodePos.x.toInt()..(nodePos.x + SLOT_SIZE).toInt() &&
                     p.y in nodePos.y.toInt()..(nodePos.y + SLOT_SIZE).toInt()
                 ) {
-                    drawRect(color = Color(0x80FFFFFF))
+                    drawRect(color = colors.slotHoverOverlay)
                 }
             },
     )

@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.material
 
 import dev.emi.emi.api.EmiApi
 import dev.emi.emi.api.stack.EmiStack

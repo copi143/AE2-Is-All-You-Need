@@ -1,4 +1,4 @@
-package allyouneed.client.itemdetail.styling
+package minecraftx.compose.itemdetail.styling
 
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style

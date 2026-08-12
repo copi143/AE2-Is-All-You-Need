@@ -1,13 +1,13 @@
-package allyouneed.client.compose.demo
+package minecraftx.compose.demo
 
-import allyouneed.client.compose.material.ItemSlot
-import allyouneed.client.compose.material.McLine
-import allyouneed.client.compose.material.McScrollBox
-import allyouneed.client.compose.material.McScrollbar
-import allyouneed.client.compose.material.McText
-import allyouneed.client.compose.material.McTooltip
-import allyouneed.client.compose.material.McVirtualColumn
-import allyouneed.client.compose.material.Text
+import minecraftx.compose.material.ItemSlot
+import minecraftx.compose.foundation.McLine
+import minecraftx.compose.foundation.McScrollBox
+import minecraftx.compose.material.McScrollbar
+import minecraftx.compose.material.McText
+import minecraftx.compose.material.McTooltip
+import minecraftx.compose.foundation.McVirtualColumn
+import minecraftx.compose.material.Text
 import allyouneed.client.compose.platform.ComposeContainerScreen
 import allyouneed.client.compose.platform.LocalMousePosition
 import allyouneed.client.compose.platform.rememberScrollState
@@ -38,6 +38,9 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.theme.DarkColorScheme
+import minecraftx.compose.theme.LightColorScheme
+import minecraftx.compose.theme.McTheme
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -55,6 +58,8 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
     @Composable
     override fun Content() {
+        var dark by remember { mutableStateOf(true) }
+        McTheme(colorScheme = if (dark) DarkColorScheme else LightColorScheme) {
         var count by remember { mutableStateOf(0) }
         var sliderValue by remember { mutableStateOf(0.5f) }
         var visible by remember { mutableStateOf(true) }
@@ -74,6 +79,15 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             ) {
             Text("Compose Demo", color = 0xFFFFAA00.toInt())
             Text("Ctrl+滚轮缩放 UI,当前 %.1fx".format(currentUiScale()), color = 0xFF88FFFF.toInt())
+
+            Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
+
+            // 主题切换:McTheme 包裹整屏内容,切换 McColorScheme 即整体换肤。
+            Row {
+                Button(onClick = { dark = !dark }) {
+                    Text(if (dark) "切到亮色主题" else "切到暗色主题", color = 0xFFFFFFFF.toInt())
+                }
+            }
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
 
@@ -279,6 +293,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                     ),
                 )
             }
+        }
         }
     }
 }

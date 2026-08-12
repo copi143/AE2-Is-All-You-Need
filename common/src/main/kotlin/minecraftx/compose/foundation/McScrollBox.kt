@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.foundation
 
 import allyouneed.client.compose.platform.McGraphics
 import allyouneed.client.compose.platform.ScrollState
@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.material.McScrollbar
+import minecraftx.compose.theme.McTheme
 import kotlin.math.min
 
 /**
@@ -61,8 +63,8 @@ fun McScrollBox(
     state: ScrollState = rememberScrollState(),
     backgroundColor: Color? = null,
     scrollbarWidth: Int = 4,
-    scrollbarColor: Color = Color(0xFFAAAAAA),
-    scrollbarTrackColor: Color = Color(0xAA444444),
+    scrollbarColor: Color = McTheme.colors.scrollbarBar,
+    scrollbarTrackColor: Color = McTheme.colors.scrollbarTrack,
     content: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier.then(if (scrollable) Modifier.mcScroll(state) else Modifier)) {

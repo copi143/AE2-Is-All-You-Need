@@ -1,7 +1,7 @@
 package allyouneed.compose.demo
 
-import allyouneed.client.compose.demo.ComposeDemoScreen
-import allyouneed.client.compose.demo.EmbeddedComposeDemoScreen
+import minecraftx.compose.demo.ComposeDemoScreen
+import minecraftx.compose.demo.EmbeddedComposeDemoScreen
 import com.mojang.blaze3d.platform.InputConstants
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft

@@ -1,6 +1,6 @@
 package allyouneed.forge.init
 
-import allyouneed.client.itemdetail.ItemDetailsKeyBind
+import minecraftx.compose.itemdetail.ItemDetailsKeyBind
 import allyouneed.util.MODID
 import net.minecraft.client.KeyMapping
 import net.minecraftforge.api.distmarker.Dist

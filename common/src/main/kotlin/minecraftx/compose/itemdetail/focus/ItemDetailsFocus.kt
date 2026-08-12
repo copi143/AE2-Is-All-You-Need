@@ -1,4 +1,4 @@
-package allyouneed.client.itemdetail.focus
+package minecraftx.compose.itemdetail.focus
 
 import net.minecraft.client.Minecraft
 import net.minecraft.core.Direction

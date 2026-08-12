@@ -1,10 +1,10 @@
-package allyouneed.client.itemdetail
+package minecraftx.compose.itemdetail
 
-import allyouneed.client.itemdetail.styling.DetailsStyling.formatFloat
-import allyouneed.client.itemdetail.styling.DetailsStyling.kv
-import allyouneed.client.itemdetail.styling.DetailsStyling.line
-import allyouneed.client.itemdetail.styling.DetailsStyling.section
-import allyouneed.client.itemdetail.styling.DetailsStyling.tag
+import minecraftx.compose.itemdetail.styling.DetailsStyling.formatFloat
+import minecraftx.compose.itemdetail.styling.DetailsStyling.kv
+import minecraftx.compose.itemdetail.styling.DetailsStyling.line
+import minecraftx.compose.itemdetail.styling.DetailsStyling.section
+import minecraftx.compose.itemdetail.styling.DetailsStyling.tag
 import net.minecraft.core.Holder
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component

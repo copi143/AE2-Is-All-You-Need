@@ -1,15 +1,7 @@
-package allyouneed.client.itemdetail
+package minecraftx.compose.itemdetail
 
-import allyouneed.client.compose.material.ItemSlot
-import allyouneed.client.compose.material.McCloseButton
-import allyouneed.client.compose.material.McLine
-import allyouneed.client.compose.material.McPanel
-import allyouneed.client.compose.material.McScrollbar
-import allyouneed.client.compose.material.McText
-import allyouneed.client.compose.material.McVirtualColumn
 import allyouneed.client.compose.platform.ComposeContainerScreen
 import allyouneed.client.compose.platform.rememberScrollState
-import allyouneed.client.itemdetail.styling.DetailsStyling.COLOR_VALUE
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,12 +9,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.foundation.McLine
+import minecraftx.compose.foundation.McVirtualColumn
+import minecraftx.compose.material.ItemSlot
+import minecraftx.compose.material.McCloseButton
+import minecraftx.compose.material.McPanel
+import minecraftx.compose.material.McScrollbar
+import minecraftx.compose.material.McText
+import minecraftx.compose.theme.McTheme
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
@@ -50,16 +50,14 @@ class ComposeItemDetailsScreen(
     Component.literal("Block Details"),
 ) {
 
-    private val rows: List<McLine> by lazy { buildRows() }
-
-    private fun buildRows(): List<McLine> {
+    private fun buildRows(valueColor: Int): List<McLine> {
         val out = ArrayList<McLine>()
         var y = 0
         for (section in details.sections) {
-            out += McLine(section.title, 4, y, COLOR_VALUE)
+            out += McLine(section.title, 4, y, valueColor)
             y += ItemDetailsLayout.LINE_HEIGHT
             for (entry in section.lines) {
-                out += McLine(entry, 8, y, COLOR_VALUE)
+                out += McLine(entry, 8, y, valueColor)
                 y += ItemDetailsLayout.LINE_HEIGHT
             }
             y += ItemDetailsLayout.SECTION_GAP
@@ -69,6 +67,8 @@ class ComposeItemDetailsScreen(
 
     @Composable
     override fun Content() {
+        val colors = McTheme.colors
+        val rows = remember(colors) { buildRows(colors.textPrimary.value.toInt()) }
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
@@ -111,8 +111,8 @@ class ComposeItemDetailsScreen(
                             .offset(ItemDetailsLayout.PADDING.dp, ItemDetailsLayout.CONTENT_TOP.dp)
                             .size(contentW.dp, contentH.dp),
                     ) {
-                        Box(Modifier.matchParentSize().background(Color(0x66000000)))
-                        Box(Modifier.matchParentSize().drawBehind { drawRect(color = Color(0xFF333333), style = Stroke(1f)) })
+                        Box(Modifier.matchParentSize().background(colors.contentBackground))
+                        Box(Modifier.matchParentSize().drawBehind { drawRect(color = colors.contentBorder, style = Stroke(1f)) })
                         McVirtualColumn(
                             lines = rows,
                             state = state,

@@ -1,6 +1,6 @@
 package allyouneed.resgen
 
-import allyouneed.client.itemdetail.ItemDetailsKeyBind
+import minecraftx.compose.itemdetail.ItemDetailsKeyBind
 import com.google.gson.JsonParser
 import java.nio.file.Path
 import kotlin.io.path.copyTo

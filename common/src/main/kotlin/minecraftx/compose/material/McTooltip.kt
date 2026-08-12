@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.material
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -9,6 +9,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.theme.McTheme
 import net.minecraft.network.chat.Component
 
 /**
@@ -29,9 +30,9 @@ import net.minecraft.network.chat.Component
 fun McTooltip(
     lines: List<Component>,
     modifier: Modifier = Modifier,
-    textColor: Int = 0xFFFFFFFF.toInt(),
-    background: Color = Color(0xC0100010),
-    border: Color = Color(0xFF555555),
+    textColor: Int = McTheme.colors.textPrimary.value.toInt(),
+    background: Color = McTheme.colors.tooltipBackground,
+    border: Color = McTheme.colors.tooltipBorder,
     maxWidth: Int = 220,
     paddingX: Int = 4,
     paddingY: Int = 3,

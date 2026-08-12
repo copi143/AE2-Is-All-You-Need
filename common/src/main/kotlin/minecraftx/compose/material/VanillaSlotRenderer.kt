@@ -1,4 +1,4 @@
-package allyouneed.client.compose.material
+package minecraftx.compose.material
 
 import allyouneed.client.integration.jei.JeiRuntimeStore
 import net.minecraft.client.Minecraft
