@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 import appeng.menu.AEBaseMenu
 import appeng.menu.guisync.GuiSync

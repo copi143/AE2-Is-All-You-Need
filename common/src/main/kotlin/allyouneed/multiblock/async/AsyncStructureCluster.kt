@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 import net.minecraft.core.BlockPos
 

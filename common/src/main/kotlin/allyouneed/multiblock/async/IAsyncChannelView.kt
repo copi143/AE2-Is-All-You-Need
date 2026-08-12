@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 /**
  * 已接入网格的 async 连接器的只读视图，由普通连接器方块实体和 GT 连接器机器

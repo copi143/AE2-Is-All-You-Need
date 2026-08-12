@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 import appeng.client.gui.AEBaseScreen
 import appeng.client.gui.style.ScreenStyle

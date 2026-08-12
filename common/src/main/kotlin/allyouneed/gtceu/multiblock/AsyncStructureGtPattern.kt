@@ -1,7 +1,7 @@
-package allyouneed.gtceu
+package allyouneed.gtceu.multiblock
 
-import allyouneed.async.AsyncBlockKind
-import allyouneed.async.AsyncBlockRegistry
+import allyouneed.multiblock.async.AsyncBlockKind
+import allyouneed.multiblock.async.AsyncBlockRegistry
 import allyouneed.multiblock.AsyncStructureType
 import allyouneed.multiblock.AsyncStructures
 import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition
@@ -10,6 +10,7 @@ import com.gregtechceu.gtceu.api.pattern.FactoryBlockPattern
 import com.gregtechceu.gtceu.api.pattern.Predicates
 import com.gregtechceu.gtceu.api.pattern.TraceabilityPredicate
 import net.minecraft.world.level.block.Block
+import kotlin.collections.iterator
 
 /**
  * async 合成结构的 GTCEu 模式，从 [AsyncStructures] 中手写的形状常量生成。

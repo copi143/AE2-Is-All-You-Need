@@ -1,9 +1,9 @@
-package allyouneed.gtceu
+package allyouneed.gtceu.multiblock
 
 import allyouneed.api.AsyncChannelNodeHolder
-import allyouneed.async.AsyncStructureEntityBlock
-import allyouneed.async.IAsyncChannelSink
-import allyouneed.async.IAsyncChannelView
+import allyouneed.multiblock.async.AsyncStructureEntityBlock
+import allyouneed.multiblock.async.IAsyncChannelSink
+import allyouneed.multiblock.async.IAsyncChannelView
 import appeng.api.networking.GridFlags
 import appeng.api.networking.IGridMultiblock
 import appeng.api.networking.IGridNode

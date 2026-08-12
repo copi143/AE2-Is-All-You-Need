@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 import allyouneed.api.AsyncChannelNodeHolder
 import appeng.api.networking.GridFlags

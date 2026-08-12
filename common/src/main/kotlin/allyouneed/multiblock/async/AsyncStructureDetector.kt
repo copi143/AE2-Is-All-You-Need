@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 import allyouneed.multiblock.AsyncStructureType
 import allyouneed.multiblock.AsyncStructures

@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 /**
  * 处理器结构状态的只读视图，由每种宿主的菜单实现（自有方块与 GTCEu 机器），

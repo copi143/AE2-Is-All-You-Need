@@ -1,8 +1,8 @@
-package allyouneed.gtceu
+package allyouneed.gtceu.multiblock
 
-import allyouneed.async.AsyncBlockKind
-import allyouneed.async.AsyncStructureEntityBlock
-import allyouneed.async.IAsyncKindBlock
+import allyouneed.multiblock.async.AsyncBlockKind
+import allyouneed.multiblock.async.AsyncStructureEntityBlock
+import allyouneed.multiblock.async.IAsyncKindBlock
 import com.gregtechceu.gtceu.api.block.MetaMachineBlock
 import com.gregtechceu.gtceu.api.machine.MachineDefinition
 import net.minecraft.core.BlockPos

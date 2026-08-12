@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 /**
  * 所有代表 async 合成方块种类的方块都实现该接口，无论是普通结构方块还是 GT

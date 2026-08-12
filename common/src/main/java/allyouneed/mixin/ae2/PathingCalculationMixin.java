@@ -1,7 +1,7 @@
 package allyouneed.mixin.ae2;
 
 import allyouneed.api.AsyncChannelNodeHolder;
-import allyouneed.async.IAsyncChannelSink;
+import allyouneed.multiblock.async.IAsyncChannelSink;
 import appeng.api.networking.IGrid;
 import appeng.me.GridNode;
 import appeng.me.pathfinding.PathingCalculation;

@@ -1,14 +1,14 @@
 package allyouneed.client
 
 import allyouneed.Platform
-import allyouneed.async.AsyncBlockKind
-import allyouneed.async.AsyncBlockRegistry
-import allyouneed.async.AsyncCraftingStatusMenu
-import allyouneed.async.AsyncCraftingStatusScreen
+import allyouneed.multiblock.async.AsyncBlockKind
+import allyouneed.multiblock.async.AsyncBlockRegistry
+import allyouneed.multiblock.async.AsyncCraftingStatusMenu
+import allyouneed.multiblock.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellItem
-import allyouneed.gtceu.AsyncStructureGtStatusMenu
+import allyouneed.gtceu.multiblock.AsyncStructureGtStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.iodrive.MEIODriveScreen
 import allyouneed.parts.machineassembler.MachineAssemblerMenu

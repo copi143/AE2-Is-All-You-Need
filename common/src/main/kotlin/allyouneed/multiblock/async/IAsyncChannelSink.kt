@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 /**
  * 由 async 处理连接器方块实体实现。结构成形后，其网格节点会吞掉所有可用的

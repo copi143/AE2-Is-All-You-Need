@@ -1,9 +1,19 @@
 package allyouneed.forge.init
 
-import allyouneed.async.AsyncBlockKind
-import allyouneed.async.AsyncBlockRegistry
-import allyouneed.async.AsyncRole
-import allyouneed.gtceu.*
+import allyouneed.multiblock.async.AsyncBlockKind
+import allyouneed.multiblock.async.AsyncBlockRegistry
+import allyouneed.multiblock.async.AsyncRole
+import allyouneed.gtceu.multiblock.AsyncStructureGtConnectorBlock
+import allyouneed.gtceu.multiblock.AsyncStructureGtConnectorMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtControllerMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtFactoryMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtLanConnectorMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtMachineBlock
+import allyouneed.gtceu.multiblock.AsyncStructureGtMeConnectorMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtPattern
+import allyouneed.gtceu.multiblock.AsyncStructureGtProcessorMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtSwitchMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtWanConnectorMachine
 import allyouneed.multiblock.AsyncStructureType
 import allyouneed.util.MODID
 import allyouneed.util.rl

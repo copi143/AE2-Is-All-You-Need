@@ -1,8 +1,8 @@
 package allyouneed.forge.init
 
 import allyouneed.Platform
-import allyouneed.async.AsyncCraftingStatusMenu
-import allyouneed.gtceu.AsyncStructureGtStatusMenu
+import allyouneed.multiblock.async.AsyncCraftingStatusMenu
+import allyouneed.gtceu.multiblock.AsyncStructureGtStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu

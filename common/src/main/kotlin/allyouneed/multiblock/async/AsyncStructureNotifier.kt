@@ -1,6 +1,6 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
-import allyouneed.async.AsyncStructureNotifier.SCAN_INTERVAL
+import allyouneed.multiblock.async.AsyncStructureNotifier.SCAN_INTERVAL
 import net.minecraft.core.BlockPos
 import net.minecraft.server.TickTask
 import net.minecraft.server.level.ServerLevel

@@ -1,6 +1,16 @@
 package allyouneed.fabric.init
 
-import allyouneed.async.*
+import allyouneed.multiblock.async.AsyncBlockKind
+import allyouneed.multiblock.async.AsyncBlockRegistry
+import allyouneed.multiblock.async.AsyncCraftingRegistration
+import allyouneed.multiblock.async.AsyncRole
+import allyouneed.multiblock.async.AsyncStructureBlock
+import allyouneed.multiblock.async.AsyncStructureBlockEntity
+import allyouneed.multiblock.async.AsyncStructureConnectorBlock
+import allyouneed.multiblock.async.AsyncStructureConnectorBlockEntity
+import allyouneed.multiblock.async.AsyncStructureControllerBlock
+import allyouneed.multiblock.async.AsyncStructureFrameBlock
+import allyouneed.multiblock.async.AsyncStructureInterfaceBlock
 import allyouneed.parts.iodrive.MEIODriveBlock
 import allyouneed.parts.iodrive.MEIODriveBlockEntity
 import allyouneed.parts.iodrive.MEIODriveRegistration

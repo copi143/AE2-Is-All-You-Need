@@ -1,4 +1,4 @@
-package allyouneed.gtceu
+package allyouneed.gtceu.multiblock
 
 /**
  * 把 GTCEu 的 [BlockPattern] 标记为携带“分组重复”元数据，该元数据由

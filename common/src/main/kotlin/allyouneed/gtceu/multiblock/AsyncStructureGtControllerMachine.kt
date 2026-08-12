@@ -1,6 +1,13 @@
-package allyouneed.gtceu
+package allyouneed.gtceu.multiblock
 
-import allyouneed.async.*
+import allyouneed.multiblock.async.AsyncBlockKind
+import allyouneed.multiblock.async.AsyncModuleCluster
+import allyouneed.multiblock.async.AsyncProcessorCluster
+import allyouneed.multiblock.async.AsyncStructureDetector
+import allyouneed.multiblock.async.AsyncStructureEntityBlock
+import allyouneed.multiblock.async.AsyncSwitchCluster
+import allyouneed.multiblock.async.IAsyncChannelView
+import allyouneed.multiblock.async.setStructuralFormed
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity

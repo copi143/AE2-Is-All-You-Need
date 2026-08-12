@@ -1,8 +1,6 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
-import allyouneed.async.AsyncStructureEntityBlock.Companion.FORMED
-import allyouneed.async.AsyncStructureEntityBlock.Companion.POWERED
-import allyouneed.async.AsyncStructureFrameBlock.Companion.CONNECTIONS
+import allyouneed.multiblock.async.AsyncStructureEntityBlock.Companion.FORMED
 import appeng.api.orientation.IOrientationStrategy
 import appeng.api.orientation.OrientationStrategies
 import appeng.block.AEBaseEntityBlock
@@ -44,13 +42,13 @@ open class AsyncStructureBlock(
     init {
         registerDefaultState(
             defaultBlockState()
-                .setValue(AsyncStructureEntityBlock.FORMED, false),
+                .setValue(FORMED, false),
         )
     }
 
     override fun createBlockStateDefinition(builder: StateDefinition.Builder<Block, BlockState>) {
         super.createBlockStateDefinition(builder)
-        builder.add(AsyncStructureEntityBlock.FORMED)
+        builder.add(FORMED)
     }
 
     @Suppress("DEPRECATION")
@@ -99,7 +97,7 @@ class AsyncStructureFrameBlock(
     init {
         registerDefaultState(
             defaultBlockState()
-                .setValue(AsyncStructureEntityBlock.FORMED, false)
+                .setValue(FORMED, false)
                 .setValue(CONNECTIONS, 0),
         )
     }
@@ -181,7 +179,7 @@ fun setStructuralFormed(level: ServerLevel, min: BlockPos, max: BlockPos, formed
                 val pos = BlockPos(x, y, z)
                 val state = level.getBlockState(pos)
                 if (state.block is AsyncStructureBlock) {
-                    val newState = state.setValue(AsyncStructureEntityBlock.FORMED, formed)
+                    val newState = state.setValue(FORMED, formed)
                     if (state != newState) {
                         level.getChunkAt(pos).setBlockState(pos, newState, false)
                         level.sendBlockUpdated(pos, state, newState, Block.UPDATE_CLIENTS)

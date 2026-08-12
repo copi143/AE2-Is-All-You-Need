@@ -1,7 +1,5 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
-import allyouneed.async.AsyncCraftingRegistration.setStructureBlockEntityType
-import allyouneed.async.AsyncCraftingRegistration.setStructureConnectorBlockEntityType
 import net.minecraft.world.level.block.entity.BlockEntityType
 
 /**

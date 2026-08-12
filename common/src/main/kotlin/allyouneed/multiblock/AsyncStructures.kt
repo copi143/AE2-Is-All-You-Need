@@ -1,6 +1,6 @@
 package allyouneed.multiblock
 
-import allyouneed.async.AsyncBlockKind
+import allyouneed.multiblock.async.AsyncBlockKind
 import net.minecraft.core.Direction
 
 /**

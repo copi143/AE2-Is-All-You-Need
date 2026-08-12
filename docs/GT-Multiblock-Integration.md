@@ -58,11 +58,12 @@
 | `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtPattern.kt` | 重写 `build()`：发全深度布局（base + 组 + 收尾 + 后墙），构造后 `setGroup(baseCount, 6)` |
 | `common/src/main/kotlin/allyouneed/multiblock/AsyncStructures.kt` | `isFloorCell` / `inCore` / `isOuterShellCell` 改为 public（pattern 生成器需要） |
 | `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtControllerMachine.kt` | 删检测器覆写；`rebuildCluster` 改从 pattern 的 pos cache 汇总 cluster 摘要 |
-| `common/src/main/kotlin/allyouneed/async/AsyncStructureNotifier.kt` | 删 GT 分支（`requestStructureCheck()`），保留 vanilla 分支 |
+| `common/src/main/kotlin/allyouneed/multiblock/async/AsyncStructureNotifier.kt` | 删 GT 分支（`requestStructureCheck()`），保留 vanilla 分支 |
 
 ### 1.4 mixin 设计细节（核心，GTCEu 7.5.3）
 
 关键事实：
+
 - `IMultiController.checkPattern()` → `getPattern().checkPatternAt(state, false)` → 2 参 → 6 参
   `checkPatternAt(state, centerPos, frontFacing, upwardsFacing, isFlipped, savePredicate)`。
 - 异步流程：`MultiblockWorldSavedData.searchingTask`（后台线程）→ `asyncCheckPattern(periodID)` →
@@ -79,6 +80,7 @@
   `blocks(a).or(blocks(b).setMaxGlobalLimited(n))` 把 b 移到 limited 并限次，a 留在 common 不限量。
 
 `BlockPatternGroupedMixin`：
+
 - `groupSizes[c]`：组首 = G；组内其余 = 0；单 aisle = 1。
 - `checkPatternAt(6参)` 重构循环：外层按「步」迭代（单 aisle 或组）。组步依次匹配
   `blockMatches[c..c+G-1]` 共 G 个连续 z（每组内 z 逐个递增），一组完整成功后 `z += G`；组重复计数
@@ -93,6 +95,7 @@
   层/全局 limited 计数、candidates 选块、放置与朝向修正逻辑不变。
 
 `MultiblockMachineDefinitionGroupMixin`：
+
 - `@Overwrite getMatchingShapes()`：`pattern is IGroupedBlockPattern` 且某组首 min==0 → 该维度枚举序
   `1..max, 0`（保证第 0 页 = 1 次重复）；其余维度维持 `min..max`。
 
@@ -107,12 +110,14 @@
 
 组内容（每层 19×height；y=0 地板：`F@x=0,18`、`M@x=1..17`；y=1 各行见 `upperFloorCell`；y≥2 全
 don't-care）：
+
 - row0/row4：`F@x=1,9,17`，其余 M（x=0,18 为**必需空气**）；
 - row1/row3：`F@x=1,9,17`、`M@x=2,8,10,16`，其余空气；
 - row2（接口行）：`Z@x=5,13`、`F@x=1,9,17`、`M@x=2,8,10,16`，其余空气；
 - row5：`F@x=1,17`、`TOWER@x=2..16`，x=0,18 空气。
 
 谓词（对应 `AsyncStructures.isValidCell` 替换规则）：
+
 - 地板层（y∈{0,1}）MACHINE → `blocks(machine)`；
 - 非地板 MACHINE → `blocks(machine).or(blocks(glass))`；
 - SWITCH 核心内（`inCore`）M 格 →
@@ -269,7 +274,7 @@ don't-care）：
 - 频道吞没：`swallowedChannels` 读 `(node as? AsyncChannelNodeHolder)?.getAsyncSwallowedChannels()`
   （`PathingCalculationMixin`/`GridNodeMixin` 注入不变）；DENSE → 32 频道。
 - 普通（非 GT）连接器 `AsyncStructureConnectorBlockEntity`（common）行为等价：`AENetworkBlockEntity`
-  + 同一组 flags + `IGridMultiblock` 收集同结构节点。
+  - 同一组 flags + `IGridMultiblock` 收集同结构节点。
 
 ---
 

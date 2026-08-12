@@ -1,4 +1,4 @@
-package allyouneed.async
+package allyouneed.multiblock.async
 
 /**
  * 一个方块在 async 合成网络中扮演的角色。只有需要按方块保存运行时状态的角色

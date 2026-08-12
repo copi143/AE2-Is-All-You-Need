@@ -1,9 +1,9 @@
-package allyouneed.gtceu
+package allyouneed.gtceu.multiblock
 
-import allyouneed.async.AsyncModuleCluster
-import allyouneed.async.AsyncProcessorCluster
-import allyouneed.async.AsyncSwitchCluster
-import allyouneed.async.IAsyncCraftingStatusView
+import allyouneed.multiblock.async.AsyncModuleCluster
+import allyouneed.multiblock.async.AsyncProcessorCluster
+import allyouneed.multiblock.async.AsyncSwitchCluster
+import allyouneed.multiblock.async.IAsyncCraftingStatusView
 import appeng.menu.AEBaseMenu
 import appeng.menu.guisync.GuiSync
 import appeng.menu.implementations.MenuTypeBuilder

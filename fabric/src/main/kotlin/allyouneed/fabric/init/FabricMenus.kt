@@ -1,6 +1,6 @@
 package allyouneed.fabric.init
 
-import allyouneed.async.AsyncCraftingStatusMenu
+import allyouneed.multiblock.async.AsyncCraftingStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
