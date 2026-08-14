@@ -65,8 +65,7 @@ class BigIngredient private constructor(
             wildcard != null -> !wildcard.isEmpty && wildcard.test(stack)
             else -> false
         }
-        if (!kindOk) return false
-        return BigInteger.valueOf(stack.count.toLong()) >= valBig
+        return kindOk && BigInteger.valueOf(stack.count.toLong()) >= valBig
     }
 
     fun setSize(value: Long): BigIngredient {
@@ -108,7 +107,7 @@ class BigIngredient private constructor(
     }
 
     override fun hashCode(): Int {
-        var h = (exactKey?.hashCode() ?: 0) xor (wildcard?.hashCode() ?: 0)
+        var h = exactKey.hashCode() xor wildcard.hashCode()
         h = h xor if (valLong < 0) bigInt.hashCode() else valLong.hashCode()
         return h
     }

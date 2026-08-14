@@ -22,6 +22,7 @@ dependencies {
     compileOnly(libs.mixin)
     api(libs.kotlinx.coroutines.core)
     api(project(":kaptor"))
+    api(project(":averith"))
     listOf(
         libs.compose.runtime,
         libs.compose.ui,

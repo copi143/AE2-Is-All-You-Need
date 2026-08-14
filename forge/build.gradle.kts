@@ -70,9 +70,8 @@ dependencies {
     implementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
-    // JiJ onto mod classloader. Non-transitive; skip kotlin-stdlib/coroutines (KFF) and antlr (Forge CP).
-    // Compose UI classes are merged straight into the mod jar via :common's composeClasses, not jarJar.
     jarJar(project(":kaptor"))
+    jarJar(project(":averith"))
 
     jarJar(libs.ojalgo)
 

@@ -179,48 +179,25 @@ $256 \text{Ti}$ 物品压成一个压缩奇点！
 
 - [x] 按 `RecipeType` 注册类别（crafting / smelting / blasting / smoking）
 - [x] 默认物品 + 本模组 tag + 约定 tag（服务端）
-- [x] 数据包扩展：`machine_types` / `machine_recipes`（手动配方优先，再回退配方源）
+- [x] 数据包扩展：`machines/types` + `machines/recipes`（手动优先 → recipe_source）
 - [ ] JEI/EMI 一键填入编码终端（仅 UX，不参与匹配）
 - [ ] 非 Container 配方适配器（GT 等）
 
 #### 数据包格式 (Datapack Format)
 
-路径（任意命名空间）/ Paths (any namespace):
+- `data/<ns>/machines/types/` — 类别：`machines[]` + `tags[]`（OR），`auto_tag` 默认开（`id`→`ns:machines/<path>`）
+- `data/<ns>/machines/recipes/` — 手动配方：`inputs[]` + `outputs[]`（输入 [BigIngredient]，输出 [BigStack]）
 
-- `data/<ns>/machines/types/` — 新增/覆盖机器类别 / add or override machine types
-- `data/<ns>/machines/recipes/` — 手动配方 / manual recipes
-
-匹配顺序 / Match order：**手动配方 → `recipe_source`**（如 `minecraft:smelting`）。
-
-类型里 **`machines` 与 `tags` 同时 OR**。  
-默认自动 tag：`id`=`ns:foo` → `ns:machines/foo`（`"auto_tag": false` 可关）。
+匹配顺序：**手动配方 → `recipe_source`**。
 
 ```jsonc
-// machines/types/example.json
-// auto tag: ae2isallyouneed:machines/example_custom
-{
-  "id": "ae2isallyouneed:example_custom",
-  "machines": ["minecraft:lodestone"],
-  "tags": [],
-  "recipe_source": null
-}
+// types
+{ "id": "ae2isallyouneed:example_custom", "machines": ["minecraft:lodestone"], "tags": [], "recipe_source": null }
 
-// machines/recipes/foo.json — 精确 item（BigStack）优先于原版熔炼
-{
-  "machine_type": "minecraft:smelting",
-  "inputs": [{ "item": "minecraft:cobblestone" }],
-  "outputs": [{ "item": "minecraft:diamond", "count": 1 }]
-}
-
-// 通配 tag：输入用 Ingredient，输出仍是确定 BigStack
-{
-  "machine_type": "minecraft:smelting",
-  "inputs": [{ "tag": "minecraft:logs", "count": 1 }],
-  "outputs": [{ "item": "minecraft:charcoal", "count": 2 }]
-}
+// recipes — item 精确 / tag 通配
+{ "machine_type": "minecraft:smelting", "inputs": [{ "item": "minecraft:cobblestone" }], "outputs": [{ "item": "minecraft:diamond", "count": 1 }] }
+{ "machine_type": "minecraft:smelting", "inputs": [{ "tag": "minecraft:logs" }], "outputs": [{ "item": "minecraft:charcoal", "count": 2 }] }
 ```
-
-输入规格见 [BigIngredient]：`item`→精确 `BigStack`，`tag`/多物品→通配；**输出不能通配**。
 
 #### 概率修正
 

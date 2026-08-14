@@ -30,8 +30,8 @@ class BigStack private constructor(val key: AEKey, val valLong: Long, private va
     val valString: String get() = bigInt?.toString() ?: valLong.toString()
     val isZero: Boolean get() = valLong == 0L
 
-    fun setSize(value: Long): BigStack = BigStack(key, value, null)
-    fun setSize(value: BigInteger): BigStack = BigStack(key, value)
+    fun withSIze(value: Long): BigStack = BigStack(key, value, null)
+    fun withSIze(value: BigInteger): BigStack = BigStack(key, value)
 
     operator fun plus(other: BigStack): BigStack {
         require(this.key == other.key) { "Cannot add stacks with different keys: ${this.key} vs ${other.key}" }
