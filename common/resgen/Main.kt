@@ -24,6 +24,25 @@ val tiers = listOf(
     "1t", "4t", "16t", "64t", "256t",
 ).map { it.uppercase() }
 
+// GT ME power hatch tiers (id -> display name), matching GTCEu's tier naming used by GTMeDynamoHatch.
+val gtDynamoHatchTiers = listOf(
+    "ulv" to "ULV",
+    "lv" to "LV",
+    "mv" to "MV",
+    "hv" to "HV",
+    "ev" to "EV",
+    "iv" to "IV",
+    "luv" to "LuV",
+    "zpm" to "ZPM",
+    "uv" to "UV",
+    "uhv" to "UHV",
+    "uev" to "UEV",
+    "uiv" to "UIV",
+    "uxv" to "UXV",
+    "opv" to "OpV",
+    "max" to "MAX",
+)
+
 private val energyCells = tiers.flatMapIndexed { i, tier ->
     listOf(
         CellEntry("$tier Energy Cell", AE2_COLORS[i].hex),
@@ -188,6 +207,15 @@ fun main(args: Array<String>) {
                 else -> asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
             }
         }
+
+        // GT ME power hatch: ULV..MAX for the 2A/4A/16A/64A variants (GT style, 2A is the base
+        // variant reusing the 1A overlay set). Each gets a static GT-styled blockstate + model (see
+        // AssetGen.gtDynamoHatchBlock) that mirror GTCEu's `overlayTieredHullModel` datagen output,
+        // so the machine renders GT's tiered hull + overlay port without running datagen. Only the
+        // emissive arrow is ours, re-themed to AE purple (AsyncTextures.generateGtDynamoHatchOverlays);
+        // the tinted plate and ring are GT's own assets referenced directly.
+        gtDynamoHatchBlock(gtDynamoHatchTiers)
+        translation("block.$modId.ae_power_hatch.tooltip", "The ME network draws the stored EU directly (EU to FE to AE)")
 
         simpleBlock("me_io_drive", "ME IO Drive")
 
@@ -459,6 +487,15 @@ fun main(args: Array<String>) {
     AsyncTextures.generate(
         asyncStructureBlocks.filter { it.id !in handDrawnAsyncBlocks },
         output.resolve("textures/block/async"),
+    )
+
+    // GT ME dynamo hatch front overlays in an AE purple theme: GT's output arrow hue-shifted to
+    // AE cable purple (`overlay_energy_{n}a_ae(_emissive).png`). The tinted plate and ring stay
+    // GT's own textures (the model references gtceu: directly, we never bundle them); the tier
+    // colour comes from MeDynamoHatchMachine.tintColor(2) at runtime, so no per-tier files.
+    AsyncTextures.generateGtDynamoHatchOverlays(
+        sourceTextures.resolve("gt"),
+        output.resolve("textures/block/overlay/machine"),
     )
 
     // GUI textures (machine slot square + molecular_assembler GUI with a baked machine slot)

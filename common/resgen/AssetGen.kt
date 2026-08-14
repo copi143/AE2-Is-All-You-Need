@@ -1,7 +1,9 @@
 package allyouneed.resgen
 
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import java.nio.file.Path
 import kotlin.io.path.*
 
@@ -252,6 +254,9 @@ class AssetGen(
      * (all formed/unformed combos are emitted so every reachable state matches a model).
      * Property-less structural blocks carry the `formed` property, so their blockstate varies
      * `formed=false/true` between the plain and the `_formed` models.
+     * When [hasFormed] is false the block has no `formed` property: only the unformed model is
+     * emitted and the blockstate varies on `facing` (or is property-less), e.g. GT machines whose
+     * runtime blockstate is generated from their rotation state.
      */
     fun asyncBlock(
         name: String,
@@ -260,6 +265,7 @@ class AssetGen(
         hasPowered: Boolean,
         faces: List<String>? = null,
         formedFaces: List<String>? = null,
+        hasFormed: Boolean = true,
     ) {
         translations["block.$modId.$name"] = displayName
 
@@ -269,7 +275,9 @@ class AssetGen(
             faceCubeModel(faces) to faceCubeModel(formedFaces ?: faces)
         }
         blockModels += GeneratedFile("models/block/async/$name.json", unformedModel)
-        blockModels += GeneratedFile("models/block/async/${name}_formed.json", formedModel)
+        if (hasFormed) {
+            blockModels += GeneratedFile("models/block/async/${name}_formed.json", formedModel)
+        }
 
         val variants = JsonObject()
 
@@ -294,7 +302,7 @@ class AssetGen(
                 )
             }
 
-            hasFacing -> for (dir in dirs) for (formed in listOf("false", "true")) {
+            hasFacing && hasFormed -> for (dir in dirs) for (formed in listOf("false", "true")) {
                 addVariant(
                     "facing=$dir,formed=$formed",
                     if (formed == "false") name else "${name}_formed",
@@ -302,9 +310,15 @@ class AssetGen(
                 )
             }
 
-            else -> for (formed in listOf("false", "true")) {
+            hasFacing -> for (dir in dirs) {
+                addVariant("facing=$dir", name, yaw.getValue(dir))
+            }
+
+            hasFormed -> for (formed in listOf("false", "true")) {
                 addVariant("formed=$formed", if (formed == "false") name else "${name}_formed")
             }
+
+            else -> addVariant("", name)
         }
 
         val stateJson = JsonObject().apply { add("variants", variants) }
@@ -338,10 +352,13 @@ class AssetGen(
 
     /**
      * Frame block with connection textures. The block carries a [connections] mask (one bit per
-     * direction, set when the neighbour is another frame); for each mask the per-face texture is
-     * `h` when both in-plane horizontal neighbours connect, `v` when both in-plane vertical
-     * neighbours connect, else `c`. Models are emitted once per unique face assignment (deduped
-     * across the 64 masks), each with an unformed and a `_formed` (animated gradient) variant.
+     * direction, set when the neighbour is another frame); for each mask the formed per-face
+     * texture is `h` when both in-plane horizontal neighbours connect, `v` when both in-plane
+     * vertical neighbours connect, else `c`. The connection bands only take effect when formed:
+     * every unformed face uses the plain `frame_c` texture, so a half-built frame reads as
+     * unconnected until the structure is complete. Models are emitted once per unique face
+     * assignment (deduped across the 64 masks), each with an unformed and a `_formed` (animated
+     * gradient) variant.
      */
     fun asyncFrameBlock(name: String, displayName: String) {
         translations["block.$modId.$name"] = displayName
@@ -360,7 +377,7 @@ class AssetGen(
             val unformedTextures = JsonObject()
             val formedTextures = JsonObject()
             for ((i, face) in FRAME_FACE_ORDER.withIndex()) {
-                unformedTextures.addProperty(face, "$modId:block/async/frame_${assignment[i]}")
+                unformedTextures.addProperty(face, "$modId:block/async/frame_c")
                 formedTextures.addProperty(face, "$modId:block/async/frame_${assignment[i]}_formed")
             }
             unformedTextures.addProperty("particle", "$modId:block/async/frame_c")
@@ -394,6 +411,161 @@ class AssetGen(
         addProperty("parent", "minecraft:block/cube")
         add("textures", textures)
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // GT ME dynamo hatch: GT energy-output-hatch model structure as static per-tier assets
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * GT ME dynamo hatch block: per-tier/per-amperage blockstate + `gtceu:machine` loader model that
+     * mirror what GTCEu's `overlayTieredHullModel` would emit through datagen, written as static
+     * assets so the machine renders without running GTCEu datagen. Each block reuses GT's
+     * `energy_output_hatch` layout: the loader model declares `replaceable_textures`
+     * (bottom/top/side) so that once formed the hull is retextured with the controller's casing
+     * like any other GT machine part, while the overlay layers (tier-tinted plate + ring +
+     * emissive) stay. Per GT's rule the 2A variant reuses the 1A overlay set; 4A/16A/64A use their
+     * own amperage sets. The tinted plate and ring are GT's own textures (referenced directly, never
+     * bundled); only the emissive arrow is our AE-purple re-theme
+     * (`overlay_energy_{n}a_ae_emissive`).
+     */
+    fun gtDynamoHatchBlock(tiers: List<Pair<String, String>>) {
+        for (amp in GT_HATCH_AMPERAGES) {
+            val a = if (amp == 2) "1a" else "${amp}a"
+            val partName = if (amp == 2) "ae_power_hatch" else "ae_power_hatch_${amp}a"
+
+            blockModels += GeneratedFile("models/block/machine/part/$partName.json", JsonObject().apply {
+                addProperty("parent", "gtceu:block/overlay/2_layer/tinted/front")
+                add("textures", JsonObject().apply {
+                    addProperty("overlay_tint", "gtceu:block/overlay/machine/overlay_energy_${a}_tinted")
+                    addProperty("overlay_in", "gtceu:block/overlay/machine/overlay_energy_${a}_in")
+                    addProperty(
+                        "overlay_out_emissive",
+                        "$modId:block/overlay/machine/overlay_energy_${a}_ae_emissive",
+                    )
+                })
+                add("elements", GT_HATCH_ELEMENTS)
+            })
+
+            for ((tierId, display) in tiers) {
+                if (amp == 64 && tierId !in GT_HATCH_64A_TIERS) continue
+                val name = if (amp == 2) "${tierId}_ae_power_hatch" else "${tierId}_ae_power_hatch_${amp}a"
+                val displayName = if (amp == 2) "$display AE Power Hatch" else "$display ${amp}A AE Power Hatch"
+                translations["block.$modId.$name"] = displayName
+
+                val loaderModelPath = "block/machine/$name"
+                val hullTextures = JsonObject().apply {
+                    addProperty("bottom", "gtceu:block/casings/voltage/$tierId/bottom")
+                    addProperty("top", "gtceu:block/casings/voltage/$tierId/top")
+                    addProperty("side", "gtceu:block/casings/voltage/$tierId/side")
+                }
+                val formedVariant = JsonObject().apply {
+                    add("model", JsonObject().apply {
+                        addProperty("parent", "$modId:block/machine/part/$partName")
+                        add("textures", hullTextures)
+                    })
+                }
+                blockModels += GeneratedFile("models/$loaderModelPath.json", JsonObject().apply {
+                    addProperty("parent", "minecraft:block/block")
+                    addProperty("loader", "gtceu:machine")
+                    addProperty("machine", "$modId:$name")
+                    add("replaceable_textures", JsonArray().apply {
+                        add("bottom")
+                        add("top")
+                        add("side")
+                    })
+                    add("variants", JsonObject().apply {
+                        add("is_formed=false", formedVariant)
+                        add("is_formed=true", formedVariant)
+                    })
+                })
+
+                // Facing rotations match GT's generated machine blockstate (x/y Euler + `gtceu:z`).
+                val variants = JsonObject().apply {
+                    fun addVariant(facing: String, y: Int = 0, x: Int = 0, z: Int = 0) {
+                        add("facing=$facing", JsonObject().apply {
+                            addProperty("model", "$modId:$loaderModelPath")
+                            if (z != 0) addProperty("gtceu:z", z)
+                            if (y != 0) addProperty("y", y)
+                            if (x != 0) addProperty("x", x)
+                        })
+                    }
+                    addVariant("down", x = 90)
+                    addVariant("up", x = 270, z = 180)
+                    addVariant("north")
+                    addVariant("south", y = 180)
+                    addVariant("west", y = 270)
+                    addVariant("east", y = 90)
+                }
+                blockStates += GeneratedFile(
+                    "blockstates/$name.json",
+                    JsonObject().apply { add("variants", variants) },
+                )
+
+                itemModels += GeneratedFile("models/item/$name.json", JsonObject().apply {
+                    addProperty("parent", "$modId:$loaderModelPath")
+                })
+            }
+        }
+    }
+
+    /**
+     * The four elements shared by every dynamo hatch overlay, identical to GT's
+     * `models/block/machine/part/energy_output_hatch.json`: the hull (tintindex 1), the
+     * tier-tinted overlay (tintindex 2), the ring, and the glowing emissive layer.
+     */
+    private val GT_HATCH_ELEMENTS: JsonArray = JsonParser.parseString(
+        """
+        [
+            {
+                "from": [  0,  0,  0 ],
+                "to":   [ 16, 16, 16 ],
+                "faces": {
+                    "down":  { "texture": "#bottom", "cullface": "down",  "tintindex": 1 },
+                    "up":    { "texture": "#top",    "cullface": "up",    "tintindex": 1 },
+                    "north": { "texture": "#side",   "cullface": "north", "tintindex": 1 },
+                    "south": { "texture": "#side",   "cullface": "south", "tintindex": 1 },
+                    "west":  { "texture": "#side",   "cullface": "west",  "tintindex": 1 },
+                    "east":  { "texture": "#side",   "cullface": "east",  "tintindex": 1 }
+                }
+            },
+            {
+                "from": [ -0.01, -0.01, -0.01 ],
+                "to":   [ 16.01, 16.01, 16.01 ],
+                "faces": {
+                    "north": { "uv": [0, 0, 16, 16], "texture": "#overlay_tint",  "cullface": "north", "tintindex": 2 }
+                }
+            },
+            {
+                "from": [ -0.02, -0.02, -0.02 ],
+                "to":   [ 16.02, 16.02, 16.02 ],
+                "faces": {
+                    "north": { "uv": [0, 0, 16, 16], "texture": "#overlay_in",  "cullface": "north" }
+                }
+            },
+            {
+                "from": [ -0.02, -0.02, -0.02 ],
+                "to":   [ 16.02, 16.02, 16.02 ],
+                "forge_data": { "block_light": 15, "sky_light": 15 },
+                "shade": false,
+                "faces": {
+                    "north": { "uv": [0, 0, 16, 16], "texture": "#overlay_out_emissive",  "cullface": "north" }
+                }
+            }
+        ]
+        """.trimIndent(),
+    ) as JsonArray
+
+    /**
+     * The amperage versions of the ME dynamo hatch, matching GT's energy-output-hatch style: 2A is
+     * the base variant (no suffix) and, per GT's rule, reuses the 1A overlay set; 4A/16A/64A carry
+     * their own suffix and amperage overlay sets, and the 64A variant only exists from EV upward.
+     */
+    private val GT_HATCH_AMPERAGES = listOf(2, 4, 16, 64)
+
+    /** 64A exists only from EV upward, matching GT's high-amperage hatches. */
+    private val GT_HATCH_64A_TIERS = listOf(
+        "ev", "iv", "luv", "zpm", "uv", "uhv", "uev", "uiv", "uxv", "opv", "max",
+    )
 
     fun generate() {
         val all = blockStates + blockModels + itemModels

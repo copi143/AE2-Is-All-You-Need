@@ -1,6 +1,8 @@
 package allyouneed.resgen
 
+import java.awt.Color
 import java.awt.image.BufferedImage
+import java.nio.file.Files
 import java.nio.file.Path
 import javax.imageio.ImageIO
 
@@ -40,6 +42,48 @@ object AsyncTextures {
             ImageIO.write(formed, "png", texturesBlockDir.resolve("${def.id}_formed.png").toFile())
         }
     }
+
+    /**
+     * GT ME dynamo hatch front overlays in an AE cable-purple theme.
+     *
+     * Stock GT dynamo hatches stack three overlay layers on the front face: `overlay_tint`
+     * (tier-tinted plate), `overlay_in` (ring) and `overlay_out_emissive` (red glow arrow). We
+     * keep GT's own `tinted`/`in` assets (referenced directly by the model, never bundled) and
+     * only re-theme the output layer: the red arrow is hue-shifted to AE's cable purple, emitting
+     * two files per amperage - `overlay_energy_{n}a_ae.png` and `overlay_energy_{n}a_ae_emissive.png`.
+     * Zero-saturation pixels (greys) pass through unchanged; alpha and the brightness gradient are
+     * preserved so the arrow keeps its shape and glow.
+     */
+    fun generateGtDynamoHatchOverlays(gtSourceDir: Path, texturesOverlayMachineDir: Path) {
+        texturesOverlayMachineDir.toFile().mkdirs()
+        Files.list(gtSourceDir).use { stream ->
+            stream.filter { p ->
+                val name = p.fileName.toString()
+                name.startsWith("overlay_energy_") && name.contains("_out") && name.endsWith(".png")
+            }.forEach { src ->
+                val img = ImageIO.read(src.toFile())
+                for (x in 0 until img.width) {
+                    for (y in 0 until img.height) {
+                        val argb = img.getRGB(x, y)
+                        val a = argb ushr 24 and 0xFF
+                        if (a == 0) continue
+                        val r = argb shr 16 and 0xFF
+                        val g = argb shr 8 and 0xFF
+                        val b = argb and 0xFF
+                        val hsb = Color.RGBtoHSB(r, g, b, null)
+                        val hue = if (hsb[1] > 0f) AE_PURPLE_HUE else hsb[0]
+                        val rgb = Color.HSBtoRGB(hue, hsb[1], hsb[2]) and 0xFFFFFF
+                        img.setRGB(x, y, (a shl 24) or rgb)
+                    }
+                }
+                val outName = src.fileName.toString().replace("_out", "_ae")
+                ImageIO.write(img, "png", texturesOverlayMachineDir.resolve(outName).toFile())
+            }
+        }
+    }
+
+    /** AE cable purple hue (HSL/HSB degrees -> fraction), AE2's fluix cable accent. */
+    private const val AE_PURPLE_HUE = 270f / 360f
 
     private fun palette(hex: String): Palette {
         val r = hex.substring(1, 3).toInt(16)
