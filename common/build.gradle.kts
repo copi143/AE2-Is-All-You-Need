@@ -179,8 +179,12 @@ sourceSets.create("resgen") {
 }
 
 artifacts {
-    add("commonJava", sourceSets.main.get().java.sourceDirectories.first())
-    add("commonKotlin", sourceSets.main.get().kotlin.sourceDirectories.filter { !it.name.endsWith("java") }.first())
+    sourceSets.main.get().java.sourceDirectories.forEach { resourceDir ->
+        add("commonJava", resourceDir)
+    }
+    sourceSets.main.get().kotlin.sourceDirectories.forEach { resourceDir ->
+        add("commonKotlin", resourceDir)
+    }
     sourceSets.main.get().resources.sourceDirectories.forEach { resourceDir ->
         add("commonResources", resourceDir)
     }

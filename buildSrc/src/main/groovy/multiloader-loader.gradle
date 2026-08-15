@@ -88,7 +88,12 @@ tasks.named('sourcesJar', Jar) {
 tasks.named("dokkaJavadoc", DokkaTask) {
     dependsOn(configurations.commonJava)
     dependsOn(configurations.commonKotlin)
+    // Dokka resolves the full compile classpath to type-check sources, which transitively pulls in
+    // :common, :kaptor and :averith build outputs. dependsOn the resolved configuration so Gradle
+    // declares explicit dependencies on those producer tasks instead of relying on implicit ones.
+    dependsOn(configurations.compileClasspath)
     dokkaSourceSets.configureEach {
         sourceRoots.from(configurations.commonJava.singleFile, configurations.commonKotlin.singleFile)
+        classpath.from(configurations.compileClasspath)
     }
 }
