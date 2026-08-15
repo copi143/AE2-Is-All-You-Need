@@ -59,15 +59,15 @@ loom {
     runs {
         named("client") {
             client()
-            configName = "Fabric Client"
-            ideConfigGenerated(true)
-            runDir("runs/client")
+            displayName = "Fabric Client"
+            generateRunConfig = true
+            runDirectory.dir("runs/client")
         }
         named("server") {
             server()
-            configName = "Fabric Server"
-            ideConfigGenerated(true)
-            runDir("runs/server")
+            displayName = "Fabric Server"
+            generateRunConfig = true
+            runDirectory.dir("runs/server")
         }
     }
 }
