@@ -413,11 +413,11 @@ class AssetGen(
     }
 
     // ---------------------------------------------------------------------------------------------
-    // GT ME dynamo hatch: GT energy-output-hatch model structure as static per-tier assets
+    // GT AE power hatch: GT energy-output-hatch model structure as static per-tier assets
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * GT ME dynamo hatch block: per-tier/per-amperage blockstate + `gtceu:machine` loader model that
+     * GT AE power hatch block: per-tier/per-amperage blockstate + `gtceu:machine` loader model that
      * mirror what GTCEu's `overlayTieredHullModel` would emit through datagen, written as static
      * assets so the machine renders without running GTCEu datagen. Each block reuses GT's
      * `energy_output_hatch` layout: the loader model declares `replaceable_textures`
@@ -428,7 +428,7 @@ class AssetGen(
      * bundled); only the emissive arrow is our AE-purple re-theme
      * (`overlay_energy_{n}a_ae_emissive`).
      */
-    fun gtDynamoHatchBlock(tiers: List<Pair<String, String>>) {
+    fun gtAEPowerHatchBlock(tiers: List<Pair<String, String>>) {
         for (amp in GT_HATCH_AMPERAGES) {
             val a = if (amp == 2) "1a" else "${amp}a"
             val partName = if (amp == 2) "ae_power_hatch" else "ae_power_hatch_${amp}a"
@@ -509,7 +509,7 @@ class AssetGen(
     }
 
     /**
-     * The four elements shared by every dynamo hatch overlay, identical to GT's
+     * The four elements shared by every power hatch overlay, identical to GT's
      * `models/block/machine/part/energy_output_hatch.json`: the hull (tintindex 1), the
      * tier-tinted overlay (tintindex 2), the ring, and the glowing emissive layer.
      */
@@ -556,7 +556,7 @@ class AssetGen(
     ) as JsonArray
 
     /**
-     * The amperage versions of the ME dynamo hatch, matching GT's energy-output-hatch style: 2A is
+     * The amperage versions of the AE power hatch, matching GT's energy-output-hatch style: 2A is
      * the base variant (no suffix) and, per GT's rule, reuses the 1A overlay set; 4A/16A/64A carry
      * their own suffix and amperage overlay sets, and the 64A variant only exists from EV upward.
      */

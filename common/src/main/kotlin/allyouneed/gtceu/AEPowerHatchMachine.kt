@@ -1,4 +1,4 @@
-package allyouneed.gtceu.multiblock
+package allyouneed.gtceu
 
 import appeng.api.config.AccessRestriction
 import appeng.api.config.Actionable
@@ -22,9 +22,10 @@ import net.minecraft.core.Direction
 import net.minecraft.server.TickTask
 import net.minecraft.server.level.ServerLevel
 import java.util.EnumSet
+import kotlin.math.ceil
 
 /**
- * ME 动力仓：GTCEu 多方块的输出能量仓（dynamo hatch）。内部 EU 缓冲由多方块注入；AE 侧
+ * AE 动力仓：GTCEu 多方块的输出能量仓（dynamo hatch）。内部 EU 缓冲由多方块注入；AE 侧
  * 不再主动充能，而是把自己注册为网格节点服务 [IAEPowerStorage]（`READ` 流向），AE 网络
  * 按需通过 [extractAEPower] 直接抽取仓内能量。网格节点始终把前脸（frontFacing）作为暴露面
  * 接入附近线缆。只要仓内缓存非空就向 AE 供电，成形与否不影响（红石/工作禁用除外）：
@@ -35,7 +36,7 @@ import java.util.EnumSet
  * 多方块检查，二者都会崩溃。这里与 GTCEu 自带 `MEHatchPartMachine` 保持一致：暴露面
  * 只在旋转（[onRotated]）时更新。
  *
- * ME dynamo hatch: a GTCEu multiblock output energy hatch. The internal EU buffer is fed by the
+ * AE power hatch: a GTCEu multiblock output energy hatch. The internal EU buffer is fed by the
  * multiblock; on the AE side the machine does not actively push power any more - it registers
  * itself as an [IAEPowerStorage] grid-node service (`READ` flow) and the AE network draws the
  * stored energy on demand through [extractAEPower]. The grid node keeps the front face exposed
@@ -48,27 +49,28 @@ import java.util.EnumSet
  * recompute and `setBlock` re-enters GTCEu's multiblock check, both crash. This matches the
  * stock `MEHatchPartMachine`: exposed sides are only updated on rotation ([onRotated]).
  */
-class MeDynamoHatchMachine(
+class AEPowerHatchMachine(
     holder: IMachineBlockEntity,
     tier: Int,
     amperage: Int,
 ) : TieredIOPartMachine(holder, tier, IO.OUT), IGridConnectedMachine, IAEPowerStorage {
 
     @Persisted
-    protected val energyContainer: MeDynamoHatchEnergyContainer
+    private val energyContainer: AEPowerHatchEnergyContainer = AEPowerHatchEnergyContainer(this, tier, amperage)
 
     @Persisted
-    protected val nodeHolder: MeDynamoHatchGridNodeTrait
+    private val nodeHolder: AEPowerHatchGridNodeTrait = AEPowerHatchGridNodeTrait(this)
 
     private var online = false
 
     /** 防抖：同一 server 任务只排一次队，避免能量频繁变化时刷屏。 */
     private var powerNotifyQueued = false
 
-    init {
-        energyContainer = MeDynamoHatchEnergyContainer(this, tier, amperage)
-        nodeHolder = MeDynamoHatchGridNodeTrait(this)
-    }
+    /** 单 tick 可向 AE 输出的 EU 预算（= 额定输出 voltage × amperage），跨 tick 在 [extractAEPower] 内重置。 */
+    private var aeOutputBudget = 0L
+
+    /** 上次预算刷新的世界 tick；与当前 [net.minecraft.world.level.Level.gameTime] 不同则重置 [aeOutputBudget]。 */
+    private var lastAeBudgetTick = Long.MIN_VALUE
 
     override fun getMainNode(): SerializableManagedGridNode = nodeHolder.mainNode
 
@@ -92,7 +94,7 @@ class MeDynamoHatchMachine(
 
     companion object {
         private val MANAGED_FIELD_HOLDER = ManagedFieldHolder(
-            MeDynamoHatchMachine::class.java,
+            AEPowerHatchMachine::class.java,
             TieredIOPartMachine.MANAGED_FIELD_HOLDER,
         )
     }
@@ -159,6 +161,11 @@ class MeDynamoHatchMachine(
      * 从 [energyContainer] 扣除并返回实际扣掉的 EU 对应的 AE 值（不做乘数除法，
      * 由 AE2 网络层统一处理）。成形与否不影响供电：只要仓内缓存非空即放行
      * （红石/工作禁用除外），这样世界重载后的首个网格 tick 就能抽到电，供电零断档。
+     *
+     * 抽取速率受 GT 额定输出限制：每个世界 tick 最多放行 `outputVoltage × outputAmperage`
+     * （本仓作为 dynamo hatch 的额定输出）EU。否则多方块把缓冲填满后，AE 侧会在单 tick
+     * 内把整仓缓存一次性抽空，等效吞吐变成「缓存大小 / tick」，远超 GT 原本的输出速度。
+     * 缓冲只是储能，真正的「发电流量」仍是 GT 的额定输出。
      */
     override fun extractAEPower(amt: Double, mode: Actionable, usePowerMultiplier: PowerMultiplier): Double {
         val level = level ?: return 0.0
@@ -170,11 +177,18 @@ class MeDynamoHatchMachine(
         val requestedEu = aeToEuRoundedUp(amt, euToFeRatio)
         if (requestedEu <= 0) return 0.0
 
-        val extractEu = minOf(energyContainer.energyStored, requestedEu)
+        val gameTime = level.gameTime
+        if (gameTime != lastAeBudgetTick) {
+            lastAeBudgetTick = gameTime
+            aeOutputBudget = energyContainer.outputVoltage * energyContainer.outputAmperage
+        }
+
+        val extractEu = minOf(energyContainer.energyStored, requestedEu, aeOutputBudget)
         if (extractEu <= 0) return 0.0
 
         if (mode == Actionable.MODULATE) {
             energyContainer.setEnergyStored(energyContainer.energyStored - extractEu)
+            aeOutputBudget -= extractEu
         }
         return euToAe(extractEu, euToFeRatio)
     }
@@ -202,22 +216,22 @@ class MeDynamoHatchMachine(
     private fun aeToEuRoundedUp(ae: Double, euToFeRatio: Int): Long {
         val fe = PowerUnits.AE.convertTo(PowerUnits.FE, ae)
         if (fe >= Long.MAX_VALUE.toDouble()) return Long.MAX_VALUE
-        return kotlin.math.ceil(fe / euToFeRatio).toLong()
+        return ceil(fe / euToFeRatio).toLong()
     }
 }
 
 /**
- * 能量容器：纯缓冲。多方块产出的 EU 经 [NotifiableEnergyContainer.handleRecipeInner] 注入，
- * 之后只被 AE 侧 [MeDynamoHatchMachine.extractAEPower] 抽走，不再主动向任何方向输出 EU，
+ * 能量容器：纯缓冲。多方块产出的 EU 经 [handleRecipeInner] 注入，
+ * 之后只被 AE 侧 [AEPowerHatchMachine.extractAEPower] 抽走，不再主动向任何方向输出 EU，
  * 因此 [serverTick] 覆写为空实现。
  *
  * Energy container: a pure buffer. EU produced by the multiblock flows in through
- * [NotifiableEnergyContainer.handleRecipeInner] and is only drawn by the AE side via
- * [MeDynamoHatchMachine.extractAEPower]; it no longer pushes EU anywhere, so [serverTick] is
+ * [handleRecipeInner] and is only drawn by the AE side via
+ * [AEPowerHatchMachine.extractAEPower]; it no longer pushes EU anywhere, so [serverTick] is
  * overridden with an empty body to suppress the base GT energy output.
  */
-class MeDynamoHatchEnergyContainer(
-    val machine: MeDynamoHatchMachine,
+class AEPowerHatchEnergyContainer(
+    val machine: AEPowerHatchMachine,
     tier: Int,
     amperage: Int,
 ) : NotifiableEnergyContainer(
@@ -236,7 +250,7 @@ class MeDynamoHatchEnergyContainer(
     /**
      * 每次能量增加（多方块注入 EU）都补发一次 PROVIDE_POWER 事件。仓可能因任何一次
      * `extractAEPower` 未满足整网空闲功耗而被动从 AE2 提供者集合移除（见
-     * [MeDynamoHatchMachine.addedToController] 的注释），能量回升后必须重新注册，否则网络
+     * [AEPowerHatchMachine.addedToController] 的注释），能量回升后必须重新注册，否则网络
      * 持续断电。AE2 抽取导致的能量减少不会触发（`increased == false`）。
      */
     override fun setEnergyStored(energyStored: Long) {
@@ -249,18 +263,18 @@ class MeDynamoHatchEnergyContainer(
 }
 
 /**
- * 为 ME 动力仓配置的 [GridNodeHolder]：节点不占频道（无 REQUIRE_CHANNEL）、无闲置功耗，
+ * 为 AE 动力仓配置的 [GridNodeHolder]：节点不占频道（无 REQUIRE_CHANNEL）、无闲置功耗，
  * 并把机器自身注册为 [IAEPowerStorage] 节点服务（`addService` 在节点创建时写入
  * `GridNode.services`，AE2 的 `EnergyService` 由此把它识别为能量提供者）。暴露面沿用基类
  * 默认值（前脸），由旋转更新。初始值之外不做任何生命周期驱动。
  *
- * [GridNodeHolder] configured for the ME dynamo hatch: the node takes no channels (no
+ * [GridNodeHolder] configured for the AE power hatch: the node takes no channels (no
  * REQUIRE_CHANNEL), has no idle power draw, and registers the machine itself as an
  * [IAEPowerStorage] node service (`addService` writes it into `GridNode.services` on creation,
  * which AE2's `EnergyService` uses to discover the power provider). Exposed sides keep the base
  * default (front face), updated only on rotation.
  */
-class MeDynamoHatchGridNodeTrait(
+class AEPowerHatchGridNodeTrait(
     connectedMachine: IGridConnectedMachine,
 ) : GridNodeHolder(connectedMachine) {
 
@@ -270,6 +284,6 @@ class MeDynamoHatchGridNodeTrait(
         return super.createManagedNode()
             .setFlags()
             .setIdlePowerUsage(0.0)
-            .addService(IAEPowerStorage::class.java, machine as MeDynamoHatchMachine) as SerializableManagedGridNode
+            .addService(IAEPowerStorage::class.java, machine as AEPowerHatchMachine) as SerializableManagedGridNode
     }
 }

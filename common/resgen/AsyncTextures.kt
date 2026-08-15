@@ -44,7 +44,7 @@ object AsyncTextures {
     }
 
     /**
-     * GT ME dynamo hatch front overlays in an AE cable-purple theme.
+     * GT AE power hatch front overlays in an AE cable-purple theme.
      *
      * Stock GT dynamo hatches stack three overlay layers on the front face: `overlay_tint`
      * (tier-tinted plate), `overlay_in` (ring) and `overlay_out_emissive` (red glow arrow). We
@@ -54,7 +54,7 @@ object AsyncTextures {
      * Zero-saturation pixels (greys) pass through unchanged; alpha and the brightness gradient are
      * preserved so the arrow keeps its shape and glow.
      */
-    fun generateGtDynamoHatchOverlays(gtSourceDir: Path, texturesOverlayMachineDir: Path) {
+    fun generateGtAEPowerHatchOverlays(gtSourceDir: Path, texturesOverlayMachineDir: Path) {
         texturesOverlayMachineDir.toFile().mkdirs()
         Files.list(gtSourceDir).use { stream ->
             stream.filter { p ->

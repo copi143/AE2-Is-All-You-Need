@@ -7,7 +7,7 @@ import allyouneed.forge.init.ForgeBlocks
 import allyouneed.forge.init.ForgeItems
 import allyouneed.forge.init.ForgeMenus
 import allyouneed.forge.init.GTAsyncCrafting
-import allyouneed.forge.init.GTMeDynamoHatch
+import allyouneed.forge.init.GTAEPowerHatch
 import allyouneed.logic.script.ScriptDsl
 import allyouneed.util.MODID
 import allyouneed.util.logger
@@ -58,7 +58,7 @@ class ForgeMain {
         // GTCEu host flavour: the common host block is replaced by the GT multiblock machine.
         if (Platform.isModLoaded("gtceu")) {
             GTAsyncCrafting.init(MOD_BUS)
-            GTMeDynamoHatch.init(MOD_BUS)
+            GTAEPowerHatch.init(MOD_BUS)
         }
 
         Main.init()

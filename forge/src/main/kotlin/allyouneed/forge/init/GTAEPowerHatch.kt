@@ -1,6 +1,6 @@
 package allyouneed.forge.init
 
-import allyouneed.gtceu.multiblock.MeDynamoHatchMachine
+import allyouneed.gtceu.AEPowerHatchMachine
 import allyouneed.util.MODID
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
@@ -25,16 +25,16 @@ import java.util.function.Consumer
 import java.util.function.Function
 
 /**
- * ME 动力仓的 GTCEu 注册胶水，结构与 [GTAsyncCrafting] 相同：在 GTCEu 机器注册表的
+ * AE 动力仓的 GTCEu 注册胶水，结构与 [GTAsyncCrafting] 相同：在 GTCEu 机器注册表的
  * `RegisterEvent` 窗口内，逐档调用 `registrate.machine`（用默认 [com.gregtechceu.gtceu.api.block.MetaMachineBlock]
  * 方块，静态方块状态只含 `facing`），并把成品放进 AE2 创造模式标签页。
  *
- * GTCEu registration glue for the ME dynamo hatch, structured like [GTAsyncCrafting]: within
+ * GTCEu registration glue for the AE power hatch, structured like [GTAsyncCrafting]: within
  * GTCEu's machine-registry `RegisterEvent` window it calls `registrate.machine` per tier (with
  * the default [com.gregtechceu.gtceu.api.block.MetaMachineBlock], so the static blockstate only
  * carries `facing`) and hands the resulting definitions to the AE2 creative tab.
  */
-object GTMeDynamoHatch {
+object GTAEPowerHatch {
     const val BASE_ID = "ae_power_hatch"
 
     /** Amperage variants, GT style: 2A is the base variant (no suffix); per GT's rule it reuses the
@@ -86,7 +86,7 @@ object GTMeDynamoHatch {
         })
     }
 
-    /** Registers the dynamo hatches for every amperage variant; the blockstate carries only `facing`.
+    /** Registers the power hatches for every amperage variant; the blockstate carries only `facing`.
      *  2A spans all tiers (ULV..MAX); 4A/16A also span all tiers; 64A only exists from EV up. */
     private fun registerMachines() {
         val registrate = this.registrate
@@ -100,7 +100,7 @@ object GTMeDynamoHatch {
                 }
                 val definition = registrate.machine(
                     id,
-                    Function<IMachineBlockEntity, MetaMachine> { holder -> MeDynamoHatchMachine(holder, tier, amp) },
+                    Function<IMachineBlockEntity, MetaMachine> { holder -> AEPowerHatchMachine(holder, tier, amp) },
                 )
                     .tier(tier)
                     .rotationState(RotationState.NON_Y_AXIS)
@@ -118,7 +118,7 @@ object GTMeDynamoHatch {
                         ),
                         Component.translatable("block.$MODID.$BASE_ID.tooltip"),
                     )
-                    // GT dynamo hatch look: overlayTieredHullModel wraps the per-amperage part model
+                    // AE power hatch look: overlayTieredHullModel wraps the per-amperage part model
                     // (which mirrors GT's energy_output_hatch layout) and injects the per-tier hull at
                     // runtime. Only the front-centre overlay differs from GT's dynamo hatch (the arrow
                     // is re-themed to AE cable purple); the ring and tinted plate are GT's own assets.
