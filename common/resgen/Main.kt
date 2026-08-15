@@ -8,13 +8,20 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 
+/** Id form of a display string (lowercase snake), used for registry names. */
+fun idify(value: String): String =
+    value.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
+
 data class CellEntry(
     val displayName: String,
     val color: String,
     val isCreative: Boolean = false,
     val isSelfPowered: Boolean = false,
 ) {
-    val id = displayName.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
+    val id = idify(displayName)
+
+    /** Id of the matching drive-cell block model/texture (item cell → drive cell). */
+    val itemCellId = id.removeSuffix("_item_storage_cell") + "_item_cell"
 }
 
 val tiers = listOf(
@@ -24,23 +31,9 @@ val tiers = listOf(
     "1t", "4t", "16t", "64t", "256t",
 ).map { it.uppercase() }
 
-// GT AE power hatch tiers (id -> display name), matching GTCEu's tier naming used by GTAEPowerHatch.
+// GT AE power hatch tier display names, matching GTCEu's tier naming used by GTAEPowerHatch.
 val gtAEPowerHatchTiers = listOf(
-    "ulv" to "ULV",
-    "lv" to "LV",
-    "mv" to "MV",
-    "hv" to "HV",
-    "ev" to "EV",
-    "iv" to "IV",
-    "luv" to "LuV",
-    "zpm" to "ZPM",
-    "uv" to "UV",
-    "uhv" to "UHV",
-    "uev" to "UEV",
-    "uiv" to "UIV",
-    "uxv" to "UXV",
-    "opv" to "OpV",
-    "max" to "MAX",
+    "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV", "MAX",
 )
 
 private val energyCells = tiers.flatMapIndexed { i, tier ->
@@ -48,15 +41,11 @@ private val energyCells = tiers.flatMapIndexed { i, tier ->
         CellEntry("$tier Energy Cell", AE2_COLORS[i].hex),
         CellEntry("$tier Self-Powered Energy Cell", AE2_COLORS[i].hex, isSelfPowered = true),
     )
-}.toMutableList().apply {
-    add(CellEntry("Creative Energy Cell", AE2_COLOR_CREATIVE.hex, isCreative = true))
-}.toList()
+} + CellEntry("Creative Energy Cell", AE2_COLOR_CREATIVE.hex, isCreative = true)
 
 private val craftingStorages = tiers.mapIndexed { i, tier ->
     CellEntry("$tier Crafting Storage", AE2_COLORS[i].hex)
-}.toMutableList().apply {
-    add(CellEntry("Creative Crafting Storage", AE2_COLOR_CREATIVE.hex, isCreative = true))
-}.toList()
+} + CellEntry("Creative Crafting Storage", AE2_COLOR_CREATIVE.hex, isCreative = true)
 
 // Item storage cell tiers, colored per AE2_COLORS like the other storage tiers.
 private val itemStorageCells = tiers.mapIndexed { i, tier ->
@@ -143,39 +132,39 @@ fun main(args: Array<String>) {
         translation("itemGroup.$modId", "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.CATEGORY_ID, "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.KEY_ID, "Open Item Details")
-        translation("gui.$modId.group.all", "ALL")
-        translation("gui.$modId.group.ae2", "AE2")
-        translation("gui.$modId.adaptive_probability", "Probability (p)")
-        translation("gui.$modId.adaptive_timeout", "Timeout (T)")
-        translation("gui.$modId.machine_assembler", "Molecular Assembler")
-        translation("gui.$modId.machine_pattern_terminal", "Machine Pattern Terminal")
-        translation("gui.$modId.machine_slot", "Machine")
-        translation("gui.$modId.machine_slot_no_machine", "No machine selected")
-        translation("gui.$modId.machine_slot_hint", "Click to change machine")
+        gui("group.all", "ALL")
+        gui("group.ae2", "AE2")
+        gui("adaptive_probability", "Probability (p)")
+        gui("adaptive_timeout", "Timeout (T)")
+        gui("machine_assembler", "Molecular Assembler")
+        gui("machine_pattern_terminal", "Machine Pattern Terminal")
+        gui("machine_slot", "Machine")
+        gui("machine_slot_no_machine", "No machine selected")
+        gui("machine_slot_hint", "Click to change machine")
 
         // Async processing status GUI
-        translation("gui.$modId.async.status.title", "Async Processing Status")
-        translation("gui.$modId.async.status.formed", "Formed")
-        translation("gui.$modId.async.status.unformed", "Not formed")
-        translation("gui.$modId.async.status.connected", "Grid connected")
-        translation("gui.$modId.async.status.disconnected", "No grid connection")
-        translation("gui.$modId.async.status.swallowed", "Channels swallowed: %s")
-        translation("gui.$modId.async.status.swallowed_infinite", "Channels swallowed: Infinite")
-        translation("gui.$modId.async.status.storage", "Storage: %s MB")
-        translation("gui.$modId.async.status.block_count", "Blocks: %s")
-        translation("gui.$modId.async.status.working", "Working")
-        translation("gui.$modId.async.status.not_working", "Not working")
+        gui("async.status.title", "Async Processing Status")
+        gui("async.status.formed", "Formed")
+        gui("async.status.unformed", "Not formed")
+        gui("async.status.connected", "Grid connected")
+        gui("async.status.disconnected", "No grid connection")
+        gui("async.status.swallowed", "Channels swallowed: %s")
+        gui("async.status.swallowed_infinite", "Channels swallowed: Infinite")
+        gui("async.status.storage", "Storage: %s MB")
+        gui("async.status.block_count", "Blocks: %s")
+        gui("async.status.working", "Working")
+        gui("async.status.not_working", "Not working")
 
-        translation("gui.$modId.mac", "MAC: %s")
-        translation("gui.$modId.mac_named", "MAC (%s): %s")
-        translation("gui.$modId.mac_item", "MAC: %s")
+        gui("mac", "MAC: %s")
+        gui("mac_named", "MAC (%s): %s")
+        gui("mac_item", "MAC: %s")
         translation("config.jade.plugin_$modId.mac", "MAC Address")
 
-        translation("gui.$modId.machine.crafting", "Crafting")
-        translation("gui.$modId.machine.smelting", "Smelting")
-        translation("gui.$modId.machine.blasting", "Blasting")
-        translation("gui.$modId.machine.smoking", "Smoking")
-        translation("gui.$modId.machine.example_custom", "Example Custom")
+        gui("machine.crafting", "Crafting")
+        gui("machine.smelting", "Smelting")
+        gui("machine.blasting", "Blasting")
+        gui("machine.smoking", "Smoking")
+        gui("machine.example_custom", "Example Custom")
 
         for (cell in energyCells) {
             if (cell.isCreative) {
@@ -215,7 +204,7 @@ fun main(args: Array<String>) {
         // emissive arrow is ours, re-themed to AE purple (AsyncTextures.generateGtAEPowerHatchOverlays);
         // the tinted plate and ring are GT's own assets referenced directly.
         gtAEPowerHatchBlock(gtAEPowerHatchTiers)
-        translation("block.$modId.ae_power_hatch.tooltip", "The ME network draws the stored EU directly (EU to FE to AE)")
+        block("ae_power_hatch.tooltip", "The ME network draws the stored EU directly (EU to FE to AE)")
 
         simpleBlock("me_io_drive", "ME IO Drive")
 
@@ -225,11 +214,11 @@ fun main(args: Array<String>) {
         // Item storage cells: LED item model + drive-cell block model
         for (cell in itemStorageCells) {
             cellItem(cell.id, cell.displayName)
-            driveCellModel(cell.id.removeSuffix("_item_storage_cell") + "_item_cell")
+            driveCellModel(cell.itemCellId)
         }
 
-        translation("item.$modId.creative_me_cell", "Creative ME Storage Cell")
-        translation("item.$modId.dimensional_cell", "Dimensional Storage Cell")
+        itemLang("creative_me_cell", "Creative ME Storage Cell")
+        itemLang("dimensional_cell", "Dimensional Storage Cell")
 
         // Adaptive Pattern Terminal block
         simpleBlock("adaptive_pattern_terminal", "Adaptive Pattern Terminal")
@@ -245,29 +234,31 @@ fun main(args: Array<String>) {
     }
 
     retexture(output) {
-        // FG template base hue (dominant opaque pixel of energy_cell_fg.png ≈ rgb 152,194,231)
+        val gradientHex = AE2_GRADIENT.map { it.hex }
+
+        // FG template base hue (dominant opaque pixel of energy_cell/energy_cell_fg.png ≈ rgb 152,194,231)
         source(sourceTextures, "#98C2E7")
 
         // Energy cells: bg + fg(tint) + fullness/creative + optional self-powered badge
         for (cell in energyCells) {
-            val badge = if (cell.isSelfPowered) listOf("energy_cell_self_powered") else emptyList()
+            val badge = if (cell.isSelfPowered) listOf("energy_cell/energy_cell_self_powered") else emptyList()
             if (cell.isCreative) {
                 // AE2-style vertical strip: fg cycles through AE2_GRADIENT with interpolation
                 layeredAnimated(
-                    bg = "energy_cell_bg",
-                    mid = "energy_cell_fg",
-                    top = "energy_cell_creative",
+                    bg = "energy_cell/energy_cell_bg",
+                    mid = "energy_cell/energy_cell_fg",
+                    top = "energy_cell/energy_cell_creative",
                     outputPrefix = cell.id,
-                    midColors = AE2_GRADIENT.map { it.hex },
+                    midColors = gradientHex,
                     frameTime = 4,
                     interpolate = true,
                     overlays = badge,
                 )
             } else {
                 layeredTarget(
-                    bg = "energy_cell_bg",
-                    mid = "energy_cell_fg",
-                    top = "energy_cell",
+                    bg = "energy_cell/energy_cell_bg",
+                    mid = "energy_cell/energy_cell_fg",
+                    top = "energy_cell/energy_cell",
                     outputPrefix = cell.id,
                     color = cell.color,
                     levels = 0..4,
@@ -295,12 +286,11 @@ fun main(args: Array<String>) {
         // Drive cell faces: bg (opaque plate) + fg (tint per tier). The drive_cell model
         // samples only rows 0-6 / cols 0-6, so these templates are designed for that region.
         for (cell in itemStorageCells) {
-            val driveId = cell.id.removeSuffix("_item_storage_cell") + "_item_cell"
             layeredTarget(
                 bg = "drive_item_cell_bg",
                 mid = "drive_item_cell_fg",
                 top = null,
-                outputPrefix = "drive/cells/$driveId",
+                outputPrefix = "drive/cells/${cell.itemCellId}",
                 color = cell.color,
                 levels = null,
             )
@@ -313,8 +303,8 @@ fun main(args: Array<String>) {
         for (storage in craftingStorages) {
             if (storage.isCreative) {
                 layeredTarget(
-                    bg = "crafting_storage_bg",
-                    mid = "crafting_storage_fg",
+                    bg = "crafting_storage/crafting_storage_bg",
+                    mid = "crafting_storage/crafting_storage_fg",
                     top = null,
                     outputPrefix = storage.id,
                     color = null,
@@ -322,15 +312,15 @@ fun main(args: Array<String>) {
                 )
             } else {
                 layeredTarget(
-                    bg = "crafting_storage_bg",
-                    mid = "crafting_storage_fg",
+                    bg = "crafting_storage/crafting_storage_bg",
+                    mid = "crafting_storage/crafting_storage_fg",
                     top = null,
                     outputPrefix = storage.id,
                     color = storage.color,
                     levels = null,
                 )
             }
-            targetSingle("crafting_storage_light", "crafting/${storage.id}_light", storage.color)
+            targetSingle("crafting_storage/crafting_storage_light", "crafting/${storage.id}_light", storage.color)
         }
 
         // Async machine frame: animated formed-state glow strips. The base frame_* textures are
@@ -341,7 +331,7 @@ fun main(args: Array<String>) {
                 bg = "async/frame_$variant",
                 mid = "async/frame_light_$variant",
                 outputPrefix = "async/frame_${variant}_formed",
-                midColors = AE2_GRADIENT.map { it.hex },
+                midColors = gradientHex,
                 frameTime = 4,
                 interpolate = true,
             )
@@ -356,7 +346,7 @@ fun main(args: Array<String>) {
                 bg = "async/$core",
                 mid = "async/${core}_formed_light",
                 outputPrefix = "async/async_${core}_formed",
-                midColors = AE2_GRADIENT.map { it.hex },
+                midColors = gradientHex,
                 frameTime = 4,
                 interpolate = true,
             )
@@ -368,7 +358,7 @@ fun main(args: Array<String>) {
 
     val texOut = output.resolve("textures/block")
     texOut.createDirectories()
-    sourceTextures.resolve("me_io_drive.png").copyTo(texOut.resolve("me_io_drive.png"), overwrite = true)
+    sourceTextures.resolve("placeholder.png").copyTo(texOut.resolve("me_io_drive.png"), overwrite = true)
 
     // Async machine frame: base connection textures (unformed faces) referenced by the generated
     // models. The `_formed` variants are the animated strips produced by the retexture block above.
@@ -449,7 +439,7 @@ fun main(args: Array<String>) {
         "{\n  \"parent\": \"minecraft:block/block\",\n  \"textures\": {\n$texJson\n  }\n}\n",
     )
 
-    val lightMcmeta = sourceTextures.resolve("crafting_storage_light.png.mcmeta")
+    val lightMcmeta = sourceTextures.resolve("crafting_storage/crafting_storage_light.png.mcmeta")
     if (lightMcmeta.exists()) {
         for (storage in craftingStorages) {
             lightMcmeta.copyTo(craftingTexOut.resolve("${storage.id}_light.png.mcmeta"), overwrite = true)
@@ -457,13 +447,13 @@ fun main(args: Array<String>) {
     }
 
     // Adaptive pattern terminal texture (placeholder - copy from pattern provider if available)
-    val ptTex = sourceTextures.resolve("me_io_drive.png")
+    val ptTex = sourceTextures.resolve("placeholder.png")
     if (ptTex.exists()) {
         ptTex.copyTo(texOut.resolve("adaptive_pattern_terminal.png"), overwrite = true)
     }
 
     // Adaptive pattern item texture (placeholder)
-    val apTex = sourceTextures.resolve("me_io_drive.png")
+    val apTex = sourceTextures.resolve("placeholder.png")
     if (apTex.exists()) {
         apTex.copyTo(itemTexOut.resolve("adaptive_pattern.png"), overwrite = true)
     }

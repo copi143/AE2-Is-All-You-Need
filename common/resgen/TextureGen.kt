@@ -13,7 +13,6 @@ class TextureGen(private val output: Path) {
         val sourceTemplate: String,
         val outputPrefix: String,
         val targetColor: RGB,
-        val levels: IntRange?,
         val sourceHz: JzCzHz,
     )
 
@@ -79,12 +78,8 @@ class TextureGen(private val output: Path) {
     private fun currentSourceHz(): JzCzHz =
         sourceColorHz ?: error("Call source() before registering texture targets")
 
-    fun target(sourceTemplate: String, outputPrefix: String, color: String, levels: IntRange = 0..4) {
-        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), levels, currentSourceHz())
-    }
-
     fun targetSingle(sourceTemplate: String, outputPrefix: String, color: String) {
-        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), null, currentSourceHz())
+        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), currentSourceHz())
     }
 
     /**
@@ -171,23 +166,12 @@ class TextureGen(private val output: Path) {
     private fun generateRecolor(srcDir: Path, entry: RecolorEntry) {
         val srcHz = entry.sourceHz
         val targetHz = entry.targetColor.toJzCzHz()
-        val hueShift = targetHz.h - srcHz.h
-        val chromaScale = if (srcHz.c > 0.001f) targetHz.c / srcHz.c else 1f
-        val lightnessScale = if (srcHz.j > 0.001f) targetHz.j / srcHz.j else 1f
+        val (hueShift, chromaScale, lightnessScale) = colorTransform(srcHz, targetHz)
 
-        val srcFiles = if (entry.levels != null) {
-            entry.levels.map { srcDir.resolve("${entry.sourceTemplate}_$it.png") }
-        } else {
-            listOf(srcDir.resolve("${entry.sourceTemplate}.png"))
-        }
-
-        for ((idx, file) in srcFiles.withIndex()) {
-            if (!file.exists()) continue
-            val suffix = entry.levels?.let { "_${it.first + idx}" } ?: ""
-            val srcImage = ImageIO.read(file.toFile())
-            val dstImage = recolorImage(srcImage, hueShift, chromaScale, lightnessScale)
-            writePng(dstImage, entry.outputPrefix, suffix)
-        }
+        val file = srcDir.resolve("${entry.sourceTemplate}.png")
+        if (!file.exists()) return
+        val dstImage = recolorImage(ImageIO.read(file.toFile()), hueShift, chromaScale, lightnessScale)
+        writePng(dstImage, entry.outputPrefix, "")
     }
 
     private fun generateLayered(srcDir: Path, entry: LayeredEntry) {
@@ -203,10 +187,7 @@ class TextureGen(private val output: Path) {
         val midSrc = ensureArgb(ImageIO.read(midFile.toFile()))
 
         val mid: BufferedImage = if (entry.targetColor != null) {
-            val targetHz = entry.targetColor.toJzCzHz()
-            val hueShift = targetHz.h - srcHz.h
-            val chromaScale = if (srcHz.c > 0.001f) targetHz.c / srcHz.c else 1f
-            val lightnessScale = if (srcHz.j > 0.001f) targetHz.j / srcHz.j else 1f
+            val (hueShift, chromaScale, lightnessScale) = colorTransform(srcHz, entry.targetColor.toJzCzHz())
             recolorImage(midSrc, hueShift, chromaScale, lightnessScale)
         } else {
             midSrc
@@ -287,10 +268,7 @@ class TextureGen(private val output: Path) {
         val g = strip.createGraphics()
 
         for ((i, color) in entry.midColors.withIndex()) {
-            val targetHz = color.toJzCzHz()
-            val hueShift = targetHz.h - srcHz.h
-            val chromaScale = if (srcHz.c > 0.001f) targetHz.c / srcHz.c else 1f
-            val lightnessScale = if (srcHz.j > 0.001f) targetHz.j / srcHz.j else 1f
+            val (hueShift, chromaScale, lightnessScale) = colorTransform(srcHz, color.toJzCzHz())
             val mid = recolorImage(midSrc, hueShift, chromaScale, lightnessScale)
             val layers = buildList {
                 add(bg)
@@ -359,16 +337,7 @@ class TextureGen(private val output: Path) {
         frameTime: Int,
         interpolate: Boolean,
     ) {
-        val outRelative = if (outputPrefix.contains('/')) {
-            "textures/block/${outputPrefix.substringBeforeLast('/')}"
-        } else {
-            "textures/block"
-        }
-        val outName = if (outputPrefix.contains('/')) {
-            outputPrefix.substringAfterLast('/')
-        } else {
-            outputPrefix
-        }
+        val (outRelative, outName) = splitOutput(outputPrefix, "block")
         val outDir = output.resolve(outRelative)
         outDir.toFile().mkdirs()
 
@@ -472,19 +441,26 @@ $frames
     }
 
     private fun writePng(image: BufferedImage, outputPrefix: String, suffix: String, dir: String = "block") {
-        val outRelative = if (outputPrefix.contains('/')) {
-            "textures/$dir/${outputPrefix.substringBeforeLast('/')}"
-        } else {
-            "textures/$dir"
-        }
-        val outName = if (outputPrefix.contains('/')) {
-            outputPrefix.substringAfterLast('/') + suffix
-        } else {
-            outputPrefix + suffix
-        }
+        val (outRelative, outName) = splitOutput(outputPrefix, dir)
         val outDir = output.resolve(outRelative)
         outDir.toFile().mkdirs()
-        ImageIO.write(image, "png", outDir.resolve("$outName.png").toFile())
+        ImageIO.write(image, "png", outDir.resolve("${outName + suffix}.png").toFile())
+    }
+
+    /** Splits [prefix] into (textures/&lt;dir&gt;/&lt;subdir&gt;, file name) for output writes. */
+    private fun splitOutput(prefix: String, dir: String): Pair<String, String> =
+        if ('/' in prefix) {
+            "textures/$dir/${prefix.substringBeforeLast('/')}" to prefix.substringAfterLast('/')
+        } else {
+            "textures/$dir" to prefix
+        }
+
+    /** Hue shift / chroma scale / lightness scale mapping [srcHz] towards [targetHz]. */
+    private fun colorTransform(srcHz: JzCzHz, targetHz: JzCzHz): Triple<Float, Float, Float> {
+        val hueShift = targetHz.h - srcHz.h
+        val chromaScale = if (srcHz.c > 0.001f) targetHz.c / srcHz.c else 1f
+        val lightnessScale = if (srcHz.j > 0.001f) targetHz.j / srcHz.j else 1f
+        return Triple(hueShift, chromaScale, lightnessScale)
     }
 }
 

@@ -40,6 +40,12 @@ class AssetGen(
         translations[key] = value
     }
 
+    fun gui(key: String, value: String) = translation("gui.$modId.$key", value)
+
+    fun block(key: String, value: String) = translation("block.$modId.$key", value)
+
+    fun itemLang(key: String, value: String) = translation("item.$modId.$key", value)
+
     /**
      * 写入物品标签 `data/<modId>/tags/items/<path>.json`。
      * [required] 为普通字符串；[optional] 为 `{ "id": "...", "required": false }`，缺失模组不导致加载失败。
@@ -428,7 +434,7 @@ class AssetGen(
      * bundled); only the emissive arrow is our AE-purple re-theme
      * (`overlay_energy_{n}a_ae_emissive`).
      */
-    fun gtAEPowerHatchBlock(tiers: List<Pair<String, String>>) {
+    fun gtAEPowerHatchBlock(tiers: List<String>) {
         for (amp in GT_HATCH_AMPERAGES) {
             val a = if (amp == 2) "1a" else "${amp}a"
             val partName = if (amp == 2) "ae_power_hatch" else "ae_power_hatch_${amp}a"
@@ -446,7 +452,8 @@ class AssetGen(
                 add("elements", GT_HATCH_ELEMENTS)
             })
 
-            for ((tierId, display) in tiers) {
+            for (display in tiers) {
+                val tierId = idify(display)
                 if (amp == 64 && tierId !in GT_HATCH_64A_TIERS) continue
                 val name = if (amp == 2) "${tierId}_ae_power_hatch" else "${tierId}_ae_power_hatch_${amp}a"
                 val displayName = if (amp == 2) "$display AE Power Hatch" else "$display ${amp}A AE Power Hatch"
@@ -706,15 +713,11 @@ class AssetGen(
     ): String {
         var out = template
         for ((name, value) in combo) {
-            val rendered = if (idify) idifyPlaceholder(value) else value
+            val rendered = if (idify) idify(value) else value
             out = out.replace("{$name}", rendered)
         }
         return out
     }
-
-    /** 占位符值在 key 中的 id 形式（小写 snake），与 `CellEntry.id` 保持一致。 */
-    private fun idifyPlaceholder(value: String): String =
-        value.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
 
     private data class GeneratedFile(val relativePath: String, val json: JsonObject)
 }

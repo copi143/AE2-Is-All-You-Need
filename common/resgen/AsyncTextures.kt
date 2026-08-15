@@ -9,9 +9,11 @@ import javax.imageio.ImageIO
 /**
  * Procedurally drawn 16x16 pixel-art textures for the async synthesis block set.
  *
- * Every one of the 16 blocks gets its own full-canvas face design - distinct border treatment,
- * panel layout and details - NOT a shared casing recoloured per block. They only stay in the same
- * family through a common edge vocabulary (outline + bevel ring) and per-block colours.
+ * Only the seven GT-machine roles without hand-drawn art are generated here (controllers, factory,
+ * dedicated cable and the three connectors); the rest of the block set ships hand-drawn PNGs
+ * copied by Main.kt. Each procedural role gets its own full-canvas face design - distinct border
+ * treatment, panel layout and details - NOT a shared casing recoloured per block. They only stay in
+ * the same family through a common edge vocabulary (outline + bevel ring) and per-block colours.
  *
  * The `_formed` variant lights the block's active elements up (hot near-white) and adds an
  * energised inner ring + corner nodes. All textures are fully opaque.
@@ -110,14 +112,6 @@ object AsyncTextures {
         val c = Canvas(img)
 
         when (role) {
-            "FRAME" -> frame(c, p, formed)
-            "MACHINE" -> machine(c, p, formed)
-            "GLASS" -> glass(c, p, formed)
-            "TOWER" -> tower(c, p, formed)
-            "ENERGY" -> energy(c, p, formed)
-            "COMPUTING" -> computing(c, p, formed)
-            "STORAGE" -> storage(c, p, formed)
-            "EXECUTION" -> execution(c, p, formed)
             "CONTROLLER" -> controller(c, p, formed)
             "SWITCH" -> switch(c, p, formed)
             "FACTORY" -> factory(c, p, formed)
@@ -125,7 +119,6 @@ object AsyncTextures {
             "ME_CONNECTOR" -> meConnector(c, p, formed)
             "WAN_CONNECTOR" -> wanConnector(c, p, formed)
             "LAN_CONNECTOR" -> lanConnector(c, p, formed)
-            "INTERFACE" -> interface_(c, p, formed)
             else -> frameBorder(c, p)
         }
 
@@ -145,154 +138,6 @@ object AsyncTextures {
         c.fillRect(0, 0, 15, 15, p.outline)
         c.fillRect(1, 1, 14, 14, p.dark)
         c.fillRect(2, 2, 13, 13, p.base)
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // Structural blocks
-    // -------------------------------------------------------------------------------------------
-
-    /** Open 3x3 vent grid: hollow frame with deep recesses. */
-    private fun frame(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        val hole = p.outline
-        // Bars between the cells (bright when formed).
-        val bar = if (formed) p.hot else p.bright
-        for (x in intArrayOf(6, 10)) c.fillRect(x, 2, x, 13, bar)
-        for (y in intArrayOf(6, 10)) c.fillRect(2, y, 13, y, bar)
-        // Nine recessed cells.
-        for (cx in intArrayOf(3, 7, 11)) for (cy in intArrayOf(3, 7, 11)) {
-            c.fillRect(cx, cy, cx + 2, cy + 2, hole)
-        }
-        // Cross joints.
-        c.fill(6, 6, p.hot)
-        c.fill(10, 6, p.hot)
-        c.fill(6, 10, p.hot)
-        c.fill(10, 10, p.hot)
-    }
-
-    /** Heavy solid plate: inner bevel, centre hatch, rivets + seam. */
-    private fun machine(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        c.fillRect(3, 3, 12, 12, p.base)
-        c.fillRect(3, 3, 12, 3, p.bright)
-        c.fillRect(3, 3, 3, 12, p.bright)
-        c.fillRect(3, 12, 12, 12, p.dark)
-        c.fillRect(12, 3, 12, 12, p.dark)
-
-        val seam = if (formed) p.hot else p.dark
-        c.fillRect(2, 8, 13, 8, seam)
-        c.fill(4, 8, p.hot)
-        c.fill(8, 8, p.hot)
-        c.fill(12, 8, p.hot)
-
-        c.fill(3, 3, p.hot)
-        c.fill(12, 3, p.hot)
-        c.fill(3, 12, p.hot)
-        c.fill(12, 12, p.hot)
-
-        c.strokeRect(6, 5, 9, 7, p.dark)
-        c.fill(7, 6, p.hot)
-        c.fill(8, 6, p.hot)
-    }
-
-    /** Glass pane: thin frame, light pane, diagonal shine, deep corner. */
-    private fun glass(c: Canvas, p: Palette, formed: Boolean) {
-        c.fillRect(0, 0, 15, 15, p.outline)
-        c.fillRect(1, 1, 14, 14, p.dark)
-        c.fillRect(2, 2, 13, 13, p.light)
-        c.fillRect(2, 2, 13, 2, p.bright)
-        c.fillRect(2, 2, 2, 13, p.bright)
-        for (i in 3..12) c.fill(i, 15 - i, p.bright)
-        c.fill(3, 10, p.hot)
-        c.fill(4, 11, p.hot)
-        c.fillRect(11, 11, 13, 13, p.base)
-    }
-
-    /** Reinforced tower: twin rails, central core pillar, support rings. */
-    private fun tower(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        c.fillRect(2, 1, 3, 14, p.bright)
-        c.fillRect(12, 1, 13, 14, p.bright)
-        c.fillRect(5, 1, 10, 14, p.dark)
-        val core = if (formed) p.hot else p.bright
-        c.fillRect(7, 1, 8, 14, core)
-        for (y in intArrayOf(3, 7, 11)) {
-            c.fillRect(1, y, 14, y, p.dark)
-            c.fill(3, y, p.hot)
-            c.fill(12, y, p.hot)
-        }
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // Core blocks
-    // -------------------------------------------------------------------------------------------
-
-    /** Power core: glowing orb with a bolt and charge bars. */
-    private fun energy(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        c.circle(7, 7, 3, if (formed) p.hot else p.bright)
-        c.circle(7, 7, 2, p.light)
-        // Bolt.
-        c.fillRect(7, 4, 8, 5, p.outline)
-        c.fillRect(5, 5, 8, 6, p.outline)
-        c.fillRect(6, 6, 7, 7, p.outline)
-        c.fillRect(8, 7, 9, 8, p.outline)
-        c.fillRect(7, 8, 8, 10, p.outline)
-        // Charge bars.
-        c.fillRect(4, 12, 5, 13, p.bright)
-        c.fillRect(7, 12, 8, 13, p.bright)
-        c.fillRect(10, 12, 11, 13, p.bright)
-        // Rays.
-        c.fill(7, 1, p.hot)
-        c.fill(1, 7, p.hot)
-        c.fill(14, 7, p.hot)
-    }
-
-    /** Computing core: dark circuit board with a chip and traces. */
-    private fun computing(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        c.fillRect(2, 2, 13, 13, p.dark)
-        val trace = p.bright
-        c.fillRect(6, 2, 6, 4, trace)
-        c.fillRect(9, 2, 9, 4, trace)
-        c.fillRect(6, 11, 6, 13, trace)
-        c.fillRect(9, 11, 9, 13, trace)
-        c.fillRect(2, 6, 4, 6, trace)
-        c.fillRect(2, 9, 4, 9, trace)
-        c.fillRect(11, 6, 13, 6, trace)
-        c.fillRect(11, 9, 13, 9, trace)
-        c.fillRect(5, 5, 10, 10, if (formed) p.hot else p.bright)
-        c.strokeRect(5, 5, 10, 10, p.outline)
-        c.fillRect(6, 6, 9, 9, p.dark)
-        c.fillRect(7, 7, 8, 8, if (formed) p.hot else p.bright)
-    }
-
-    /** Storage core: three stacked drawers with handles. */
-    private fun storage(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        for (y0 in intArrayOf(2, 6, 10)) {
-            val y1 = y0 + 3
-            c.fillRect(2, y0, 13, y1, p.base)
-            c.fillRect(2, y0, 13, y0, p.bright)
-            c.fillRect(2, y1, 13, y1, p.dark)
-            c.fillRect(2, y0, 2, y1, p.dark)
-            c.fillRect(13, y0, 13, y1, p.dark)
-            val h = if (formed) p.hot else p.dark
-            c.fillRect(7, y0 + 1, 8, y0 + 2, h)
-        }
-    }
-
-    /** Execution core: concentric processing rings with spokes. */
-    private fun execution(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        c.strokeRect(3, 3, 12, 12, p.dark)
-        c.strokeRect(5, 5, 10, 10, p.bright)
-        c.strokeRect(6, 6, 9, 9, p.dark)
-        c.fillRect(7, 3, 8, 4, p.bright)
-        c.fillRect(7, 11, 8, 12, p.bright)
-        c.fillRect(3, 7, 4, 8, p.bright)
-        c.fillRect(11, 7, 12, 8, p.bright)
-        c.fillRect(7, 7, 8, 8, if (formed) p.hot else p.bright)
     }
 
     // -------------------------------------------------------------------------------------------
@@ -420,24 +265,6 @@ object AsyncTextures {
         c.fill(10, 8, on)
         c.fillRect(6, 6, 9, 9, on)
         c.strokeRect(5, 5, 10, 10, p.dark)
-    }
-
-    /** Module interface: plug body with pin holes, alignment key and status LED. */
-    private fun interface_(c: Canvas, p: Palette, formed: Boolean) {
-        frameBorder(c, p)
-        c.fillRect(3, 3, 12, 12, p.dark)
-        c.fillRect(4, 4, 11, 11, if (formed) p.hot else p.bright)
-        c.strokeRect(4, 4, 11, 11, p.outline)
-        c.fill(6, 6, p.outline)
-        c.fill(9, 6, p.outline)
-        c.fill(6, 9, p.outline)
-        c.fill(9, 9, p.outline)
-        // Alignment key notch.
-        c.fill(11, 5, p.dark)
-        c.fill(12, 5, p.dark)
-        // Status LED.
-        c.fill(5, 11, p.hot)
-        c.fill(5, 10, p.hot)
     }
 
     // -------------------------------------------------------------------------------------------
