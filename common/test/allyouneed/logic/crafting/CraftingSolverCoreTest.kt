@@ -36,6 +36,29 @@ class CraftingSolverCoreTest {
     private fun stock(vararg v: Long) = Array(v.size) { i -> BigInteger.valueOf(v[i]) }
 
     // ------------------------------------------------------------
+    // Fast paths
+    // ------------------------------------------------------------
+
+    @Test
+    fun targetStockSkipsCrafting() {
+        val c = core(1, emptyList(), targetId = 0)
+        val s = c.plan(100, stock(100L))
+        assertEquals(100L, s.finalAmount)
+        assertEquals(0L, s.missingOutput)
+        assertTrue(s.xs.isEmpty())
+        assertFalse(s.simulation)
+    }
+
+    @Test
+    fun outputOnlyRowsDoNotNeedStockConstraints() {
+        val c = core(1, listOf(listOf(0 to 1L)), targetId = 0)
+        val s = c.plan(100, stock(0L))
+        assertEquals(100L, s.finalAmount)
+        assertEquals(100L, s.xs[0])
+        assertFalse(s.simulation)
+    }
+
+    // ------------------------------------------------------------
     // ojalgo 大库存数值防护（MAX_VAR 上界）
     // ------------------------------------------------------------
 

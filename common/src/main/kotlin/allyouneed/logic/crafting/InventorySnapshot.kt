@@ -20,6 +20,7 @@ class InventorySnapshot(grid: IGrid) {
     val fuzzyCraftable = craftable.groupBy { it.dropSecondary() }.mapValues {
         it.value.associateWith { 0L }.toSortedMap(comparator)
     }
+    private val fuzzyCandidateCache = HashMap<AEKey, Set<AEKey>>()
 
     operator fun contains(key: AEKey): Boolean = stored.contains(key) || craftable.contains(key)
 
@@ -36,16 +37,16 @@ class InventorySnapshot(grid: IGrid) {
     }
 
     fun fuzzy(key: AEKey): Set<AEKey> {
-        val set = HashSet<AEKey>()
         val baseKey = key.dropSecondary()
         if (baseKey.fuzzySearchMaxValue > 0) {
-            fuzzyStored[baseKey]?.forEach { set.add(it.key) }
-            fuzzyCraftable[baseKey]?.forEach { set.add(it.key) }
-        } else {
-            if (stored.contains(key)) set.add(key)
-            if (craftable.contains(key)) set.add(key)
+            return fuzzyCandidateCache.getOrPut(baseKey) {
+                buildSet {
+                    fuzzyStored[baseKey]?.forEach { add(it.key) }
+                    fuzzyCraftable[baseKey]?.forEach { add(it.key) }
+                }
+            }
         }
-        return set
+        return if (stored.contains(key) || craftable.contains(key)) setOf(key) else emptySet()
     }
 
     fun fuzzy(key: AEKey, fuzzy: FuzzyMode): Set<AEKey> {
