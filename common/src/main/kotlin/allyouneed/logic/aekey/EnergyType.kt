@@ -1,5 +1,6 @@
 package allyouneed.logic.aekey
 
+import allyouneed.Platform
 import kotlin.math.roundToInt
 
 /**
@@ -14,11 +15,11 @@ import kotlin.math.roundToInt
  * Instantiated as [EnergyKey] for actual use.
  * Must be registered to AE2's [appeng.api.stacks.AEKeyTypes] during mod initialization.
  */
-enum class EnergyType(val id: String, val unit: String, val energyPerAE: Double) {
+enum class EnergyType(val id: String, val unit: String, val energyPerAE: Double = Platform.energyUnitRatio(id)) {
     AE("ae2", "AE", 1.0), //
-    ForgeEnergy("forge", "FE", 2.0), //
-    FabricE("fabric", "E", 0.5), //
-    GtceuEu("gtceu", "EU", 0.5), //
+    ForgeEnergy("forge", "FE"), //
+    TechReborn("team_reborn_energy", "E"), //
+    GtceuEu("gtceu", "EU"), //
     ;
 
     val granularity = (EnergyKey.ENERGY_GRANULARITY / energyPerAE).roundToInt()
@@ -28,5 +29,10 @@ enum class EnergyType(val id: String, val unit: String, val energyPerAE: Double)
     companion object {
         @JvmField
         val idMap = entries.associateBy { it.id }
+
+        @JvmStatic
+        fun ratioOf(pair: Pair<EnergyType, EnergyType>): Double {
+            return pair.second.energyPerAE / pair.first.energyPerAE
+        }
     }
 }

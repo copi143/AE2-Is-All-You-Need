@@ -32,6 +32,32 @@ interface PlatformHelper {
      */
     fun onClientTick(handler: () -> Unit)
 
+    /**
+     * 一单位的 AE2 能源对应目标能源的数值。
+     */
+    fun energyUnitRatio(id: String): Double {
+        return when (id) {
+            "ae2" -> 1.0
+            "forge" -> 2.0
+            "team_reborn_energy" -> 0.5
+            "gtceu" -> 0.5
+            else -> 1.0
+        }
+    }
+
+    /**
+     * 一单位的 AE2 魔力对应目标魔力的数值。
+     */
+    fun manaUnitRatio(id: String): Double {
+        return when (id) {
+            "ae2" -> 1.0
+            "botania" -> 1.0
+            "bloodmagic" -> 1.0
+            "ars_nouveau" -> 1.0
+            else -> 1.0
+        }
+    }
+
     companion object {
         private fun <T> load(clazz: Class<T>): T = ServiceLoader.load(clazz).findFirst().orElseThrow {
             IllegalStateException("Failed to load service for ${clazz.name}")

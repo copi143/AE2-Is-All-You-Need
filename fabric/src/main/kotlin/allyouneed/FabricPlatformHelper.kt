@@ -1,6 +1,7 @@
 package allyouneed
 
 import allyouneed.util.PlatformHelper
+import appeng.api.config.PowerUnits
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper
 import net.fabricmc.loader.api.FabricLoader
@@ -21,5 +22,12 @@ class FabricPlatformHelper : PlatformHelper {
 
     override fun onClientTick(handler: () -> Unit) {
         ClientTickEvents.END_CLIENT_TICK.register { handler() }
+    }
+
+    override fun energyUnitRatio(id: String): Double {
+        return when (id) {
+            "team_reborn_energy" -> PowerUnits.AE.convertTo(PowerUnits.TR, 1.0)
+            else -> super.energyUnitRatio(id)
+        }
     }
 }
