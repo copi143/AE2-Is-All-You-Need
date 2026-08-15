@@ -64,7 +64,11 @@ kapt {
     keepJavacAnnotationProcessors = true
 }
 
-sourceSets.main.get().resources { srcDir("src/generated/resources") }
+sourceSets.main {
+    java.srcDir("src")
+    kotlin.srcDir("src")
+    resources.srcDir("resources")
+}
 
 dependencies {
     implementation(libs.kff)

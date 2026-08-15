@@ -4,7 +4,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val modId: String by project
+val modId = project.property("modId") as String
+
+sourceSets.main {
+    java.srcDir("src")
+    kotlin.srcDir("src")
+    resources.srcDir("resources")
+}
 
 dependencies {
     minecraft(libs.minecraft)
