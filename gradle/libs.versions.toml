@@ -22,9 +22,9 @@ neoForm = "1.20.1"
 kff = "4.12.0"
 kffRange = "[4, )"
 
-fabricLoader = "0.16.9"
+fabricLoader = "0.19.3"
 fabricApi = "0.92.11+1.20.1"
-flk = "1.12.3+kotlin.2.0.21"
+flk = "1.13.13+kotlin.2.4.10"
 
 junit = "5.10.5"
 junit-launcher = "1.10.0"
