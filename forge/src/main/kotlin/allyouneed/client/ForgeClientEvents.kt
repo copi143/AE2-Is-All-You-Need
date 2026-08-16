@@ -21,9 +21,11 @@ import allyouneed.pattern.pseudo.PseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.PseudoPatternTerminalScreen
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalScreen
+import allyouneed.util.native.DesktopNotify
 import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
 import appeng.hooks.BuiltInModelHooks
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.MenuScreens
 import net.minecraft.client.renderer.ItemBlockRenderTypes
 import net.minecraft.client.renderer.RenderType
@@ -63,6 +65,9 @@ object ForgeClientEvents {
 
     @SubscribeEvent
     fun onClientSetup(event: FMLClientSetupEvent) {
+        DesktopNotify.focusProbe = DesktopNotify.FocusProbe {
+            Minecraft.getInstance().isWindowActive
+        }
         event.enqueueWork {
             // AE2 crafting storage uses cutout so light_base transparency is not solid black
             for (storage in CraftingStorage.entries) {

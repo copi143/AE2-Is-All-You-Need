@@ -59,6 +59,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(kotlin("test"))
     testRuntimeOnly(libs.junit.launcher)
+    testImplementation("org.lwjgl:lwjgl:3.3.1")
+    testRuntimeOnly("org.lwjgl:lwjgl:3.3.1:natives-linux")
 }
 
 configurations["testRuntimeClasspath"].exclude(
