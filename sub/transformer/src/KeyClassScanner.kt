@@ -1,9 +1,9 @@
 package allyouneed.transformer
 
 import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.TypeInsnNode
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,7 +30,7 @@ object KeyClassScanner {
 
     fun scanKeyClasses(paths: Iterable<Path>): Set<String> {
         val supers = LinkedHashMap<String, String?>()
-        for (path in paths) walk(path) { name, bytes ->
+        for (path in paths) walk(path) { _, bytes ->
             val cr = ClassReader(bytes)
             supers[cr.className] = cr.superName
         }
@@ -46,21 +46,28 @@ object KeyClassScanner {
         val sites = LinkedHashSet<String>()
         for (seed in SEED_SITES) sites.add(seed)
         for (path in paths) walk(path) { _, bytes ->
-            val cn = ClassNode()
-            ClassReader(bytes).accept(cn, ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
-            if (cn.methods.any { mn ->
-                    var insn = mn.instructions?.first
-                    while (insn != null) {
-                        if (insn.opcode == Opcodes.NEW && insn is TypeInsnNode && insn.desc in keyClasses) {
-                            return@any true
+            val cr = ClassReader(bytes)
+            var found = false
+            cr.accept(
+                object : ClassVisitor(Opcodes.ASM9) {
+                    override fun visitMethod(
+                        access: Int,
+                        name: String,
+                        descriptor: String,
+                        signature: String?,
+                        exceptions: Array<out String>?,
+                    ): MethodVisitor? {
+                        if (found) return null
+                        return object : MethodVisitor(Opcodes.ASM9) {
+                            override fun visitTypeInsn(opcode: Int, type: String) {
+                                if (opcode == Opcodes.NEW && type in keyClasses) found = true
+                            }
                         }
-                        insn = insn.next
                     }
-                    false
-                }
-            ) {
-                sites.add(cn.name)
-            }
+                },
+                ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES,
+            )
+            if (found) sites.add(cr.className)
         }
         return sites
     }
@@ -75,7 +82,7 @@ object KeyClassScanner {
     fun scan(paths: Iterable<Path>): Scan {
         val keys = scanKeyClasses(paths)
         val sites = findNewCallSites(keys, paths)
-        Log.info("scan done: {} key types, {} new-sites, {} transform targets", keys.size, sites.size, keys.size + sites.size)
+        logger.info("scan done: {} key types, {} new-sites, {} transform targets", keys.size, sites.size, keys.size + sites.size)
         return Scan(keys, sites)
     }
 

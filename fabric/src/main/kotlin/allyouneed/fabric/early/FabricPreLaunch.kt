@@ -1,8 +1,8 @@
 package allyouneed.fabric.early
 
 import allyouneed.transformer.KeyClassScanner
-import allyouneed.transformer.Log
 import allyouneed.transformer.NewCallTransformer
+import allyouneed.transformer.logger
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint
 import net.fabricmc.loader.impl.game.GameProvider
 import net.fabricmc.loader.impl.game.patch.GameTransformer
@@ -16,13 +16,13 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         try {
             install()
         } catch (t: Throwable) {
-            Log.error("AEKey intern transformer not installed; falling back to stock constructors", t)
+            logger.error("AEKey intern transformer not installed; falling back to stock constructors", t)
         }
     }
 
     private fun install() {
         val paths = scanPaths()
-        Log.info("Fabric preLaunch starting, {} scan paths", paths.size)
+        logger.info("Fabric preLaunch starting, {} scan paths", paths.size)
         val scan = KeyClassScanner.scan(paths)
         val knot = Thread.currentThread().contextClassLoader
         val delegate = field(knot, "delegate") ?: throw IllegalStateException("Knot delegate missing")
@@ -37,7 +37,7 @@ class FabricPreLaunch : PreLaunchEntrypoint {
             else method.invoke(provider, *args)
         }
         putField(delegate, "provider", proxy)
-        Log.info("Wrapped Knot GameProvider for {} AEKey intern targets", scan.targets.size)
+        logger.info("Wrapped Knot GameProvider for {} AEKey intern targets", scan.targets.size)
     }
 
     private fun scanPaths(): List<Path> {
@@ -111,7 +111,7 @@ private class InterningTransformer(
             ?: return orig
         val out = NewCallTransformer.apply(bytes, keys)
         cache[className] = out
-        Log.debug("fabric transform {}", className)
+        logger.debug("fabric transform {}", className)
         return out
     }
 }

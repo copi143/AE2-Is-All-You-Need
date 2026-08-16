@@ -14,27 +14,38 @@ java {
     }
 }
 
+sourceSets.main {
+    kotlin.setSrcDirs(listOf("src"))
+    resources.setSrcDirs(listOf("resources"))
+}
+
 val embed = configurations.create("embed")
 val r8 = configurations.create("r8")
 val r8Lib = configurations.create("r8Lib")
 
 dependencies {
     compileOnly(kotlin("stdlib"))
-    compileOnly("org.ow2.asm:asm-tree:9.8")
+    compileOnly(libs.asm.tree)
+    compileOnly(libs.asm.analysis)
     compileOnly("cpw.mods:modlauncher:10.0.9")
     compileOnly("org.jetbrains:annotations:26.0.2")
     compileOnly("net.minecraftforge:forgespi:7.0.1")
-    compileOnly("net.minecraftforge:fmlloader:${libs.versions.forge.get()}") { isTransitive = false }
+    compileOnly(libs.slf4j)
+    compileOnly(libs.fml) { isTransitive = false }
     embed(kotlin("stdlib"))
-    r8("com.android.tools:r8:9.4.14")
-    r8Lib("org.ow2.asm:asm-tree:9.8")
+    embed(libs.asm.analysis) { isTransitive = false }
+    r8(libs.r8)
+    r8Lib(libs.slf4j)
+    r8Lib(libs.asm)
+    r8Lib(libs.asm.tree)
     r8Lib("cpw.mods:modlauncher:10.0.9")
     r8Lib("net.minecraftforge:forgespi:7.0.1")
-    r8Lib("net.minecraftforge:fmlloader:${libs.versions.forge.get()}") { isTransitive = false }
+    r8Lib(libs.fml) { isTransitive = false }
     testImplementation(kotlin("stdlib"))
-    testImplementation("org.ow2.asm:asm-tree:9.8")
+    testImplementation(libs.asm.tree)
+    testImplementation(libs.asm.analysis)
     testImplementation(libs.junit)
-    testImplementation(libs.kotlin.test)
+    testImplementation(kotlin("test"))
     testRuntimeOnly(libs.junit.launcher)
 }
 

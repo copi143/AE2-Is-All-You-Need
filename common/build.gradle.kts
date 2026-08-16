@@ -8,7 +8,7 @@ plugins {
 legacyForge {
     mcpVersion = libs.versions.neoForm.get()
     // Automatically enable AccessTransformers if the file exists
-    val at = file("src/main/resources/META-INF/accesstransformer.cfg")
+    val at = file("resources/META-INF/accesstransformer.cfg")
     if (at.exists()) {
         accessTransformers.from(at.absolutePath)
     }
@@ -33,7 +33,6 @@ dependencies {
         libs.ojalgo,
     ).forEach {
         api(it)
-        testImplementation(it)
     }
 
 //    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
@@ -51,12 +50,14 @@ dependencies {
 
     // Mixin's IMixinConfigPlugin declares org.objectweb.asm.tree.ClassNode (and the shaded
     // mixin jar does not bundle ASM), so the plugin needs it on the compile classpath.
-    compileOnly("org.ow2.asm:asm-tree:9.8")
-    testImplementation("org.ow2.asm:asm-tree:9.8")
+    compileOnly(libs.asm.tree)
+    testImplementation(libs.asm.tree)
+    testImplementation(libs.asm.analysis)
     testImplementation(project(":transformer"))
+    testImplementation(libs.slf4j)
 
     testImplementation(libs.junit)
-    testImplementation(libs.kotlin.test)
+    testImplementation(kotlin("test"))
     testRuntimeOnly(libs.junit.launcher)
 }
 

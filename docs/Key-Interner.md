@@ -1,8 +1,7 @@
 # AEKey Interner（全局单例化）
 
 让 AE2 的 `AEKey`（及第三方派生类）的**所有创建点**返回**同一实例**（`===` 成立），
-使基于 identity 的 HashMap / `IdentityHashMap` 场景直接命中，同时消除 `AEItemKey.maxStackSize`
-缓存字段在不同实例间不一致的问题。
+使基于 identity 的 HashMap / `IdentityHashMap` 场景直接命中。
 
 ## 架构
 
@@ -23,8 +22,8 @@ Fabric：PreLaunch 包装 Knot `GameTransformer`，对目标类实时调用同�
 
 ## 变换规则（NewCallTransformer）
 
-从 `NEW+DUP` 起按栈深度找配对的 `<init>`（允许 Label、三元跳转、invoke、局部计算）。
-嵌套 `new Key(...)` 各自配对。对不上的 `NEW` 打 WARN，不改。
+用 ASM `Analyzer(SourceInterpreter)` 按数据流把 `NEW <key>` 和消耗它的 `<init>` 配对
+（三元、先存局部再构造、嵌套 `new` 都能配）。对不上的 `NEW` 打 WARN，不改。
 
 ```
 NEW   <keyClass>
@@ -34,14 +33,6 @@ INVOKESPECIAL <keyClass>.<init>(<desc>)V
 INVOKESTATIC allyouneed/core/KeyInterner.intern(Ljava/lang/Object;)Ljava/lang/Object;
 CHECKCAST <keyClass>
 ```
-
-### `AEItemKey.maxStackSize` 缓存污染
-
-`AEItemKey.of(ItemStack)` 会在 `of(item, tag)` 的返回值上写
-`ret.maxStackSize = stack.getMaxStackSize()`。intern 后该返回值是共享实例，
-写入会污染其它 stack 的缓存。处理：对该类 `of(ItemStack)` 方法中的
-`PUTFIELD appeng/api/stacks/AEItemKey.maxStackSize` 替换为 `POP2`。
-`getMaxStackSize()` 首次调用时 `maxStackSize == -1` 会自动兜底计算。
 
 ### equals / hashCode
 

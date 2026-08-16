@@ -15,16 +15,14 @@ kotlin {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
+    implementation(kotlin("stdlib"))
 
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation(kotlin("test"))
 }
 
-sourceSets {
-    main {
-        kotlin.setSrcDirs(listOf("src"))
-    }
-    test {
-        kotlin.setSrcDirs(listOf("test"))
-    }
+sourceSets.main {
+    kotlin.setSrcDirs(listOf("src"))
+}
+sourceSets.test {
+    kotlin.setSrcDirs(listOf("test"))
 }

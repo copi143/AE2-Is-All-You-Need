@@ -18,20 +18,20 @@ kotlin {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.antlr:antlr4-runtime:4.9.1")
-    implementation("org.ow2.asm:asm:9.8")
-    implementation("org.ow2.asm:asm-commons:9.8")
-    implementation("org.ow2.asm:asm-util:9.8")
+    implementation(kotlin("stdlib"))
+    implementation(libs.antlr.runtime)
+    implementation(libs.asm)
+    implementation(libs.asm.commons)
+    implementation(libs.asm.util)
     implementation("com.google.code.gson:gson:2.10.1")
 
-    compileOnly("org.slf4j:slf4j-api:2.0.9")
+    compileOnly(libs.slf4j)
 
-    antlr("org.antlr:antlr4:4.9.1") // 由于 forge 依赖，从 4.13.2 调整为 4.9.1
+    antlr(libs.antlr)
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.5")
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.0")
+    testImplementation(libs.junit)
+    testImplementation(kotlin("test"))
+    testRuntimeOnly(libs.junit.launcher)
 }
 
 val antlrOutDir = layout.buildDirectory.dir("generated-src/antlr/main")

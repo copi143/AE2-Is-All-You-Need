@@ -10,12 +10,7 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.Label
-import org.objectweb.asm.tree.FieldInsnNode
-import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.MethodInsnNode
-import org.objectweb.asm.tree.MethodNode
-import org.objectweb.asm.tree.TypeInsnNode
-import org.objectweb.asm.tree.VarInsnNode
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertSame
@@ -72,6 +67,21 @@ class NewCallTransformerTest {
     }
 
     @Test
+    fun `wraps new stored to local before init`() {
+        val factoryName = "allyouneed/core/GeneratedStoreFactory"
+        val transformed = NewCallTransformer.apply(
+            generateStoreFactory(factoryName),
+            setOf(Type.getInternalName(SampleKey::class.java)),
+        )
+        val cls = ByteClassLoader(factoryName.replace('/', '.'), transformed).loadClass(factoryName.replace('/', '.'))
+        val makeFn = cls.getMethod("make", String::class.java)
+        val a = makeFn.invoke(null, "zinc")
+        val b = makeFn.invoke(null, "zinc")
+        assertSame(a, b)
+        assertEquals(SampleKey("zinc", 0), a)
+    }
+
+    @Test
     fun `renames equals and hashCode to identity plus asm methods`() {
         val name = "allyouneed/core/GeneratedKey"
         val transformed = NewCallTransformer.apply(generateKey(name), setOf(name))
@@ -85,35 +95,6 @@ class NewCallTransformerTest {
         assertTrue((a as ContentIdentity).`asm$equals`(b))
         assertEquals((a as ContentIdentity).`asm$hashCode`(), (b as ContentIdentity).`asm$hashCode`())
         assertSame(KeyInterner.intern(a), KeyInterner.intern(b))
-    }
-
-    @Test
-    fun `strips AEItemKey maxStackSize putfield`() {
-        val cn = ClassNode()
-        cn.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, NewCallTransformer.AE_ITEM_KEY, null, "java/lang/Object", null)
-        val mn = MethodNode(
-            Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
-            "of",
-            "(Lnet/minecraft/world/item/ItemStack;)L${NewCallTransformer.AE_ITEM_KEY};",
-            null,
-            null,
-        )
-        mn.instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
-        mn.instructions.add(InsnNode(Opcodes.ICONST_1))
-        mn.instructions.add(
-            FieldInsnNode(Opcodes.PUTFIELD, NewCallTransformer.AE_ITEM_KEY, NewCallTransformer.MAX_STACK_SIZE, "I"),
-        )
-        mn.instructions.add(InsnNode(Opcodes.ACONST_NULL))
-        mn.instructions.add(InsnNode(Opcodes.ARETURN))
-        cn.methods.add(mn)
-        val n = NewCallTransformer.apply(cn, emptySet())
-        assertEquals(1, n)
-        assertTrue(mn.instructions.toArray().any { it.opcode == Opcodes.POP2 })
-        assertTrue(
-            mn.instructions.toArray().none {
-                it is FieldInsnNode && it.name == NewCallTransformer.MAX_STACK_SIZE
-            },
-        )
     }
 
     private fun generateKey(internalName: String): ByteArray {
@@ -211,6 +192,32 @@ class NewCallTransformerTest {
         mv.visitMethodInsn(Opcodes.INVOKESPECIAL, key, "<init>", "(Ljava/lang/String;I)V", false)
         mv.visitInsn(Opcodes.ARETURN)
         mv.visitMaxs(4, 1)
+        mv.visitEnd()
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    private fun generateStoreFactory(internalName: String): ByteArray {
+        val key = Type.getInternalName(SampleKey::class.java)
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, internalName, null, "java/lang/Object", null)
+        val mv = cw.visitMethod(
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+            "make",
+            "(Ljava/lang/String;)L$key;",
+            null,
+            null,
+        )
+        mv.visitCode()
+        mv.visitTypeInsn(Opcodes.NEW, key)
+        mv.visitVarInsn(Opcodes.ASTORE, 1)
+        mv.visitVarInsn(Opcodes.ALOAD, 1)
+        mv.visitVarInsn(Opcodes.ALOAD, 0)
+        mv.visitInsn(Opcodes.ICONST_0)
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, key, "<init>", "(Ljava/lang/String;I)V", false)
+        mv.visitVarInsn(Opcodes.ALOAD, 1)
+        mv.visitInsn(Opcodes.ARETURN)
+        mv.visitMaxs(3, 2)
         mv.visitEnd()
         cw.visitEnd()
         return cw.toByteArray()

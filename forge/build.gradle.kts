@@ -30,7 +30,7 @@ tasks.jar {
 legacyForge {
     version = libs.versions.forge.get()
     // Automatically enable neoforge AccessTransformers if the file exists
-    val at = project(":common").file("src/main/resources/META-INF/accesstransformer.cfg")
+    val at = project(":common").file("resources/META-INF/accesstransformer.cfg")
     if (at.exists()) {
         accessTransformers.from(at.absolutePath)
     }
@@ -111,7 +111,7 @@ dependencies {
     modRuntimeOnly(variantOf(libs.mek) { classifier("tools") })
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
-    testImplementation("org.ow2.asm:asm-tree:9.8")
+    testImplementation(libs.asm.tree)
     testRuntimeOnly(libs.junit.launcher)
 }
 

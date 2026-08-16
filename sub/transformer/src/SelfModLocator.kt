@@ -29,7 +29,7 @@ class SelfModLocator : AbstractJarFileModLocator() {
             zip.getInputStream(entry).use { input ->
                 Files.copy(input, dest, StandardCopyOption.REPLACE_EXISTING)
             }
-            Log.info("extracted embedded game jar to {}", dest)
+            logger.info("extracted embedded game jar to {}", dest)
             return dest
         }
     }

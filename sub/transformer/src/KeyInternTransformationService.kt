@@ -22,13 +22,13 @@ class KeyInternTransformationService : ITransformationService {
     @Throws(IncompatibleEnvironmentException::class)
     override fun onLoad(env: IEnvironment, otherServices: Set<String>) {
         System.setProperty(INSTALLED_PROP, "true")
-        Log.info("ITransformationService onLoad (plugin layer, before game classes)")
+        logger.info("ITransformationService onLoad (plugin layer, before game classes)")
     }
 
     override fun transformers(): List<ITransformer<*>> {
         val scan = KeyClassScanner.scan(scanMods())
-        Log.info("ITransformationService transformers: {} keys, {} targets", scan.keys.size, scan.targets.size)
-        for (key in scan.targets) Log.info("  target {}", key.replace('/', '.'))
+        logger.info("ITransformationService transformers: {} keys, {} targets", scan.keys.size, scan.targets.size)
+        for (key in scan.targets) logger.info("  target {}", key.replace('/', '.'))
         return listOf(KeyInternClassTransformer(scan.keys, scan.targets))
     }
 
@@ -42,7 +42,7 @@ class KeyInternTransformationService : ITransformationService {
                 out
             }
         } catch (t: Throwable) {
-            Log.error("mods dir scan failed", t)
+            logger.error("mods dir scan failed", t)
             emptyList()
         }
     }
