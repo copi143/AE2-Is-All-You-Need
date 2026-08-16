@@ -36,47 +36,62 @@ AE2 Is All You Need 是一个以在整合包末期继续提升产能为目标的
 
 ---
 
-## 模组关系
+## 依赖关系
 
-### 必选依赖
+<details>
+  <summary><h3>模组关系</h3></summary>
 
-- `Kotlin for Forge`
-- `Fabric Language Kotlin`
-- `GuideME` *TODO*
-- `Applied Energistics 2`
+1. 必选依赖
+   - `Kotlin for Forge`
+   - `Fabric Language Kotlin`
+   - `GuideME` *TODO*
+   - `Applied Energistics 2`
+2. 可选依赖
+   - `Just Enough Items`
+   - `EMI`
+   - `Jade` *TODO*
+   - `GregTechCEu Modern`
+3. 兼容模组
+   - `Mekanism` *TODO*
+   - `Create` *TODO*
+4. 注入资源
+   - `FTB Quests` *TODO*
+5. 感谢
+   - `Minecraft Forge`
+   - `Fabric Loader`
+   - `NeoForge`
+   - `Applied Energistics 2`
+   - `ExtendedAE`
+   - `AdvancedAE`
+   - `GregTechCEu Modern`
+   - `BuildCraft`
+   - `PackagedAuto`
 
-### 可选依赖
+</details>
 
-- `Just Enough Items`
-- `EMI`
-- `Jade` *TODO*
-- `GregTechCEu Modern`
+<details>
+  <summary><h3>库关系</h3></summary>
 
-### 兼容模组
+依赖名称：
 
-- `Mekanism` *TODO*
-- `Create` *TODO*
+- `kotlinx-coroutines-core`
+- `compose-runtime`
+- `compose-ui`
+- `compose-foundation`
+- `compose-foundation-layout`
+- `compose-animation`
+- `compose-material`
+- `ojalgo`
 
-### 第三方库
+包路径：
 
+- `kotlinx.*`
+- `androidx.*`
 - `org.jetbrains.kotlin.*`
 - `org.jetbrains.compose.*`
+- `org.ojalgo.*`
 
-### 注入资源
-
-- `FTB Quests` *TODO*
-
-### 感谢
-
-- `Minecraft Forge`
-- `Fabric Loader`
-- `NeoForge`
-- `Applied Energistics 2`
-- `ExtendedAE`
-- `AdvancedAE`
-- `GregTechCEu Modern`
-- `BuildCraft`
-- `PackagedAuto`
+</details>
 
 ## 辅助功能
 
