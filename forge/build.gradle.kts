@@ -57,6 +57,9 @@ legacyForge {
         register(modId) {
             sourceSet(sourceSets.main.get())
         }
+        register("ae2isallyouneed_core") {
+            sourceSet(sourceSets.main.get())
+        }
     }
 }
 
@@ -68,6 +71,10 @@ sourceSets.main {
     java.srcDir("src")
     kotlin.srcDir("src")
     resources.srcDir("resources")
+}
+
+sourceSets.test {
+    kotlin.srcDir("test")
 }
 
 dependencies {
@@ -103,6 +110,34 @@ dependencies {
     modRuntimeOnly(variantOf(libs.mek) { classifier("generators") })
     modRuntimeOnly(variantOf(libs.mek) { classifier("tools") })
     testImplementation(kotlin("test"))
+    testImplementation(libs.junit)
+    testImplementation("org.ow2.asm:asm-tree:9.8")
+    testRuntimeOnly(libs.junit.launcher)
+}
+
+val copyTransformerToRunMods = tasks.register("copyTransformerToRunMods") {
+    group = "build"
+    dependsOn(":transformer:pluginJar")
+    doLast {
+        val src = project(":transformer").tasks.named("pluginJar").get().outputs.files.singleFile
+        val dir = layout.projectDirectory.dir("run/mods").asFile
+        dir.mkdirs()
+        src.copyTo(dir.resolve("ae2isallyouneed-transformer.jar"), overwrite = true)
+    }
+}
+
+tasks.matching { it.name.startsWith("prepare") && it.name.contains("Run") }.configureEach {
+    dependsOn(copyTransformerToRunMods)
+}
+
+afterEvaluate {
+    listOf("prepareClientRun", "prepareServerRun", "prepareDataRun").forEach { name ->
+        tasks.findByName(name)?.dependsOn(copyTransformerToRunMods)
+    }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
 
 // Drop module-info so atomicfu does not require a separate kotlin.stdlib module (KFF provides Kotlin).
@@ -154,11 +189,42 @@ val cleanJarJarMetadata = tasks.register("cleanJarJarMetadata") {
 }
 
 tasks.named<Jar>("jar") {
+    dependsOn(copyTransformerToRunMods)
+    archiveClassifier.set("mod")
     exclude("META-INF/jarjar/ModernUI-Core-*.jar")
     exclude("META-INF/jarjar/metadata.json")
     from(cleanJarJarMetadata) {
         rename { "META-INF/jarjar/metadata.json" }
     }
+}
+
+val wrapForgeJar = tasks.register<Jar>("wrapForgeJar") {
+    group = "build"
+    description = "Single mods/ jar: transformer plugin + embedded game mod"
+    archiveClassifier.set("")
+    dependsOn(":transformer:pluginJar")
+    from(zipTree(project(":transformer").layout.buildDirectory.file("libs/ae2isallyouneed-transformer.jar"))) {
+        exclude("META-INF/MANIFEST.MF")
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes["Automatic-Module-Name"] = "allyouneed.transformer"
+    }
+}
+
+afterEvaluate {
+    val game = tasks.findByName("reobfJar") ?: tasks.named("jar").get()
+    wrapForgeJar.configure {
+        dependsOn(game)
+        from(game.outputs.files) {
+            into("META-INF/mod")
+            rename { "game.jar" }
+        }
+    }
+}
+
+tasks.named("assemble") {
+    dependsOn(wrapForgeJar)
 }
 repositories {
     mavenCentral()

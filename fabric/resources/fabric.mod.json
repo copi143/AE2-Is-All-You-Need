@@ -13,6 +13,12 @@
   "icon": "${mod_id}.png",
   "environment": "*",
   "entrypoints": {
+    "preLaunch": [
+      {
+        "adapter": "kotlin",
+        "value": "allyouneed.fabric.early.FabricPreLaunch"
+      }
+    ],
     "main": [
       {
         "adapter": "kotlin",

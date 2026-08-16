@@ -2,7 +2,8 @@ package allyouneed.logic.machine
 
 import allyouneed.util.bigint.BigIngredient
 import allyouneed.util.bigint.BigStack
-import allyouneed.util.globalId
+import allyouneed.util.primaryId
+import allyouneed.util.secondaryId
 import allyouneed.util.logger
 import appeng.api.stacks.AEItemKey
 import net.minecraft.resources.ResourceLocation
@@ -23,9 +24,9 @@ data class ManualMachineRecipe(
     init {
         require(outputs.isNotEmpty()) { "requires at least one output" }
         require(machineType.valid) { "machineType must be valid: ${machineType.id}" }
-        inputs.forEach { it.key?.globalId }
-        outputs.forEach { it.key.globalId }
-        remainders?.forEach { it?.key?.globalId }
+        inputs.forEach { it.key?.let { key -> key.primaryId; key.secondaryId } }
+        outputs.forEach { it.key.let { key -> key.primaryId; key.secondaryId } }
+        remainders?.forEach { it?.key?.let { key -> key.primaryId; key.secondaryId } }
     }
 
     fun matches(container: Container): Boolean {

@@ -24,6 +24,8 @@ plugins {
 include("common")
 include("fabric")
 include("forge")
-include("graphicsrepl")
-include("kaptor")
-include("averith")
+
+listOf("averith", "graphicsrepl", "kaptor", "transformer").forEach { name ->
+    include(name)
+    project(":$name").projectDir = file("sub/$name")
+}

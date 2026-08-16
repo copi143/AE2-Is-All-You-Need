@@ -1,6 +1,5 @@
 package allyouneed.logic.crafting
 
-import allyouneed.util.globalId
 import appeng.api.config.Actionable
 import appeng.api.config.FuzzyMode
 import appeng.api.networking.security.IActionSource
@@ -49,13 +48,6 @@ object MeInventorySnapshot {
  * Holds no reference to [IStorageService] or any live grid object.
  */
 class CopiedNetworkSimulationState(private val list: KeyCounter) : CraftingSimulationState() {
-    init {
-        println("CopiedNetworkSimulationState")
-        for (item in list) {
-            println("[${item.key.globalId}] ${item.key.displayName.string}: ${item.longValue}")
-        }
-    }
-
     override fun simulateExtractParent(what: AEKey, amount: Long): Long = minOf(list.get(what), amount)
 
     override fun findFuzzyParent(input: AEKey): Iterable<AEKey> =

@@ -42,6 +42,8 @@ dependencies {
     compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
     modCompileOnly(libs.gtceu)
 
+    implementation(project(":transformer"))
+    include(project(":transformer"))
     include(project(":kaptor"))
     include(project(":averith"))
     include("org.antlr:antlr4-runtime:4.9.1")

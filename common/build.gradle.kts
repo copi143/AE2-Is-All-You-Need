@@ -52,6 +52,8 @@ dependencies {
     // Mixin's IMixinConfigPlugin declares org.objectweb.asm.tree.ClassNode (and the shaded
     // mixin jar does not bundle ASM), so the plugin needs it on the compile classpath.
     compileOnly("org.ow2.asm:asm-tree:9.8")
+    testImplementation("org.ow2.asm:asm-tree:9.8")
+    testImplementation(project(":transformer"))
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
@@ -64,7 +66,7 @@ configurations["testRuntimeClasspath"].exclude(
 )
 
 dependencies {
-    testRuntimeOnly(files("${rootProject.projectDir}/graphicsrepl/build/libs/ui-graphics-desktop-noskiko.jar"))
+    testRuntimeOnly(files(rootProject.project(":graphicsrepl").layout.buildDirectory.file("libs/ui-graphics-desktop-noskiko.jar")))
 }
 
 tasks.withType<Test> {
@@ -96,7 +98,7 @@ dependencies {
         add(it, "org.jetbrains.compose.foundation:foundation-layout-desktop:${libs.versions.compose.get()}")
         add(it, "org.jetbrains.compose.animation:animation-desktop:${libs.versions.compose.get()}")
         add(it, "org.jetbrains.compose.material:material-desktop:${libs.versions.compose.get()}")
-        add(it, files("${rootProject.projectDir}/graphicsrepl/build/libs/ui-graphics-desktop-noskiko.jar"))
+        add(it, files(rootProject.project(":graphicsrepl").layout.buildDirectory.file("libs/ui-graphics-desktop-noskiko.jar")))
     }
 }
 

@@ -1,0 +1,16 @@
+package allyouneed.forge.early
+
+import net.minecraftforge.fml.common.Mod
+
+const val CORE_MODID = "ae2isallyouneed_core"
+
+@Mod(CORE_MODID)
+class EarlyLoaderMod {
+    init {
+        if (System.getProperty("allyouneed.core.transformer") == "true") {
+            println("[AE2IsAllYouNeed/Core] ITransformationService installed")
+        } else {
+            println("[AE2IsAllYouNeed/Core] WARN: transformer jar missing from mods/; ASM will not rewrite AEKey")
+        }
+    }
+}

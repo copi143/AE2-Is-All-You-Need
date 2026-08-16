@@ -1,43 +1,71 @@
 package allyouneed.mixin.ae2;
 
-import allyouneed.api.GlobalIdHolder;
+import allyouneed.api.KeyIdHolder;
 import allyouneed.util.id.KeyIdRegistry;
 import appeng.api.stacks.AEKey;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 /**
- * Injects a process-global, NBT-excluded integer identity onto every {@link AEKey}
- * for fast search/dedup. The id is assigned lazily on first read from
- * {@link KeyIdRegistry} and cached on the instance; two keys sharing the same
- * item/fluid (different NBT) always resolve to the same id.
+ * Injects process-global integer identities onto every {@link AEKey}.
  * <p>
- * 向每个 AEKey 注入去 NBT 的进程全局整数身份，用于快速搜索/去重。
- * ID 在首次读取时从 KeyIdRegistry 惰性分配并缓存于实例；
- * 相同物品/流体（不同 NBT）的 AEKey 获得同一个 ID。
+ * {@code primaryId}: same item/fluid (NBT ignored).<br>
+ * {@code secondaryId}: {@code (primaryId << 32) | local}; {@code local == 0} when
+ * {@code dropSecondary()} equals this key.
+ * <p>
+ * 向每个 AEKey 注入进程全局整数身份。
+ * secondaryId 高 32 位为 primaryId；无 secondary 时等于 {@code primaryId << 32}。
  */
 @SuppressWarnings("AddedMixinMembersNamePattern")
 @Mixin(value = AEKey.class, remap = false)
-public abstract class AEKeyMixin implements GlobalIdHolder {
+public abstract class AEKeyMixin implements KeyIdHolder {
 
-    /**
-     * NBT-excluded global id cached on the instance; -1 = not yet assigned.
-     */
     @Unique
-    private int globalId = -1;
+    private int primaryId = -1;
+
+    @Unique
+    private long secondaryId = -1L;
+
+    @Unique
+    private AEKey cachedSecondaryDropped;
 
     @Unique
     @Override
-    public int getGlobalId() {
-        if (this.globalId < 0) {
-            this.globalId = KeyIdRegistry.assign((AEKey) (Object) this);
+    public int getPrimaryId() {
+        if (this.primaryId < 0) {
+            this.primaryId = KeyIdRegistry.assignPrimary((AEKey) (Object) this);
         }
-        return this.globalId;
+        return this.primaryId;
     }
 
     @Unique
     @Override
-    public void invalidateGlobalId() {
-        this.globalId = -1;
+    public long getSecondaryId() {
+        if (this.secondaryId < 0) {
+            this.secondaryId = KeyIdRegistry.assignSecondary((AEKey) (Object) this);
+            if (this.primaryId < 0) {
+                this.primaryId = (int) (this.secondaryId >>> 32);
+            }
+        }
+        return this.secondaryId;
+    }
+
+    @Unique
+    @Override
+    public AEKey getCachedSecondaryDropped() {
+        return this.cachedSecondaryDropped;
+    }
+
+    @Unique
+    @Override
+    public void setCachedSecondaryDropped(AEKey key) {
+        this.cachedSecondaryDropped = key;
+    }
+
+    @Unique
+    @Override
+    public void invalidateKeyIds() {
+        this.primaryId = -1;
+        this.secondaryId = -1L;
     }
 }
