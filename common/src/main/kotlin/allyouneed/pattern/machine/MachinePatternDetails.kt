@@ -44,9 +44,7 @@ class MachinePatternDetails(private val definition: AEItemKey) : IPatternDetails
         output = GenericStack.readTag(tag.getCompound(MachinePatternTags.OUTPUT))
             ?: throw IllegalStateException("Machine pattern without output")
 
-        inputs = Array(sparseInputs.size) { i ->
-            Input(sparseInputs[i]!!)
-        }
+        inputs = sparseInputs.filterNotNull().map { Input(it) }.toTypedArray()
     }
 
     private fun readArray(tag: CompoundTag, key: String): Array<GenericStack?> {

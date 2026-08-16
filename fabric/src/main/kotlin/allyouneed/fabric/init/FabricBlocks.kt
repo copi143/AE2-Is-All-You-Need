@@ -17,14 +17,6 @@ import allyouneed.parts.iodrive.MEIODriveRegistration
 import allyouneed.parts.machineassembler.MachineAssemblerBlock
 import allyouneed.parts.machineassembler.MachineAssemblerBlockEntity
 import allyouneed.parts.machineassembler.MachineAssemblerRegistration
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlock
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlockEntity
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
-import allyouneed.pattern.machine.MachinePatternTerminalBlock
-import allyouneed.pattern.machine.MachinePatternTerminalBlockEntity
-import allyouneed.pattern.machine.MachinePatternTerminalRegistration
-import allyouneed.pattern.pseudo.PseudoPatternTerminalBlock
-import allyouneed.pattern.pseudo.PseudoPatternTerminalBlockEntity
 import allyouneed.util.rl
 import appeng.block.AEBaseEntityBlock
 import appeng.core.MainCreativeTab
@@ -40,29 +32,11 @@ import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.material.MapColor
 
 object FabricBlocks {
-    val PSEUDO_PATTERN_TERMINAL: PseudoPatternTerminalBlock = PseudoPatternTerminalBlock(
-        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
-    )
-
-    lateinit var PSEUDO_PATTERN_TERMINAL_BE: BlockEntityType<PseudoPatternTerminalBlockEntity>
-
-    val ADAPTIVE_PATTERN_TERMINAL: AdaptivePatternTerminalBlock = AdaptivePatternTerminalBlock(
-        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
-    )
-
-    lateinit var ADAPTIVE_PATTERN_TERMINAL_BE: BlockEntityType<AdaptivePatternTerminalBlockEntity>
-
     val MACHINE_ASSEMBLER: MachineAssemblerBlock = MachineAssemblerBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
     )
 
     lateinit var MACHINE_ASSEMBLER_BE: BlockEntityType<MachineAssemblerBlockEntity>
-
-    val MACHINE_PATTERN_TERMINAL: MachinePatternTerminalBlock = MachinePatternTerminalBlock(
-        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
-    )
-
-    lateinit var MACHINE_PATTERN_TERMINAL_BE: BlockEntityType<MachinePatternTerminalBlockEntity>
 
     val ME_IO_DRIVE: MEIODriveBlock = MEIODriveBlock(
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
@@ -71,38 +45,6 @@ object FabricBlocks {
     lateinit var ME_IO_DRIVE_BE: BlockEntityType<MEIODriveBlockEntity>
 
     fun register() {
-        val blockId = "pseudo_pattern_terminal".rl
-
-        PSEUDO_PATTERN_TERMINAL_BE = FabricBlockEntityTypeBuilder.create(
-            { pos, state -> PseudoPatternTerminalBlockEntity(PSEUDO_PATTERN_TERMINAL_BE, pos, state) },
-            PSEUDO_PATTERN_TERMINAL
-        ).build()
-
-        Registry.register(BuiltInRegistries.BLOCK, blockId, PSEUDO_PATTERN_TERMINAL)
-        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, blockId, PSEUDO_PATTERN_TERMINAL_BE)
-        Registry.register(BuiltInRegistries.ITEM, blockId, BlockItem(PSEUDO_PATTERN_TERMINAL, Item.Properties()))
-
-        // Adaptive Pattern Terminal
-        val adaptiveId = "adaptive_pattern_terminal".rl
-
-        ADAPTIVE_PATTERN_TERMINAL_BE = FabricBlockEntityTypeBuilder.create(
-            { pos, state -> AdaptivePatternTerminalBlockEntity(ADAPTIVE_PATTERN_TERMINAL_BE, pos, state) },
-            ADAPTIVE_PATTERN_TERMINAL
-        ).build()
-        @Suppress("UNCHECKED_CAST") (ADAPTIVE_PATTERN_TERMINAL as AEBaseEntityBlock<AdaptivePatternTerminalBlockEntity>).setBlockEntity(
-            AdaptivePatternTerminalBlockEntity::class.java, ADAPTIVE_PATTERN_TERMINAL_BE, null, null
-        )
-        AdaptivePatternTerminalRegistration.setBlockEntityType(ADAPTIVE_PATTERN_TERMINAL_BE)
-
-        Registry.register(BuiltInRegistries.BLOCK, adaptiveId, ADAPTIVE_PATTERN_TERMINAL)
-        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, adaptiveId, ADAPTIVE_PATTERN_TERMINAL_BE)
-        val adaptiveItem = BlockItem(ADAPTIVE_PATTERN_TERMINAL, Item.Properties())
-        Registry.register(BuiltInRegistries.ITEM, adaptiveId, adaptiveItem)
-
-        BlockDefinition("Adaptive Pattern Terminal", adaptiveId, ADAPTIVE_PATTERN_TERMINAL, adaptiveItem).also {
-            MainCreativeTab.add(it)
-        }
-
         // Machine Assembler
         val machineAssemblerId = "molecular_assembler".rl
 
@@ -121,29 +63,6 @@ object FabricBlocks {
         Registry.register(BuiltInRegistries.ITEM, machineAssemblerId, machineAssemblerItem)
 
         BlockDefinition("Molecular Assembler", machineAssemblerId, MACHINE_ASSEMBLER, machineAssemblerItem).also {
-            MainCreativeTab.add(it)
-        }
-
-        // Machine Pattern Terminal
-        val machineTerminalId = "machine_pattern_terminal".rl
-
-        MACHINE_PATTERN_TERMINAL_BE = FabricBlockEntityTypeBuilder.create(
-            { pos, state -> MachinePatternTerminalBlockEntity(MACHINE_PATTERN_TERMINAL_BE, pos, state) },
-            MACHINE_PATTERN_TERMINAL
-        ).build()
-        @Suppress("UNCHECKED_CAST") (MACHINE_PATTERN_TERMINAL as AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
-            MachinePatternTerminalBlockEntity::class.java, MACHINE_PATTERN_TERMINAL_BE, null, null
-        )
-        MachinePatternTerminalRegistration.setBlockEntityType(MACHINE_PATTERN_TERMINAL_BE)
-
-        Registry.register(BuiltInRegistries.BLOCK, machineTerminalId, MACHINE_PATTERN_TERMINAL)
-        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, machineTerminalId, MACHINE_PATTERN_TERMINAL_BE)
-        val machineTerminalItem = BlockItem(MACHINE_PATTERN_TERMINAL, Item.Properties())
-        Registry.register(BuiltInRegistries.ITEM, machineTerminalId, machineTerminalItem)
-
-        BlockDefinition(
-            "Machine Pattern Terminal", machineTerminalId, MACHINE_PATTERN_TERMINAL, machineTerminalItem
-        ).also {
             MainCreativeTab.add(it)
         }
 

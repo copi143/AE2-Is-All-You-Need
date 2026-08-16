@@ -9,6 +9,7 @@ import allyouneed.logic.aekey.ManaKey
 import allyouneed.logic.aekey.VirtualKey
 import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.parts.p2p.EntityP2PTunnelPart
+import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.util.*
@@ -76,5 +77,7 @@ object Main {
 
     fun registerParts() {
         PartModels.registerModels(PartModelsHelper.createModels(EntityP2PTunnelPart::class.java))
+        PartModels.registerModels(PartModelsHelper.createModels(UnifiedPatternEncodingTermPart::class.java))
+        ModItems.PATTERN_ENCODING_TERMINAL_DEF
     }
 }

@@ -18,14 +18,6 @@ import allyouneed.parts.iodrive.MEIODriveRegistration
 import allyouneed.parts.machineassembler.MachineAssemblerBlock
 import allyouneed.parts.machineassembler.MachineAssemblerBlockEntity
 import allyouneed.parts.machineassembler.MachineAssemblerRegistration
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlock
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalBlockEntity
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalRegistration
-import allyouneed.pattern.machine.MachinePatternTerminalBlock
-import allyouneed.pattern.machine.MachinePatternTerminalBlockEntity
-import allyouneed.pattern.machine.MachinePatternTerminalRegistration
-import allyouneed.pattern.pseudo.PseudoPatternTerminalBlock
-import allyouneed.pattern.pseudo.PseudoPatternTerminalBlockEntity
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalItem
 import allyouneed.util.MODID
 import allyouneed.util.rl
@@ -47,43 +39,9 @@ object ForgeBlocks {
     val BLOCK_ENTITIES: DeferredRegister<BlockEntityType<*>> =
         DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID)
 
-    val PSEUDO_PATTERN_TERMINAL: RegistryObject<PseudoPatternTerminalBlock> =
-        BLOCKS.register("pseudo_pattern_terminal") {
-            PseudoPatternTerminalBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f))
-        }
-
-    val PSEUDO_PATTERN_TERMINAL_BE: RegistryObject<BlockEntityType<PseudoPatternTerminalBlockEntity>> =
-        BLOCK_ENTITIES.register("pseudo_pattern_terminal") {
-            BlockEntityType.Builder.of(
-                { pos, state -> PseudoPatternTerminalBlockEntity(PSEUDO_PATTERN_TERMINAL_BE.get(), pos, state) },
-                PSEUDO_PATTERN_TERMINAL.get()
-            ).build(null as com.mojang.datafixers.types.Type<*>?)
-        }
-
     val WIRELESS_PSEUDO_PATTERN_TERMINAL: RegistryObject<WirelessPseudoPatternTerminalItem> =
         ForgeItems.ITEMS.register("wireless_pseudo_pattern_terminal") {
             WirelessPseudoPatternTerminalItem(Item.Properties().stacksTo(1))
-        }
-
-    // Adaptive Pattern Terminal
-    val ADAPTIVE_PATTERN_TERMINAL: RegistryObject<AdaptivePatternTerminalBlock> =
-        BLOCKS.register("adaptive_pattern_terminal") {
-            AdaptivePatternTerminalBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f))
-        }
-
-    val ADAPTIVE_PATTERN_TERMINAL_BE: RegistryObject<BlockEntityType<AdaptivePatternTerminalBlockEntity>> =
-        BLOCK_ENTITIES.register("adaptive_pattern_terminal") {
-            val type = BlockEntityType.Builder.of(
-                { pos, state -> AdaptivePatternTerminalBlockEntity(ADAPTIVE_PATTERN_TERMINAL_BE.get(), pos, state) },
-                ADAPTIVE_PATTERN_TERMINAL.get()
-            ).build(null as com.mojang.datafixers.types.Type<*>?)
-            AdaptivePatternTerminalRegistration.setBlockEntityType(type)
-            type
-        }
-
-    val ADAPTIVE_PATTERN_TERMINAL_ITEM: RegistryObject<BlockItem> =
-        ForgeItems.ITEMS.register("adaptive_pattern_terminal") {
-            BlockItem(ADAPTIVE_PATTERN_TERMINAL.get(), Item.Properties())
         }
 
     // Machine Assembler
@@ -114,40 +72,6 @@ object ForgeBlocks {
 
     val MACHINE_ASSEMBLER_DEF: BlockDefinition<MachineAssemblerBlock> = BlockDefinition(
         "Molecular Assembler", "molecular_assembler".rl, MACHINE_ASSEMBLER_INSTANCE, MACHINE_ASSEMBLER_ITEM_INSTANCE
-    ).also {
-        MainCreativeTab.add(it)
-    }
-
-    // Machine Pattern Terminal
-    val MACHINE_PATTERN_TERMINAL_INSTANCE = MachinePatternTerminalBlock(
-        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
-    )
-    val MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE = BlockItem(MACHINE_PATTERN_TERMINAL_INSTANCE, Item.Properties())
-
-    val MACHINE_PATTERN_TERMINAL: RegistryObject<MachinePatternTerminalBlock> =
-        BLOCKS.register("machine_pattern_terminal") { MACHINE_PATTERN_TERMINAL_INSTANCE }
-
-    val MACHINE_PATTERN_TERMINAL_BE: RegistryObject<BlockEntityType<MachinePatternTerminalBlockEntity>> =
-        BLOCK_ENTITIES.register("machine_pattern_terminal") {
-            val type = BlockEntityType.Builder.of(
-                { pos, state -> MachinePatternTerminalBlockEntity(MACHINE_PATTERN_TERMINAL_BE.get(), pos, state) },
-                MACHINE_PATTERN_TERMINAL.get()
-            ).build(null as com.mojang.datafixers.types.Type<*>?)
-            @Suppress("UNCHECKED_CAST") (MACHINE_PATTERN_TERMINAL_INSTANCE as appeng.block.AEBaseEntityBlock<MachinePatternTerminalBlockEntity>).setBlockEntity(
-                MachinePatternTerminalBlockEntity::class.java, type, null, null
-            )
-            MachinePatternTerminalRegistration.setBlockEntityType(type)
-            type
-        }
-
-    val MACHINE_PATTERN_TERMINAL_ITEM: RegistryObject<BlockItem> =
-        ForgeItems.ITEMS.register("machine_pattern_terminal") { MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE }
-
-    val MACHINE_PATTERN_TERMINAL_DEF: BlockDefinition<MachinePatternTerminalBlock> = BlockDefinition(
-        "Machine Pattern Terminal",
-        "machine_pattern_terminal".rl,
-        MACHINE_PATTERN_TERMINAL_INSTANCE,
-        MACHINE_PATTERN_TERMINAL_ITEM_INSTANCE
     ).also {
         MainCreativeTab.add(it)
     }

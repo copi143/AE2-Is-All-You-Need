@@ -5,6 +5,7 @@ import allyouneed.pattern.ModItems
 import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
+import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
 import allyouneed.util.MODID
 import appeng.items.parts.PartItem
 import net.minecraft.world.item.Item
@@ -26,6 +27,9 @@ object ForgeItems {
 
     val ENTITY_P2P_TUNNEL: RegistryObject<PartItem<EntityP2PTunnelPart>> =
         ITEMS.register("entity_p2p_tunnel") { ModItems.ENTITY_P2P_TUNNEL }
+
+    val PATTERN_ENCODING_TERMINAL: RegistryObject<PartItem<UnifiedPatternEncodingTermPart>> =
+        ITEMS.register("pattern_encoding_terminal") { ModItems.PATTERN_ENCODING_TERMINAL }
 
     fun register(bus: IEventBus) {
         ITEMS.register(bus)

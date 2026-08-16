@@ -13,14 +13,10 @@ import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.iodrive.MEIODriveScreen
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.parts.machineassembler.MachineAssemblerScreen
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalScreen
-import allyouneed.pattern.machine.MachinePatternTerminalMenu
-import allyouneed.pattern.machine.MachinePatternTerminalScreen
-import allyouneed.pattern.pseudo.PseudoPatternTerminalMenu
-import allyouneed.pattern.pseudo.PseudoPatternTerminalScreen
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalScreen
+import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
+import allyouneed.pattern.term.UnifiedPatternEncodingTermScreen
 import allyouneed.util.notify.DesktopNotify
 import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
@@ -59,10 +55,6 @@ fun initClient() {
         BlockRenderLayerMap.INSTANCE.putBlock(it, RenderType.cutout())
     }
 
-    MenuScreens.register(PseudoPatternTerminalMenu.TYPE) { menu, inv, title ->
-        val style = StyleManager.loadStyleDoc("/screens/terminals/wireless_terminal.json")
-        PseudoPatternTerminalScreen(menu, inv, title, style)
-    }
     MenuScreens.register(WirelessPseudoPatternTerminalMenu.TYPE) { menu, inv, title ->
         val style = StyleManager.loadStyleDoc("/screens/terminals/wireless_terminal.json")
         WirelessPseudoPatternTerminalScreen(menu, inv, title, style)
@@ -71,17 +63,13 @@ fun initClient() {
         val style = StyleManager.loadStyleDoc("/screens/drive.json")
         MEIODriveScreen(menu, inv, title, style)
     }
-    MenuScreens.register(AdaptivePatternTerminalMenu.TYPE) { menu, inv, title ->
-        val style = StyleManager.loadStyleDoc("/screens/terminals/adaptive_pattern_encoding_terminal.json")
-        AdaptivePatternTerminalScreen(menu, inv, title, style)
-    }
     MenuScreens.register(MachineAssemblerMenu.TYPE) { menu, inv, title ->
         val style = StyleManager.loadStyleDoc("/screens/machine_assembler.json")
         MachineAssemblerScreen(menu, inv, title, style)
     }
-    MenuScreens.register(MachinePatternTerminalMenu.TYPE) { menu, inv, title ->
-        val style = StyleManager.loadStyleDoc("/screens/terminals/machine_pattern_encoding_terminal.json")
-        MachinePatternTerminalScreen(menu, inv, title, style)
+    MenuScreens.register(UnifiedPatternEncodingTermMenu.TYPE) { menu, inv, title ->
+        val style = StyleManager.loadStyleDoc("/screens/terminals/allyouneed_pattern_encoding_terminal.json")
+        UnifiedPatternEncodingTermScreen(menu, inv, title, style)
     }
     MenuScreens.register(AsyncCraftingStatusMenu.TYPE) { menu, inv, title ->
         val style = StyleManager.loadStyleDoc("/screens/async_crafting_status.json")

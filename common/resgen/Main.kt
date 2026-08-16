@@ -137,7 +137,12 @@ fun main(args: Array<String>) {
         gui("adaptive_probability", "Probability (p)")
         gui("adaptive_timeout", "Timeout (T)")
         gui("machine_assembler", "Molecular Assembler")
-        gui("machine_pattern_terminal", "Machine Pattern Terminal")
+        gui("pattern_encoding_terminal", "ME Pattern Encoding Terminal")
+        gui("encoding.machine", "Machine Pattern")
+        gui("encoding.processing", "Processing Pattern")
+        gui("encoding.probability", "Probability Pattern")
+        gui("encoding.pseudo", "Pseudo Pattern")
+        gui("encode_failed", "Cannot encode pattern")
         gui("machine_slot", "Machine")
         gui("machine_slot_no_machine", "No machine selected")
         gui("machine_slot_hint", "Click to change machine")
@@ -220,17 +225,13 @@ fun main(args: Array<String>) {
         itemLang("creative_me_cell", "Creative ME Storage Cell")
         itemLang("dimensional_cell", "Dimensional Storage Cell")
 
-        // Adaptive Pattern Terminal block
-        simpleBlock("adaptive_pattern_terminal", "Adaptive Pattern Terminal")
-
         // Machine Assembler: reuse AE2's molecular assembler shell model/texture
         parentedBlock("molecular_assembler", "Molecular Assembler", "ae2:block/molecular_assembler")
 
-        // Machine Pattern Terminal block
-        simpleBlock("machine_pattern_terminal", "Machine Pattern Terminal")
-
         // Machine Pattern item (just an item model, no block)
         item("machine_pattern", "Machine Pattern")
+        itemLang("pattern_encoding_terminal", "ME Pattern Encoding Terminal")
+        itemLang("pseudo_pattern", "Pseudo Pattern")
     }
 
     retexture(output) {
@@ -446,21 +447,9 @@ fun main(args: Array<String>) {
         }
     }
 
-    // Adaptive pattern terminal texture (placeholder - copy from pattern provider if available)
-    val ptTex = sourceTextures.resolve("placeholder.png")
-    if (ptTex.exists()) {
-        ptTex.copyTo(texOut.resolve("adaptive_pattern_terminal.png"), overwrite = true)
-    }
-
-    // Adaptive pattern item texture (placeholder)
     val apTex = sourceTextures.resolve("placeholder.png")
     if (apTex.exists()) {
         apTex.copyTo(itemTexOut.resolve("adaptive_pattern.png"), overwrite = true)
-    }
-
-    // Machine pattern terminal + machine pattern textures (placeholder)
-    if (apTex.exists()) {
-        apTex.copyTo(texOut.resolve("machine_pattern_terminal.png"), overwrite = true)
         apTex.copyTo(itemTexOut.resolve("machine_pattern.png"), overwrite = true)
     }
 

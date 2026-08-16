@@ -7,6 +7,8 @@ import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalItem
+import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
+import appeng.core.definitions.AEParts
 import allyouneed.util.rl
 import appeng.api.ids.AECreativeTabIds
 import appeng.items.parts.PartItem
@@ -21,6 +23,7 @@ object FabricItems {
     val ADAPTIVE_PATTERN: AdaptivePatternItem = ModItems.ADAPTIVE_PATTERN
     val MACHINE_PATTERN: MachinePatternItem = ModItems.MACHINE_PATTERN
     val ENTITY_P2P_TUNNEL: PartItem<EntityP2PTunnelPart> = ModItems.ENTITY_P2P_TUNNEL
+    val PATTERN_ENCODING_TERMINAL: PartItem<UnifiedPatternEncodingTermPart> = ModItems.PATTERN_ENCODING_TERMINAL
     val WIRELESS_PSEUDO_PATTERN_TERMINAL: WirelessPseudoPatternTerminalItem =
         WirelessPseudoPatternTerminalItem(Item.Properties().stacksTo(1))
 
@@ -37,6 +40,9 @@ object FabricItems {
         Registry.register(
             BuiltInRegistries.ITEM, "entity_p2p_tunnel".rl, ENTITY_P2P_TUNNEL
         )
+        Registry.register(
+            BuiltInRegistries.ITEM, "pattern_encoding_terminal".rl, PATTERN_ENCODING_TERMINAL
+        )
         AllRegistries.items.forEach { entry ->
             Registry.register(BuiltInRegistries.ITEM, entry.id(), entry.asItem())
         }
@@ -49,6 +55,7 @@ object FabricItems {
             entries.accept(ADAPTIVE_PATTERN)
             entries.accept(MACHINE_PATTERN)
             entries.accept(ENTITY_P2P_TUNNEL)
+            entries.accept(PATTERN_ENCODING_TERMINAL)
             entries.accept(AllRegistries.CREATIVE_ME_CELL)
             entries.accept(AllRegistries.DIMENSIONAL_CELL)
             entries.accept(WIRELESS_PSEUDO_PATTERN_TERMINAL)
@@ -58,6 +65,9 @@ object FabricItems {
         ItemGroupEvents.modifyEntriesEvent(AECreativeTabIds.MAIN).register { entries ->
             entries.accept(AllRegistries.CREATIVE_ME_CELL)
             entries.accept(AllRegistries.DIMENSIONAL_CELL)
+            entries.accept(PATTERN_ENCODING_TERMINAL)
+            runCatching { entries.javaClass.getMethod("remove", net.minecraft.world.item.ItemStack::class.java)
+                .invoke(entries, AEParts.PATTERN_ENCODING_TERMINAL.stack()) }
         }
     }
 }

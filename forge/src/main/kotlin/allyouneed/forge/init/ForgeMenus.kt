@@ -5,10 +5,8 @@ import allyouneed.multiblock.async.AsyncCraftingStatusMenu
 import allyouneed.gtceu.multiblock.AsyncStructureGtStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
-import allyouneed.pattern.adaptive.AdaptivePatternTerminalMenu
-import allyouneed.pattern.machine.MachinePatternTerminalMenu
-import allyouneed.pattern.pseudo.PseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
+import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
 import allyouneed.util.MODID
 import net.minecraft.world.inventory.MenuType
 import net.minecraftforge.eventbus.api.IEventBus
@@ -19,20 +17,14 @@ import net.minecraftforge.registries.RegistryObject
 object ForgeMenus {
     val MENUS: DeferredRegister<MenuType<*>> = DeferredRegister.create(ForgeRegistries.MENU_TYPES, MODID)
 
-    val PSEUDO_PATTERN_TERMINAL: RegistryObject<MenuType<PseudoPatternTerminalMenu>> =
-        MENUS.register("pseudo_pattern_terminal") { PseudoPatternTerminalMenu.TYPE }
-
     val WIRELESS_PSEUDO_PATTERN_TERMINAL: RegistryObject<MenuType<WirelessPseudoPatternTerminalMenu>> =
         MENUS.register("wireless_pseudo_pattern_terminal") { WirelessPseudoPatternTerminalMenu.TYPE }
-
-    val ADAPTIVE_PATTERN_TERMINAL: RegistryObject<MenuType<AdaptivePatternTerminalMenu>> =
-        MENUS.register("adaptive_pattern_terminal") { AdaptivePatternTerminalMenu.TYPE }
 
     val MACHINE_ASSEMBLER: RegistryObject<MenuType<MachineAssemblerMenu>> =
         MENUS.register("machine_assembler") { MachineAssemblerMenu.TYPE }
 
-    val MACHINE_PATTERN_TERMINAL: RegistryObject<MenuType<MachinePatternTerminalMenu>> =
-        MENUS.register("machine_pattern_terminal") { MachinePatternTerminalMenu.TYPE }
+    val PATTERN_ENCODING_TERMINAL: RegistryObject<MenuType<UnifiedPatternEncodingTermMenu>> =
+        MENUS.register("pattern_encoding_terminal") { UnifiedPatternEncodingTermMenu.TYPE }
 
     val ME_IO_DRIVE: RegistryObject<MenuType<MEIODriveMenu>> = MENUS.register("me_io_drive") { MEIODriveMenu.TYPE }
 

@@ -1,5 +1,6 @@
 package allyouneed.pattern.pseudo
 
+import allyouneed.logic.aekey.VirtualKey
 import allyouneed.pattern.AEPatternUtil
 import allyouneed.pattern.ModEncodedPatternItem
 import appeng.api.crafting.IPatternDetails
@@ -68,6 +69,14 @@ class AEPseudoPattern(private val definition: AEItemKey) : IPatternDetails {
     override fun getDefinition(): AEItemKey = definition
     override fun getInputs(): Array<IPatternDetails.IInput> = inputs
     override fun getOutputs(): Array<GenericStack> = emptyArray()
+
+    override fun getPrimaryOutput(): GenericStack {
+        sparseInputs.firstOrNull { it != null }?.let { return it }
+        icon?.takeIf { !it.isEmpty }?.let { stack ->
+            AEItemKey.of(stack)?.let { return GenericStack(it, 1) }
+        }
+        return GenericStack(VirtualKey(0), 1)
+    }
 
     override fun equals(other: Any?): Boolean =
         other is AEPseudoPattern && other.definition == this.definition
