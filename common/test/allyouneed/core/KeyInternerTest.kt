@@ -3,10 +3,8 @@ package allyouneed.core
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertSame
-import kotlin.test.assertTrue
 
 class KeyInternerTest {
     @AfterEach
@@ -33,16 +31,6 @@ class KeyInternerTest {
     }
 
     @Test
-    fun `content identity intern ignores public identity equals`() {
-        val a = IdentityKey("same")
-        val b = IdentityKey("same")
-        assertFalse(a.equals(b))
-        assertTrue(a.`asm$equals`(b))
-        assertSame(KeyInterner.intern(a), KeyInterner.intern(b))
-        assertEquals(1, KeyInterner.size())
-    }
-
-    @Test
     fun `constructed instances collapse after intern`() {
         val a = KeyInterner.intern(SampleKey("copper", 3))
         val b = KeyInterner.intern(SampleKey("copper", 3))
@@ -50,12 +38,5 @@ class KeyInternerTest {
         a as SampleKey
         assertEquals("copper", a.name)
         assertEquals(3, a.extra)
-    }
-
-    private class IdentityKey(val name: String) : ContentIdentity {
-        override fun equals(other: Any?): Boolean = this === other
-        override fun hashCode(): Int = System.identityHashCode(this)
-        override fun `asm$equals`(other: Any?): Boolean = other is IdentityKey && name == other.name
-        override fun `asm$hashCode`(): Int = name.hashCode()
     }
 }

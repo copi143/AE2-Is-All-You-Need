@@ -11,6 +11,7 @@ import java.util.zip.ZipInputStream
 
 object KeyClassScanner {
     const val AE_KEY = "appeng/api/stacks/AEKey"
+    const val AE_KEY_ASM = "allyouneed/core/AEKeyAsm"
     const val AE_ITEM_KEY = "appeng/api/stacks/AEItemKey"
     const val AE_FLUID_KEY = "appeng/api/stacks/AEFluidKey"
 
@@ -37,7 +38,7 @@ object KeyClassScanner {
         val keys = LinkedHashSet<String>()
         for (seed in SEED_KEYS) keys.add(seed)
         for (name in supers.keys) {
-            if (inherits(name, AE_KEY, supers)) keys.add(name)
+            if (name != AE_KEY_ASM && inherits(name, AE_KEY, supers)) keys.add(name)
         }
         return keys
     }

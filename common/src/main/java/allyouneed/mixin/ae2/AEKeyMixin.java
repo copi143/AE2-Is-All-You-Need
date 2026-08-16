@@ -27,9 +27,6 @@ public abstract class AEKeyMixin implements KeyIdHolder {
     private long secondaryId = -1L;
 
     @Unique
-    private AEKey cachedSecondaryDropped;
-
-    @Unique
     @Override
     public int getPrimaryId() {
         if (this.primaryId < 0) {
@@ -48,18 +45,6 @@ public abstract class AEKeyMixin implements KeyIdHolder {
             }
         }
         return this.secondaryId;
-    }
-
-    @Unique
-    @Override
-    public AEKey getCachedSecondaryDropped() {
-        return this.cachedSecondaryDropped;
-    }
-
-    @Unique
-    @Override
-    public void setCachedSecondaryDropped(AEKey key) {
-        this.cachedSecondaryDropped = key;
     }
 
     @Unique

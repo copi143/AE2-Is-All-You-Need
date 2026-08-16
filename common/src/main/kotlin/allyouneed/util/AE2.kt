@@ -53,14 +53,7 @@ val AEKey.primaryId get() = (this as KeyIdHolder).primaryId
 
 val AEKey.secondaryId get() = (this as KeyIdHolder).secondaryId
 
-val AEKey.droppedSecondary: AEKey
-    get() {
-        val holder = this as KeyIdHolder
-        holder.cachedSecondaryDropped?.let { return it }
-        val dropped = dropSecondary()
-        holder.cachedSecondaryDropped = dropped
-        return dropped
-    }
+val AEKey.droppedSecondary: AEKey get() = dropSecondary()
 
 fun AEKey.invalidateKeyIds() = (this as KeyIdHolder).invalidateKeyIds()
 

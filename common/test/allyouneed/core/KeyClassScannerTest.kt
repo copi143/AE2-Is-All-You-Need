@@ -17,6 +17,7 @@ class KeyClassScannerTest {
         val root = tmp()
         writeClass(root, "appeng/api/stacks/AEKey", "java/lang/Object")
         writeClass(root, "appeng/api/stacks/AEItemKey", "appeng/api/stacks/AEKey")
+        writeClass(root, KeyClassScanner.AE_KEY_ASM, "appeng/api/stacks/AEKey")
         writeKeyUser(root, "demo/UsesKey", "appeng/api/stacks/AEItemKey")
         writeClass(root, "demo/Unrelated", "java/lang/Object")
 
@@ -24,6 +25,7 @@ class KeyClassScannerTest {
         assertTrue("appeng/api/stacks/AEItemKey" in keys)
         assertTrue("appeng/api/stacks/AEFluidKey" in keys)
         assertTrue("appeng/api/stacks/AEKey" !in keys)
+        assertTrue(KeyClassScanner.AE_KEY_ASM !in keys)
 
         val sites = KeyClassScanner.findNewCallSites(keys, listOf(root))
         assertTrue("demo/UsesKey" in sites)

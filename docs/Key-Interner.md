@@ -34,17 +34,19 @@ INVOKESTATIC allyouneed/core/KeyInterner.intern(Ljava/lang/Object;)Ljava/lang/Ob
 CHECKCAST <keyClass>
 ```
 
-### equals / hashCode
+### 父类与 equals / hashCode
 
-对 AEKey 子类：原 `equals`/`hashCode` 改名为 `asm$equals`/`asm$hashCode`，并实现
-`ContentIdentity`。新 `equals` 为 `this == o`；新 `hashCode` 转发 `asm$hashCode()`。
-intern 表按 `asm$equals`/`asm$hashCode` 查找。
+直接继承 `AEKey` 的类：`super` 改为 `AEKeyAsm`，`<init>` 里的 `AEKey.<init>` 改成 `AEKeyAsm.<init>`。
+原 `equals`/`hashCode` 改名为 `asm$equals`/`asm$hashCode`（实现 `AEKeyAsm` 的抽象方法）。
+`AEKeyAsm.equals` 为 `final` identity；`hashCode` 转发 `asm$hashCode()`。
+`dropSecondary` 改名为 `asm$dropSecondary`；`AEKeyAsm.dropSecondary` 为 `final` 并缓存结果。
+intern 表对 `AEKeyAsm` 走 `asm$*`。扫描排除 `AEKeyAsm` 自身。
 
 ## KeyInterner
 
 ```kotlin
 object KeyInterner {
-    fun intern(key: Any): Any   // ContentIdentity 走 asm$*，否则 equals/hashCode
+    fun intern(key: Any): Any   // AEKeyAsm 走 asm$*，否则 equals/hashCode
     fun size(): Int
 }
 ```
@@ -59,5 +61,5 @@ object KeyInterner {
 
 ## 与 KeyIdHolder
 
-intern 后同一内容只有一个实例，`AEKeyMixin` 上的 `primaryId` / `secondaryId` /
-`cachedSecondaryDropped` 天然共享。intern 是源头单例化，Mixin 是实例上的身份缓存。
+intern 后同一内容只有一个实例，`AEKeyMixin` 上的 `primaryId` / `secondaryId`
+与 `AEKeyAsm` 上的 `dropSecondary` 缓存天然共享。intern 是源头单例化，Mixin 是实例上的身份缓存。

@@ -12,7 +12,6 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.Label
 import org.objectweb.asm.tree.MethodInsnNode
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -82,29 +81,50 @@ class NewCallTransformerTest {
     }
 
     @Test
-    fun `renames equals and hashCode to identity plus asm methods`() {
+    fun `wraps new with long constructor args`() {
+        val factoryName = "allyouneed/core/GeneratedLongFactory"
+        val transformed = NewCallTransformer.apply(
+            generateLongFactory(factoryName),
+            setOf(Type.getInternalName(SampleLongKey::class.java)),
+        )
+        val cls = ByteClassLoader(factoryName.replace('/', '.'), transformed).loadClass(factoryName.replace('/', '.'))
+        val makeFn = cls.getMethod("make", Long::class.javaPrimitiveType)
+        val a = makeFn.invoke(null, 7L)
+        val b = makeFn.invoke(null, 7L)
+        assertSame(a, b)
+        assertEquals(SampleLongKey(7L, 0L), a)
+    }
+
+    @Test
+    fun `retargets AEKey super and renames equals hashCode`() {
         val name = "allyouneed/core/GeneratedKey"
         val transformed = NewCallTransformer.apply(generateKey(name), setOf(name))
-        val cls = ByteClassLoader(name.replace('/', '.'), transformed).loadClass(name.replace('/', '.'))
-        assertTrue(ContentIdentity::class.java.isAssignableFrom(cls))
-        val ctor = cls.getConstructor(String::class.java)
-        val a = ctor.newInstance("zinc")
-        val b = ctor.newInstance("zinc")
-        assertFalse(a === b)
-        assertFalse(a == b)
-        assertTrue((a as ContentIdentity).`asm$equals`(b))
-        assertEquals((a as ContentIdentity).`asm$hashCode`(), (b as ContentIdentity).`asm$hashCode`())
-        assertSame(KeyInterner.intern(a), KeyInterner.intern(b))
+        val cn = ClassNode()
+        ClassReader(transformed).accept(cn, 0)
+        assertEquals(NewCallTransformer.AE_KEY_ASM, cn.superName)
+        assertTrue(cn.methods.any { it.name == NewCallTransformer.ASM_EQUALS && it.desc == "(Ljava/lang/Object;)Z" })
+        assertTrue(cn.methods.any { it.name == NewCallTransformer.ASM_HASH && it.desc == "()I" })
+        assertTrue(cn.methods.none { it.name == "equals" && it.desc == "(Ljava/lang/Object;)Z" })
+        assertTrue(cn.methods.none { it.name == "hashCode" && it.desc == "()I" })
+        assertTrue(cn.methods.any { it.name == NewCallTransformer.ASM_DROP })
+        assertTrue(cn.methods.none { it.name == NewCallTransformer.DROP_SECONDARY })
+        val init = cn.methods.first { it.name == "<init>" }
+        assertTrue(
+            init.instructions.toArray().any {
+                it is MethodInsnNode && it.opcode == Opcodes.INVOKESPECIAL &&
+                    it.owner == NewCallTransformer.AE_KEY_ASM && it.name == "<init>"
+            },
+        )
     }
 
     private fun generateKey(internalName: String): ByteArray {
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
-        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, internalName, null, "java/lang/Object", null)
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, internalName, null, NewCallTransformer.AE_KEY, null)
         cw.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, "name", "Ljava/lang/String;", null, null).visitEnd()
         val init = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "(Ljava/lang/String;)V", null, null)
         init.visitCode()
         init.visitVarInsn(Opcodes.ALOAD, 0)
-        init.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false)
+        init.visitMethodInsn(Opcodes.INVOKESPECIAL, NewCallTransformer.AE_KEY, "<init>", "()V", false)
         init.visitVarInsn(Opcodes.ALOAD, 0)
         init.visitVarInsn(Opcodes.ALOAD, 1)
         init.visitFieldInsn(Opcodes.PUTFIELD, internalName, "name", "Ljava/lang/String;")
@@ -137,6 +157,18 @@ class NewCallTransformerTest {
         hash.visitInsn(Opcodes.IRETURN)
         hash.visitMaxs(1, 1)
         hash.visitEnd()
+        val drop = cw.visitMethod(
+            Opcodes.ACC_PUBLIC,
+            NewCallTransformer.DROP_SECONDARY,
+            "()L${NewCallTransformer.AE_KEY};",
+            null,
+            null,
+        )
+        drop.visitCode()
+        drop.visitVarInsn(Opcodes.ALOAD, 0)
+        drop.visitInsn(Opcodes.ARETURN)
+        drop.visitMaxs(1, 1)
+        drop.visitEnd()
         cw.visitEnd()
         return cw.toByteArray()
     }
@@ -218,6 +250,30 @@ class NewCallTransformerTest {
         mv.visitVarInsn(Opcodes.ALOAD, 1)
         mv.visitInsn(Opcodes.ARETURN)
         mv.visitMaxs(3, 2)
+        mv.visitEnd()
+        cw.visitEnd()
+        return cw.toByteArray()
+    }
+
+    private fun generateLongFactory(internalName: String): ByteArray {
+        val key = Type.getInternalName(SampleLongKey::class.java)
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, internalName, null, "java/lang/Object", null)
+        val mv = cw.visitMethod(
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+            "make",
+            "(J)L$key;",
+            null,
+            null,
+        )
+        mv.visitCode()
+        mv.visitTypeInsn(Opcodes.NEW, key)
+        mv.visitInsn(Opcodes.DUP)
+        mv.visitVarInsn(Opcodes.LLOAD, 0)
+        mv.visitInsn(Opcodes.LCONST_0)
+        mv.visitMethodInsn(Opcodes.INVOKESPECIAL, key, "<init>", "(JJ)V", false)
+        mv.visitInsn(Opcodes.ARETURN)
+        mv.visitMaxs(6, 2)
         mv.visitEnd()
         cw.visitEnd()
         return cw.toByteArray()

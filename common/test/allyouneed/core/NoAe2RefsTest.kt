@@ -18,6 +18,7 @@ class NoAe2RefsTest {
             val refs = classOwners(readClass(cls))
             assertTrue(refs.none { it.startsWith("appeng/") }, "$cls refs appeng: $refs")
             assertTrue(NewCallTransformer.INTERNER_OWNER !in refs, "$cls refs KeyInterner")
+            assertTrue(NewCallTransformer.AE_KEY_ASM !in refs, "$cls refs AEKeyAsm")
             assertTrue("allyouneed/api/KeyIdHolder" !in refs, "$cls refs KeyIdHolder")
         }
     }

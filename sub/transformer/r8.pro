@@ -2,7 +2,6 @@
 -dontwarn **
 -dontnote **
 -keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations
--keepnames class org.objectweb.asm.tree.ClassNode
 -keep,allowoptimization class allyouneed.transformer.KeyInternTransformationService {
     public <init>();
     public <methods>;

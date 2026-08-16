@@ -3,6 +3,11 @@ package allyouneed.core
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 
+internal interface KeyContent {
+    fun `asm$equals`(other: Any?): Boolean
+    fun `asm$hashCode`(): Int
+}
+
 object KeyInterner {
     private val lock = Any()
     private val queue = ReferenceQueue<Any>()
@@ -36,10 +41,10 @@ object KeyInterner {
     }
 
     private fun hashOf(key: Any): Int =
-        if (key is ContentIdentity) key.`asm$hashCode`() else key.hashCode()
+        if (key is KeyContent) key.`asm$hashCode`() else key.hashCode()
 
     private fun eq(a: Any, b: Any): Boolean =
-        if (a is ContentIdentity) a.`asm$equals`(b) else a == b
+        if (a is KeyContent) a.`asm$equals`(b) else a == b
 
     private fun find(key: Any, h: Int): Any? {
         var s = buckets[index(h)]
