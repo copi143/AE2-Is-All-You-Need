@@ -1,4 +1,4 @@
-package allyouneed.util.native
+package allyouneed.util.notify
 
 import org.lwjgl.system.JNI
 import org.lwjgl.system.MemoryStack

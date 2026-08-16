@@ -1,4 +1,4 @@
-package allyouneed.util.native
+package allyouneed.util.notify
 
 import org.lwjgl.system.APIUtil
 import org.lwjgl.system.SharedLibrary

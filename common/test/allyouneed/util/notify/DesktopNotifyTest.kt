@@ -1,4 +1,4 @@
-package allyouneed.util.native
+package allyouneed.util.notify
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test

@@ -21,7 +21,7 @@ import allyouneed.pattern.pseudo.PseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.PseudoPatternTerminalScreen
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalScreen
-import allyouneed.util.native.DesktopNotify
+import allyouneed.util.notify.DesktopNotify
 import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader

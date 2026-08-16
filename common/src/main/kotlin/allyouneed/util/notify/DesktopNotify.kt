@@ -1,4 +1,4 @@
-package allyouneed.util.native
+package allyouneed.util.notify
 
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
