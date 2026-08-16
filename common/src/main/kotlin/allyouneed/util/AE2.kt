@@ -4,7 +4,6 @@ package allyouneed.util
 
 import allyouneed.api.AsyncChannelNodeHolder
 import allyouneed.api.BigCpuCapacity
-import allyouneed.api.KeyIdHolder
 import allyouneed.api.IMacAddressHolder
 import allyouneed.api.IManagedMacAddressHolder
 import appeng.api.stacks.AEKey
@@ -49,13 +48,7 @@ var CraftingCPUCluster.isUnboundedCapacity
         (this as BigCpuCapacity).isUnboundedCapacity = value
     }
 
-val AEKey.primaryId get() = (this as KeyIdHolder).primaryId
-
-val AEKey.secondaryId get() = (this as KeyIdHolder).secondaryId
-
 val AEKey.droppedSecondary: AEKey get() = dropSecondary()
-
-fun AEKey.invalidateKeyIds() = (this as KeyIdHolder).invalidateKeyIds()
 
 val GridNode.macAddress get() = (this as IMacAddressHolder).macAddress
 

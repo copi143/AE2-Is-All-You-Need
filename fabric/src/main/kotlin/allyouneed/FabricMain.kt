@@ -9,7 +9,6 @@ import allyouneed.fabric.init.FabricMenus
 import allyouneed.logic.machine.MachineTypeReloadListener
 import allyouneed.logic.machine.ManualMachineRecipeReloadListener
 import allyouneed.util.MODID
-import allyouneed.util.id.KeyIdRegistry
 import allyouneed.util.id.mac.MacAddressRegistry
 import allyouneed.util.logger
 import allyouneed.util.rl
@@ -80,7 +79,6 @@ fun init() {
     ServerLifecycleEvents.SERVER_STOPPING.register {
         MacAddressRegistry.detach()
         DimensionalCellStore.detach()
-        KeyIdRegistry.clear()
     }
 }
 

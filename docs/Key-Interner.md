@@ -59,7 +59,4 @@ object KeyInterner {
 - `findNewCallSites`：含 `NEW <keyClass>` 的类
 - 纯 ASM 字符串常量，零 AE2 依赖
 
-## 与 KeyIdHolder
-
-intern 后同一内容只有一个实例，`AEKeyMixin` 上的 `primaryId` / `secondaryId`
-与 `AEKeyAsm` 上的 `dropSecondary` 缓存天然共享。intern 是源头单例化，Mixin 是实例上的身份缓存。
+intern 后同一内容只有一个实例，`AEKeyAsm` 上的 `dropSecondary` 缓存天然共享。

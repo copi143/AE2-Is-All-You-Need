@@ -4,7 +4,6 @@ import allyouneed.cell.dimensional.DimensionalCellStore
 import allyouneed.logic.machine.MachineTypeReloadListener
 import allyouneed.logic.machine.ManualMachineRecipeReloadListener
 import allyouneed.util.MODID
-import allyouneed.util.id.KeyIdRegistry
 import allyouneed.util.id.mac.MacAddressRegistry
 import net.minecraftforge.event.AddReloadListenerEvent
 import net.minecraftforge.event.server.ServerAboutToStartEvent
@@ -31,6 +30,5 @@ object ForgeServerEvents {
     fun onServerStopping(event: ServerStoppingEvent) {
         MacAddressRegistry.detach()
         DimensionalCellStore.detach()
-        KeyIdRegistry.clear()
     }
 }

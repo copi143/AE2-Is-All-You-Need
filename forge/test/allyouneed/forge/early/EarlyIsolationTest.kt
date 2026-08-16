@@ -15,7 +15,6 @@ class EarlyIsolationTest {
             val refs = classOwners(readClass(cls))
             assertTrue(refs.none { it.startsWith("appeng/") }, "$cls refs appeng: $refs")
             assertTrue("allyouneed/core/KeyInterner" !in refs, "$cls refs KeyInterner")
-            assertTrue("allyouneed/api/KeyIdHolder" !in refs, "$cls refs KeyIdHolder")
         }
     }
 
