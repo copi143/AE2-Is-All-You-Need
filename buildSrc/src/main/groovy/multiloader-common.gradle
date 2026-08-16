@@ -66,13 +66,13 @@ dependencies {
 sourcesJar {
     dependsOn(":common:generateAssets")
     from(rootProject.file('LICENSE')) {
-        rename { "${it}_${modId}" }
+        rename { "${it}-${modId}" }
     }
 }
 
 jar {
     from(rootProject.file('LICENSE')) {
-        rename { "${it}_${modId}" }
+        rename { "${it}-${modId}" }
     }
 
     manifest {
