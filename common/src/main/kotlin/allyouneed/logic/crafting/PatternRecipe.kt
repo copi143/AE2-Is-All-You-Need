@@ -1,6 +1,7 @@
 package allyouneed.logic.crafting
 
 import allyouneed.logic.crafting.PatternRecipe.WTF.*
+import allyouneed.util.debugLogger
 import allyouneed.util.logger
 import appeng.api.crafting.IPatternDetails
 import appeng.api.stacks.AEItemKey
@@ -90,25 +91,57 @@ data class PatternRecipe(
             }
 
             data class Field(val input: IPatternDetails.IInput, val stack: GenericStack, val wtf: WTF)
+            data class FieldKey(val key: AEKey, val amount: Long, val wtf: WTF)
 
             val inputs = pattern.inputs.map { input ->
                 if (input.possibleInputs.size > 1) {
-                    logger.info("possibleInputs size: ${input.possibleInputs.size}")
+                    debugLogger.info("possibleInputs size: {}", input.possibleInputs.size)
                 }
-                input.possibleInputs.flatMap { stack ->
-                    snapshot.fuzzy(stack.what).map { Pair(it, stack.amount * input.multiplier) }
-                }.filter { level == null || input.isValid(it.first, level) }.map { (key, value) ->
-                    Field(input, GenericStack(key, value), wtfIsThis(level, input, key))
+
+                // Multiple possibleInputs often resolve to the same fuzzy key. Deduplicate before
+                // taking the product, otherwise identical recipes multiply every later dimension.
+                val fields = ArrayList<Field>()
+                val seen = HashSet<FieldKey>()
+                for (stack in input.possibleInputs) {
+                    val amount = stack.amount * input.multiplier
+                    for (key in snapshot.fuzzy(stack.what)) {
+                        if (level != null && !input.isValid(key, level)) continue
+                        val wtf = wtfIsThis(level, input, key)
+                        if (seen.add(FieldKey(key, amount, wtf))) {
+                            fields.add(Field(input, GenericStack(key, amount), wtf))
+                        }
+                    }
                 }
+                fields
             }
 
-            val size = inputs.fold(1L) { acc, list -> acc * list.size }
-            if (size > 128) logger.info("Too large: $size")
-            if (size > 4096) throw LooksLikeDosAttack("cartesianProduct size: $size")
+            var size = 1L
+            for (input in inputs) {
+                if (input.isEmpty()) return emptyList()
+                if (size > MAX_FUZZY_RECIPES / input.size) {
+                    throw LooksLikeDosAttack("cartesianProduct size: >$MAX_FUZZY_RECIPES")
+                }
+                size *= input.size
+            }
+            if (size > 128) logger.info("Too large: {}", size)
+            if (size > MAX_FUZZY_RECIPES) throw LooksLikeDosAttack("cartesianProduct size: $size")
 
-            return cartesianProduct(inputs).map { sub ->
+            // Generate leaves directly. The old fold/flatMap implementation allocated every
+            // intermediate prefix list, which becomes dominant for wide fuzzy patterns.
+            val result = ArrayList<PatternRecipe>(size.toInt())
+            val selected = arrayOfNulls<Field>(inputs.size)
+            fun generate(depth: Int) {
+                if (depth < inputs.size) {
+                    for (field in inputs[depth]) {
+                        selected[depth] = field
+                        generate(depth + 1)
+                    }
+                    return
+                }
+
                 val pr = makePatternRecipe()
-                sub.forEach { (input, stack, wtf) ->
+                for (field in selected) {
+                    val (input, stack, wtf) = field!!
                     when (wtf) {
                         CompletelyConsumed -> pr.sources.add(stack)
                         SlowlyConsumed -> pr.catalysts.add(Catalyst(stack, true))
@@ -119,8 +152,12 @@ data class PatternRecipe(
                         }
                     }
                 }
-                pr
+                result.add(pr)
             }
+            generate(0)
+            return result
         }
+
+        private const val MAX_FUZZY_RECIPES = 4096L
     }
 }

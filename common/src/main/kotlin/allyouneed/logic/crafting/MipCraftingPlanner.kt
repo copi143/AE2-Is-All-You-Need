@@ -38,25 +38,26 @@ class MipCraftingPlanner(
     /** 初始库存，BigInteger 精确表示。 */
     private val baseStock = Array(nItems) { i -> snapshot.resources[i].stack.valBig }
     private val isEmitter = BooleanArray(mRecipes) { r -> snapshot.recipes[r].pattern.contains(-1) }
-    /** deltaByItem[item] = map(recipe -> 净变化)，正 = 产出，负 = 消耗。 */
-    private val deltaByItem = Array(nItems) { HashMap<Int, Long>() }
-
-    private val core = CraftingSolverCore(
-        nItems = nItems,
-        mRecipes = mRecipes,
-        deltaByItem = deltaByItem,
-        targetId = targetId,
-        isEmitter = isEmitter,
-    )
+    private val multiplePaths = snapshot.resources.any { it.recipes.size > 1 }
+    private val core: CraftingSolverCore
 
     init {
         if (targetId < 0) {
             throw IllegalStateException("Target $output is not reachable in the crafting snapshot")
         }
+        // deltaByItem[item] = map(recipe -> net change), positive for output and negative for input.
+        val deltaByItem = Array(nItems) { HashMap<Int, Long>() }
         for ((r, recipe) in snapshot.recipes.withIndex()) {
             for (ref in recipe.sources) deltaByItem[ref.id].merge(r, -ref.amount, Long::plus)
             for (ref in recipe.targets) deltaByItem[ref.id].merge(r, ref.amount, Long::plus)
         }
+        core = CraftingSolverCore(
+            nItems = nItems,
+            mRecipes = mRecipes,
+            deltaByItem = deltaByItem,
+            targetId = targetId,
+            isEmitter = isEmitter,
+        )
     }
 
     data class Result(
@@ -100,7 +101,7 @@ class MipCraftingPlanner(
                 solve.net[i].min(Long.MAX_VALUE.toBigInteger()).toLong()
             )
         }
-        val toolLoss = toolLossByKey(solve.xs)
+        val toolLoss = toolLossByKey(patternTimes)
         for ((tool, loss) in toolLoss) usedItems.add(tool, loss)
 
         val missing = KeyCounter()
@@ -138,7 +139,7 @@ class MipCraftingPlanner(
             missingItems = missing,
             bytes = bytes,
             simulation = solve.simulation || inventoryShort,
-            multiplePaths = snapshot.resources.any { it.recipes.size > 1 },
+            multiplePaths = multiplePaths,
             net = solve.net,
         )
     }
@@ -154,7 +155,7 @@ class MipCraftingPlanner(
             missingItems = missing,
             bytes = 0,
             simulation = true,
-            multiplePaths = snapshot.resources.any { it.recipes.size > 1 },
+            multiplePaths = multiplePaths,
             net = Array(nItems) { BigInteger.ZERO },
         )
     }
@@ -163,13 +164,9 @@ class MipCraftingPlanner(
     // 工具损耗：主树定死后循环 getRemainingKey
     // ------------------------------------------------------------
 
-    private fun toolLossByKey(xs: LongArray): Map<AEKey, Long> {
+    private fun toolLossByKey(patternTimes: Map<IPatternDetails, Long>): Map<AEKey, Long> {
         val result = HashMap<AEKey, Long>()
-        for ((r, recipe) in snapshot.recipes.withIndex()) {
-            val times = xs[r]
-            if (times <= 0) continue
-            val pid = recipe.pattern.firstOrNull { it >= 0 } ?: continue
-            val pattern = snapshot.patterns[pid]
+        for ((pattern, times) in patternTimes) {
             for (input in pattern.inputs) {
                 val possible = input.possibleInputs
                 if (possible.isEmpty()) continue
@@ -192,43 +189,20 @@ class MipCraftingPlanner(
      * - 返回 null 表示当前工具报废，损耗 +1，换一把满耐久工具继续
      * - 返回剩余 key 表示耐久下降，继续使用
      *
-     * [times] 很大时用耐久探测：先跑一遍求"每把可执行次数"，再做除法。
+     * 只探测一把工具的可执行次数，再做除法，避免按总合成次数重复模拟耐久。
      */
     private fun countToolLoss(input: IPatternDetails.IInput, full: AEKey, times: Long): Long {
         if (times <= 0) return 0
-        if (times <= MAX_TOOL_LOOP) {
-            var lost = 0L
-            var current = full
-            var remaining = times
-            while (remaining > 0) {
-                val next = input.getRemainingKey(current)
-                if (next == null) {
-                    lost++
-                    current = full
-                } else {
-                    current = next
-                }
-                remaining--
-            }
-            return lost
-        }
-        var uses = 0L
-        var cur = full
-        while (true) {
-            val next = input.getRemainingKey(cur)
+        var usesPerTool = 0L
+        var current = full
+        while (usesPerTool < times) {
+            usesPerTool++
+            val next = input.getRemainingKey(current)
             if (next == null) {
-                uses++
-                break
+                return times / usesPerTool
             }
-            cur = next
-            uses++
-            if (uses > times) break
+            current = next
         }
-        return times / uses
-    }
-
-    private companion object {
-        /** 工具损耗精确循环的迭代上限，超过后改用耐久探测除法估算。 */
-        const val MAX_TOOL_LOOP = 1_000_000L
+        return 0
     }
 }

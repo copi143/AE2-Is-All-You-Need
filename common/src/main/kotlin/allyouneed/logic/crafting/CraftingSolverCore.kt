@@ -37,7 +37,7 @@ import kotlin.math.roundToLong
 class CraftingSolverCore(
     private val nItems: Int,
     private val mRecipes: Int,
-    private val deltaByItem: Array<out Map<Int, Long>>,
+    deltaByItem: Array<out Map<Int, Long>>,
     private val targetId: Int,
     private val isEmitter: BooleanArray,
 ) {
@@ -70,6 +70,20 @@ class CraftingSolverCore(
         val simulation: Boolean,
     )
 
+    /** Compact sparse rows avoid boxed map iteration in every model build and validation pass. */
+    private class DeltaRow(source: Map<Int, Long>) {
+        private val entries = source.entries.asSequence()
+            .filter { it.value != 0L }
+            .sortedBy { it.key }
+            .toList()
+
+        val recipes = IntArray(entries.size) { entries[it].key }
+        val values = LongArray(entries.size) { entries[it].value }
+        val hasConsumption = values.any { it < 0L }
+    }
+
+    private val rows = Array(nItems) { DeltaRow(deltaByItem[it]) }
+
     /**
      * 主入口：为 [amount] 的需求、基于 [stockBig] 库存求计划。
      *
@@ -77,12 +91,11 @@ class CraftingSolverCore(
      */
     fun plan(amount: Long, stockBig: Array<BigInteger>): Solve {
         if (amount <= 0) return emptySolve()
+        if (stockBig[targetId] >= amount.toBigInteger()) return satisfiedSolve(amount)
         if (amount <= EXACT_LIMIT) return exactPlan(amount, stockBig)
 
         // 目标自身库存一次性满足，不参与放大（否则缩放会把"库存满足"误当成可放大的生产）
         val ownStock = minOf(stockBig[targetId], amount.toBigInteger()).toLong()
-        if (ownStock >= amount) return exactPlan(amount, stockBig)
-
         // 纯生产库存：目标库存清零，保证 base 是"可安全 ×k 的纯生产基数"
         val prodStock = stockBig.copyOf()
         prodStock[targetId] = BigInteger.ZERO
@@ -218,7 +231,10 @@ class CraftingSolverCore(
         }
         addStockConstraints(model, vars, stockCap)
         val target = model.addExpression("target")
-        for ((r, delta) in deltaByItem[targetId]) target.set(vars[r], delta)
+        val targetRow = rows[targetId]
+        for (i in targetRow.recipes.indices) {
+            target.set(vars[targetRow.recipes[i]], targetRow.values[i])
+        }
         target.lower((amount - stockCap[targetId].roundToLong()).coerceAtLeast(0L).toDouble())
 
         val result = model.minimise()
@@ -241,7 +257,11 @@ class CraftingSolverCore(
         }
         addStockConstraints(model, vars, stockCap)
         val objective = model.addExpression("objective")
-        for ((r, delta) in deltaByItem[targetId]) if (delta > 0) objective.set(vars[r], delta)
+        val targetRow = rows[targetId]
+        for (i in targetRow.recipes.indices) {
+            val delta = targetRow.values[i]
+            if (delta > 0) objective.set(vars[targetRow.recipes[i]], delta)
+        }
         objective.weight(1.0)
 
         val result = model.maximise()
@@ -251,10 +271,11 @@ class CraftingSolverCore(
 
     private fun addStockConstraints(model: ExpressionsBasedModel, vars: List<Variable>, stockCap: DoubleArray) {
         for (i in 0 until nItems) {
-            val deltas = deltaByItem[i]
-            if (deltas.isEmpty()) continue
+            val row = rows[i]
+            // With non-negative variables and stock, an output-only row is always satisfied.
+            if (!row.hasConsumption && stockCap[i] >= 0.0) continue
             val expr = model.addExpression("stock$i")
-            for ((r, delta) in deltas) expr.set(vars[r], delta)
+            for (j in row.recipes.indices) expr.set(vars[row.recipes[j]], row.values[j])
             // 库存守恒：库存 + SUM(delta*x) >= 0
             expr.lower(-stockCap[i])
         }
@@ -273,10 +294,10 @@ class CraftingSolverCore(
     /** 四舍五入后的整数解必须仍满足库存约束，容差 1。 */
     private fun validate(xs: LongArray, stockCap: DoubleArray): Boolean {
         for (i in 0 until nItems) {
-            val deltas = deltaByItem[i]
-            if (deltas.isEmpty()) continue
+            val row = rows[i]
+            if (!row.hasConsumption && stockCap[i] >= 0.0) continue
             var sum = 0.0
-            for ((r, delta) in deltas) sum += delta * xs[r]
+            for (j in row.recipes.indices) sum += row.values[j] * xs[row.recipes[j]]
             if (sum < -stockCap[i] - 1.0) return false
         }
         return true
@@ -289,7 +310,11 @@ class CraftingSolverCore(
         var missingOutput = 0L
         if (stage2) {
             var produced = 0.0
-            for ((r, delta) in deltaByItem[targetId]) if (delta > 0) produced += delta * xs[r]
+            val targetRow = rows[targetId]
+            for (i in targetRow.recipes.indices) {
+                val delta = targetRow.values[i]
+                if (delta > 0) produced += delta * xs[targetRow.recipes[i]]
+            }
             val reachable = minOf(amount, stockBig[targetId].min(MAX_EXACT.toBigInteger()).toLong() + produced.roundToLong())
             finalAmount = reachable
             missingOutput = (amount - reachable).coerceAtLeast(0L)
@@ -313,16 +338,38 @@ class CraftingSolverCore(
     private fun netConsumption(xs: LongArray): Array<BigInteger> {
         val cons = Array(nItems) { BigInteger.ZERO }
         for (i in 0 until nItems) {
-            val deltas = deltaByItem[i]
-            if (deltas.isEmpty()) continue
-            var s = BigInteger.ZERO
-            for ((r, delta) in deltas) {
-                if (delta != 0L) s += delta.toBigInteger() * xs[r].toBigInteger()
+            val row = rows[i]
+            if (!row.hasConsumption) continue
+            var sum = 0L
+            var bigSum: BigInteger? = null
+            for (j in row.recipes.indices) {
+                val count = xs[row.recipes[j]]
+                if (count == 0L) continue
+                val delta = row.values[j]
+                if (bigSum == null) {
+                    try {
+                        sum = Math.addExact(sum, Math.multiplyExact(delta, count))
+                    } catch (_: ArithmeticException) {
+                        bigSum = BigInteger.valueOf(sum)
+                            .add(BigInteger.valueOf(delta).multiply(BigInteger.valueOf(count)))
+                    }
+                } else {
+                    bigSum = bigSum.add(BigInteger.valueOf(delta).multiply(BigInteger.valueOf(count)))
+                }
             }
-            if (s.signum() < 0) cons[i] = s.negate()
+            val exact = bigSum ?: BigInteger.valueOf(sum)
+            if (exact.signum() < 0) cons[i] = exact.negate()
         }
         return cons
     }
+
+    private fun satisfiedSolve(amount: Long): Solve = Solve(
+        xs = LongArray(mRecipes),
+        finalAmount = amount,
+        missingOutput = 0,
+        net = Array(nItems) { BigInteger.ZERO },
+        simulation = false,
+    )
 
     private fun emptySolve(): Solve = Solve(
         xs = LongArray(mRecipes),
