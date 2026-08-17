@@ -20,7 +20,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -55,6 +57,12 @@ fun ItemSlot(
     stack: ItemStack,
     modifier: Modifier = Modifier,
     interactive: Boolean = false,
+    consumeClicks: Boolean = true,
+    amount: String? = null,
+    craftable: Boolean = false,
+    disabled: Boolean = false,
+    missing: Boolean = false,
+    showTooltip: Boolean = true,
     onSlotClicked: ((button: Int, clickType: ClickType) -> Unit)? = null,
     colors: McColorScheme = McTheme.colors,
 ) {
@@ -65,7 +73,8 @@ fun ItemSlot(
     val density = LocalDensity.current
     var nodePos by remember { mutableStateOf(Offset.Zero) }
 
-    DisposableEffect(tooltipHost, renderer, stack, uiScale) {
+    DisposableEffect(tooltipHost, renderer, stack, uiScale, showTooltip) {
+        if (!showTooltip) return@DisposableEffect onDispose { }
         val unregister = tooltipHost.register {
             val graphics = McGraphics.current ?: return@register
             if (stack.isEmpty) return@register
@@ -96,37 +105,66 @@ fun ItemSlot(
         modifier = modifier
             .size(SLOT_SIZE.dp)
             .onGloballyPositioned { nodePos = it.positionInWindow() }
-            .pointerInput(stack, interactive, renderer) {
-                var gestureButton: PointerButton? = null
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull() ?: continue
-                        val pos = change.position
-                        val inBounds = pos.x in 0f..SLOT_SIZE.toFloat() && pos.y in 0f..SLOT_SIZE.toFloat()
-                        when (event.type) {
-                            PointerEventType.Press -> gestureButton = event.button
-                            PointerEventType.Release -> {
-                                if (gestureButton != null && inBounds) {
-                                    val button = if (gestureButton == PointerButton.Secondary) 1 else 0
-                                    if (interactive) {
-                                        onSlotClicked?.invoke(button, ClickType.PICKUP)
-                                    } else {
-                                        renderer.onClick(stack, button)
-                                    }
+            .then(
+                if (!consumeClicks) Modifier
+                else Modifier.pointerInput(stack, interactive, renderer) {
+                    var gestureButton: PointerButton? = null
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: continue
+                            val pos = change.position
+                            val inBounds = pos.x in 0f..SLOT_SIZE.toFloat() && pos.y in 0f..SLOT_SIZE.toFloat()
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    if (change.isConsumed) continue
+                                    gestureButton = event.button
+                                    change.consume()
                                 }
-                                gestureButton = null
+                                PointerEventType.Release -> {
+                                    if (gestureButton != null && inBounds && !change.isConsumed) {
+                                        val button = mouseButtonOf(gestureButton)
+                                        val clickType = clickTypeOf(event)
+                                        if (interactive) {
+                                            onSlotClicked?.invoke(button, clickType)
+                                        } else {
+                                            renderer.onClick(stack, button)
+                                        }
+                                        change.consume()
+                                    }
+                                    gestureButton = null
+                                }
+                                else -> Unit
                             }
-                            else -> Unit
                         }
                     }
-                }
-            }
+                },
+            )
             .drawBehind {
                 val graphics = McGraphics.current ?: return@drawBehind
                 drawRect(color = colors.slotBackground)
                 drawRect(color = colors.slotBorder, style = Stroke(1f))
                 renderer.drawStack(graphics, stack, 1, 1)
+                if (disabled) drawRect(color = colors.slotDisabledOverlay)
+                if (missing) drawRect(color = colors.slotMissingOverlay)
+                if (amount != null && amount.isNotEmpty()) {
+                    val font = Minecraft.getInstance().font
+                    graphics.pose().pushPose()
+                    graphics.pose().translate(1f, 1f, 200f)
+                    graphics.pose().scale(0.5f, 0.5f, 1f)
+                    val textX = SLOT_SIZE * 2 - 2 - font.width(amount)
+                    val textY = SLOT_SIZE * 2 - 2 - font.lineHeight
+                    graphics.drawString(font, amount, textX, textY, 0xFFFFFF, false)
+                    graphics.pose().popPose()
+                }
+                if (craftable) {
+                    val font = Minecraft.getInstance().font
+                    graphics.pose().pushPose()
+                    graphics.pose().translate(1f, 1f, 200f)
+                    graphics.pose().scale(0.5f, 0.5f, 1f)
+                    graphics.drawString(font, "+", 0, 0, 0x00FF00, false)
+                    graphics.pose().popPose()
+                }
                 val p = mouse.inDensity(density)
                 if (p.x in nodePos.x.toInt()..(nodePos.x + SLOT_SIZE).toInt() &&
                     p.y in nodePos.y.toInt()..(nodePos.y + SLOT_SIZE).toInt()
@@ -138,6 +176,19 @@ fun ItemSlot(
 }
 
 private const val SLOT_SIZE = 18
+
+private fun mouseButtonOf(button: PointerButton?): Int = when (button) {
+    PointerButton.Secondary -> 1
+    PointerButton.Tertiary -> 2
+    else -> 0
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun clickTypeOf(event: PointerEvent): ClickType = when {
+    event.button == PointerButton.Tertiary -> ClickType.CLONE
+    event.keyboardModifiers.isShiftPressed -> ClickType.QUICK_MOVE
+    else -> ClickType.PICKUP
+}
 
 /**
  * Renders a stack inside an [ItemSlot] and drives its tooltip / click behaviour. The concrete

@@ -57,15 +57,24 @@ fun McScrollbar(
                         while (true) {
                             val event = awaitPointerEvent()
                             val p = event.changes.firstOrNull()?.position ?: continue
+                            val change = event.changes.firstOrNull() ?: continue
                             when (event.type) {
                                 PointerEventType.Press -> {
+                                    if (change.isConsumed) continue
                                     dragging = true
                                     val barCenter = travel * state.display / state.maxScroll
                                     grabOffset = p.y - barCenter
                                     seek(p.y)
+                                    change.consume()
                                 }
-                                PointerEventType.Move -> if (dragging) seek(p.y)
-                                PointerEventType.Release -> dragging = false
+                                PointerEventType.Move -> if (dragging && !change.isConsumed) {
+                                    seek(p.y)
+                                    change.consume()
+                                }
+                                PointerEventType.Release -> if (dragging) {
+                                    dragging = false
+                                    if (!change.isConsumed) change.consume()
+                                }
                                 else -> Unit
                             }
                         }

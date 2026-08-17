@@ -33,12 +33,13 @@ import kotlin.math.sin
  * (immediate-mode GUI rendering). No offscreen surface, no skiko: every command is translated
  * directly into GuiGraphics calls, so the Compose tree paints with vanilla MC rendering state.
  *
- * Transform support is limited to translations (mirroring how the official layout places nodes);
- * scale/rotation/clipping are ignored.
+ * Transform support: translate / scale / rotate and intersecting clipRect. Path/image/arc
+ * drawing and clipPath are not implemented.
  */
 class McCanvas(private val graphics: GuiGraphics) : Canvas {
 
     private var alphaMultiplier: Float = 1f
+    private val clipDepthAtSave = ArrayDeque<Int>()
 
     /** Runs [block] with all subsequent drawing commands alpha-multiplied by [alpha]. */
     fun withAlpha(alpha: Float, block: () -> Unit) {
@@ -74,11 +75,18 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         graphics.fill((right - w).toInt(), top.toInt(), right.toInt(), bottom.toInt(), color)
     }
 
-    override fun save() = graphics.pose().pushPose()
+    override fun save() {
+        graphics.pose().pushPose()
+        clipDepthAtSave.addLast(McScissor.depth)
+    }
 
-    override fun restore() = graphics.pose().popPose()
+    override fun restore() {
+        graphics.pose().popPose()
+        val mark = if (clipDepthAtSave.isEmpty()) 0 else clipDepthAtSave.removeLast()
+        while (McScissor.depth > mark) McScissor.pop(graphics)
+    }
 
-    override fun saveLayer(bounds: Rect, paint: Paint) = graphics.pose().pushPose()
+    override fun saveLayer(bounds: Rect, paint: Paint) = save()
 
     override fun translate(dx: Float, dy: Float) {
         graphics.pose().translate(dx, dy, 0f)
@@ -97,7 +105,21 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
 
     override fun concat(matrix: Matrix) = Unit
 
-    override fun clipRect(left: Float, top: Float, right: Float, bottom: Float, clipOp: ClipOp) = Unit
+    override fun clipRect(left: Float, top: Float, right: Float, bottom: Float, clipOp: ClipOp) {
+        if (clipOp != ClipOp.Intersect) return
+        val matrix = graphics.pose().last().pose()
+        val x0 = matrix.m30() + left * matrix.m00()
+        val y0 = matrix.m31() + top * matrix.m11()
+        val x1 = matrix.m30() + right * matrix.m00()
+        val y1 = matrix.m31() + bottom * matrix.m11()
+        McScissor.push(
+            graphics,
+            min(x0, x1).toInt(),
+            min(y0, y1).toInt(),
+            max(x0, x1).toInt(),
+            max(y0, y1).toInt(),
+        )
+    }
 
     override fun clipPath(path: Path, clipOp: ClipOp) = Unit
 
@@ -151,15 +173,13 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         val colorInt = color
         val x0 = center.x
         val y0 = center.y
-        var p0x = 0f
-        var p0y = 0f
-        for (i in 0 until segments) {
+        var p0x = x0 + radius
+        var p0y = y0
+        for (i in 1..segments) {
             val angle = i * step
             val px = x0 + radius * cos(angle).toFloat()
             val py = y0 + radius * sin(angle).toFloat()
-            if (i > 0) {
-                graphics.fillTriangle(p0x, p0y, px, py, x0, y0, colorInt)
-            }
+            graphics.fillTriangle(p0x, p0y, px, py, x0, y0, colorInt)
             p0x = px
             p0y = py
         }

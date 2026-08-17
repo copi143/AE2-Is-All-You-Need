@@ -89,6 +89,12 @@ class ComposeLayer {
         }
     }
 
+    fun containsRaw(mouseX: Double, mouseY: Double): Boolean {
+        val local = toLocal(mouseX, mouseY)
+        return local.x >= 0f && local.y >= 0f &&
+            local.x < logicalSize.width && local.y < logicalSize.height
+    }
+
     /** Forwards a raw-pixel click; returns true when a Compose node consumed it. */
     fun onMouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
         val local = toLocal(mouseX, mouseY)
@@ -110,6 +116,10 @@ class ComposeLayer {
     /** Forwards a key-press (GLFW keyCode/scanCode/modifiers); true when a text field consumed it. */
     fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
         owner.onKeyPressed(keyCode, scanCode, modifiers)
+
+    /** Forwards a key-release (GLFW keyCode/scanCode/modifiers). */
+    fun onKeyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
+        owner.onKeyReleased(keyCode, scanCode, modifiers)
 
     /** Forwards a committed character (direct key or IME); true when a text field consumed it. */
     fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =

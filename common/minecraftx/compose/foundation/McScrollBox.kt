@@ -1,6 +1,7 @@
 package minecraftx.compose.foundation
 
 import allyouneed.client.compose.platform.McGraphics
+import allyouneed.client.compose.platform.McScissor
 import allyouneed.client.compose.platform.ScrollState
 import allyouneed.client.compose.platform.rememberScrollState
 import androidx.compose.foundation.background
@@ -142,11 +143,10 @@ private fun Modifier.scissorClip(): Modifier = drawWithContent {
     val clipRight = (nodeX + size.width * scaleX).toInt()
     val clipBottom = (nodeY + size.height * scaleY).toInt()
     if (clipRight <= clipLeft || clipBottom <= clipTop) return@drawWithContent
-    g.enableScissor(clipLeft, clipTop, clipRight, clipBottom)
+    McScissor.push(g, clipLeft, clipTop, clipRight, clipBottom)
     try {
         drawContent()
-        g.flush()
     } finally {
-        g.disableScissor()
+        McScissor.pop(g)
     }
 }

@@ -1,6 +1,7 @@
 package minecraftx.compose.material
 
 import allyouneed.client.compose.platform.McGraphics
+import allyouneed.client.compose.platform.McScissor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -47,6 +48,17 @@ fun McText(
         val h = constraints.constrainHeight(font.lineHeight)
         layout(w, h) {}
     }
+}
+
+@Composable
+fun McText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Int = McTheme.colors.textPrimary.value.toInt(),
+    maxWidth: Int = Int.MAX_VALUE,
+    clipFrame: Rect? = null,
+) {
+    McText(Component.literal(text), modifier, color, maxWidth, clipFrame)
 }
 
 /** String convenience overload of [McText]. */
@@ -97,19 +109,18 @@ private fun drawClipped(
     val clipRight = min(nodeX + widthPx * scaleX, nodeX + clipFrame.right * scaleX)
     val clipBottom = min(nodeY + font.lineHeight * scaleY, nodeY + clipFrame.bottom * scaleY)
     if (clipRight <= clipLeft || clipBottom <= clipTop) return
-    g.enableScissor(clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
+    McScissor.push(g, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
     try {
         drawText(g, font, text, widthPx, color)
     } finally {
-        g.flush()
-        g.disableScissor()
+        McScissor.pop(g)
     }
 }
 
 private fun drawText(g: GuiGraphics, font: Font, text: Component, widthPx: Int, color: Int) {
     if (widthPx < font.width(text)) {
-        g.drawString(font, font.plainSubstrByWidth(text.getString(), widthPx), 0, 0, color)
+        g.drawString(font, font.plainSubstrByWidth(text.getString(), widthPx), 0, 0, color, false)
     } else {
-        g.drawString(font, text, 0, 0, color)
+        g.drawString(font, text, 0, 0, color, false)
     }
 }

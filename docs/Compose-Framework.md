@@ -32,10 +32,10 @@ common/src/main/kotlin/minecraftx/compose/
 │   ├── DarkColorScheme.kt       # 默认暗色主题
 │   └── LightColorScheme.kt      # 亮色主题（多主题控件 = 切换 McColorScheme）
 ├── material/                    # 主题化控件（读取 McTheme.colors，可单节点覆盖）
-│   ├── McText.kt                # 统一文本组件（Component/String 重载 + 像素级 scissor 裁剪）
-│   ├── McPanel.kt               # 带边框面板 + McCloseButton（colors 参数主题化）
-│   ├── McScrollbar.kt / McTooltip.kt
-│   ├── McTextField.kt           # ★ 可输入文本框（imeEnabled / 光标 / 回车 / 剪贴板）
+│   ├── McText.kt / McButton.kt / McTab.kt / McCheckbox.kt
+│   ├── McProgressBar.kt / McSearchField.kt / McNumberField.kt
+│   ├── McItemGrid.kt / McPlayerInventory.kt / McCarriedStack.kt
+│   ├── McScrollbar.kt / McTooltip.kt / McTextField.kt
 │   └── ItemSlot.kt / EmiSlotRenderer.kt / VanillaSlotRenderer.kt
 ├── foundation/                  # 与主题无关的布局基元
 │   ├── McVirtualColumn.kt       # 虚拟化滚动文本列（不可见行不组合）+ Modifier.mcScroll
@@ -49,6 +49,16 @@ common/src/main/kotlin/minecraftx/compose/
 └── demo/
     ├── ComposeDemoScreen.kt          # 按 K 打开：官方组件 + 框架组件混用 + 主题切换
     └── EmbeddedComposeDemoScreen.kt  # 按 L 打开：vanilla Screen 内嵌 ComposeLayer 面板
+
+# AE2 兼容层（ae2x.compose.*，继承 AEBaseScreen，外观走 McTheme）
+common/ae2x/compose/
+├── AeComposeScreen.kt           # AEBaseScreen + ComposeLayer；槽位坐标由 Compose 回写
+├── RememberGuiSync.kt           # @GuiSync 字段 → Compose 状态（每帧轮询）
+├── AeComposeStyles.kt           # 空白 ScreenStyle（构造器硬约束）
+├── screen/AeMachineScaffold.kt / AeTerminalScaffold.kt / AeComposeMEScreen.kt
+├── slot/AeMenuSlot.kt / AeSlotGrid.kt / AePlayerInventory.kt / AeRepoGrid.kt
+└── widget/AeSettingToggle.kt / AeSearchBar.kt / AeProgressBar.kt / AeNumberEntry.kt
+              AeCpuList.kt / AeCraftTable.kt / AeAmountDialog.kt / AeEncodingPanel.kt
 ```
 
 渲染驱动链（每帧，游戏线程）：
@@ -168,7 +178,7 @@ IME 会话（Minecraft 内没有 Android IME），而是由 `McTextInputService`
 - 光标渲染：插入点绘制两态闪烁（无选区时按 `System.currentTimeMillis` 亮灭，透明合成，
   blend 开启），有选区时半透明高亮。
 - 输入默认居中、仅绘制可视片段；内容超出时水平滚动，光标位置自动滚入视野。
-- 键盘转发路径：`ComposeScreen`/`ComposeContainerScreen` 的 `keyPressed/keyReleased/charTyped`
+- 键盘转发路径：`ComposeScreen`/`ComposeContainerScreen`/`AeComposeScreen` 的 `keyPressed/keyReleased/charTyped`
   → `ComposeLayer` → `ComposeOwner.onKeyPressed/onCharTyped` → 焦点节点的 `McTextField`。
 - **无 skiko 依赖**：官方桌面 jar 里 `BackspaceCommand`（折叠光标）与 `MoveCursorCommand` 的
   `applyTo` 会调用 skiko 的 `org.jetbrains.skia.BreakIterator`，而框架不加载 skiko native。
@@ -224,19 +234,15 @@ McVirtualColumn / 内层 McScrollBox）不会一次滚两处：内层按叶子�
 切换 scheme，且可全局或局部生效：
 
 ```kotlin
-// 全局：包住整屏内容（demo 的 K 屏用按钮在 Dark/Light 间切换）
-var dark by remember { mutableStateOf(true) }
-McTheme(colorScheme = if (dark) DarkColorScheme else LightColorScheme) {
-    McPanel(width = 200.dp, height = 100.dp) { McText("Hello") }
-}
+McThemeSettings.toggle()
+McTheme { McPanel(width = 200.dp, height = 100.dp) { McText("Hello") } }
 
-// 局部：单个节点用别的配色
 McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
 ```
 
-- `McColorScheme` 是语义颜色契约（面板背景/边框、槽位、滚动条、tooltip、文本主色、
-  输入框背景/边框/光标……），接口默认值即暗色主题；自定义主题只需 override 有差异的槽。
-- 未包裹 `McTheme` 的组件回落到 `DarkColorScheme`，现有屏幕外观不变（向后兼容）。
+- 默认主题是客户端全局设置，存在 `config/ae2isallyouneed-client.properties`（`theme=dark|light`）。
+- `McColorScheme` 是语义颜色契约；自定义主题只需 override 有差异的槽。
+- 未包裹 `McTheme` 的组件回落到 [McThemeSettings]。
 - `McTheme` 用 `staticCompositionLocalOf`：切换 scheme 会整体重组合子树，全屏换肤即此语义。
 - 颜色以 `Color`（ULong ARGB）承载；落进 `GuiGraphics.drawString` 的文本用
   `color.value.toInt()` 转回 `Int`（`0xAARRGGBB`，与 MC 一致）。
@@ -260,6 +266,15 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
    版本用 `McTooltip`（§4.2），二者内容同源，管线互斥。
 6. **文本输入**：`textInputSession` 等 suspend 输入 API 暂不支持（Minecraft 无 Android IME）；
    输入走 `McTextInputService` 的原生键盘事件直通（§4.4）。
+
+### AE2 `@GuiSync`
+
+`@GuiSync` / `registerClientAction` 仍挂在 `AEBaseMenu` 上，Compose 屏直接用。字段变化不会自动触发重组，用 `rememberGuiSync { menu.xxx }` 每帧读一次：
+
+```kotlin
+val formed = rememberGuiSync { menu.formed }
+McText(if (formed == 1) "已成形" else "未成形")
+```
 
 ---
 

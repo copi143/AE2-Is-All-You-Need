@@ -47,8 +47,8 @@ abstract class ComposeScreen(title: Component) : Screen(title) {
     }
 
     override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
-        if (layer.onMouseClicked(mouseX, mouseY, button)) return true
-        return super.mouseClicked(mouseX, mouseY, button)
+        layer.onMouseClicked(mouseX, mouseY, button)
+        return true
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
@@ -57,18 +57,23 @@ abstract class ComposeScreen(title: Component) : Screen(title) {
             layer.setUiScaleFactor(layer.uiScale + (delta * UI_SCALE_STEP).toFloat())
             return true
         }
-        if (layer.onMouseScrolled(mouseX, mouseY, delta)) return true
-        return super.mouseScrolled(mouseX, mouseY, delta)
+        layer.onMouseScrolled(mouseX, mouseY, delta)
+        return true
     }
 
     override fun mouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
-        if (layer.onMouseReleased(mouseX, mouseY, button)) return true
-        return super.mouseReleased(mouseX, mouseY, button)
+        layer.onMouseReleased(mouseX, mouseY, button)
+        return true
     }
 
     override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
         if (layer.onKeyPressed(keyCode, scanCode, modifiers)) return true
         return super.keyPressed(keyCode, scanCode, modifiers)
+    }
+
+    override fun keyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
+        if (layer.onKeyReleased(keyCode, scanCode, modifiers)) return true
+        return super.keyReleased(keyCode, scanCode, modifiers)
     }
 
     override fun charTyped(codePoint: Char, modifiers: Int): Boolean {

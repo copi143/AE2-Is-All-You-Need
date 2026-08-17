@@ -50,7 +50,7 @@ dependencies {
 }
 
 loom {
-    val aw = project(":common").file("resources/${modId}.accesswidener")
+    val aw = project(":common").file("resources/${modId}.aw")
     if (aw.exists()) {
         accessWidenerPath.set(aw)
     }

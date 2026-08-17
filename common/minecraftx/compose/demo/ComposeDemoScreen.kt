@@ -24,8 +24,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Button
-import androidx.compose.material.Slider
+import minecraftx.compose.material.McButton
+import minecraftx.compose.material.McCheckbox
+import minecraftx.compose.material.McNumberField
+import minecraftx.compose.material.McProgressBar
+import minecraftx.compose.material.McSearchField
+import minecraftx.compose.material.McTab
+import minecraftx.compose.material.McTabRow
+import minecraftx.compose.material.McToggle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,9 +46,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.TextFieldValue
-import minecraftx.compose.theme.DarkColorScheme
-import minecraftx.compose.theme.LightColorScheme
 import minecraftx.compose.theme.McTheme
+import minecraftx.compose.theme.McThemeId
+import minecraftx.compose.theme.McThemeSettings
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -60,8 +66,6 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
     @Composable
     override fun Content() {
-        var dark by remember { mutableStateOf(true) }
-        McTheme(colorScheme = if (dark) DarkColorScheme else LightColorScheme) {
         var count by remember { mutableStateOf(0) }
         var sliderValue by remember { mutableStateOf(0.5f) }
         var visible by remember { mutableStateOf(true) }
@@ -84,42 +88,31 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
 
-            // 主题切换:McTheme 包裹整屏内容,切换 McColorScheme 即整体换肤。
             Row {
-                Button(onClick = { dark = !dark }) {
-                    Text(if (dark) "切到亮色主题" else "切到暗色主题", color = 0xFFFFFFFF.toInt())
-                }
+                McButton(
+                    if (McThemeSettings.id == McThemeId.Dark) "切到亮色主题" else "切到暗色主题",
+                    onClick = { McThemeSettings.toggle() },
+                )
             }
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
 
-            // Official material Button
             Row {
                 Text("Count: $count", color = 0xFF00FF00.toInt())
                 Spacer(Modifier.size(8.dp))
-                Button(
-                    onClick = { count++ },
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                ) {
-                    Text("+1", color = 0xFFFFFFFF.toInt())
-                }
-                Button(
-                    onClick = { count = 0 },
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                ) {
-                    Text("Reset", color = 0xFFFF5555.toInt())
-                }
+                McButton("+1", onClick = { count++ }, modifier = Modifier.padding(horizontal = 4.dp))
+                McButton("Reset", onClick = { count = 0 }, modifier = Modifier.padding(horizontal = 4.dp))
             }
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            // Official material Slider
-            Text("Slider: ${(sliderValue * 100).toInt()}%", color = 0xFFAAAAAA.toInt())
-            Slider(
-                value = sliderValue,
-                onValueChange = { sliderValue = it },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            )
+            Text("McProgressBar: ${(sliderValue * 100).toInt()}%", color = 0xFFAAAAAA.toInt())
+            McProgressBar(progress = sliderValue, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+            Row {
+                McButton("-", onClick = { sliderValue = (sliderValue - 0.1f).coerceIn(0f, 1f) })
+                Spacer(Modifier.size(4.dp))
+                McButton("+", onClick = { sliderValue = (sliderValue + 0.1f).coerceIn(0f, 1f) })
+            }
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
@@ -133,18 +126,14 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                         .background(Color(0xFF00AAFF)),
                 )
                 Spacer(Modifier.size(8.dp))
-                Button(onClick = { highlight = !highlight }) {
-                    Text(if (highlight) "Dim" else "Bright", color = 0xFFFFFFFF.toInt())
-                }
+                McButton(if (highlight) "Dim" else "Bright", onClick = { highlight = !highlight })
             }
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Official AnimatedVisibility (fade + scale)
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
-                Button(onClick = { visible = !visible }) {
-                    Text(if (visible) "Hide" else "Show", color = 0xFFFFFFFF.toInt())
-                }
+                McButton(if (visible) "Hide" else "Show", onClick = { visible = !visible })
                 Spacer(Modifier.size(8.dp))
                 AnimatedVisibility(visible = visible) {
                     Box(
@@ -248,6 +237,33 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
+            Text("McTab / McCheckbox / McToggle / McNumberField / McSearchField:", color = 0xFFCCCCCC.toInt())
+            var tab by remember { mutableStateOf(0) }
+            McTabRow(Modifier.padding(vertical = 4.dp)) {
+                McTab("Crafting", selected = tab == 0, onClick = { tab = 0 })
+                McTab("Processing", selected = tab == 1, onClick = { tab = 1 })
+                McTab("Machine", selected = tab == 2, onClick = { tab = 2 })
+            }
+            var checked by remember { mutableStateOf(true) }
+            var toggled by remember { mutableStateOf(false) }
+            Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                McCheckbox(checked = checked, onCheckedChange = { checked = it }, label = "enabled")
+                Spacer(Modifier.size(8.dp))
+                McToggle(checked = toggled, onCheckedChange = { toggled = it })
+                Spacer(Modifier.size(8.dp))
+                var number by remember { mutableStateOf(64L) }
+                McNumberField(value = number, onValueChange = { number = it }, min = 0, max = 1000)
+            }
+            var search by remember { mutableStateOf(TextFieldValue("")) }
+            McSearchField(
+                value = search,
+                onValueChange = { search = it },
+                placeholder = "搜索（右键清空）",
+                width = 276,
+            )
+
+            Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
             // McTextField 输入框演示:像浏览器一样支持"开启输入法"与"关闭输入法(纯 ASCII)"两种模式。
             // IME 模式文本走 Screen.charTyped(直接按键与 IME 提交文本都会到达);ASCII 模式忽略
             // charTyped,按键用 US 布局 shift 表映射。编辑键(退格/方向键/Home/End/Ctrl+A)两模式通用。
@@ -320,7 +336,6 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                     ),
                 )
             }
-        }
         }
     }
 }

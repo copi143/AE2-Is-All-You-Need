@@ -148,7 +148,7 @@ configurations {
 
 sourceSets.main {
     java.srcDir("src")
-    kotlin.srcDirs("src", "minecraftx")
+    kotlin.srcDirs("src", "minecraftx", "ae2x")
     resources.srcDirs("res", "resources")
 }
 

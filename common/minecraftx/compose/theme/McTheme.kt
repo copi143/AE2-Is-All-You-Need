@@ -10,25 +10,25 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * Theme plumbing for the Minecraft component set.
  *
  * Provide a scheme around a subtree to re-skin everything under it — either globally (wrap a whole
- * screen's content) or locally (wrap a single panel). Components that do not wrap themselves in
- * [McTheme] fall back to [DarkColorScheme], so existing screens keep their look unchanged.
+ * screen's content) or locally (wrap a single panel). The default scheme is [McThemeSettings]
+ * (client config `ae2isallyouneed-client.properties`). Components that do not wrap themselves in
+ * [McTheme] fall back to the same setting.
  *
  * ```kotlin
- * var dark by remember { mutableStateOf(true) }
- * McTheme(colorScheme = if (dark) DarkColorScheme else LightColorScheme) {
- *     McPanel(width = 200.dp, height = 100.dp) { McText(...) }
- * }
+ * McTheme { McPanel(width = 200.dp, height = 100.dp) { McText(...) } }
+ * McThemeSettings.toggle()
  * ```
  */
 @Composable
 fun McTheme(
-    colorScheme: McColorScheme = DarkColorScheme,
+    colorScheme: McColorScheme? = null,
     typography: McTypography = McTypography.Default,
     shapes: McShapes = McShapes.Default,
     content: @Composable () -> Unit,
 ) {
+    val resolved = colorScheme ?: McThemeSettings.colorScheme
     CompositionLocalProvider(
-        LocalColorScheme provides colorScheme,
+        LocalColorScheme provides resolved,
         LocalTypography provides typography,
         LocalShapes provides shapes,
         content = content,
@@ -53,6 +53,7 @@ object McTheme {
         get() = LocalShapes.current
 }
 
-internal val LocalColorScheme: ProvidableCompositionLocal<McColorScheme> = staticCompositionLocalOf { DarkColorScheme }
+internal val LocalColorScheme: ProvidableCompositionLocal<McColorScheme> =
+    staticCompositionLocalOf { McThemeSettings.colorScheme }
 internal val LocalTypography: ProvidableCompositionLocal<McTypography> = staticCompositionLocalOf { McTypography.Default }
 internal val LocalShapes: ProvidableCompositionLocal<McShapes> = staticCompositionLocalOf { McShapes.Default }

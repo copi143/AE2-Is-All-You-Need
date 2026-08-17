@@ -2,6 +2,7 @@ package minecraftx.compose.material
 
 import allyouneed.client.compose.platform.LocalMcTextInputService
 import allyouneed.client.compose.platform.McGraphics
+import allyouneed.client.compose.platform.McScissor
 import allyouneed.client.compose.platform.rememberFrameCallback
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -121,7 +122,10 @@ fun McTextField(
                     while (true) {
                         val event = awaitPointerEvent()
                         if (event.type != PointerEventType.Press) continue
-                        val press = event.changes.firstOrNull()?.position ?: continue
+                        val change = event.changes.firstOrNull() ?: continue
+                        if (change.isConsumed) continue
+                        val press = change.position
+                        change.consume()
                         service.activate(id)
                         val clickPx = press.x - TEXT_PAD_LEFT + scrollX
                         val offset = if (internal.text.isEmpty()) {
@@ -180,12 +184,11 @@ private fun drawField(
     val clipRight = minOf(nodeX + width * scaleX, nodeX + (width - 1) * scaleX)
     val clipBottom = minOf(nodeY + height * scaleY, nodeY + (height - 1) * scaleY)
     if (clipRight > clipLeft && clipBottom > clipTop) {
-        g.enableScissor(clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
+        McScissor.push(g, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
         try {
             drawContent(g, font, value, scrollX, blinkTick, focused, width, height, placeholder, colors)
         } finally {
-            g.flush()
-            g.disableScissor()
+            McScissor.pop(g)
         }
     }
 }
@@ -212,13 +215,13 @@ private fun drawContent(
     val drawX = TEXT_PAD_LEFT + prefixWidth - scrollX
     if (text.isEmpty()) {
         if (!placeholder.isNullOrEmpty()) {
-            g.drawString(font, placeholder, drawX.roundToInt(), textY, colors.textSecondary.value.toInt())
+            g.drawString(font, placeholder, drawX.roundToInt(), textY, colors.textSecondary.value.toInt(), false)
         }
     } else {
         val drawSub = text.substring(scrollOffset)
         val availPx = (visibleWidth + scrollX - prefixWidth).roundToInt().coerceAtLeast(0)
         val slice = if (font.width(drawSub) > availPx) font.plainSubstrByWidth(drawSub, availPx) else drawSub
-        g.drawString(font, slice, drawX.roundToInt(), textY, colors.textPrimary.value.toInt())
+        g.drawString(font, slice, drawX.roundToInt(), textY, colors.textPrimary.value.toInt(), false)
     }
 
     // Selection highlight or blinking caret.

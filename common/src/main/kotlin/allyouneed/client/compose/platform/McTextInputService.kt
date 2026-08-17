@@ -48,7 +48,14 @@ import java.text.BreakIterator
  * through `Screen.keyPressed`); they are re-declared here as plain Ints to keep the lwjgl dependency
  * out of the common module.
  */
+interface TextClipboard {
+    fun getText(): String?
+    fun setText(text: String)
+}
+
 class McTextInputService : PlatformTextInputService {
+
+    var clipboard: TextClipboard? = null
 
     private var onEditCommand: ((List<EditCommand>) -> Unit)? = null
     private var onImeActionPerformed: ((ImeAction) -> Unit)? = null
@@ -138,8 +145,13 @@ class McTextInputService : PlatformTextInputService {
             else -> {
                 if (ctrl && keyCode == KEY_A) {
                     onEditCommand(listOf(SetSelectionCommand(0, Int.MAX_VALUE)))
+                } else if (ctrl && keyCode == KEY_C) {
+                    copySelection() ?: return false
+                } else if (ctrl && keyCode == KEY_X) {
+                    if (!cutSelection()) return false
+                } else if (ctrl && keyCode == KEY_V) {
+                    if (!pasteClipboard()) return false
                 } else if (ctrl) {
-                    // Ctrl+C / Ctrl+X / Ctrl+V...: the clipboard is stubbed, leave them to vanilla.
                     return false
                 } else if (asciiForKey(keyCode, shift) != null) {
                     // Printable key. In IME mode the actual character is delivered by onCharTyped
@@ -186,6 +198,33 @@ class McTextInputService : PlatformTextInputService {
     private fun extendSelectionToEnd() {
         val onEditCommand = onEditCommand ?: return
         onEditCommand(listOf(SetSelectionCommand(valueProvider().selection.min, Int.MAX_VALUE)))
+    }
+
+    private fun copySelection(): Unit? {
+        val clipboard = clipboard ?: return null
+        val value = valueProvider()
+        val selected = value.text.substring(value.selection.min, value.selection.max)
+        clipboard.setText(selected)
+        return Unit
+    }
+
+    private fun cutSelection(): Boolean {
+        val clipboard = clipboard ?: return false
+        val onEditCommand = onEditCommand ?: return false
+        val value = valueProvider()
+        if (value.selection.min >= value.selection.max) return false
+        clipboard.setText(value.text.substring(value.selection.min, value.selection.max))
+        onEditCommand(listOf(BackspaceCommand()))
+        return true
+    }
+
+    private fun pasteClipboard(): Boolean {
+        val clipboard = clipboard ?: return false
+        val onEditCommand = onEditCommand ?: return false
+        val text = clipboard.getText() ?: return false
+        if (text.isEmpty()) return true
+        onEditCommand(listOf(CommitTextCommand(text, 1)))
+        return true
     }
 
     private fun moveCursorBy(direction: Int) {
@@ -293,6 +332,9 @@ class McTextInputService : PlatformTextInputService {
         const val KEY_SEMICOLON = 59
         const val KEY_EQUAL = 61
         const val KEY_A = 65
+        const val KEY_C = 67
+        const val KEY_V = 86
+        const val KEY_X = 88
         const val KEY_Z = 90
         const val KEY_LEFT_BRACKET = 91
         const val KEY_BACKSLASH = 92

@@ -108,8 +108,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import com.mojang.blaze3d.platform.InputConstants
+import minecraftx.compose.theme.McTheme
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
+import org.lwjgl.glfw.GLFW
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.coroutines.resume
@@ -195,9 +198,22 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         override fun requestInputMode(inputMode: InputMode): Boolean = false
     }
 
+    private var mcClipboardText: String?
+        get() = runCatching { Minecraft.getInstance()?.keyboardHandler?.clipboard }.getOrNull()
+        set(value) {
+            if (value == null) return
+            runCatching { Minecraft.getInstance()?.keyboardHandler?.clipboard = value }
+        }
+
     override val clipboardManager: ClipboardManager = object : ClipboardManager {
-        override fun setText(annotatedString: AnnotatedString) {}
-        override fun getText(): AnnotatedString? = null
+        override fun setText(annotatedString: AnnotatedString) {
+            mcClipboardText = annotatedString.text
+        }
+
+        override fun getText(): AnnotatedString? {
+            val text = mcClipboardText ?: return null
+            return if (text.isEmpty()) null else AnnotatedString(text)
+        }
     }
 
     override val clipboard: Clipboard = object : Clipboard {
@@ -238,7 +254,14 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     override val autofillManager: AutofillManager? = null
 
     /** Bridges Minecraft's raw key events into [EditCommand]s for the active [McTextField]. */
-    val mcTextInputService = McTextInputService()
+    val mcTextInputService = McTextInputService().also { service ->
+        service.clipboard = object : TextClipboard {
+            override fun getText(): String? = mcClipboardText
+            override fun setText(text: String) {
+                mcClipboardText = text
+            }
+        }
+    }
 
     override val textInputService: TextInputService by lazy { TextInputService(mcTextInputService) }
 
@@ -307,7 +330,9 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     }
 
     private var mouseDown = false
-    private var activeButton: PointerButton? = null
+    private var pressedPrimary = false
+    private var pressedSecondary = false
+    private var pressedTertiary = false
     private var hoverPosition: Offset? = null
 
     /** Logical root-space mouse position for the current frame, updated every render / input event. */
@@ -341,7 +366,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
                     LocalMcTextInputService provides mcTextInputService,
                     LocalTextInputService provides textInputService,
                 ) {
-                    content()
+                    McTheme { content() }
                 }
             }
         }
@@ -367,6 +392,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         measureAndLayout()
         dispatchMouseMove(mouseX / scale - uiOrigin.x, mouseY / scale - uiOrigin.y)
         McGraphics.current = graphics
+        McScissor.reset(graphics)
         try {
             graphics.pose().pushPose()
             graphics.pose().translate(uiOrigin.x * scale, uiOrigin.y * scale, 0f)
@@ -374,6 +400,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
             root.draw(McCanvas(graphics), null)
             graphics.pose().popPose()
         } finally {
+            McScissor.reset(graphics)
             McGraphics.current = null
         }
     }
@@ -383,10 +410,9 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     // -------------------------------------------------------------------------------------------
 
     fun onMouseClicked(x: Float, y: Float, button: Int): Boolean {
-        if (button != 0 && button != 1) return false
-        val pointerButton = if (button == 0) PointerButton.Primary else PointerButton.Secondary
-        activeButton = pointerButton
-        mouseDown = true
+        val pointerButton = pointerButtonOf(button) ?: return false
+        setPressed(pointerButton, true)
+        mouseDown = anyPressed()
         val position = Offset(x, y)
         updateMousePosition(position)
         return processPointerEvent(
@@ -395,24 +421,26 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
                 position = position,
                 down = true,
                 button = pointerButton,
-                primary = pointerButton == PointerButton.Primary,
+                buttons = currentButtons(),
+                keyboardModifiers = currentKeyboardModifiers(),
             ),
         )
     }
 
     fun onMouseReleased(x: Float, y: Float, button: Int): Boolean {
-        val pointerButton = activeButton ?: return false
-        mouseDown = false
-        activeButton = null
+        val pointerButton = pointerButtonOf(button) ?: return false
+        setPressed(pointerButton, false)
+        mouseDown = anyPressed()
         val position = Offset(x, y)
         updateMousePosition(position)
         return processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Release,
                 position = position,
-                down = false,
+                down = mouseDown,
                 button = pointerButton,
-                primary = pointerButton == PointerButton.Primary,
+                buttons = currentButtons(),
+                keyboardModifiers = currentKeyboardModifiers(),
             ),
         )
     }
@@ -426,6 +454,8 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
                 position = position,
                 down = mouseDown,
                 scrollDelta = Offset(0f, delta.toFloat()),
+                buttons = currentButtons(),
+                keyboardModifiers = currentKeyboardModifiers(),
             ),
         )
     }
@@ -447,12 +477,51 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         val previous = hoverPosition
         hoverPosition = position
         val eventType = if (previous == null) PointerEventType.Enter else PointerEventType.Move
-        processPointerEvent(buildPointerEvent(eventType, position, down = mouseDown))
+        processPointerEvent(
+            buildPointerEvent(
+                eventType,
+                position,
+                down = mouseDown,
+                buttons = currentButtons(),
+                keyboardModifiers = currentKeyboardModifiers(),
+            ),
+        )
+    }
+
+    private fun setPressed(button: PointerButton, down: Boolean) {
+        when (button) {
+            PointerButton.Primary -> pressedPrimary = down
+            PointerButton.Secondary -> pressedSecondary = down
+            PointerButton.Tertiary -> pressedTertiary = down
+        }
+    }
+
+    private fun anyPressed(): Boolean = pressedPrimary || pressedSecondary || pressedTertiary
+
+    private fun currentButtons(): PointerButtons = pointerButtonsOf(
+        primary = pressedPrimary,
+        secondary = pressedSecondary,
+        tertiary = pressedTertiary,
+    )
+
+    private fun currentKeyboardModifiers(): PointerKeyboardModifiers {
+        val window = runCatching { Minecraft.getInstance()?.window?.window }.getOrNull()
+            ?: return PointerKeyboardModifiers()
+        return keyboardModifiersOf(
+            shift = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT) ||
+                InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SHIFT),
+            ctrl = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_CONTROL) ||
+                InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_CONTROL),
+            alt = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_ALT) ||
+                InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_ALT),
+            meta = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SUPER) ||
+                InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SUPER),
+        )
     }
 
     private fun processPointerEvent(event: PointerInputEvent): Boolean {
         val result = pointerInputEventProcessor.process(event, IdentityPositionCalculator)
-        return result.value != 0
+        return result.anyChangeConsumed
     }
 
     // -------------------------------------------------------------------------------------------
@@ -462,6 +531,9 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     /** Forwards a raw key-press to the active text input session; true when a field consumed it. */
     fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
         mcTextInputService.onKeyPressed(keyCode, modifiers)
+
+    /** Forwards a raw key-release. Text fields currently ignore releases. */
+    fun onKeyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean = false
 
     /** Forwards a committed character (direct key or IME) to the active text input session. */
     fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =
@@ -612,7 +684,8 @@ private fun buildPointerEvent(
     down: Boolean,
     button: PointerButton? = null,
     scrollDelta: Offset = Offset.Zero,
-    primary: Boolean = true,
+    buttons: PointerButtons = PointerButtons(),
+    keyboardModifiers: PointerKeyboardModifiers = PointerKeyboardModifiers(),
 ): PointerInputEvent {
     val uptime = System.nanoTime() / 1_000_000L
     return PointerInputEvent(
@@ -635,12 +708,8 @@ private fun buildPointerEvent(
                 originalEventPosition = position,
             ),
         ),
-        buttons = when {
-            !down -> PointerButtons()
-            primary -> PointerButtons(isPrimaryPressed = true)
-            else -> PointerButtons(isSecondaryPressed = true)
-        },
-        keyboardModifiers = PointerKeyboardModifiers(),
+        buttons = buttons,
+        keyboardModifiers = keyboardModifiers,
         button = button,
     )
 }

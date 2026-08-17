@@ -85,10 +85,9 @@ fun Modifier.mcScroll(state: ScrollState): Modifier = pointerInput(state) {
                 val change = event.changes.firstOrNull() ?: continue
                 if (change.isConsumed) continue
                 val dy = change.scrollDelta.y
-                if (dy != 0f) {
-                    state.scrollBy(-dy * ScrollState.WHEEL_STEP)
-                    change.consume()
-                }
+                if (dy == 0f) continue
+                state.scrollBy(-dy * ScrollState.WHEEL_STEP)
+                change.consume()
             }
         }
     }

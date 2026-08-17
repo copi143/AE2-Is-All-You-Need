@@ -10,5 +10,6 @@ object ComposeDemoKeyRegistration {
     @SubscribeEvent
     fun onRegisterKeys(event: RegisterKeyMappingsEvent) {
         event.register(ComposeDemoKeybind.OPEN_DEMO)
+        event.register(ComposeDemoKeybind.OPEN_EMBEDDED)
     }
 }

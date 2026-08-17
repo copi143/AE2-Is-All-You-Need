@@ -1,7 +1,9 @@
 package allyouneed.client.compose.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import net.minecraft.client.gui.GuiGraphics
@@ -78,8 +80,9 @@ val LocalMcTextInputService = compositionLocalOf<McTextInputService> { error("No
 @Composable
 fun rememberFrameCallback(callback: () -> Unit) {
     val host = LocalFrameCallbacks.current
-    androidx.compose.runtime.DisposableEffect(host) {
-        val unregister = host.register(callback)
+    val latest = rememberUpdatedState(callback)
+    DisposableEffect(host) {
+        val unregister = host.register { latest.value() }
         onDispose { unregister() }
     }
 }

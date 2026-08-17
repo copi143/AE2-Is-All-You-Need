@@ -227,6 +227,51 @@ class McTextInputServiceTest {
     }
 
     @Test
+    fun `ctrl+c copies the selection when a clipboard is attached`() {
+        val clipboard = FakeClipboard()
+        service.clipboard = clipboard
+        register(imeEnabled = false, initial = TextFieldValue("hello", TextRange(1, 4)))
+        assertTrue(service.onKeyPressed(67, 2)) // KEY_C + CTRL
+        assertEquals("ell", clipboard.stored)
+        assertTrue(commands.isEmpty())
+    }
+
+    @Test
+    fun `ctrl+x cuts the selection`() {
+        val clipboard = FakeClipboard()
+        service.clipboard = clipboard
+        register(imeEnabled = false, initial = TextFieldValue("hello", TextRange(1, 4)))
+        assertTrue(service.onKeyPressed(88, 2)) // KEY_X + CTRL
+        assertEquals("ell", clipboard.stored)
+        assertEquals(BackspaceCommand(), last())
+    }
+
+    @Test
+    fun `ctrl+v pastes clipboard text`() {
+        val clipboard = FakeClipboard("xy")
+        service.clipboard = clipboard
+        register(imeEnabled = false, initial = TextFieldValue("a", TextRange(1)))
+        assertTrue(service.onKeyPressed(86, 2)) // KEY_V + CTRL
+        assertEquals(CommitTextCommand("xy", 1), last())
+    }
+
+    @Test
+    fun `clipboard shortcuts fall through when no clipboard is attached`() {
+        service.clipboard = null
+        register(imeEnabled = false, initial = TextFieldValue("hello", TextRange(0, 5)))
+        assertFalse(service.onKeyPressed(67, 2))
+        assertFalse(service.onKeyPressed(88, 2))
+        assertFalse(service.onKeyPressed(86, 2))
+    }
+
+    private class FakeClipboard(var stored: String? = null) : allyouneed.client.compose.platform.TextClipboard {
+        override fun getText(): String? = stored
+        override fun setText(text: String) {
+            stored = text
+        }
+    }
+
+    @Test
     fun `enter fires the ime action on a single-line field`() {
         register(imeEnabled = false, singleLine = true, initial = TextFieldValue("x", TextRange(1)))
         assertTrue(service.onKeyPressed(257, 0)) // KEY_ENTER
