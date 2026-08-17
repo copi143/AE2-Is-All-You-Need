@@ -8,6 +8,7 @@ import allyouneed.logic.aekey.EnergyKey
 import allyouneed.logic.aekey.ManaKey
 import allyouneed.logic.aekey.VirtualKey
 import allyouneed.logic.machine.BuiltinMachineTypes
+import allyouneed.net.http.HttpModule
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
 import allyouneed.pattern.ModItems
@@ -34,6 +35,7 @@ object Main {
         // Register our pattern decoders and part models
         ModPatternDecoders.register()
         BuiltinMachineTypes.registerAll()
+        HttpModule.register()
         registerParts()
     }
 

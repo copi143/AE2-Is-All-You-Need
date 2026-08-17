@@ -33,6 +33,7 @@ AE2 Is All You Need 是一个以在整合包末期继续提升产能为目标的
 - [Compose-Framework](docs/Compose-Framework.md) 纯AIGC
 - [Crafting-Calculation](docs/Crafting-Calculation.md) 纯AIGC
 - [GT-Multiblock-Integration](docs/GT-Multiblock-Integration.md) 纯AIGC
+- [Http-Server](docs/Http-Server.md) 纯手写
 
 ---
 

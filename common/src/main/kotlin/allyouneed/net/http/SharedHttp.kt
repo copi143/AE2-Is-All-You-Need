@@ -10,7 +10,7 @@ object SharedHttp {
     const val SSL = "ssl"
     const val HTTP_CODEC = "http_codec"
     const val HTTP_AGG = "http_agg"
-    const val HTTP_HELLO = "http_hello"
+    const val HTTP_ROUTER = "http_router"
 
     val MC_HANDLERS = listOf(
         "legacy_query",

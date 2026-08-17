@@ -38,7 +38,7 @@ class ProtocolDetector(
         }
         pipeline.addLast(SharedHttp.HTTP_CODEC, HttpServerCodec())
         pipeline.addLast(SharedHttp.HTTP_AGG, HttpObjectAggregator(65536))
-        pipeline.addLast(SharedHttp.HTTP_HELLO, HttpHelloHandler())
+        pipeline.addLast(SharedHttp.HTTP_ROUTER, HttpRouter(listener.server))
         debugLogger.debug("adopted HTTP{} from {}", if (tls) "S" else "", ctx.channel().remoteAddress())
         pipeline.remove(this)
     }
