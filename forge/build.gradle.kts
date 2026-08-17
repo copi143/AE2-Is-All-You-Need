@@ -85,6 +85,9 @@ dependencies {
     jarJar(project(":averith"))
 
     jarJar(libs.ojalgo)
+    jarJar(libs.netty.codec.http) {
+        isTransitive = false
+    }
 
     // ModernUI-Core is jarJar'd so the dev (exploded) run can load it via Forge's META-INF/jarjar
     // mechanism - it has no mods.toml and no Automatic-Module-Name, so ModLauncher silently skips it

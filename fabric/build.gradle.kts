@@ -24,6 +24,9 @@ dependencies {
     modImplementation(libs.flk)
 
     include(libs.ojalgo)
+    include(libs.netty.codec.http) {
+        isTransitive = false
+    }
 
 //    modRuntimeOnly("dev.ftb.mods:ftb-quests-fabric:${libs.versions.ftb.get()}")
 
