@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import appeng.client.gui.StackWithBounds
 import appeng.menu.AEBaseMenu
 import appeng.menu.SlotSemantic
 import net.minecraft.client.renderer.Rect2i
@@ -19,7 +20,8 @@ interface AeComposeHost {
     fun bindSlot(slot: Slot, coordinates: LayoutCoordinates)
     fun hideSlot(slot: Slot)
     fun reportPanel(left: Int, top: Int, width: Int, height: Int)
-    fun reportExclusion(zones: List<Rect2i>)
+    fun addExclusion(x: Int, y: Int, width: Int, height: Int)
+    fun reportHoverStack(stack: StackWithBounds?)
 }
 
 val LocalAeHost = compositionLocalOf<AeComposeHost> { error("No AeComposeHost provided") }
@@ -39,12 +41,12 @@ fun Modifier.aePanelBounds(): Modifier {
     return onGloballyPositioned { coords ->
         val pos = coords.positionInWindow()
         val scale = host.uiScale
-        host.reportPanel(
-            (pos.x * scale).roundToInt(),
-            (pos.y * scale).roundToInt(),
-            (coords.size.width * scale).roundToInt(),
-            (coords.size.height * scale).roundToInt(),
-        )
+        val left = (pos.x * scale).roundToInt()
+        val top = (pos.y * scale).roundToInt()
+        val width = (coords.size.width * scale).roundToInt()
+        val height = (coords.size.height * scale).roundToInt()
+        host.reportPanel(left, top, width, height)
+        host.addExclusion(left, top, width, height)
     }
 }
 

@@ -6,8 +6,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.positionInWindow
 import appeng.client.gui.AEBaseScreen
+import appeng.client.gui.StackWithBounds
 import appeng.client.gui.style.ScreenStyle
 import appeng.menu.AEBaseMenu
+import appeng.menu.slot.AppEngSlot
 import minecraftx.compose.theme.McTheme
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
@@ -15,6 +17,7 @@ import net.minecraft.client.renderer.Rect2i
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.Slot
+import org.jetbrains.annotations.Nullable
 import kotlin.math.roundToInt
 
 abstract class AeComposeScreen<M : AEBaseMenu>(
@@ -25,7 +28,8 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
 ) : AEBaseScreen<M>(menu, playerInventory, title, style), AeComposeHost {
 
     protected val layer = ComposeLayer()
-    private val extraExclusion = mutableListOf<Rect2i>()
+    private val exclusions = ExclusionAccumulator()
+    private var hoverStack: StackWithBounds? = null
 
     @Composable
     abstract fun Content()
@@ -36,8 +40,7 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
         super.init()
         clearWidgets()
         for (slot in menu.slots) {
-            slot.x = HIDDEN
-            slot.y = HIDDEN
+            hideSlot(slot)
         }
         layer.setContent {
             CompositionLocalProvider(LocalAeHost provides this) {
@@ -54,6 +57,8 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
     override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
         updateBeforeRender()
         widgets.updateBeforeRender()
+        exclusions.beginFrame()
+        hoverStack = null
         renderBackground(graphics)
         layer.render(graphics, mouseX, mouseY, partialTick, layer.fullScreenRect(width, height))
         hoveredSlot = findSlot(mouseX.toDouble(), mouseY.toDouble())
@@ -99,15 +104,17 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
     }
 
     override fun hideSlot(slot: Slot) {
-        slot.x = HIDDEN
-        slot.y = HIDDEN
+        slot.x = AeSlotGeometry.HIDDEN
+        slot.y = AeSlotGeometry.HIDDEN
+        (slot as? AppEngSlot)?.setActive(false)
     }
 
     override fun bindSlot(slot: Slot, coordinates: LayoutCoordinates) {
         val pos = coordinates.positionInWindow()
-        val scale = layer.uiScale
-        slot.x = (pos.x * scale).roundToInt() + 1 - leftPos
-        slot.y = (pos.y * scale).roundToInt() + 1 - topPos
+        val mapped = AeSlotGeometry.toSlotPos(pos.x, pos.y, layer.uiScale, leftPos, topPos)
+        slot.x = mapped.x
+        slot.y = mapped.y
+        (slot as? AppEngSlot)?.setActive(true)
     }
 
     override fun reportPanel(left: Int, top: Int, width: Int, height: Int) {
@@ -118,14 +125,21 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
         topPos = top
     }
 
-    override fun reportExclusion(zones: List<Rect2i>) {
-        extraExclusion.clear()
-        extraExclusion.addAll(zones)
+    override fun addExclusion(x: Int, y: Int, width: Int, height: Int) {
+        exclusions.add(x, y, width, height)
     }
 
-    override fun getExclusionZones(): List<Rect2i> = extraExclusion.toList()
-
-    companion object {
-        private const val HIDDEN = -9999
+    override fun reportHoverStack(stack: StackWithBounds?) {
+        if (stack != null) hoverStack = stack
     }
+
+    @Nullable
+    override fun getStackUnderMouse(mouseX: Double, mouseY: Double): StackWithBounds? {
+        val fromSlot = super.getStackUnderMouse(mouseX, mouseY)
+        if (fromSlot != null) return fromSlot
+        return hoverStack
+    }
+
+    override fun getExclusionZones(): List<Rect2i> =
+        exclusions.snapshot().map { Rect2i(it.x, it.y, it.width, it.height) }
 }

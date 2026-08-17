@@ -267,6 +267,17 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
 6. **文本输入**：`textInputSession` 等 suspend 输入 API 暂不支持（Minecraft 无 Android IME）；
    输入走 `McTextInputService` 的原生键盘事件直通（§4.4）。
 
+### EMI / JEI
+
+`AeComposeScreen` 仍是 `AEBaseScreen`，AE2 已注册的 ghost / R·U / exclusion 会自动套上，不必再注册一遍。Compose 侧要保证：
+
+- `FakeSlot` 在绑定后 `setActive(true)`，藏起后 `setActive(false)`，坐标为物品 16×16（`AeSlotGeometry` 的 +1 内缩）。
+- `getStackUnderMouse`：先看 `hoveredSlot`，再看 `reportHoverStack`（`AeRepoGrid` 报 `AEKey`）。
+- `getExclusionZones` 每帧清空后由 `addExclusion` 累加（面板 + 左侧栏等）。
+- 终端搜索走 `ItemListMod` + `AEConfig`（外部搜索 / 双向同步 / 打开清空）。
+
+配方填充认 Menu 不认 Screen，现有 `UnifiedEmiEncodePatternHandler` 不用改。
+
 ### AE2 `@GuiSync`
 
 `@GuiSync` / `registerClientAction` 仍挂在 `AEBaseMenu` 上，Compose 屏直接用。字段变化不会自动触发重组，用 `rememberGuiSync { menu.xxx }` 每帧读一次：
@@ -284,6 +295,7 @@ McText(if (formed == 1) "已成形" else "未成形")
   - `compose/platform/ScrollStateTest`：滚动收敛/钳制/即时 seek/静止零写入（注入时钟）。
   - `compose/platform/McTextInputServiceTest`：ASCII 移位表映射 / IME 插入 / 编辑键 /
     选区 / 多行回车 / 会话生命周期（断言发出的 `EditCommand`，无需 MC 依赖）。
+  - `ae2x/AeSlotGeometryTest`：槽位坐标换算 + exclusion 累加/清空。
   - `compose/spike/*`：官方 Owner 冒烟 + 指针悬停命中测试（`PointerHoverSpikeTest`）。
 - 编译/打包：`:common:compileKotlin`、`:common:test`、`:fabric:build`、`:forge:jar`。
 - 实机：K 打开 demo（官方按钮/滑条/动画 + 框架滚动面板 + McScrollBox 容器 + 双 tooltip +

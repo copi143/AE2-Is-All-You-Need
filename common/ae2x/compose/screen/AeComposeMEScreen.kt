@@ -11,7 +11,9 @@ import appeng.api.util.IConfigManager
 import appeng.client.gui.me.common.Repo
 import appeng.client.gui.widgets.IScrollSource
 import appeng.client.gui.widgets.ISortSource
+import appeng.core.AEConfig
 import appeng.helpers.InventoryAction
+import appeng.integration.abstraction.ItemListMod
 import appeng.menu.me.common.GridInventoryEntry
 import appeng.menu.me.common.MEStorageMenu
 import appeng.util.IConfigManagerListener
@@ -33,11 +35,20 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
     val repo: Repo = Repo(this, this)
     var scrollRow: Int = 0
     var columns: Int = 9
+    var searchText: String = ""
+        private set
 
     init {
         menu.setClientRepo(repo)
         menu.setGui(this)
         repo.setRowSize(columns)
+        val config = AEConfig.instance()
+        if ((menu.isReturnedFromSubScreen || config.isRememberLastSearch) && rememberedSearch.isNotEmpty()) {
+            applySearch(rememberedSearch, syncExternal = false)
+        }
+        if (!menu.isReturnedFromSubScreen && config.isUseExternalSearch && config.isClearExternalSearchOnOpen) {
+            ItemListMod.setSearchText("")
+        }
     }
 
     override fun getCurrentScroll(): Int = scrollRow
@@ -54,9 +65,39 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
         repo.updateView()
     }
 
+    override fun updateBeforeRender() {
+        super.updateBeforeRender()
+        repo.setPaused(hasShiftDown())
+        syncExternalSearch()
+    }
+
     fun setSearch(text: String) {
+        applySearch(text, syncExternal = true)
+    }
+
+    private fun applySearch(text: String, syncExternal: Boolean) {
+        if (searchText == text && repo.searchString == text) return
+        searchText = text
         repo.searchString = text
         repo.updateView()
+        rememberedSearch = text
+        val config = AEConfig.instance()
+        if (syncExternal && !config.isUseExternalSearch && config.isSyncWithExternalSearch) {
+            ItemListMod.setSearchText(text)
+        }
+    }
+
+    private fun syncExternalSearch() {
+        val config = AEConfig.instance()
+        if (config.isUseExternalSearch) {
+            val external = ItemListMod.getSearchText()
+            if (external != repo.searchString) applySearch(external, syncExternal = false)
+            return
+        }
+        if (config.isSyncWithExternalSearch && ItemListMod.hasSearchFocus()) {
+            val external = ItemListMod.getSearchText()
+            if (external != searchText) applySearch(external, syncExternal = false)
+        }
     }
 
     fun handleRepoClick(entry: GridInventoryEntry?, button: Int, clickType: ClickType) {
@@ -97,5 +138,9 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
             }
         }
         if (action != null) menu.handleInteraction(serial, action)
+    }
+
+    companion object {
+        private var rememberedSearch: String = ""
     }
 }

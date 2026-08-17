@@ -2,6 +2,7 @@ package ae2x.compose.screen
 
 import ae2x.compose.LocalAeHost
 import ae2x.compose.aePanelBounds
+import ae2x.compose.rememberGuiSync
 import ae2x.compose.slot.AePlayerInventory
 import ae2x.compose.slot.AeRepoGrid
 import ae2x.compose.widget.AeLeftBar
@@ -21,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -43,7 +45,11 @@ fun AeTerminalScaffold(
     extraContent: @Composable () -> Unit = {},
 ) {
     val host = LocalAeHost.current
-    var search by remember { mutableStateOf(TextFieldValue(screen.repo.searchString)) }
+    val syncedSearch = rememberGuiSync { screen.searchText }
+    var search by remember { mutableStateOf(TextFieldValue(syncedSearch)) }
+    if (syncedSearch != search.text) {
+        search = TextFieldValue(syncedSearch, TextRange(syncedSearch.length))
+    }
     val configurable = screen.menu as IConfigurableObject
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.Top) {
