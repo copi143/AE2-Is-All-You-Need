@@ -1,7 +1,7 @@
 package allyouneed.resgen
 
-import minecraftx.compose.itemdetail.ItemDetailsKeyBind
 import com.google.gson.JsonParser
+import minecraftx.compose.itemdetail.ItemDetailsKeyBind
 import java.nio.file.Path
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
@@ -302,25 +302,14 @@ fun main(args: Array<String>) {
 
         // Crafting storage unformed: bg (no tint) + fg (tint); light still flat recolor
         for (storage in craftingStorages) {
-            if (storage.isCreative) {
-                layeredTarget(
-                    bg = "crafting_storage/crafting_storage_bg",
-                    mid = "crafting_storage/crafting_storage_fg",
-                    top = null,
-                    outputPrefix = storage.id,
-                    color = null,
-                    levels = null,
-                )
-            } else {
-                layeredTarget(
-                    bg = "crafting_storage/crafting_storage_bg",
-                    mid = "crafting_storage/crafting_storage_fg",
-                    top = null,
-                    outputPrefix = storage.id,
-                    color = storage.color,
-                    levels = null,
-                )
-            }
+            layeredTarget(
+                bg = "crafting_storage/crafting_storage_bg",
+                mid = "crafting_storage/crafting_storage_fg",
+                top = null,
+                outputPrefix = storage.id,
+                color = storage.color,
+                levels = null,
+            )
             targetSingle("crafting_storage/crafting_storage_light", "crafting/${storage.id}_light", storage.color)
         }
 
