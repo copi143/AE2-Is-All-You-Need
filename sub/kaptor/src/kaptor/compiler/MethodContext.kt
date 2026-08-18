@@ -9,11 +9,11 @@ import org.objectweb.asm.Opcodes.INVOKESTATIC
 internal const val TYPE_HANDLER_BASE = "kaptor/runtime/ScriptHandlerBase"
 internal const val TYPE_SANDBOX = "kaptor/runtime/ScriptSandbox"
 internal const val TYPE_SCRIPT_RUNTIME = "kaptor/runtime/ScriptRuntime"
+internal const val TYPE_EVENT_ACCESSOR = "kaptor/runtime/EventAccessor"
 
 class MethodContext(
     val mv: MethodVisitor,
     val costLimit: Int,
-    val eventClassName: String? = null,
     val eventParamName: String? = null,
 ) {
     var currentCost: Int = 0

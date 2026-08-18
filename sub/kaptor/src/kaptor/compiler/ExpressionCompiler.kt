@@ -110,10 +110,12 @@ private fun compileFloatLiteral(ctx: MethodContext, expr: IrFloatLiteral) {
 private fun compileFieldAccess(ctx: MethodContext, expr: IrFieldAccess) {
     val mv = ctx.mv
     compileExpression(ctx, expr.receiver)
-    if (ctx.eventClassName != null && ctx.isEventVariable(expr.receiver)) {
-        mv.visitTypeInsn(CHECKCAST, ctx.eventClassName)
-        val getterName = "get${expr.fieldName.replaceFirstChar { it.uppercase() }}"
-        mv.visitMethodInsn(INVOKEVIRTUAL, ctx.eventClassName, getterName, "()Ljava/lang/Object;", false)
+    if (ctx.isEventVariable(expr.receiver)) {
+        mv.visitLdcInsn(expr.fieldName)
+        mv.visitMethodInsn(
+            INVOKESTATIC, TYPE_EVENT_ACCESSOR, "getField",
+            "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false
+        )
     } else {
         mv.visitTypeInsn(CHECKCAST, "java/util/Map")
         mv.visitLdcInsn(expr.fieldName)

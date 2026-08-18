@@ -17,7 +17,6 @@ class ScriptCompiler {
     fun compile(
         ir: IrScriptFile,
         scriptName: String,
-        eventClassMap: Map<String, String> = emptyMap(),
         srcType: SrcType,
     ): CompiledScript {
         val className = "script.${scriptName.replace('.', '_')}_${classCounter++}"
@@ -39,8 +38,7 @@ class ScriptCompiler {
         generateInit(cw, internalName)
 
         for (handler in ir.handlers) {
-            val eventClass = eventClassMap[handler.eventType]
-            generateHandler(cw, internalName, handler, eventClass)
+            generateHandler(cw, internalName, handler)
         }
 
         generateGetEventTypes(cw, ir.handlers)

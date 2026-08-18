@@ -41,37 +41,6 @@ object ScriptManager {
         managerLogger.info("ScriptManager initialized with directory: $scriptsPath")
     }
 
-    fun loadEventClasses() {
-        val dir = scriptDir ?: return
-        val bytecodes = ScriptEventBus.getEventClassBytecodes()
-        if (bytecodes.isEmpty()) return
-
-        for ((eventType, bytecode) in bytecodes) {
-            if (ScriptEventBus.getEventClass(eventType) != null) continue
-            val safeName = eventType.replace(Regex("[^a-zA-Z0-9_]"), "_")
-            val classFileName = "kaptor/runtime/event/${safeName}.class"
-            val classFile = dir.resolve(classFileName)
-            Files.createDirectories(classFile.parent)
-            Files.write(classFile, bytecode)
-        }
-
-        classLoader = URLClassLoader(
-            arrayOf(dir.toUri().toURL()),
-            ScriptManager::class.java.classLoader
-        )
-
-        for ((eventType, _) in bytecodes) {
-            if (ScriptEventBus.getEventClass(eventType) != null) continue
-            val safeName = eventType.replace(Regex("[^a-zA-Z0-9_]"), "_")
-            try {
-                val clazz = classLoader!!.loadClass("kaptor.runtime.event.$safeName")
-                ScriptEventBus.registerEventClass(eventType, clazz)
-            } catch (e: Exception) {
-                managerLogger.error("Failed to load event class for $eventType", e)
-            }
-        }
-    }
-
     fun loadAllScripts() {
         val dir = scriptDir ?: return
         managerLogger.info("Loading all scripts from $dir")
@@ -102,8 +71,7 @@ object ScriptManager {
         return try {
             val ir = parseWithAntlr(source, name, srcType)
 
-            val eventClassMap = buildEventClassMap()
-            val compiled = compiler.compile(ir, name, eventClassMap, srcType)
+            val compiled = compiler.compile(ir, name, srcType = srcType)
 
             unregisterScript(name)
 
@@ -292,15 +260,6 @@ object ScriptManager {
     }
 
     fun getLanguageService(): ScriptLanguageService = languageService
-
-    private fun buildEventClassMap(): Map<String, String> {
-        val map = mutableMapOf<String, String>()
-        for (eventType in ScriptEventBus.getRegisteredEventClassTypes()) {
-            val clazz = ScriptEventBus.getEventClass(eventType) ?: continue
-            map[eventType] = clazz.name.replace('.', '/')
-        }
-        return map
-    }
 
     fun reset() {
         stopHotReload()

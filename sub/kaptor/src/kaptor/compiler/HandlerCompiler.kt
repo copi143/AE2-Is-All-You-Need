@@ -6,7 +6,7 @@ import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Opcodes.*
 
 fun generateHandler(
-    cw: ClassVisitor, internalName: String, handler: IrHandler, eventClassName: String? = null
+    cw: ClassVisitor, internalName: String, handler: IrHandler
 ) {
     val prefix = when (handler.hookType) {
         HookType.ON -> "handle"
@@ -19,7 +19,7 @@ fun generateHandler(
     val mv = cw.visitMethod(ACC_PUBLIC, methodName, methodDesc, null, null)
     mv.visitCode()
 
-    val ctx = MethodContext(mv, handler.costLimit, eventClassName, handler.paramName)
+    val ctx = MethodContext(mv, handler.costLimit, handler.paramName)
     ctx.declareLocal("event", "Ljava/lang/Object;")
     mv.visitVarInsn(ALOAD, 1)
     mv.visitVarInsn(ASTORE, ctx.getLocal("event"))

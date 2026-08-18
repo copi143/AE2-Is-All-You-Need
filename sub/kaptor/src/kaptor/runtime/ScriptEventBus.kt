@@ -10,8 +10,6 @@ object ScriptEventBus {
     private val beforeHandlers = ConcurrentHashMap<String, MutableList<EventHandlerEntry>>()
     private val onHandlers = ConcurrentHashMap<String, EventHandlerEntry>()
     private val afterHandlers = ConcurrentHashMap<String, MutableList<EventHandlerEntry>>()
-    private val eventClassMap = ConcurrentHashMap<String, Class<*>>()
-    private val eventClassBytecodes = ConcurrentHashMap<String, ByteArray>()
     private val eventSchemas = ConcurrentHashMap<String, EventSchema>()
     private val eventLogger: ScriptLogger = createLogger()
 
@@ -68,13 +66,11 @@ object ScriptEventBus {
         beforeHandlers.clear()
         onHandlers.clear()
         afterHandlers.clear()
-        eventClassMap.clear()
         eventLogger.debug("Cleared all script event handlers")
     }
 
     fun resetAll() {
         clearAll()
-        eventClassBytecodes.clear()
         eventLogger.debug("Reset all script event state")
     }
 
@@ -101,15 +97,7 @@ object ScriptEventBus {
     }
 
     private fun wrapEvent(eventType: String, event: Any?): Any? {
-        if (event == null) return null
-        val clazz = getEventClass(eventType) ?: return event
-        if (clazz.isInstance(event)) return event
-        return try {
-            val ctor = clazz.getDeclaredConstructor(Map::class.java)
-            ctor.newInstance(event)
-        } catch (_: Exception) {
-            event
-        }
+        return event
     }
 
     private fun dispatchEntry(entry: EventHandlerEntry, event: Any?) {
@@ -154,22 +142,6 @@ object ScriptEventBus {
         afterHandlers[eventType]?.let { result.addAll(it) }
         return result
     }
-
-    fun registerEventClass(eventType: String, clazz: Class<*>) {
-        eventClassMap[eventType] = clazz
-    }
-
-    fun getEventClass(eventType: String): Class<*>? = eventClassMap[eventType]
-
-    fun getRegisteredEventClassTypes(): Set<String> = eventClassMap.keys.toSet()
-
-    fun storeEventClassBytecode(eventType: String, bytecode: ByteArray) {
-        eventClassBytecodes[eventType] = bytecode
-    }
-
-    fun getEventClassBytecodes(): Map<String, ByteArray> = eventClassBytecodes.toMap()
-
-    fun getEventClassBytecode(eventType: String): ByteArray? = eventClassBytecodes[eventType]
 
     fun storeEventSchema(eventType: String, schema: EventSchema) {
         eventSchemas[eventType] = schema

@@ -1,8 +1,8 @@
 package kaptor
 
-import kaptor.compiler.EventClassGenerator
 import kaptor.compiler.SchemaBuilder
 import kaptor.lsp.ScriptLanguageService
+import kaptor.runtime.EventAccessor
 import kaptor.runtime.ScriptEventBus
 import kaptor.runtime.ScriptManager
 import kaptor.runtime.ScriptStats
@@ -13,8 +13,7 @@ class ScriptEngine(private val config: ScriptEngineConfig = ScriptEngineConfig()
 
     fun declareEvent(eventType: String, builder: SchemaBuilder.() -> Unit) {
         val schema = SchemaBuilder().apply(builder).build()
-        val bytecode = EventClassGenerator.generate(eventType, schema)
-        ScriptEventBus.storeEventClassBytecode(eventType, bytecode)
+        EventAccessor.registerEvent(eventType, schema)
         ScriptEventBus.storeEventSchema(eventType, schema)
     }
 
@@ -26,7 +25,6 @@ class ScriptEngine(private val config: ScriptEngineConfig = ScriptEngineConfig()
             scriptsDir.toFile().mkdirs()
         }
         ScriptManager.init(scriptsDir, config.logger)
-        ScriptManager.loadEventClasses()
         ScriptManager.loadAllScripts()
         if (config.enableHotReload) {
             ScriptManager.startHotReload()
@@ -38,13 +36,14 @@ class ScriptEngine(private val config: ScriptEngineConfig = ScriptEngineConfig()
     fun shutdown() {
         ScriptManager.stopHotReload()
         ScriptEventBus.clearAll()
+        EventAccessor.clearAll()
         initialized = false
     }
 
     fun reloadAll() {
         ScriptManager.stopHotReload()
         ScriptEventBus.clearAll()
-        ScriptManager.loadEventClasses()
+        EventAccessor.clearAll()
         ScriptManager.loadAllScripts()
         if (config.enableHotReload) {
             ScriptManager.startHotReload()

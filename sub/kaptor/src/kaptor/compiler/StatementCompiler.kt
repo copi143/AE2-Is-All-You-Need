@@ -183,11 +183,13 @@ private fun compileStoreTarget(ctx: MethodContext, target: IrExpression) {
 
         is IrFieldAccess -> {
             compileExpression(ctx, target.receiver)
-            if (ctx.eventClassName != null && ctx.isEventVariable(target.receiver)) {
-                val setterName = "set${target.fieldName.replaceFirstChar { it.uppercase() }}"
+            if (ctx.isEventVariable(target.receiver)) {
+                mv.visitInsn(SWAP)
+                mv.visitLdcInsn(target.fieldName)
                 mv.visitInsn(SWAP)
                 mv.visitMethodInsn(
-                    INVOKEVIRTUAL, ctx.eventClassName, setterName, "(Ljava/lang/Object;)V", false
+                    INVOKESTATIC, TYPE_EVENT_ACCESSOR, "setField",
+                    "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V", false
                 )
             } else {
                 mv.visitTypeInsn(CHECKCAST, "java/util/Map")
