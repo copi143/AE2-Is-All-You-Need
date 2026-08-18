@@ -73,6 +73,7 @@ import androidx.compose.ui.platform.DefaultViewConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalPointerIconService
 import androidx.compose.ui.platform.LocalTextInputService
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
@@ -275,6 +276,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         override fun getIcon(): PointerIcon = desiredIcon ?: PointerIcon.Default
         override fun setIcon(value: PointerIcon?) {
             desiredIcon = value
+            McPointerCursor.apply(value)
         }
 
         private var desiredStylusHoverIcon: PointerIcon? = null
@@ -359,6 +361,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
                     LocalLayoutDirection provides layoutDirection,
                     LocalViewConfiguration provides createViewConfiguration(density),
                     LocalInputModeManager provides inputModeManager,
+                    LocalPointerIconService provides pointerIconService,
                     LocalTooltipHost provides tooltipHost,
                     LocalUiScale provides uiScale,
                     LocalMousePosition provides mousePosition,
@@ -391,6 +394,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         )
         measureAndLayout()
         dispatchMouseMove(mouseX / scale - uiOrigin.x, mouseY / scale - uiOrigin.y)
+        McPointerCursor.apply(if (hoverPosition == null) null else pointerIconService.getIcon())
         McGraphics.current = graphics
         McScissor.reset(graphics)
         try {
@@ -664,6 +668,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     ): Nothing = error("text input is not supported by the Compose owner")
 
     fun dispose() {
+        McPointerCursor.apply(null)
         composition?.dispose()
         mcTextInputService.stopInput()
         recomposer.cancel()

@@ -46,6 +46,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.TextFieldValue
+import minecraftx.compose.dock.DockAxis
+import minecraftx.compose.dock.DockNode
+import minecraftx.compose.dock.DockState
+import minecraftx.compose.dock.McDockHost
+import minecraftx.compose.material.McPanel
 import minecraftx.compose.theme.McTheme
 import minecraftx.compose.theme.McThemeId
 import minecraftx.compose.theme.McThemeSettings
@@ -286,6 +291,45 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                 modifier = Modifier.padding(vertical = 2.dp),
                 placeholder = "纯 ASCII 模式:忽略输入法(Shift 映射符号)",
             )
+
+            Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
+            Text("McDockHost (拖标签 / 拖分隔条):", color = 0xFFCCCCCC.toInt())
+            var dock by remember {
+                mutableStateOf(
+                    DockState(
+                        root = DockNode.Split(
+                            id = "s0",
+                            axis = DockAxis.Horizontal,
+                            ratio = 0.5f,
+                            first = DockNode.Leaf("l0", listOf("alpha", "beta"), "alpha"),
+                            second = DockNode.Split(
+                                id = "s1",
+                                axis = DockAxis.Vertical,
+                                ratio = 0.55f,
+                                first = DockNode.Leaf("l1", listOf("gamma"), "gamma"),
+                                second = DockNode.Leaf("l2", listOf("delta"), "delta"),
+                            ),
+                        ),
+                        nextId = 3,
+                    ),
+                )
+            }
+            Box(Modifier.fillMaxWidth().size(width = 360.dp, height = 200.dp)) {
+                McDockHost(state = dock, onStateChange = { dock = it }) { tabId ->
+                    McPanel(Modifier.fillMaxSize().padding(1.dp)) {
+                        McText(tabId, modifier = Modifier.padding(8.dp))
+                    }
+                }
+            }
+            if (dock.closed.isNotEmpty()) {
+                Row(Modifier.padding(top = 4.dp)) {
+                    Text("已关闭: ", color = 0xFFAAAAAA.toInt())
+                    for (id in dock.closed) {
+                        McButton(id, onClick = { dock = dock.openTab(id) }, modifier = Modifier.padding(end = 4.dp))
+                    }
+                }
+            }
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 

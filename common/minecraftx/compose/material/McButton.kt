@@ -17,6 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,7 @@ fun McButton(
             .defaultMinSize(minHeight = McTheme.shapes.buttonHeight)
             .background(fill)
             .drawBehind { drawRect(color = border, style = Stroke(1f)) }
+            .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand) else Modifier)
             .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 1.dp),
         contentAlignment = Alignment.Center,

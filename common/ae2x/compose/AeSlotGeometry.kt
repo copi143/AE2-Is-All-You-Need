@@ -16,6 +16,21 @@ object AeSlotGeometry {
     fun ghostX(guiLeft: Int, slotX: Int): Int = guiLeft + slotX
 
     fun ghostY(guiTop: Int, slotY: Int): Int = guiTop + slotY
+
+    fun union(rects: List<IntRect>): IntRect? {
+        if (rects.isEmpty()) return null
+        var minX = Int.MAX_VALUE
+        var minY = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE
+        var maxY = Int.MIN_VALUE
+        for (rect in rects) {
+            minX = minOf(minX, rect.x)
+            minY = minOf(minY, rect.y)
+            maxX = maxOf(maxX, rect.x + rect.width)
+            maxY = maxOf(maxY, rect.y + rect.height)
+        }
+        return IntRect(minX, minY, maxX - minX, maxY - minY)
+    }
 }
 
 data class IntPair(val x: Int, val y: Int)

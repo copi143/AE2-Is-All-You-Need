@@ -29,6 +29,8 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
 
     protected val layer = ComposeLayer()
     private val exclusions = ExclusionAccumulator()
+    private val panelBounds = ArrayList<IntRect>(4)
+    private val pendingSlots = ArrayList<PendingSlot>(16)
     private var hoverStack: StackWithBounds? = null
 
     @Composable
@@ -58,9 +60,12 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
         updateBeforeRender()
         widgets.updateBeforeRender()
         exclusions.beginFrame()
+        panelBounds.clear()
+        pendingSlots.clear()
         hoverStack = null
         renderBackground(graphics)
         layer.render(graphics, mouseX, mouseY, partialTick, layer.fullScreenRect(width, height))
+        flushGeometry()
         hoveredSlot = findSlot(mouseX.toDouble(), mouseY.toDouble())
     }
 
@@ -111,18 +116,28 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
 
     override fun bindSlot(slot: Slot, coordinates: LayoutCoordinates) {
         val pos = coordinates.positionInWindow()
-        val mapped = AeSlotGeometry.toSlotPos(pos.x, pos.y, layer.uiScale, leftPos, topPos)
-        slot.x = mapped.x
-        slot.y = mapped.y
+        pendingSlots += PendingSlot(slot, pos.x, pos.y)
         (slot as? AppEngSlot)?.setActive(true)
     }
 
     override fun reportPanel(left: Int, top: Int, width: Int, height: Int) {
         if (width <= 0 || height <= 0) return
-        imageWidth = width
-        imageHeight = height
-        leftPos = left
-        topPos = top
+        panelBounds += IntRect(left, top, width, height)
+    }
+
+    private fun flushGeometry() {
+        val union = AeSlotGeometry.union(panelBounds)
+        if (union != null) {
+            leftPos = union.x
+            topPos = union.y
+            imageWidth = union.width
+            imageHeight = union.height
+        }
+        for (pending in pendingSlots) {
+            val mapped = AeSlotGeometry.toSlotPos(pending.windowX, pending.windowY, layer.uiScale, leftPos, topPos)
+            pending.slot.x = mapped.x
+            pending.slot.y = mapped.y
+        }
     }
 
     override fun addExclusion(x: Int, y: Int, width: Int, height: Int) {
@@ -143,3 +158,5 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
     override fun getExclusionZones(): List<Rect2i> =
         exclusions.snapshot().map { Rect2i(it.x, it.y, it.width, it.height) }
 }
+
+private class PendingSlot(val slot: Slot, val windowX: Float, val windowY: Float)

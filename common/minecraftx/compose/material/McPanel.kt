@@ -26,17 +26,26 @@ import net.minecraft.network.chat.Component
  */
 @Composable
 fun McPanel(
+    modifier: Modifier = Modifier,
+    colors: McColorScheme = McTheme.colors,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(modifier) {
+        Box(Modifier.matchParentSize().background(colors.panelBackground))
+        Box(Modifier.matchParentSize().drawBehind { drawRect(color = colors.panelBorder, style = Stroke(1f)) })
+        content()
+    }
+}
+
+@Composable
+fun McPanel(
     width: Dp,
     height: Dp,
     modifier: Modifier = Modifier,
     colors: McColorScheme = McTheme.colors,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(modifier.size(width, height)) {
-        Box(Modifier.matchParentSize().background(colors.panelBackground))
-        Box(Modifier.matchParentSize().drawBehind { drawRect(color = colors.panelBorder, style = Stroke(1f)) })
-        content()
-    }
+    McPanel(modifier.size(width, height), colors, content)
 }
 
 /** The standard ✕ close button (box with border and a centered cross glyph). */

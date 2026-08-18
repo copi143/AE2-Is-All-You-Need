@@ -32,6 +32,7 @@ fun McTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    handleClicks: Boolean = true,
     colors: McColorScheme = McTheme.colors,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -50,7 +51,7 @@ fun McTab(
                     )
                 }
             }
-            .clickable(enabled = enabled, onClick = onClick)
+            .then(if (handleClicks) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
         content = content,
@@ -64,9 +65,17 @@ fun McTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    handleClicks: Boolean = true,
     colors: McColorScheme = McTheme.colors,
 ) {
-    McTab(selected = selected, onClick = onClick, modifier = modifier, enabled = enabled, colors = colors) {
+    McTab(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        handleClicks = handleClicks,
+        colors = colors,
+    ) {
         val color = if (enabled) colors.textPrimary else colors.textDisabled
         McText(Component.literal(label), color = color.value.toInt())
     }

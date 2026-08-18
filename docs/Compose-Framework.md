@@ -21,6 +21,7 @@ common/src/main/kotlin/allyouneed/client/compose/
     ├── McGraphics.kt            # 当前 GuiGraphics 的公开持有者（渲染桥接）
     ├── McCanvas.kt              # Canvas → GuiGraphics 指令桥（含 flush / scissor 透传）
     ├── McTextInputService.kt    # 文本输入桥：无 IME（服务端）时的原生键盘码 → EditCommand 映射
+    ├── McPointerCursor.kt       # PointerIcon → GLFW 系统光标
     └── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
 
 # 界面定义层（minecraftx.compose.*，全部基于基础兼容层构建）
@@ -37,6 +38,9 @@ common/src/main/kotlin/minecraftx/compose/
 │   ├── McItemGrid.kt / McPlayerInventory.kt / McCarriedStack.kt
 │   ├── McScrollbar.kt / McTooltip.kt / McTextField.kt
 │   └── ItemSlot.kt / EmiSlotRenderer.kt / VanillaSlotRenderer.kt
+├── dock/                        # VSCode 式停靠（一棵树，不是多窗口）
+│   ├── DockState.kt / DockDrop.kt
+│   └── McDockHost.kt / McSplitter.kt / McDockTabBar.kt
 ├── foundation/                  # 与主题无关的布局基元
 │   ├── McVirtualColumn.kt       # 虚拟化滚动文本列（不可见行不组合）+ Modifier.mcScroll
 │   └── McScrollBox.kt           # 通用 overflow 容器
@@ -278,6 +282,14 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
 
 配方填充认 Menu 不认 Screen，现有 `UnifiedEmiEncodePatternHandler` 不用改。
 
+### 系统光标
+
+官方 `Modifier.pointerHoverIcon(PointerIcon.*)` 经 `LocalPointerIconService` 生效。`McPointerCursor` 把 `AwtCursor` 映到 `glfwCreateStandardCursor`（含 3.4 的 EW/NS/NWSE/NESW/ALL）；native 建不出则退回横/竖/箭头。关屏与鼠标离开 layer 时 `glfwSetCursor(NULL)`。
+
+### 停靠
+
+`McDockHost` 是同一 `ComposeLayer` 里的分栏树：官方 `Row`/`Column`/`draggable`/`detectDragGestures`/`pointerHoverIcon`。标签可拖到边/中间/标签栏。没有浮窗、不写盘。槽位多面板时 `AeComposeScreen` 在 `layer.render` 后对面板矩形取并集再回写 `leftPos` 与 `slot.x/y`。
+
 ### AE2 `@GuiSync`
 
 `@GuiSync` / `registerClientAction` 仍挂在 `AEBaseMenu` 上，Compose 屏直接用。字段变化不会自动触发重组，用 `rememberGuiSync { menu.xxx }` 每帧读一次：
@@ -295,12 +307,14 @@ McText(if (formed == 1) "已成形" else "未成形")
   - `compose/platform/ScrollStateTest`：滚动收敛/钳制/即时 seek/静止零写入（注入时钟）。
   - `compose/platform/McTextInputServiceTest`：ASCII 移位表映射 / IME 插入 / 编辑键 /
     选区 / 多行回车 / 会话生命周期（断言发出的 `EditCommand`，无需 MC 依赖）。
-  - `ae2x/AeSlotGeometryTest`：槽位坐标换算 + exclusion 累加/清空。
+  - `ae2x/AeSlotGeometryTest`：槽位坐标换算 + exclusion 累加/清空 + 面板并集。
+  - `compose/platform/McPointerCursorTest`：PointerIcon → GLFW 形状。
+  - `minecraftx/dock/*`：停靠树移动/折叠/投放命中。
   - `compose/spike/*`：官方 Owner 冒烟 + 指针悬停命中测试（`PointerHoverSpikeTest`）。
 - 编译/打包：`:common:compileKotlin`、`:common:test`、`:fabric:build`、`:forge:jar`。
 - 实机：K 打开 demo（官方按钮/滑条/动画 + 框架滚动面板 + McScrollBox 容器 + 双 tooltip +
-  IME 开/关两个文本框：中文输入、选区/光标、Ctrl+A/V、回车失焦；整页以 McScrollBox flow 模式
-  滚动，内容超屏不再溢出），L 打开内嵌面板，
+  IME 开/关两个文本框：中文输入、选区/光标、Ctrl+A/V、回车失焦；McDockHost 拖标签/分隔条；
+  整页以 McScrollBox flow 模式滚动，内容超屏不再溢出），L 打开内嵌面板，
   V 打开 item-details 屏（Compose 渲染，滚动/拖拽滚动条/关闭按钮，小屏下面板收缩、内容区自动滚动）。
 
 ---

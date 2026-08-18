@@ -17,6 +17,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.EditProcessor
 import androidx.compose.ui.text.input.SetSelectionCommand
@@ -117,6 +119,7 @@ fun McTextField(
     Box(
         modifier
             .size(width.dp, height.dp)
+            .pointerHoverIcon(PointerIcon.Text)
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {

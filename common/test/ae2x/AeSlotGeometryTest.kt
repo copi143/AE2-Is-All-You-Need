@@ -2,6 +2,7 @@ package allyouneed.ae2x
 
 import ae2x.compose.AeSlotGeometry
 import ae2x.compose.ExclusionAccumulator
+import ae2x.compose.IntRect
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -28,6 +29,20 @@ class AeSlotGeometryTest {
         val mapped = AeSlotGeometry.toSlotPos(20f, 10f, uiScale = 2f, guiLeft = 0, guiTop = 0)
         assertEquals(41, mapped.x)
         assertEquals(21, mapped.y)
+    }
+
+    @Test
+    fun `unions panel rectangles into a bounding box`() {
+        val union = AeSlotGeometry.union(
+            listOf(
+                IntRect(10, 20, 30, 40),
+                IntRect(50, 10, 20, 20),
+            ),
+        )
+        assertEquals(10, union!!.x)
+        assertEquals(10, union.y)
+        assertEquals(60, union.width)
+        assertEquals(50, union.height)
     }
 }
 
