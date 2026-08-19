@@ -54,3 +54,12 @@ data class A2sNullableType(val inner: A2sType) : A2sType {
 
 /** 未推断/未知类型，编译期兜底。 */
 data object A2sUnknown : A2sType { override val descriptor = "Ljava/lang/Object;" }
+
+/** lambda 类型：引用 A2sLambdaFn 接口，用于编译期识别可调用的 lambda 变量。 */
+data object A2sLambdaType : A2sType {
+    override val descriptor = "Lkaptor/a2s/runtime/A2sLambdaFn;"
+}
+
+/** 若类型为 A2sUnknown 则使用 [fallback]，否则返回自身。用于类型推断的回退。 */
+inline fun A2sType.ifUnknown(fallback: () -> A2sType): A2sType =
+    if (this == A2sUnknown) fallback() else this

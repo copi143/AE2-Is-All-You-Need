@@ -30,6 +30,13 @@ class A2sCompileContext(
     private val loopStartLabels = mutableListOf<Label>()
     private val loopEndLabels = mutableListOf<Label>()
 
+    /**
+     * scriptObj 所在的局部变量槽号。
+     * - 普通方法：0（this 即脚本实例）
+     * - lambda invoke()：scriptObj 加载后的槽号（供顶层 var 访问用）
+     */
+    var scriptObjSlot: Int = 0
+
     /** 事件字段名 → 类型。编译事件方法时注入，用于字段访问走 GETFIELD。 */
     var eventFields: Map<String, kaptor.a2s.ir.A2sType> = emptyMap()
 
@@ -80,6 +87,14 @@ class A2sCompileContext(
 
     fun touchStack(size: Int) {
         maxStack = maxOf(maxStack, size)
+    }
+
+    private var tempCounter = 0
+    /** 分配一个唯一的临时局部变量槽（不会与已声明的变量冲突）。 */
+    fun allocateTemp(): Int {
+        val slot = nextLocal++
+        maxLocals = maxOf(maxLocals, nextLocal)
+        return slot
     }
 
     fun finish() {

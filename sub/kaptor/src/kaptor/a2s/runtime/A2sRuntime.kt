@@ -23,7 +23,7 @@ object A2sRuntime {
     }
 
     @JvmStatic
-    fun listOf(values: List<Any?>): List<Any?> = values
+    fun listOf(vararg values: Any?): List<Any?> = values.toList()
 
     @JvmStatic
     fun toInt(value: Any?): Any? = when (value) {
@@ -91,30 +91,69 @@ object A2sRuntime {
         val method = receiver?.javaClass?.methods?.find {
             it.name == methodName && it.parameterCount == args.size
         } ?: return null
+        // 当方法签名恰好是 invoke(Object[]) 时，直接传数组（不展开）
+        if (method.parameterCount == 1 && method.parameterTypes[0] == Array::class.java) {
+            return method.invoke(receiver, args)
+        }
         return method.invoke(receiver, *args)
+    }
+
+    /** Lambda 构造器注册表：className → (scriptObj, captures[]) → instance。 */
+    private val lambdaCtors = java.util.concurrent.ConcurrentHashMap<String, (Any?, Array<out Any?>) -> Any?>()
+
+    /** 注册 lambda 隐藏类的构造器。[factory] 接受 (scriptObj, captures) 返回实例。 */
+    @JvmStatic
+    fun registerLambdaCtor(className: String, factory: (Any?, Array<out Any?>) -> Any?) {
+        lambdaCtors[className] = factory
+    }
+
+    /**
+     * 工厂方法：由编译后的脚本字节码调用，创建 lambda 实例。
+     * 替代 NEW + INVOKESPECIAL（隐藏类无法被 NEW 直接实例化）。
+     */
+    @JvmStatic
+    fun newLambda(className: String, scriptObj: Any?, captures: Array<Any?>): Any? {
+        val factory = lambdaCtors[className]
+            ?: throw IllegalStateException("Lambda class not registered: $className")
+        return factory(scriptObj, captures)
+    }
+
+    /** 清除所有已注册的 lambda 构造器（引擎重置时调用）。 */
+    @JvmStatic
+    fun clearLambdaCtors() {
+        lambdaCtors.clear()
     }
 
     /** post 事件：加入当前引擎的事件队列（延迟 1 tick 分发）。 */
     @JvmStatic
     fun postEvent(event: A2sEventObject) {
-        eventQueue?.post(event)
+        currentEngine.get()?.eventQueue?.post(event)
     }
 
     /** post EventType(args)：查找构造器 MH 创建事件并入队。 */
     @JvmStatic
     fun postEvent(eventType: String, args: Array<Any?>) {
-        val ctor = eventConstructors[eventType]
-        if (ctor != null) {
-            val event = ctor.invokeWithArguments(*args) as A2sEventObject
-            eventQueue?.post(event)
-        }
+        val engine = currentEngine.get() ?: return
+        val ctor = engine.eventConstructor(eventType) ?: return
+        val event = ctor.invokeWithArguments(*args) as A2sEventObject
+        engine.eventQueue.post(event)
     }
 
-    @Volatile
-    var eventQueue: A2sEventQueue? = null
+    /** 当前线程关联的引擎实例。由 [A2sEngine.init] 设置，[A2sEngine.unregisterAll] 清除。 */
+    private val currentEngine = ThreadLocal<A2sEngine?>()
 
-    @Volatile
-    var eventConstructors: Map<String, java.lang.invoke.MethodHandle> = emptyMap()
+    /** 引擎构造时调用，绑定当前线程。 */
+    fun registerEngine(engine: A2sEngine) {
+        currentEngine.set(engine)
+    }
+
+    /** 引擎销毁/重置时调用，解除绑定。 */
+    fun unregisterEngine(engine: A2sEngine) {
+        if (currentEngine.get() === engine) currentEngine.remove()
+    }
+
+    /** 获取当前线程关联的引擎（用于测试/外部调用）。 */
+    fun engine(): A2sEngine? = currentEngine.get()
 
     /** 拆分资源引用 `raw`，如 `item|minecraft:diamond`、`minecraft:diamond`、`diamond`。 */
     private fun parseResourceRef(

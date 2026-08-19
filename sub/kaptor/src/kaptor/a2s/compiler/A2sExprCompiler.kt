@@ -11,6 +11,8 @@ import org.objectweb.asm.Opcodes.*
  */
 class A2sExprCompiler(private val symbols: A2sSymbolTable) {
 
+    lateinit var classCompiler: A2sClassCompiler
+
     fun compile(ctx: A2sCompileContext, expr: A2sExpr) {
         when (expr) {
             is A2sBigIntLiteral -> compileBigInt(ctx, expr.value)
@@ -31,25 +33,27 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
             is A2sCall -> compileCall(ctx, expr)
             is A2sMethodCall -> compileMethodCall(ctx, expr)
             is A2sIndexAccess -> compileIndexAccess(ctx, expr)
-            is A2sLambda -> throw A2sCompileError("lambda 尚未实现")
+            is A2sElvis -> compileElvis(ctx, expr)
+            is A2sNotNull -> compileNotNull(ctx, expr)
+            is A2sLambda -> compileLambda(ctx, expr)
             is A2sIfExpr -> throw A2sCompileError("if 表达式不支持求值")
             is A2sWhenExpr -> throw A2sCompileError("when 表达式不支持求值")
         }
     }
 
-    /** 编译标识符：局部变量走 ALOAD，事件字段走 GETFIELD，顶层变量走 GETFIELD。 */
+    /** 编译标识符：局部变量走 ALOAD，事件字段走 GETFIELD（通过 scriptObjSlot），顶层变量走 GETFIELD（通过 scriptObjSlot）。 */
     private fun compileIdentifier(ctx: A2sCompileContext, expr: A2sIdentifier) {
         when {
             ctx.hasLocal(expr.name) -> ctx.loadVariable(expr.name)
             ctx.isEventField(expr.name) -> {
-                ctx.mv.visitVarInsn(ALOAD, 0)
+                ctx.mv.visitVarInsn(ALOAD, ctx.scriptObjSlot)
                 val desc = A2sTypeCodegen.boxedDescriptor(ctx.eventFieldType(expr.name))
                 ctx.mv.visitFieldInsn(GETFIELD, ctx.className, expr.name, desc)
             }
 
             symbols.isTopLevelVar(expr.name) -> {
                 val desc = A2sTypeCodegen.boxedDescriptor(symbols.topLevelVarType(expr.name))
-                ctx.mv.visitVarInsn(ALOAD, 0)
+                ctx.mv.visitVarInsn(ALOAD, ctx.scriptObjSlot)
                 ctx.mv.visitFieldInsn(GETFIELD, ctx.className, expr.name, desc)
             }
 
@@ -138,7 +142,7 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
 
         // 先编译右操作数（存临时引用槽），再编译左操作数
         compile(ctx, expr.right)
-        val tmp = ctx.declareLocal("__arith_tmp", A2sAny)
+        val tmp = ctx.allocateTemp()
         ctx.mv.visitVarInsn(ASTORE, tmp)
         compile(ctx, expr.left)
 
@@ -248,7 +252,7 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
 
         // 编译右操作数存临时槽，再编译左操作数
         compile(ctx, expr.right)
-        val tmp = ctx.declareLocal("__cmp_tmp", A2sAny)
+        val tmp = ctx.allocateTemp()
         ctx.mv.visitVarInsn(ASTORE, tmp)
         compile(ctx, expr.left)
 
@@ -372,19 +376,51 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
 
     private fun compileFieldAccess(ctx: A2sCompileContext, expr: A2sFieldAccess) {
         val receiverType = symbols.inferType(expr.receiver, ctx.localTypes())
-        if (receiverType is A2sEventType) {
-            // 事件字段：CHECKCAST 到事件类，GETFIELD
-            val eventClass = A2sNames.eventClass(receiverType.eventName)
-            compile(ctx, expr.receiver)
-            ctx.mv.visitTypeInsn(CHECKCAST, eventClass)
-            val fieldType = symbols.eventFieldType(receiverType.eventName, expr.fieldName)
-            val desc = A2sTypeCodegen.boxedDescriptor(fieldType)
-            ctx.mv.visitFieldInsn(GETFIELD, eventClass, expr.fieldName, desc)
+        val fieldType = if (receiverType is A2sEventType) {
+            symbols.eventFieldType(receiverType.eventName, expr.fieldName)
         } else {
-            // 非事件字段：运行时反射
+            A2sAny
+        }
+        val needsCheckcast = fieldType != A2sAny && fieldType !is A2sUnknown
+
+        if (receiverType is A2sEventType) {
             compile(ctx, expr.receiver)
-            ctx.mv.visitLdcInsn(expr.fieldName)
-            ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "getField", "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+            if (expr.safe) {
+                val nullLabel = Label()
+                val endLabel = Label()
+                ctx.mv.visitInsn(DUP)
+                ctx.mv.visitJumpInsn(IFNULL, nullLabel)
+                ctx.mv.visitLdcInsn(expr.fieldName)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "getField", "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+                if (needsCheckcast) ctx.mv.visitTypeInsn(CHECKCAST, A2sTypeCodegen.boxedInternalName(fieldType))
+                ctx.mv.visitJumpInsn(GOTO, endLabel)
+                ctx.mv.visitLabel(nullLabel)
+                ctx.mv.visitInsn(POP)
+                ctx.mv.visitInsn(ACONST_NULL)
+                ctx.mv.visitLabel(endLabel)
+            } else {
+                ctx.mv.visitLdcInsn(expr.fieldName)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "getField", "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+                if (needsCheckcast) ctx.mv.visitTypeInsn(CHECKCAST, A2sTypeCodegen.boxedInternalName(fieldType))
+            }
+        } else {
+            compile(ctx, expr.receiver)
+            if (expr.safe) {
+                val nullLabel = Label()
+                val endLabel = Label()
+                ctx.mv.visitInsn(DUP)
+                ctx.mv.visitJumpInsn(IFNULL, nullLabel)
+                ctx.mv.visitLdcInsn(expr.fieldName)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "getField", "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+                ctx.mv.visitJumpInsn(GOTO, endLabel)
+                ctx.mv.visitLabel(nullLabel)
+                ctx.mv.visitInsn(POP)
+                ctx.mv.visitInsn(ACONST_NULL)
+                ctx.mv.visitLabel(endLabel)
+            } else {
+                ctx.mv.visitLdcInsn(expr.fieldName)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "getField", "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+            }
         }
     }
 
@@ -408,20 +444,198 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
                 ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, expr.name, "(Ljava/lang/Object;)Ljava/lang/Object;", false)
             }
 
+            "listOf" -> compileListOf(ctx, expr)
+
             else -> {
-                // 自定义函数：this 调用脚本类自身方法
-                ctx.mv.visitVarInsn(ALOAD, 0)
-                for (arg in expr.arguments) compile(ctx, arg)
-                val desc = "(" + "Ljava/lang/Object;".repeat(expr.arguments.size) + ")Ljava/lang/Object;"
-                ctx.mv.visitMethodInsn(INVOKEVIRTUAL, ctx.className, expr.name, desc, false)
+                // 检查是否是 lambda 变量
+                val localType = ctx.localType(expr.name)
+                if (localType is A2sLambdaType) {
+                    // lambda 调用：通过 invokeMethod 反射
+                    // 加载 lambda 实例
+                    ctx.loadVariable(expr.name)
+                    val lambdaTmp = ctx.declareLocal("__lambda_ref", A2sLambdaType)
+                    ctx.mv.visitVarInsn(ASTORE, lambdaTmp)
+                    // 打包参数为 Object[]
+                    ctx.mv.visitLdcInsn(expr.arguments.size)
+                    ctx.mv.visitTypeInsn(ANEWARRAY, "java/lang/Object")
+                    for ((i, arg) in expr.arguments.withIndex()) {
+                        ctx.mv.visitInsn(DUP)
+                        ctx.mv.visitLdcInsn(i)
+                        compile(ctx, arg)
+                        ctx.mv.visitInsn(AASTORE)
+                    }
+                    val argsArraySlot = ctx.declareLocal("__lambda_args", A2sAny)
+                    ctx.mv.visitVarInsn(ASTORE, argsArraySlot)
+                    // 调用 invokeMethod(lambda, "invoke", args)
+                    // 栈序：receiver, methodName, args
+                    ctx.mv.visitVarInsn(ALOAD, lambdaTmp)
+                    ctx.mv.visitLdcInsn("invoke")
+                    ctx.mv.visitVarInsn(ALOAD, argsArraySlot)
+                    ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "invokeMethod",
+                        "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", false)
+                } else {
+                    // 自定义函数：this 调用脚本类自身方法
+                    ctx.mv.visitVarInsn(ALOAD, 0)
+                    for (arg in expr.arguments) compile(ctx, arg)
+                    val desc = "(" + "Ljava/lang/Object;".repeat(expr.arguments.size) + ")Ljava/lang/Object;"
+                    ctx.mv.visitMethodInsn(INVOKEVIRTUAL, ctx.className, expr.name, desc, false)
+                }
             }
         }
     }
 
+    private fun compileListOf(ctx: A2sCompileContext, expr: A2sCall) {
+        val count = expr.arguments.size
+        ctx.mv.visitLdcInsn(count)
+        ctx.mv.visitTypeInsn(ANEWARRAY, "java/lang/Object")
+        for ((i, arg) in expr.arguments.withIndex()) {
+            ctx.mv.visitInsn(DUP)
+            ctx.mv.visitLdcInsn(i)
+            compile(ctx, arg)
+            ctx.mv.visitInsn(AASTORE)
+        }
+        ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "listOf", "([Ljava/lang/Object;)Ljava/util/List;", false)
+    }
+
+    /** 编译 elvis `a ?: b`：a 只求值一次，非空返回 a，否则返回 b。 */
+    private fun compileElvis(ctx: A2sCompileContext, expr: A2sElvis) {
+        val endLabel = Label()
+        val elseLabel = Label()
+        compile(ctx, expr.left)
+        val tmp = ctx.allocateTemp()
+        ctx.mv.visitVarInsn(ASTORE, tmp)
+        ctx.mv.visitVarInsn(ALOAD, tmp)
+        ctx.mv.visitJumpInsn(IFNULL, elseLabel)
+        // left 非空
+        ctx.mv.visitVarInsn(ALOAD, tmp)
+        ctx.mv.visitJumpInsn(GOTO, endLabel)
+        // left 为空：求 right
+        ctx.mv.visitLabel(elseLabel)
+        compile(ctx, expr.right)
+        ctx.mv.visitLabel(endLabel)
+    }
+
+    /** 编译 `a!!`：若 null 则抛 NPE，否则返回原值。 */
+    private fun compileNotNull(ctx: A2sCompileContext, expr: A2sNotNull) {
+        val endLabel = Label()
+        val throwLabel = Label()
+        compile(ctx, expr.expr)
+        ctx.mv.visitInsn(DUP)
+        ctx.mv.visitJumpInsn(IFNULL, throwLabel)
+        ctx.mv.visitJumpInsn(GOTO, endLabel)
+        ctx.mv.visitLabel(throwLabel)
+        ctx.mv.visitInsn(POP)
+        ctx.mv.visitTypeInsn(NEW, "java/lang/NullPointerException")
+        ctx.mv.visitInsn(DUP)
+        ctx.mv.visitMethodInsn(INVOKESPECIAL, "java/lang/NullPointerException", "<init>", "()V", false)
+        ctx.mv.visitInsn(ATHROW)
+        ctx.mv.visitLabel(endLabel)
+    }
+
+    /** 编译 lambda 字面量：分析捕获变量，生成隐藏类（含捕获字段），通过 A2sRuntime.newLambda 创建实例。 */
+    private fun compileLambda(ctx: A2sCompileContext, expr: A2sLambda) {
+        val capturedVars = analyzeCapturedVars(expr, ctx)
+
+        val lambdaIndex = classCompiler.nextLambdaIndex()
+        val lambdaClassName = "${ctx.className}_lambda_$lambdaIndex"
+        val lambdaClass = classCompiler.generateLambdaClass(lambdaClassName, expr, ctx.className, capturedVars)
+        classCompiler.collectedLambdas[lambdaClassName] = lambdaClass
+
+        // emit: A2sRuntime.newLambda(className, scriptObj, Object[] captures)
+        // 压入 className (String)
+        ctx.mv.visitLdcInsn(lambdaClassName)
+        // 压入 scriptObj
+        ctx.mv.visitVarInsn(ALOAD, ctx.scriptObjSlot)
+        // 创建 captures Object[] 数组
+        ctx.mv.visitLdcInsn(capturedVars.size)
+        ctx.mv.visitTypeInsn(ANEWARRAY, "java/lang/Object")
+        for ((i, cap) in capturedVars.withIndex()) {
+            ctx.mv.visitInsn(DUP)
+            ctx.mv.visitLdcInsn(i)
+            ctx.loadVariable(cap.first)
+            ctx.mv.visitInsn(AASTORE)
+        }
+        // INVOKESTATIC A2sRuntime.newLambda(String, Object, Object[])Object
+        ctx.mv.visitMethodInsn(
+            INVOKESTATIC, TYPE_RUNTIME, "newLambda",
+            "(Ljava/lang/String;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
+            false
+        )
+    }
+
+    /**
+     * 自由变量分析：扫描 lambda body，找出引用的外层变量（排除自身参数和 body 内声明的局部变量）。
+     * 顶层 var 通过 scriptObj 访问，不需要捕获。
+     */
+    private fun analyzeCapturedVars(
+        lambda: A2sLambda,
+        ctx: A2sCompileContext,
+    ): List<Pair<String, A2sType>> {
+        val ownParams = lambda.params.map { it.name }.toSet()
+        val declaredInBody = mutableSetOf<String>()
+        val referenced = mutableSetOf<String>()
+
+        lateinit var scanExpr: (A2sExpr) -> Unit
+        lateinit var scanStmt: (A2sStmt) -> Unit
+
+        scanStmt = { stmt ->
+            when (stmt) {
+                is A2sVarDecl -> { declaredInBody.add(stmt.name); stmt.initializer?.let(scanExpr) }
+                is A2sAssign -> { scanExpr(stmt.target); scanExpr(stmt.value) }
+                is A2sExprStmt -> scanExpr(stmt.expr)
+                is A2sIf -> { scanExpr(stmt.condition); stmt.thenBody.forEach(scanStmt); stmt.elseBody?.forEach(scanStmt) }
+                is A2sFor -> { declaredInBody.add(stmt.variable); scanExpr(stmt.iterable); stmt.body.forEach(scanStmt) }
+                is A2sWhile -> { scanExpr(stmt.condition); stmt.body.forEach(scanStmt) }
+                is A2sReturn -> stmt.value?.let(scanExpr)
+                is A2sThrow -> scanExpr(stmt.expr)
+                is A2sTry -> {
+                    stmt.body.forEach(scanStmt)
+                    stmt.catches.forEach { c -> declaredInBody.add(c.paramName); c.body.forEach(scanStmt) }
+                    stmt.finallyBody?.forEach(scanStmt)
+                }
+                is A2sPost -> stmt.arguments.forEach(scanExpr)
+                else -> {}
+            }
+        }
+
+        scanExpr = { expr ->
+            when (expr) {
+                is A2sIdentifier -> referenced.add(expr.name)
+                is A2sBinary -> { scanExpr(expr.left); scanExpr(expr.right) }
+                is A2sUnary -> scanExpr(expr.operand)
+                is A2sCall -> {
+                    if (ctx.hasLocal(expr.name) || ctx.isEventField(expr.name)) referenced.add(expr.name)
+                    expr.arguments.forEach(scanExpr)
+                }
+                is A2sFieldAccess -> scanExpr(expr.receiver)
+                is A2sMethodCall -> { scanExpr(expr.receiver); expr.arguments.forEach(scanExpr) }
+                is A2sIndexAccess -> { scanExpr(expr.receiver); scanExpr(expr.index) }
+                is A2sElvis -> { scanExpr(expr.left); scanExpr(expr.right) }
+                is A2sNotNull -> scanExpr(expr.expr)
+                is A2sLambda -> {
+                    // 嵌套 lambda：参数视为 "在 body 内声明"，递归扫描 body 以发现外层需要捕获的变量
+                    expr.params.forEach { declaredInBody.add(it.name) }
+                    expr.body.forEach(scanStmt)
+                }
+                is A2sStringInterpolation -> expr.parts.filterIsInstance<A2sStrExpr>().forEach { scanExpr(it.expr) }
+                is A2sIfExpr -> { scanExpr(expr.condition); expr.thenBody.forEach(scanStmt); expr.elseBody?.forEach(scanStmt) }
+                is A2sWhenExpr -> { scanExpr(expr.subject); expr.entries.forEach { e -> e.conditions.forEach(scanExpr); e.body.forEach(scanStmt) } }
+                else -> {}
+            }
+        }
+
+        lambda.body.forEach(scanStmt)
+
+        // captured = referenced - declaredInBody - ownParams
+        val capturedNames = referenced - declaredInBody - ownParams
+        return capturedNames
+            .filter { ctx.hasLocal(it) }
+            .map { it to ctx.localType(it) }
+    }
+
     private fun compileMethodCall(ctx: A2sCompileContext, expr: A2sMethodCall) {
         compile(ctx, expr.receiver)
-        for (arg in expr.arguments) compile(ctx, arg)
-        // 动态方法调用：打包参数，交运行时
+        ctx.mv.visitLdcInsn(expr.methodName)
         ctx.mv.visitLdcInsn(expr.arguments.size)
         ctx.mv.visitTypeInsn(ANEWARRAY, "java/lang/Object")
         for ((i, arg) in expr.arguments.withIndex()) {
@@ -430,8 +644,6 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
             compile(ctx, arg)
             ctx.mv.visitInsn(AASTORE)
         }
-        ctx.mv.visitLdcInsn(expr.methodName)
-        // 栈序：receiver, methodName, args[]。调用签名调整
         ctx.mv.visitMethodInsn(
             INVOKESTATIC, TYPE_RUNTIME, "invokeMethod",
             "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", false

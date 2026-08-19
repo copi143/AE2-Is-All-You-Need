@@ -286,8 +286,7 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
     override fun visitElvis(ctx: A2sParser.ElvisContext): A2sExpr {
         val left = visit(ctx.disjunction()) as A2sExpr
         return if (ctx.ELVIS() != null) {
-            // a ?: b 展开为 if (a != null) a else b —— 阶段 1 用二元运算占位，编译器阶段处理
-            A2sBinary(left, A2sBinaryOp.EQUALS, visit(ctx.elvis()) as A2sExpr)
+            A2sElvis(left, visit(ctx.elvis()) as A2sExpr)
         } else {
             left
         }
@@ -383,10 +382,12 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
         return when {
             suffix.DOT() != null -> A2sFieldAccess(receiver, suffix.Identifier().text)
             suffix.SAFE_DOT() != null -> A2sFieldAccess(receiver, suffix.Identifier().text, safe = true)
+            suffix.NOT_NULL() != null -> A2sNotNull(receiver)
             suffix.callSuffix() != null -> {
                 val args = suffix.callSuffix().expressionList()?.expression()?.map { visit(it) as A2sExpr } ?: emptyList()
                 when (receiver) {
                     is A2sIdentifier -> A2sCall(receiver.name, args)
+                    is A2sFieldAccess -> A2sMethodCall(receiver.receiver, receiver.fieldName, args)
                     else -> A2sMethodCall(receiver, receiverNameFor(receiver), args)
                 }
             }

@@ -1,6 +1,7 @@
 package kaptor.a2s.compiler
 
 import kaptor.a2s.ir.*
+import kaptor.a2s.ir.ifUnknown
 
 /**
  * 符号表：事件字段类型、函数签名，以及类型推断。
@@ -62,9 +63,11 @@ class A2sSymbolTable(
         is A2sStringInterpolation -> A2sString
         is A2sIdentifier -> locals[expr.name] ?: topLevelVarType(expr.name)
         is A2sResourceRef -> A2sAny
-        is A2sLambda -> A2sAny
+        is A2sLambda -> A2sLambdaType
         is A2sIfExpr -> A2sUnit
         is A2sWhenExpr -> A2sUnit
+        is A2sElvis -> inferType(expr.left, locals).ifUnknown { inferType(expr.right, locals) }
+        is A2sNotNull -> inferType(expr.expr, locals)
         is A2sFieldAccess -> inferFieldAccessType(expr, locals)
         is A2sMethodCall -> A2sUnknown
         is A2sCall -> inferCallType(expr)

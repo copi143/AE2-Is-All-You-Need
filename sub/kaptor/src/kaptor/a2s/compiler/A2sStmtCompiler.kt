@@ -52,31 +52,38 @@ class A2sStmtCompiler(
     }
 
     private fun compileAssign(ctx: A2sCompileContext, stmt: A2sAssign) {
-        // 目标若为标识符：编译值后存储
         if (stmt.target is A2sIdentifier) {
             val name = (stmt.target as A2sIdentifier).name
-            exprCompiler.compile(ctx, stmt.value)
-            ctx.storeVariable(name)
+            when {
+                ctx.hasLocal(name) -> {
+                    exprCompiler.compile(ctx, stmt.value)
+                    ctx.storeVariable(name)
+                }
+                ctx.isEventField(name) -> {
+                    ctx.mv.visitVarInsn(ALOAD, ctx.scriptObjSlot)
+                    exprCompiler.compile(ctx, stmt.value)
+                    val fieldType = ctx.eventFieldType(name)
+                    val desc = A2sTypeCodegen.boxedDescriptor(fieldType)
+                    ctx.mv.visitFieldInsn(PUTFIELD, ctx.className, name, desc)
+                }
+                symbols.isTopLevelVar(name) -> {
+                    ctx.mv.visitVarInsn(ALOAD, ctx.scriptObjSlot)
+                    exprCompiler.compile(ctx, stmt.value)
+                    val desc = A2sTypeCodegen.boxedDescriptor(symbols.topLevelVarType(name))
+                    ctx.mv.visitFieldInsn(PUTFIELD, ctx.className, name, desc)
+                }
+                else -> throw A2sCompileError("未定义的变量: $name")
+            }
             return
         }
         // 字段/索引赋值：简化为运行时辅助
         when (val target = stmt.target) {
             is A2sFieldAccess -> {
                 val receiverType = symbols.inferType(target.receiver, ctx.localTypes())
-                if (receiverType is A2sEventType) {
-                    val eventClass = A2sNames.eventClass(receiverType.eventName)
-                    exprCompiler.compile(ctx, target.receiver)
-                    ctx.mv.visitTypeInsn(CHECKCAST, eventClass)
-                    exprCompiler.compile(ctx, stmt.value)
-                    val fieldType = symbols.eventFieldType(receiverType.eventName, target.fieldName)
-                    val desc = A2sTypeCodegen.boxedDescriptor(fieldType)
-                    ctx.mv.visitFieldInsn(PUTFIELD, eventClass, target.fieldName, desc)
-                } else {
-                    exprCompiler.compile(ctx, target.receiver)
-                    ctx.mv.visitLdcInsn(target.fieldName)
-                    exprCompiler.compile(ctx, stmt.value)
-                    ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "setField", "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V", false)
-                }
+                exprCompiler.compile(ctx, target.receiver)
+                ctx.mv.visitLdcInsn(target.fieldName)
+                exprCompiler.compile(ctx, stmt.value)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "setField", "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V", false)
             }
 
             else -> throw A2sCompileError("不支持的赋值目标")
@@ -188,10 +195,75 @@ class A2sStmtCompiler(
     }
 
     private fun compileTry(ctx: A2sCompileContext, stmt: A2sTry) {
-        // 简化：try-catch 编译为直接执行 body（异常处理后续完善）
-        // 完整实现需 tryCatchBlock 标注，第一阶段先执行 body + finally
+        val tryStart = Label()
+        val tryEnd = Label()
+        val finallyLabel = if (stmt.finallyBody != null) Label() else null
+        val doneLabel = Label()
+
+        // catch handlers
+        val handlerLabels = stmt.catches.map { Label() }
+        // uncaught handler（用于执行 finally 后 rethrow）
+        val uncaughtLabel = if (stmt.finallyBody != null) Label() else null
+
+        // 注册 tryCatchBlock：try start → try end → handler
+        for (h in handlerLabels) {
+            ctx.mv.visitTryCatchBlock(tryStart, tryEnd, h, "java/lang/Throwable")
+        }
+        // uncaught 异常（finally 场景下需要执行 finally 再 rethrow）
+        if (uncaughtLabel != null) {
+            ctx.mv.visitTryCatchBlock(tryStart, tryEnd, uncaughtLabel, "java/lang/Throwable")
+        } else if (stmt.catches.isEmpty() && stmt.finallyBody == null) {
+            // 无 catch 无 finally：只是 try block，注册一个 handler 但不会触发
+            // （实际不需要，因为无 catch 无 finally，try 块就是普通代码）
+        }
+
+        // try body
+        ctx.mv.visitLabel(tryStart)
         compileBlock(ctx, stmt.body)
-        stmt.finallyBody?.let { compileBlock(ctx, it) }
+        ctx.mv.visitLabel(tryEnd)
+
+        // 正常路径结束后执行 finally（若有）
+        if (finallyLabel != null) {
+            ctx.mv.visitJumpInsn(GOTO, finallyLabel)
+        } else {
+            ctx.mv.visitJumpInsn(GOTO, doneLabel)
+        }
+
+        // catch handlers
+        for ((i, catch) in stmt.catches.withIndex()) {
+            ctx.mv.visitLabel(handlerLabels[i])
+            // catch 参数存入局部槽
+            val catchSlot = ctx.declareLocal(catch.paramName, A2sAny)
+            ctx.mv.visitVarInsn(ASTORE, catchSlot)
+            // catch body
+            compileBlock(ctx, catch.body)
+            // catch body 执行完后执行 finally（若有）
+            if (finallyLabel != null) {
+                ctx.mv.visitJumpInsn(GOTO, finallyLabel)
+            } else {
+                ctx.mv.visitJumpInsn(GOTO, doneLabel)
+            }
+        }
+
+        // uncaught handler：执行 finally 后 rethrow
+        if (uncaughtLabel != null) {
+            ctx.mv.visitLabel(uncaughtLabel)
+            val tmpSlot = ctx.declareLocal("__ex", A2sAny)
+            ctx.mv.visitVarInsn(ASTORE, tmpSlot)
+            compileBlock(ctx, stmt.finallyBody!!)
+            ctx.mv.visitVarInsn(ALOAD, tmpSlot)
+            ctx.mv.visitTypeInsn(CHECKCAST, "java/lang/Throwable")
+            ctx.mv.visitInsn(ATHROW)
+        }
+
+        // finally
+        if (finallyLabel != null) {
+            ctx.mv.visitLabel(finallyLabel)
+            compileBlock(ctx, stmt.finallyBody!!)
+            ctx.mv.visitJumpInsn(GOTO, doneLabel)
+        }
+
+        ctx.mv.visitLabel(doneLabel)
     }
 
     private fun compilePost(ctx: A2sCompileContext, stmt: A2sPost) {

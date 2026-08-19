@@ -195,6 +195,6 @@ class A2sVisitorTest {
             """
         )
         val decl = script.handlers[0].body[0] as A2sVarDecl
-        assertIs<A2sBinary>(decl.initializer)
+        assertIs<A2sElvis>(decl.initializer)
     }
 }

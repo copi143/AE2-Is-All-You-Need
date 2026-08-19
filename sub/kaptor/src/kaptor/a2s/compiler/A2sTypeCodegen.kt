@@ -25,8 +25,24 @@ object A2sTypeCodegen {
         A2sString -> "Ljava/lang/String;"
         A2sBigInt -> "Ljava/math/BigInteger;"
         A2sRational -> "L$TYPE_RATIONAL;"
+        A2sLambdaType -> "Lkaptor/a2s/runtime/A2sLambdaFn;"
         is A2sListType -> "Ljava/util/List;"
         else -> "Ljava/lang/Object;"
+    }
+
+    /** 装箱类型的内部名（用于 CHECKCAST 指令）。 */
+    fun boxedInternalName(type: A2sType): String = when (type) {
+        A2sI32, A2sU32 -> "java/lang/Integer"
+        A2sI64, A2sU64 -> "java/lang/Long"
+        A2sF32 -> "java/lang/Float"
+        A2sF64 -> "java/lang/Double"
+        A2sBoolean -> "java/lang/Boolean"
+        A2sString -> "java/lang/String"
+        A2sBigInt -> "java/math/BigInteger"
+        A2sRational -> TYPE_RATIONAL
+        A2sLambdaType -> "kaptor/a2s/runtime/A2sLambdaFn"
+        is A2sListType -> "java/util/List"
+        else -> "java/lang/Object"
     }
 
     /** 原生描述符（仅定长类型有） */
@@ -44,11 +60,26 @@ object A2sTypeCodegen {
     /** 将栈顶的装箱值拆箱为原生类型（仅定长类型生效） */
     fun unbox(mv: MethodVisitor, type: A2sType) {
         when (type) {
-            A2sI32, A2sU32 -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false)
-            A2sI64, A2sU64 -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Long", "longValue", "()J", false)
-            A2sF32 -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Float", "floatValue", "()F", false)
-            A2sF64 -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false)
-            A2sBoolean -> mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false)
+            A2sI32, A2sU32 -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Integer")
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Integer", "intValue", "()I", false)
+            }
+            A2sI64, A2sU64 -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Long")
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Long", "longValue", "()J", false)
+            }
+            A2sF32 -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Float")
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Float", "floatValue", "()F", false)
+            }
+            A2sF64 -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Double")
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false)
+            }
+            A2sBoolean -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean")
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false)
+            }
             else -> {}
         }
     }

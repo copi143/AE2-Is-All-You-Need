@@ -264,3 +264,16 @@ data class A2sWhenExpr(
 ) : A2sExpr {
     override var type: A2sType = A2sUnit
 }
+
+/** elvis `a ?: b`：若 a 为 null 则取 b，否则取 a。右结合。 */
+data class A2sElvis(
+    val left: A2sExpr,
+    val right: A2sExpr,
+) : A2sExpr {
+    override var type: A2sType = A2sUnknown
+}
+
+/** 非空断言 `a!!`：a 为 null 则抛 NullPointerException，否则返回 a。 */
+data class A2sNotNull(val expr: A2sExpr) : A2sExpr {
+    override var type: A2sType = A2sUnknown
+}

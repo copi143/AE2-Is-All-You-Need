@@ -6,18 +6,19 @@ import kaptor.a2s.ir.A2sScriptFile
  * 顶层编译器：一个脚本 → 事件类字节码 + 脚本类字节码。
  */
 class A2sCompiler {
-    private var scriptCounter = 0
+    internal var scriptCounter = 0
 
     fun resetCounter() {
         scriptCounter = 0
     }
 
     data class A2sCompiledScript(
-        val eventClasses: Map<String, ByteArray>,   // 事件名 → 字节码
+        val eventClasses: Map<String, ByteArray>,
         val scriptClass: ByteArray,
         val scriptIndex: Int,
         val eventTypes: List<String>,
         val handlers: List<A2sHandlerInfo>,
+        val lambdaClasses: Map<String, ByteArray>,
     )
 
     data class A2sHandlerInfo(
@@ -36,7 +37,7 @@ class A2sCompiler {
             eventClasses[event.name] = classCompiler.generateEventClass(event)
         }
 
-        val scriptClass = classCompiler.generateScriptClass(index, script)
+        val scriptBytes = classCompiler.generateScriptClass(index, script)
 
         val handlers = script.handlers.map { h ->
             val prefix = when (h.hookType) {
@@ -49,10 +50,11 @@ class A2sCompiler {
 
         return A2sCompiledScript(
             eventClasses = eventClasses,
-            scriptClass = scriptClass,
+            scriptClass = scriptBytes,
             scriptIndex = index,
             eventTypes = script.events.map { it.name },
             handlers = handlers,
+            lambdaClasses = classCompiler.collectedLambdas,
         )
     }
 }

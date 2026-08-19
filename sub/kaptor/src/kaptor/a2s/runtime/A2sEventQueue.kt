@@ -22,4 +22,9 @@ class A2sEventQueue {
     }
 
     fun isEmpty(): Boolean = queue.isEmpty()
+
+    /** 清空队列中所有待处理事件。用于脚本重载时丢弃旧事件。 */
+    fun clear() {
+        queue.clear()
+    }
 }

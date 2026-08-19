@@ -9,8 +9,15 @@ import org.objectweb.asm.Opcodes.*
  */
 class A2sClassCompiler(private val symbols: A2sSymbolTable) {
 
-    private val exprCompiler = A2sExprCompiler(symbols)
+    private val exprCompiler = A2sExprCompiler(symbols).also { it.classCompiler = this }
     private val stmtCompiler = A2sStmtCompiler(symbols, exprCompiler)
+
+    /** compileLambda() 写入，A2sCompiler.compile() 返回。key = lambdaClassName。 */
+    val collectedLambdas = mutableMapOf<String, ByteArray>()
+
+    /** 全局 lambda 索引计数器（跨方法共享，确保每个 lambda 类名唯一）。 */
+    private var lambdaCounter = 0
+    fun nextLambdaIndex(): Int = lambdaCounter++
 
     /** 生成事件类字节码。 */
     fun generateEventClass(decl: A2sEventDecl): ByteArray {
@@ -73,8 +80,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
 
     private fun generateEventMethod(cw: ClassWriter, internalName: String, decl: A2sEventDecl, method: A2sFunctionDecl) {
         val paramDescs = method.params.joinToString("") { A2sTypeCodegen.boxedDescriptor(it.type) }
-        val returnDesc = method.returnType?.let { A2sTypeCodegen.boxedDescriptor(it) } ?: "Ljava/lang/Object;"
-        val desc = "($paramDescs)$returnDesc"
+        val desc = "($paramDescs)Ljava/lang/Object;"
         val mv = cw.visitMethod(ACC_PUBLIC, method.name, desc, null, null)
         mv.visitCode()
 
@@ -128,7 +134,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
             generateScriptFunction(cw, internalName, f)
         }
 
-        // handler → 方法 handle_{eventType} / before_ / after_
+        // handler → 方法
         for (h in script.handlers) {
             generateScriptHandler(cw, internalName, h)
         }
@@ -165,8 +171,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
 
     private fun generateScriptFunction(cw: ClassWriter, internalName: String, f: A2sFunctionDecl) {
         val paramDescs = f.params.joinToString("") { A2sTypeCodegen.boxedDescriptor(it.type) }
-        val returnDesc = f.returnType?.let { A2sTypeCodegen.boxedDescriptor(it) } ?: "Ljava/lang/Object;"
-        val desc = "($paramDescs)$returnDesc"
+        val desc = "($paramDescs)Ljava/lang/Object;"
         val mv = cw.visitMethod(ACC_PUBLIC, f.name, desc, null, null)
         mv.visitCode()
 
@@ -209,5 +214,108 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
         mv.visitInsn(RETURN)
         ctx.finish()
         mv.visitEnd()
+    }
+
+    /**
+     * 生成 lambda 隐藏类字节码：实现 A2sLambdaFn 接口，参数从 invoke(Object[]) 拆包。
+     * capturedVars: 闭包捕获的外层变量 (name, type)，作为额外字段传入构造器。
+     */
+    fun generateLambdaClass(
+        className: String,
+        expr: A2sLambda,
+        scriptClassName: String,
+        capturedVars: List<Pair<String, A2sType>> = emptyList(),
+    ): ByteArray {
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
+        cw.visit(V17, ACC_PUBLIC or ACC_SUPER, className, null, "java/lang/Object",
+            arrayOf("kaptor/a2s/runtime/A2sLambdaFn"))
+
+        // 字段：scriptObj + 每个捕获变量
+        cw.visitField(ACC_PRIVATE, "scriptObj", "Ljava/lang/Object;", null, null).visitEnd()
+        for ((capName, _) in capturedVars) {
+            cw.visitField(ACC_PRIVATE, "cap_$capName", "Ljava/lang/Object;", null, null).visitEnd()
+        }
+
+        // 构造器：(Object scriptObj, Object cap0, Object cap1, ...)
+        val ctorDesc = "(Ljava/lang/Object;" + "Ljava/lang/Object;".repeat(capturedVars.size) + ")V"
+        val ctorMv = cw.visitMethod(ACC_PUBLIC, "<init>", ctorDesc, null, null)
+        ctorMv.visitCode()
+        ctorMv.visitVarInsn(ALOAD, 0)
+        ctorMv.visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false)
+        // this.scriptObj = arg1
+        ctorMv.visitVarInsn(ALOAD, 0)
+        ctorMv.visitVarInsn(ALOAD, 1)
+        ctorMv.visitFieldInsn(PUTFIELD, className, "scriptObj", "Ljava/lang/Object;")
+        // this.cap_X = argN
+        for ((i, _) in capturedVars.withIndex()) {
+            ctorMv.visitVarInsn(ALOAD, 0)
+            ctorMv.visitVarInsn(ALOAD, i + 2)
+            ctorMv.visitFieldInsn(PUTFIELD, className, "cap_${capturedVars[i].first}", "Ljava/lang/Object;")
+        }
+        ctorMv.visitInsn(RETURN)
+        ctorMv.visitMaxs(2, 2 + capturedVars.size)
+        ctorMv.visitEnd()
+
+        // invoke([Object]) -> 加载 scriptObj/captured vars 到局部槽 + 拆包参数 + 编译 body
+        val invokeMv = cw.visitMethod(ACC_PUBLIC, "invoke", "([Ljava/lang/Object;)Ljava/lang/Object;", null, null)
+        invokeMv.visitCode()
+
+        // 用 isStatic=true 让 nextLocal 从 0 开始，然后预留 slot 0(this) 和 slot 1(Object[] args)
+        val bodyCtx = A2sCompileContext(invokeMv, symbols, scriptClassName, isStatic = true)
+        bodyCtx.declareLocal("__this", A2sAny)    // 预留 slot 0: this
+        bodyCtx.declareLocal("__args_param", A2sAny) // 预留 slot 1: Object[] args 参数
+
+        // 1. 加载 scriptObj 到局部槽（供顶层 var 访问）
+        val scriptObjSlot = bodyCtx.declareLocal("__scriptObj", A2sAny)  // slot 2
+        invokeMv.visitVarInsn(ALOAD, 0) // this
+        invokeMv.visitFieldInsn(GETFIELD, className, "scriptObj", "Ljava/lang/Object;")
+        invokeMv.visitVarInsn(ASTORE, scriptObjSlot)
+        bodyCtx.scriptObjSlot = scriptObjSlot
+
+        // 2. 加载捕获变量到局部槽（用原始名称和类型，供类型推断和嵌套 lambda 捕获分析使用）
+        for ((capName, capType) in capturedVars) {
+            val slot = bodyCtx.declareLocal(capName, capType)
+            invokeMv.visitVarInsn(ALOAD, 0) // this
+            invokeMv.visitFieldInsn(GETFIELD, className, "cap_$capName", "Ljava/lang/Object;")
+            invokeMv.visitVarInsn(ASTORE, slot)
+        }
+
+        // 3. 从 Object[] 拆包 lambda 参数（slot 1 始终是 Object[] args 参数）
+        for ((i, param) in expr.params.withIndex()) {
+            val slot = bodyCtx.declareLocal(param.name, param.type ?: A2sAny)
+            invokeMv.visitVarInsn(ALOAD, 1) // slot 1 = Object[] args
+            invokeMv.visitLdcInsn(i)
+            invokeMv.visitInsn(AALOAD)
+            invokeMv.visitVarInsn(ASTORE, slot)
+        }
+
+        // 4. 编译 body
+        when {
+            expr.body.size == 1 && expr.body[0] is A2sExprStmt -> {
+                exprCompiler.compile(bodyCtx, (expr.body[0] as A2sExprStmt).expr)
+                invokeMv.visitInsn(ARETURN)
+            }
+            expr.body.size == 1 && expr.body[0] is A2sReturn -> {
+                exprCompiler.compile(bodyCtx, (expr.body[0] as A2sReturn).value!!)
+                invokeMv.visitInsn(ARETURN)
+            }
+            else -> {
+                for ((i, stmt) in expr.body.withIndex()) {
+                    if (i == expr.body.lastIndex && stmt is A2sExprStmt) {
+                        exprCompiler.compile(bodyCtx, stmt.expr)
+                        invokeMv.visitInsn(ARETURN)
+                    } else {
+                        stmtCompiler.compile(bodyCtx, stmt)
+                    }
+                }
+                invokeMv.visitInsn(ACONST_NULL)
+                invokeMv.visitInsn(ARETURN)
+            }
+        }
+
+        bodyCtx.finish()
+        invokeMv.visitEnd()
+        cw.visitEnd()
+        return cw.toByteArray()
     }
 }
