@@ -38,6 +38,7 @@ val antlrOutDir = layout.buildDirectory.dir("generated-src/antlr/main")
 
 tasks.named("generateGrammarSource") { enabled = false }
 val antlrPkgDir = layout.buildDirectory.dir("generated-src/antlr/main/kaptor/parser/antlr")
+val a2sPkgDir = layout.buildDirectory.dir("generated-src/antlr/main/kaptor/a2s/parser")
 
 val generateLexerGrammarSource = tasks.register<AntlrTask>("generateLexerGrammarSource") {
     description = "Generates KotlinLexer from official ANTLR grammar"
@@ -58,6 +59,25 @@ val generateParserGrammarSource = tasks.register<AntlrTask>("generateParserGramm
     dependsOn(generateLexerGrammarSource)
 }
 
+val generateA2sLexerGrammarSource = tasks.register<AntlrTask>("generateA2sLexerGrammarSource") {
+    description = "Generates A2sLexer from a2s grammar"
+    group = "antlr"
+    maxHeapSize = "512m"
+    source = fileTree("antlr") { include("A2sLexer.g4") }
+    outputDirectory = a2sPkgDir.get().asFile
+    arguments = listOf("-visitor")
+}
+
+val generateA2sParserGrammarSource = tasks.register<AntlrTask>("generateA2sParserGrammarSource") {
+    description = "Generates A2sParser from a2s grammar"
+    group = "antlr"
+    maxHeapSize = "512m"
+    source = fileTree("antlr") { include("A2sParser.g4") }
+    outputDirectory = a2sPkgDir.get().asFile
+    arguments = listOf("-visitor")
+    dependsOn(generateA2sLexerGrammarSource)
+}
+
 sourceSets {
     main {
         kotlin.setSrcDirs(listOf("src"))
@@ -69,11 +89,11 @@ sourceSets {
 }
 
 tasks.named("compileJava") {
-    dependsOn(generateLexerGrammarSource, generateParserGrammarSource)
+    dependsOn(generateLexerGrammarSource, generateParserGrammarSource, generateA2sLexerGrammarSource, generateA2sParserGrammarSource)
 }
 
 tasks.named("compileKotlin") {
-    dependsOn(generateLexerGrammarSource, generateParserGrammarSource)
+    dependsOn(generateLexerGrammarSource, generateParserGrammarSource, generateA2sLexerGrammarSource, generateA2sParserGrammarSource)
 }
 
 tasks.withType<Test> {
@@ -81,7 +101,7 @@ tasks.withType<Test> {
 }
 
 tasks.named<Jar>("sourcesJar") {
-    dependsOn(generateLexerGrammarSource, generateParserGrammarSource)
+    dependsOn(generateLexerGrammarSource, generateParserGrammarSource, generateA2sLexerGrammarSource, generateA2sParserGrammarSource)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
