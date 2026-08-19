@@ -43,7 +43,7 @@ class ItemStorageCellInventory(
     private val amountPerByte: Long = keyType.amountPerByte.toLong()
 
     /** Total capacity in bytes (long, unlike vanilla's int). */
-    private val totalBytes: Long = cellType.cellType.sizeBytes
+    private val totalBytes: Long = cellType.cellType.size
 
     /** Bytes reserved per distinct item type (scales with tier, like vanilla). */
     private val bytesPerType: Long = cellType.cellType.bytesPerType

@@ -60,7 +60,7 @@ object Main {
         StorageCellModels.registerModel(ModItems.CREATIVE_ME_CELL, "block/drive/cells/creative_cell".rlAE)
         StorageCellModels.registerModel(ModItems.DIMENSIONAL_CELL, "block/drive/cells/creative_cell".rlAE)
         for (cell in ItemStorageCell.entries) {
-            StorageCellModels.registerModel(cell.item, "block/drive/cells/${cell.driveCellId.path}".rl)
+            StorageCellModels.registerModel(cell.define, "block/drive/cells/${cell.driveCellId.path}".rl)
         }
         val cellGroup = GuiText.StorageCells.translationKey
         ModItems.DIMENSIONAL_CELL.registerSupportedUpgrade(cellGroup).with(
@@ -68,7 +68,7 @@ object Main {
             ExtRef.fuzzyCard to 1,
         )
         for (cell in ItemStorageCell.entries) {
-            cell.item.asItem().registerSupportedUpgrade(cellGroup).with(
+            cell.define.asItem().registerSupportedUpgrade(cellGroup).with(
                 ExtRef.inverterCard to 1,
                 ExtRef.fuzzyCard to 1,
                 AEItems.EQUAL_DISTRIBUTION_CARD to 1,

@@ -1,7 +1,7 @@
 package allyouneed.cell
 
 import allyouneed.logic.aekey.EnergyKey
-import allyouneed.util.*
+import allyouneed.util.rl
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
 import appeng.block.AEBaseEntityBlock
@@ -14,7 +14,6 @@ import appeng.blockentity.networking.EnergyCellBlockEntity
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import com.mojang.datafixers.types.Type
-import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.Block
@@ -23,76 +22,28 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
-enum class EnergyCell(size: Double = -1.0) {
-    K1(1.0.Ki), //
-    K4(4.0.Ki), //
-    K16(16.0.Ki), //
-    K64(64.0.Ki), //
-    K256(256.0.Ki), //
-    M1(1.0.Mi), //
-    M4(4.0.Mi), //
-    M16(16.0.Mi), //
-    M64(64.0.Mi), //
-    M256(256.0.Mi), //
-    G1(1.0.Gi), //
-    G4(4.0.Gi), //
-    G16(16.0.Gi), //
-    G64(64.0.Gi), //
-    G256(256.0.Gi), //
-    T1(1.0.Ti), //
-    T4(4.0.Ti), //
-    T16(16.0.Ti), //
-    T64(64.0.Ti), //
-    T256(256.0.Ti), //
+class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlock(size) {
+    private fun cellBlock(priority: Int): Block = EnergyCellBlock(
+        size.toDouble() * EnergyKey.ENERGY_PER_BYTE,
+        size * 4.0,
+        sizeExp * 10 + priority,
+    )
 
-    SpK1(1.0.Ki), //
-    SpK4(4.0.Ki), //
-    SpK16(16.0.Ki), //
-    SpK64(64.0.Ki), //
-    SpK256(256.0.Ki), //
-    SpM1(1.0.Mi), //
-    SpM4(4.0.Mi), //
-    SpM16(16.0.Mi), //
-    SpM64(64.0.Mi), //
-    SpM256(256.0.Mi), //
-    SpG1(1.0.Gi), //
-    SpG4(4.0.Gi), //
-    SpG16(16.0.Gi), //
-    SpG64(64.0.Gi), //
-    SpG256(256.0.Gi), //
-    SpT1(1.0.Ti), //
-    SpT4(4.0.Ti), //
-    SpT16(16.0.Ti), //
-    SpT64(64.0.Ti), //
-    SpT256(256.0.Ti), //
+    override val blockName = "$prefixUpper Energy Cell"
 
-    Creative; //
+    override val blockId = "$prefixLower${if (isSelfPowered) "_self_powered" else ""}_energy_cell".rl
 
-    private val prefix = if (size < 0) {
-        null
-    } else {
-        assert(size.toBits() and 0x00fffff_ffffffff == 0L)
-        formatScaledUnit(size.floatingExp)
-    }
-
-    val blockName: String = (prefix?.uppercase() ?: "Creative") + " Energy Cell"
-    val isSelfPowered: Boolean = name.startsWith("Sp")
-    val isCreative: Boolean = size < 0
-
-    val blockId: ResourceLocation =
-        ((prefix ?: "creative") + (if (isSelfPowered) "_self_powered" else "") + "_energy_cell").rl
-
-    val blockSupplier = when {
+    override val blockSupplier = when {
         isCreative -> Supplier<Block> { CreativeEnergyCellBlock() }
-        isSelfPowered -> Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10 + 1000) }
-        else -> Supplier<Block> { EnergyCellBlock(size * EnergyKey.ENERGY_PER_BYTE, size * 4.0, size.floatingExp * 10) }
+        isSelfPowered -> Supplier<Block> { cellBlock(1000) }
+        else -> Supplier<Block> { cellBlock(0) }
     }
 
     val itemFactory = if (size < 0) null else BiFunction<Block, Item.Properties, BlockItem> { block, props ->
         EnergyCellBlockItem(block, props)
     }
 
-    val define: BlockDefinition<Block> = run {
+    override val define = run {
         val block = blockSupplier.get()
 
         val item = itemFactory?.apply(block, Item.Properties()) ?: if (block is AEBaseBlock) {
@@ -115,7 +66,7 @@ enum class EnergyCell(size: Double = -1.0) {
         require(block is AEBaseEntityBlock<*>) { "EnergyCell block must be AEBaseEntityBlock" }
 
         when {
-            this == Creative -> {
+            isCreative -> {
                 val typeRef = AtomicReference<BlockEntityType<*>>()
                 @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(BlockEntityType.Builder.of({ pos, state ->
                     CreativeEnergyCellBlockEntity(
@@ -162,6 +113,8 @@ enum class EnergyCell(size: Double = -1.0) {
     }
 
     companion object {
+        val entries = sizeList.map { EnergyCell(it) } + sizeList.map { EnergyCell(it, true) } + EnergyCell()
+
         lateinit var selfPoweredBlockEntityType: BlockEntityType<SelfPoweredEnergyCellBlockEntity>
             private set
 

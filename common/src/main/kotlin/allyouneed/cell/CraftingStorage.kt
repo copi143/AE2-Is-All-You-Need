@@ -1,6 +1,6 @@
 package allyouneed.cell
 
-import allyouneed.util.*
+import allyouneed.util.rl
 import appeng.block.AEBaseBlockItem
 import appeng.block.AEBaseEntityBlock
 import appeng.block.crafting.CraftingUnitBlock
@@ -19,48 +19,14 @@ import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
 
-enum class CraftingStorage(size: Double = -1.0) : ICraftingUnitType {
-    K1(1.0.Ki), //
-    K4(4.0.Ki), //
-    K16(16.0.Ki), //
-    K64(64.0.Ki), //
-    K256(256.0.Ki), //
-    M1(1.0.Mi), //
-    M4(4.0.Mi), //
-    M16(16.0.Mi), //
-    M64(64.0.Mi), //
-    M256(256.0.Mi), //
-    G1(1.0.Gi), //
-    G4(4.0.Gi), //
-    G16(16.0.Gi), //
-    G64(64.0.Gi), //
-    G256(256.0.Gi), //
-    T1(1.0.Ti), //
-    T4(4.0.Ti), //
-    T16(16.0.Ti), //
-    T64(64.0.Ti), //
-    T256(256.0.Ti), //
+class CraftingStorage(size: Long = -1) : ICellBlock(size), ICraftingUnitType {
+    override val blockName: String = "$prefixUpper Crafting Storage"
 
-    Creative; //
+    override val blockId: ResourceLocation = "${prefixLower}_crafting_storage".rl
 
-    private val prefix = if (size < 0) {
-        null
-    } else {
-        assert(size.toBits() and 0x00fffff_ffffffff == 0L)
-        formatScaledUnit(size.floatingExp)
-    }
+    override val blockSupplier = Supplier<Block> { CraftingUnitBlock(this) }
 
-    val blockName: String = (prefix?.uppercase() ?: "Creative") + " Crafting Storage"
-    val isCreative: Boolean = size < 0
-
-    /** Capacity in bytes for non-creative tiers (exact power-of-two). */
-    private val sizeBytes: Long = if (size > 0) size.toLong() else -1L
-
-    val blockId: ResourceLocation = ((prefix ?: "creative") + "_crafting_storage").rl
-
-    val blockSupplier = Supplier<Block> { CraftingUnitBlock(this) }
-
-    val define: BlockDefinition<Block> = run {
+    override val define: BlockDefinition<Block> = run {
         val block = blockSupplier.get()
         val item: BlockItem = if (block is appeng.block.AEBaseBlock) {
             AEBaseBlockItem(block, Item.Properties())
@@ -72,20 +38,22 @@ enum class CraftingStorage(size: Double = -1.0) : ICraftingUnitType {
         }
     }
 
-    override fun getStorageBytes(): Long = if (isCreative) Long.MAX_VALUE else sizeBytes
+    override fun getStorageBytes(): Long = if (isCreative) Long.MAX_VALUE else size
 
     /**
      * Full capacity for BigInteger CPU accounting.
      * Creative is unbounded (null marker via [isCreative]).
      */
     fun getStorageBytesBig(): BigInteger =
-        if (isCreative) BigInteger.valueOf(Long.MAX_VALUE) else BigInteger.valueOf(sizeBytes)
+        if (isCreative) BigInteger.valueOf(Long.MAX_VALUE) else BigInteger.valueOf(size)
 
     override fun getAcceleratorThreads(): Int = 0
 
     override fun getItemFromType(): Item = define.asItem()
 
     companion object {
+        val entries = sizeList.map { CraftingStorage(it) } + CraftingStorage()
+
         lateinit var blockEntityType: BlockEntityType<CraftingBlockEntity>
             private set
 

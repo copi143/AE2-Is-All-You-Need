@@ -49,7 +49,7 @@ object ForgeClientEvents {
     fun onRegisterItemColors(event: RegisterColorHandlersEvent.Item) {
         event.register(
             { stack, tintIndex -> ItemStorageCellItem.getColor(stack, tintIndex) },
-            *ItemStorageCell.entries.map { it.item.asItem() }.toTypedArray(),
+            *ItemStorageCell.entries.map { it.define.asItem() }.toTypedArray(),
         )
     }
 

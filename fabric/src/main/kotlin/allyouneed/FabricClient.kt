@@ -36,7 +36,7 @@ fun initClient() {
     ItemDetailsKeyBind.init()
     ColorProviderRegistry.ITEM.register(
         { stack, tintIndex -> ItemStorageCellItem.getColor(stack, tintIndex) },
-        *ItemStorageCell.entries.map { it.item.asItem() }.toTypedArray(),
+        *ItemStorageCell.entries.map { it.define.asItem() }.toTypedArray(),
     )
     for (storage in CraftingStorage.entries) {
         val id = CraftingStorageModels.formedModelId(storage)

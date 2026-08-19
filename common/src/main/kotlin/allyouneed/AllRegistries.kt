@@ -38,7 +38,7 @@ object AllRegistries {
         }
         ItemStorageCell.entries.forEach {
             @Suppress("UNCHECKED_CAST")
-            items += it.item as ItemDefinition<Item>
+            items += it.define as ItemDefinition<Item>
         }
 
         // Appear in AE2's main creative tab (same path as EnergyCell)
