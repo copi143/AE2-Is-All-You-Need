@@ -19,7 +19,7 @@ import thedarkcolour.kotlinforforge.forge.MOD_BUS
 @Mod(MODID)
 class ForgeMain {
     init {
-        logger.info("Hello Forge world from Kotlin!")
+        logger.info("Initializing...")
 
         EnergyCell.registerSelfPoweredBEType()
         EnergyCell.entries.forEach { it.registerBEType() }

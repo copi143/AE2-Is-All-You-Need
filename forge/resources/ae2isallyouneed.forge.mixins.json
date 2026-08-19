@@ -6,7 +6,6 @@
   "refmap": "${mod_id}.refmap.json",
   "mixins": [],
   "client": [
-    "MixinTitleScreen",
     "client.BuiltInModelHooksAccessor",
     "client.ModelBakeryMixin"
   ],

@@ -27,7 +27,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 
 fun init() {
-    logger.info("Hello Fabric world from Kotlin!")
+    logger.info("Initializing...")
+
     FabricMenus.register()
     FabricItems.register()
     FabricBlocks.register()

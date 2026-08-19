@@ -19,6 +19,7 @@ import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermScreen
 import allyouneed.util.notify.DesktopNotify
 import allyouneed.util.MODID
+import allyouneed.util.logger
 import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
@@ -30,6 +31,7 @@ import net.minecraft.client.renderer.RenderType
 import net.minecraft.resources.ResourceLocation
 
 fun initClient() {
+    logger.info("Initializing Client...")
     DesktopNotify.focusProbe = DesktopNotify.FocusProbe {
         Minecraft.getInstance().isWindowActive
     }
