@@ -12,25 +12,25 @@ abstract class ICell(val size: Long) {
 
     val sizeExp: Int = if (size < 0) -1 else size.countTrailingZeroBits()
 
-    val prefix: String? = if (size < 0) null else formatScaledUnit(sizeExp)
-    val prefixLower: String = prefix ?: "creative"
-    val prefixUpper: String = prefix?.uppercase() ?: "Creative"
+    open val prefix: String? = if (size < 0) null else formatScaledUnit(sizeExp)
+    open val prefixLower: String = prefix ?: "creative"
+    open val prefixUpper: String = prefix?.uppercase() ?: "Creative"
 
     /**
      * Bytes reserved per distinct item type.
      * AE2 scales this with tier: 8 bytes per KiB.
      */
-    val bytesPerType: Long = size / 1024 * 8
+    open val bytesPerType: Long = size / 1024 * 8
 
     /**
      * 每字节 8 个最小单元
      */
-    val maxAmounts: Long = size * 8
+    open val maxAmounts: Long = size * 8
 
     /**
      * Idle energy drain in AE/t, scaling 0.5 per 4x tier like vanilla.
      */
-    val idleDrain: Double = 0.5 + 0.5 * ((sizeExp - 10) / 2)
+    open val idleDrain: Double = 0.5 + 0.5 * ((sizeExp - 10) / 2)
 
     companion object {
         val sizeList: List<Long> = listOf(
@@ -42,15 +42,15 @@ abstract class ICell(val size: Long) {
     }
 }
 
-abstract class ICellBlock(size: Long) : ICell(size) {
-    abstract val blockName: String
-    abstract val blockId: ResourceLocation
+abstract class ICellBlock(size: Long, val postfix: String) : ICell(size) {
+    open val blockName: String = "$prefixUpper $postfix"
+    open val blockId: ResourceLocation = idify("$prefixUpper $postfix").rl
     abstract val blockSupplier: Supplier<Block>
     abstract val define: BlockDefinition<Block>
 }
 
-abstract class ICellItem(size: Long) : ICell(size) {
-    abstract val itemName: String
-    abstract val itemId: ResourceLocation
+abstract class ICellItem(size: Long, val postfix: String) : ICell(size) {
+    open val itemName: String = "$prefixUpper $postfix"
+    open val itemId: ResourceLocation = idify("$prefixUpper $postfix").rl
     abstract val define: ItemDefinition<*>
 }

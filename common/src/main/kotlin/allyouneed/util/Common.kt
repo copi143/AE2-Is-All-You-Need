@@ -5,6 +5,9 @@ package allyouneed.util
 import net.minecraft.resources.ResourceLocation
 import java.math.BigInteger
 
+fun idify(value: String): String =
+    value.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
+
 fun String.rl(ns: String) = ResourceLocation(ns, this)
 val String.rl get() = this.rl(MODID)
 val String.rlMC get() = this.rl("minecraft")

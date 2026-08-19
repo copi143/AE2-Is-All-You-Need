@@ -19,11 +19,7 @@ import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
 
-class CraftingStorage(size: Long = -1) : ICellBlock(size), ICraftingUnitType {
-    override val blockName: String = "$prefixUpper Crafting Storage"
-
-    override val blockId: ResourceLocation = "${prefixLower}_crafting_storage".rl
-
+class CraftingStorage(size: Long = -1) : ICellBlock(size, "Crafting Storage"), ICraftingUnitType {
     override val blockSupplier = Supplier<Block> { CraftingUnitBlock(this) }
 
     override val define: BlockDefinition<Block> = run {

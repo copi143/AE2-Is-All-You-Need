@@ -1,6 +1,7 @@
 package allyouneed.cell
 
 import allyouneed.logic.aekey.EnergyKey
+import allyouneed.util.idify
 import allyouneed.util.rl
 import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
@@ -22,16 +23,16 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
-class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlock(size) {
+class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlock(size, "Energy Cell") {
     private fun cellBlock(priority: Int): Block = EnergyCellBlock(
         size.toDouble() * EnergyKey.ENERGY_PER_BYTE,
         size * 4.0,
         sizeExp * 10 + priority,
     )
 
-    override val blockName = "$prefixUpper Energy Cell"
+    override val blockName = "$prefixUpper${if (isSelfPowered) " Self-Powered" else ""} Energy Cell"
 
-    override val blockId = "$prefixLower${if (isSelfPowered) "_self_powered" else ""}_energy_cell".rl
+    override val blockId = idify(blockName).rl
 
     override val blockSupplier = when {
         isCreative -> Supplier<Block> { CreativeEnergyCellBlock() }

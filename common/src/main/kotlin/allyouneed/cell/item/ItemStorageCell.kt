@@ -11,11 +11,7 @@ import net.minecraft.world.item.Item
  * Item storage cells from 1K to 256T, following the vanilla
  * `item_storage_cell` design but with long-based capacity.
  */
-class ItemStorageCell(size: Long = -1) : ICellItem(size) {
-    override val itemName: String = "$prefixUpper Item Storage Cell"
-
-    override val itemId: ResourceLocation = "${prefixLower}_item_storage_cell".rl
-
+class ItemStorageCell(size: Long = -1) : ICellItem(size, "Item Storage Cell") {
     /** Drive-cell block model id (texture + model), matching vanilla `1k_item_cell`. */
     val driveCellId: ResourceLocation = "${prefixLower}_item_cell".rl
 
