@@ -1,0 +1,446 @@
+package kaptor.a2s.compiler
+
+import kaptor.a2s.ir.*
+import org.objectweb.asm.Label
+import org.objectweb.asm.Opcodes.*
+
+/**
+ * 表达式编译器：把 A2sExpr 编译为字节码，结果以装箱形式压栈。
+ *
+ * 依赖 [A2sCompileContext] 解析变量槽号与类型。
+ */
+class A2sExprCompiler(private val symbols: A2sSymbolTable) {
+
+    fun compile(ctx: A2sCompileContext, expr: A2sExpr) {
+        when (expr) {
+            is A2sBigIntLiteral -> compileBigInt(ctx, expr.value)
+            is A2sRationalLiteral -> compileRational(ctx, expr.value)
+            is A2sI32Literal -> { ctx.mv.visitLdcInsn(expr.value); A2sTypeCodegen.box(ctx.mv, A2sI32) }
+            is A2sI64Literal -> { ctx.mv.visitLdcInsn(expr.value); A2sTypeCodegen.box(ctx.mv, A2sI64) }
+            is A2sF32Literal -> { ctx.mv.visitLdcInsn(expr.value); A2sTypeCodegen.box(ctx.mv, A2sF32) }
+            is A2sF64Literal -> { ctx.mv.visitLdcInsn(expr.value); A2sTypeCodegen.box(ctx.mv, A2sF64) }
+            is A2sBoolLiteral -> { ctx.mv.visitInsn(if (expr.value) ICONST_1 else ICONST_0); A2sTypeCodegen.box(ctx.mv, A2sBoolean) }
+            is A2sStringLiteral -> ctx.mv.visitLdcInsn(expr.value)
+            is A2sNullLiteral -> ctx.mv.visitInsn(ACONST_NULL)
+            is A2sIdentifier -> compileIdentifier(ctx, expr)
+            is A2sResourceRef -> compileResourceRef(ctx, expr)
+            is A2sStringInterpolation -> compileStringInterpolation(ctx, expr)
+            is A2sBinary -> compileBinary(ctx, expr)
+            is A2sUnary -> compileUnary(ctx, expr)
+            is A2sFieldAccess -> compileFieldAccess(ctx, expr)
+            is A2sCall -> compileCall(ctx, expr)
+            is A2sMethodCall -> compileMethodCall(ctx, expr)
+            is A2sIndexAccess -> compileIndexAccess(ctx, expr)
+            is A2sLambda -> throw A2sCompileError("lambda 尚未实现")
+            is A2sIfExpr -> throw A2sCompileError("if 表达式不支持求值")
+            is A2sWhenExpr -> throw A2sCompileError("when 表达式不支持求值")
+        }
+    }
+
+    /** 编译标识符：局部变量走 ALOAD，事件字段走 GETFIELD，顶层变量走 GETFIELD。 */
+    private fun compileIdentifier(ctx: A2sCompileContext, expr: A2sIdentifier) {
+        when {
+            ctx.hasLocal(expr.name) -> ctx.loadVariable(expr.name)
+            ctx.isEventField(expr.name) -> {
+                ctx.mv.visitVarInsn(ALOAD, 0)
+                val desc = A2sTypeCodegen.boxedDescriptor(ctx.eventFieldType(expr.name))
+                ctx.mv.visitFieldInsn(GETFIELD, ctx.className, expr.name, desc)
+            }
+
+            symbols.isTopLevelVar(expr.name) -> {
+                val desc = A2sTypeCodegen.boxedDescriptor(symbols.topLevelVarType(expr.name))
+                ctx.mv.visitVarInsn(ALOAD, 0)
+                ctx.mv.visitFieldInsn(GETFIELD, ctx.className, expr.name, desc)
+            }
+
+            else -> throw A2sCompileError("未定义的变量: ${expr.name}")
+        }
+    }
+
+    private fun compileBigInt(ctx: A2sCompileContext, value: String) {
+        ctx.mv.visitTypeInsn(NEW, "java/math/BigInteger")
+        ctx.mv.visitInsn(DUP)
+        ctx.mv.visitLdcInsn(value)
+        ctx.mv.visitMethodInsn(INVOKESPECIAL, "java/math/BigInteger", "<init>", "(Ljava/lang/String;)V", false)
+    }
+
+    private fun compileRational(ctx: A2sCompileContext, value: String) {
+        ctx.mv.visitLdcInsn(value)
+        ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RATIONAL, "fromDecimalString", "(Ljava/lang/String;)L$TYPE_RATIONAL;", false)
+    }
+
+    private fun compileResourceRef(ctx: A2sCompileContext, expr: A2sResourceRef) {
+        ctx.mv.visitLdcInsn(expr.raw)
+        ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "resolveResource", "(Ljava/lang/String;)Ljava/lang/Object;", false)
+    }
+
+    private fun compileStringInterpolation(ctx: A2sCompileContext, expr: A2sStringInterpolation) {
+        ctx.mv.visitTypeInsn(NEW, "java/lang/StringBuilder")
+        ctx.mv.visitInsn(DUP)
+        ctx.mv.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false)
+        for (part in expr.parts) {
+            when (part) {
+                is A2sStrText -> {
+                    ctx.mv.visitLdcInsn(part.text)
+                    ctx.mv.visitMethodInsn(
+                        INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false
+                    )
+                }
+
+                is A2sStrExpr -> {
+                    compile(ctx, part.expr)
+                    ctx.mv.visitMethodInsn(
+                        INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
+                        "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false
+                    )
+                }
+            }
+        }
+        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false)
+    }
+
+    private fun compileBinary(ctx: A2sCompileContext, expr: A2sBinary) {
+        when (expr.op) {
+            A2sBinaryOp.AND -> compileLogical(ctx, expr, and = true)
+            A2sBinaryOp.OR -> compileLogical(ctx, expr, and = false)
+            A2sBinaryOp.PLUS -> {
+                if (isStringConcat(ctx, expr)) compileStringConcat(ctx, expr)
+                else compileArithmetic(ctx, expr, "+")
+            }
+
+            A2sBinaryOp.MINUS -> compileArithmetic(ctx, expr, "-")
+            A2sBinaryOp.MULTIPLY -> compileArithmetic(ctx, expr, "*")
+            A2sBinaryOp.DIVIDE -> compileArithmetic(ctx, expr, "/")
+            A2sBinaryOp.MODULO -> compileArithmetic(ctx, expr, "%")
+            A2sBinaryOp.EQUALS -> compileComparison(ctx, expr, "==")
+            A2sBinaryOp.NOT_EQUALS -> compileComparison(ctx, expr, "!=")
+            A2sBinaryOp.LESS -> compileComparison(ctx, expr, "<")
+            A2sBinaryOp.LESS_EQUAL -> compileComparison(ctx, expr, "<=")
+            A2sBinaryOp.GREATER -> compileComparison(ctx, expr, ">")
+            A2sBinaryOp.GREATER_EQUAL -> compileComparison(ctx, expr, ">=")
+            A2sBinaryOp.RANGE -> compile(ctx, expr.left)
+        }
+    }
+
+    private fun isStringConcat(ctx: A2sCompileContext, expr: A2sBinary): Boolean {
+        val lt = symbols.inferType(expr.left, ctx.localTypes())
+        val rt = symbols.inferType(expr.right, ctx.localTypes())
+        return lt == A2sString || rt == A2sString
+    }
+
+    private fun compileArithmetic(ctx: A2sCompileContext, expr: A2sBinary, op: String) {
+        val lt = symbols.inferType(expr.left, ctx.localTypes())
+        val rt = symbols.inferType(expr.right, ctx.localTypes())
+        val numericPromoted = A2sTypeCodegen.promoteNumeric(lt, rt)
+        // BigInt 除法得到 Rational（精确分数）
+        val promoted = if (op == "/" && numericPromoted == A2sBigInt) A2sRational else numericPromoted
+
+        // 先编译右操作数（存临时引用槽），再编译左操作数
+        compile(ctx, expr.right)
+        val tmp = ctx.declareLocal("__arith_tmp", A2sAny)
+        ctx.mv.visitVarInsn(ASTORE, tmp)
+        compile(ctx, expr.left)
+
+        when (promoted) {
+            A2sBigInt -> {
+                convertToBigInt(ctx, lt)
+                ctx.mv.visitVarInsn(ALOAD, tmp)
+                convertToBigInt(ctx, rt)
+                ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/math/BigInteger", bigIntOp(op), "(Ljava/math/BigInteger;)Ljava/math/BigInteger;", false)
+            }
+
+            A2sRational -> {
+                convertToRational(ctx, lt)
+                ctx.mv.visitVarInsn(ALOAD, tmp)
+                convertToRational(ctx, rt)
+                ctx.mv.visitMethodInsn(INVOKEVIRTUAL, TYPE_RATIONAL, rationalOp(op), "(L$TYPE_RATIONAL;)L$TYPE_RATIONAL;", false)
+            }
+
+            else -> {
+                A2sTypeCodegen.unbox(ctx.mv, promoted)
+                ctx.mv.visitVarInsn(ALOAD, tmp)
+                A2sTypeCodegen.unbox(ctx.mv, promoted)
+                primitiveArithmetic(ctx.mv, op, promoted)
+                A2sTypeCodegen.box(ctx.mv, promoted)
+            }
+        }
+    }
+
+    /** 将栈顶的定长装箱值转换为 BigInteger（BigInt 类型本身不动）。 */
+    private fun convertToBigInt(ctx: A2sCompileContext, type: A2sType) {
+        when (type) {
+            A2sI32, A2sU32 -> {
+                A2sTypeCodegen.unbox(ctx.mv, A2sI32)
+                ctx.mv.visitInsn(I2L)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, "java/math/BigInteger", "valueOf", "(J)Ljava/math/BigInteger;", false)
+            }
+
+            A2sI64, A2sU64 -> {
+                A2sTypeCodegen.unbox(ctx.mv, A2sI64)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, "java/math/BigInteger", "valueOf", "(J)Ljava/math/BigInteger;", false)
+            }
+
+            else -> {}
+        }
+    }
+
+    /** 将栈顶的值转换为 Rational（BigInt 或定长类型转换，Rational 不动）。 */
+    private fun convertToRational(ctx: A2sCompileContext, type: A2sType) {
+        when (type) {
+            A2sBigInt -> {
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RATIONAL, "of", "(Ljava/math/BigInteger;)L$TYPE_RATIONAL;", false)
+            }
+
+            A2sI32, A2sU32 -> {
+                A2sTypeCodegen.unbox(ctx.mv, A2sI32)
+                ctx.mv.visitInsn(I2L)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RATIONAL, "of", "(J)L$TYPE_RATIONAL;", false)
+            }
+
+            A2sI64, A2sU64 -> {
+                A2sTypeCodegen.unbox(ctx.mv, A2sI64)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RATIONAL, "of", "(J)L$TYPE_RATIONAL;", false)
+            }
+
+            else -> {}
+        }
+    }
+
+    private fun bigIntOp(op: String) = when (op) {
+        "+" -> "add"; "-" -> "subtract"; "*" -> "multiply"; "/" -> "divide"; "%" -> "remainder"; else -> "add"
+    }
+
+    private fun rationalOp(op: String) = when (op) {
+        "+" -> "add"; "-" -> "sub"; "*" -> "mul"; "/" -> "div"; "%" -> "mod"; else -> "add"
+    }
+
+    private fun primitiveArithmetic(mv: org.objectweb.asm.MethodVisitor, op: String, t: A2sType) {
+        when (t) {
+            A2sI32, A2sU32 -> when (op) {
+                "+" -> mv.visitInsn(IADD); "-" -> mv.visitInsn(ISUB); "*" -> mv.visitInsn(IMUL)
+                "/" -> mv.visitInsn(IDIV); "%" -> mv.visitInsn(IREM)
+            }
+
+            A2sI64, A2sU64 -> when (op) {
+                "+" -> mv.visitInsn(LADD); "-" -> mv.visitInsn(LSUB); "*" -> mv.visitInsn(LMUL)
+                "/" -> mv.visitInsn(LDIV); "%" -> mv.visitInsn(LREM)
+            }
+
+            A2sF32 -> when (op) {
+                "+" -> mv.visitInsn(FADD); "-" -> mv.visitInsn(FSUB); "*" -> mv.visitInsn(FMUL)
+                "/" -> mv.visitInsn(FDIV); "%" -> mv.visitInsn(FREM)
+            }
+
+            A2sF64 -> when (op) {
+                "+" -> mv.visitInsn(DADD); "-" -> mv.visitInsn(DSUB); "*" -> mv.visitInsn(DMUL)
+                "/" -> mv.visitInsn(DDIV); "%" -> mv.visitInsn(DREM)
+            }
+
+            else -> {}
+        }
+    }
+
+    private fun compileComparison(ctx: A2sCompileContext, expr: A2sBinary, op: String) {
+        val lt = symbols.inferType(expr.left, ctx.localTypes())
+        val rt = symbols.inferType(expr.right, ctx.localTypes())
+        val promoted = A2sTypeCodegen.promoteNumeric(lt, rt)
+
+        // 编译右操作数存临时槽，再编译左操作数
+        compile(ctx, expr.right)
+        val tmp = ctx.declareLocal("__cmp_tmp", A2sAny)
+        ctx.mv.visitVarInsn(ASTORE, tmp)
+        compile(ctx, expr.left)
+
+        when (promoted) {
+            A2sBigInt -> {
+                convertToBigInt(ctx, lt)
+                ctx.mv.visitVarInsn(ALOAD, tmp)
+                convertToBigInt(ctx, rt)
+                ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/math/BigInteger", "compareTo", "(Ljava/math/BigInteger;)I", false)
+                compileIntCompare(ctx.mv, op)
+            }
+
+            A2sRational -> {
+                convertToRational(ctx, lt)
+                ctx.mv.visitVarInsn(ALOAD, tmp)
+                convertToRational(ctx, rt)
+                ctx.mv.visitMethodInsn(INVOKEVIRTUAL, TYPE_RATIONAL, "compareTo", "(L$TYPE_RATIONAL;)I", false)
+                compileIntCompare(ctx.mv, op)
+            }
+
+            else -> {
+                // 定长类型：拆箱转 long 比较
+                A2sTypeCodegen.unbox(ctx.mv, promoted)
+                toLong(ctx.mv, promoted)
+                ctx.mv.visitVarInsn(ALOAD, tmp)
+                A2sTypeCodegen.unbox(ctx.mv, promoted)
+                toLong(ctx.mv, promoted)
+                ctx.mv.visitInsn(LCMP)
+                compileIntCompare(ctx.mv, op)
+            }
+        }
+    }
+
+    private fun toLong(mv: org.objectweb.asm.MethodVisitor, t: A2sType) {
+        when (t) {
+            A2sI32, A2sU32 -> mv.visitInsn(I2L)
+            A2sF32 -> mv.visitInsn(F2L)
+            A2sF64 -> mv.visitInsn(D2L)
+            else -> {}
+        }
+    }
+
+    private fun compileIntCompare(mv: org.objectweb.asm.MethodVisitor, op: String) {
+        val jumpOp = when (op) {
+            "==" -> IFEQ; "!=" -> IFNE; "<" -> IFLT; "<=" -> IFLE; ">" -> IFGT; ">=" -> IFGE
+            else -> IFEQ
+        }
+        val trueLabel = Label()
+        val endLabel = Label()
+        mv.visitJumpInsn(jumpOp, trueLabel)
+        mv.visitInsn(ICONST_0)
+        mv.visitJumpInsn(GOTO, endLabel)
+        mv.visitLabel(trueLabel)
+        mv.visitInsn(ICONST_1)
+        mv.visitLabel(endLabel)
+        A2sTypeCodegen.box(mv, A2sBoolean)
+    }
+
+    private fun compileLogical(ctx: A2sCompileContext, expr: A2sBinary, and: Boolean) {
+        compile(ctx, expr.left)
+        A2sTypeCodegen.unbox(ctx.mv, A2sBoolean)
+        val skipLabel = Label()
+        val endLabel = Label()
+        if (and) ctx.mv.visitJumpInsn(IFEQ, skipLabel) else ctx.mv.visitJumpInsn(IFNE, skipLabel)
+        compile(ctx, expr.right)
+        A2sTypeCodegen.unbox(ctx.mv, A2sBoolean)
+        if (and) ctx.mv.visitJumpInsn(IFEQ, skipLabel) else ctx.mv.visitJumpInsn(IFNE, skipLabel)
+        ctx.mv.visitInsn(ICONST_1)
+        ctx.mv.visitJumpInsn(GOTO, endLabel)
+        ctx.mv.visitLabel(skipLabel)
+        ctx.mv.visitInsn(ICONST_0)
+        ctx.mv.visitLabel(endLabel)
+        A2sTypeCodegen.box(ctx.mv, A2sBoolean)
+    }
+
+    private fun compileStringConcat(ctx: A2sCompileContext, expr: A2sBinary) {
+        ctx.mv.visitTypeInsn(NEW, "java/lang/StringBuilder")
+        ctx.mv.visitInsn(DUP)
+        ctx.mv.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false)
+        compile(ctx, expr.left)
+        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false)
+        compile(ctx, expr.right)
+        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append", "(Ljava/lang/Object;)Ljava/lang/StringBuilder;", false)
+        ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "toString", "()Ljava/lang/String;", false)
+    }
+
+    private fun compileUnary(ctx: A2sCompileContext, expr: A2sUnary) {
+        compile(ctx, expr.operand)
+        val operandType = symbols.inferType(expr.operand, ctx.localTypes())
+        when (expr.op) {
+            A2sUnaryOp.MINUS -> when (operandType) {
+                A2sBigInt -> ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/math/BigInteger", "negate", "()Ljava/math/BigInteger;", false)
+                A2sRational -> ctx.mv.visitMethodInsn(INVOKEVIRTUAL, TYPE_RATIONAL, "negate", "()L$TYPE_RATIONAL;", false)
+                else -> {
+                    A2sTypeCodegen.unbox(ctx.mv, operandType)
+                    when (operandType) {
+                        A2sI32, A2sU32 -> ctx.mv.visitInsn(INEG)
+                        A2sI64, A2sU64 -> ctx.mv.visitInsn(LNEG)
+                        A2sF32 -> ctx.mv.visitInsn(FNEG)
+                        A2sF64 -> ctx.mv.visitInsn(DNEG)
+                        else -> {}
+                    }
+                    A2sTypeCodegen.box(ctx.mv, operandType)
+                }
+            }
+
+            A2sUnaryOp.NOT -> {
+                A2sTypeCodegen.unbox(ctx.mv, A2sBoolean)
+                val trueLabel = Label()
+                val endLabel = Label()
+                ctx.mv.visitJumpInsn(IFEQ, trueLabel)
+                ctx.mv.visitInsn(ICONST_0)
+                ctx.mv.visitJumpInsn(GOTO, endLabel)
+                ctx.mv.visitLabel(trueLabel)
+                ctx.mv.visitInsn(ICONST_1)
+                ctx.mv.visitLabel(endLabel)
+                A2sTypeCodegen.box(ctx.mv, A2sBoolean)
+            }
+        }
+    }
+
+    private fun compileFieldAccess(ctx: A2sCompileContext, expr: A2sFieldAccess) {
+        val receiverType = symbols.inferType(expr.receiver, ctx.localTypes())
+        if (receiverType is A2sEventType) {
+            // 事件字段：CHECKCAST 到事件类，GETFIELD
+            val eventClass = A2sNames.eventClass(receiverType.eventName)
+            compile(ctx, expr.receiver)
+            ctx.mv.visitTypeInsn(CHECKCAST, eventClass)
+            val fieldType = symbols.eventFieldType(receiverType.eventName, expr.fieldName)
+            val desc = A2sTypeCodegen.boxedDescriptor(fieldType)
+            ctx.mv.visitFieldInsn(GETFIELD, eventClass, expr.fieldName, desc)
+        } else {
+            // 非事件字段：运行时反射
+            compile(ctx, expr.receiver)
+            ctx.mv.visitLdcInsn(expr.fieldName)
+            ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "getField", "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+        }
+    }
+
+    private fun compileCall(ctx: A2sCompileContext, expr: A2sCall) {
+        when (expr.name) {
+            "println" -> {
+                ctx.mv.visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;")
+                if (expr.arguments.isNotEmpty()) compile(ctx, expr.arguments[0]) else ctx.mv.visitLdcInsn("")
+                ctx.mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/Object;)V", false)
+                ctx.mv.visitInsn(ACONST_NULL)
+            }
+
+            "len" -> {
+                if (expr.arguments.isNotEmpty()) compile(ctx, expr.arguments[0]) else ctx.mv.visitInsn(ACONST_NULL)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "len", "(Ljava/lang/Object;)I", false)
+                A2sTypeCodegen.box(ctx.mv, A2sI32)
+            }
+
+            "toInt", "toI64" -> {
+                if (expr.arguments.isNotEmpty()) compile(ctx, expr.arguments[0]) else ctx.mv.visitInsn(ACONST_NULL)
+                ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, expr.name, "(Ljava/lang/Object;)Ljava/lang/Object;", false)
+            }
+
+            else -> {
+                // 自定义函数：this 调用脚本类自身方法
+                ctx.mv.visitVarInsn(ALOAD, 0)
+                for (arg in expr.arguments) compile(ctx, arg)
+                val desc = "(" + "Ljava/lang/Object;".repeat(expr.arguments.size) + ")Ljava/lang/Object;"
+                ctx.mv.visitMethodInsn(INVOKEVIRTUAL, ctx.className, expr.name, desc, false)
+            }
+        }
+    }
+
+    private fun compileMethodCall(ctx: A2sCompileContext, expr: A2sMethodCall) {
+        compile(ctx, expr.receiver)
+        for (arg in expr.arguments) compile(ctx, arg)
+        // 动态方法调用：打包参数，交运行时
+        ctx.mv.visitLdcInsn(expr.arguments.size)
+        ctx.mv.visitTypeInsn(ANEWARRAY, "java/lang/Object")
+        for ((i, arg) in expr.arguments.withIndex()) {
+            ctx.mv.visitInsn(DUP)
+            ctx.mv.visitLdcInsn(i)
+            compile(ctx, arg)
+            ctx.mv.visitInsn(AASTORE)
+        }
+        ctx.mv.visitLdcInsn(expr.methodName)
+        // 栈序：receiver, methodName, args[]。调用签名调整
+        ctx.mv.visitMethodInsn(
+            INVOKESTATIC, TYPE_RUNTIME, "invokeMethod",
+            "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", false
+        )
+    }
+
+    private fun compileIndexAccess(ctx: A2sCompileContext, expr: A2sIndexAccess) {
+        compile(ctx, expr.receiver)
+        compile(ctx, expr.index)
+        ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "getAt", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false)
+    }
+}

@@ -157,19 +157,36 @@ kaptor 是 `object` 单例；a2s 是可实例化类，**每个玩家 AE2 网络�
 
 ```
 class A2sEngine {
-    val eventRegistry: EventTypeRegistry   // 内置 + 本网络自定义事件
-    val scriptManager: A2sScriptManager     // 脚本加载/编译/热重载
     val eventQueue: A2sEventQueue           // post 队列
-    val sandbox: A2sSandbox                 // 沙盒
+    // 内部：事件类注册表、handler 注册表、编译计数器
+    // 通过 A2sHiddenClassLoader 定义隐藏类，MethodHandle 绑定 handler
 }
 ```
 
-每个实例隔离：事件类型注册表、脚本集合、事件队列、沙盒状态。**实例内脚本共享自定义事件**。
+每个实例隔离：事件类、handler、事件队列、编译状态。**实例内脚本共享自定义事件**。
 
 - 内置事件（如 `PlayerRightClick`、`ServerTick`）由引擎预注册，脚本直接 `on` 即可，无需声明。
 - 自定义事件由脚本 `event` 声明，同一引擎实例内的脚本可跨脚本共享。
+- handler 调用通过 MethodHandle（脚本内部为直接字节码指令，引擎边界用 MethodHandle 实现动态绑定 + 可部分释放）。
 
-### 4.2 post 事件队列
+### 4.2 JIT 编译产物（Hidden Class + MethodHandle）
+
+每个脚本编译产出两类隐藏类（`MethodHandles.Lookup.defineHiddenClass`）：
+
+| 声明 | 编译产物 |
+|------|---------|
+| `event Xxx(...)` | 事件类（继承 `A2sEventObject`），字段 + 构造器 + getter + 方法 |
+| 脚本顶层 `val`/`var` | 脚本类字段（构造器初始化） |
+| `fun foo(...)` | 脚本类实例方法 |
+| `on`/`before`/`after` 处理器 | 脚本类实例方法 `handle_Xxx`/`before_Xxx`/`after_Xxx` |
+
+**MethodHandle 只用于引擎边界**（handler 分发、事件构造、post 入队），脚本内部编译为直接字节码指令（`INVOKEVIRTUAL`/`GETFIELD`/`IADD` 等），兼顾性能与可部分释放。
+
+- **可部分释放**：隐藏类不绑定 ClassLoader，释放 MethodHandle/Class 引用后即可被 GC。
+- **不写磁盘**：字节码直接内存定义，无需 `.class` 文件。
+- **约束**：隐藏类须与 lookup 宿主类同包（`kaptor.a2s.gen.GenHost`）；隐藏类之间无法按名引用，`post` 走运行时构造器 MethodHandle。
+
+### 4.3 post 事件队列
 
 ```
 post MyEvent(...) → 写入 per-engine 队列（不立即执行）
@@ -179,7 +196,7 @@ flush = drain 队列 → 逐个 dispatch → 新 post 进入下一刻
 
 **必定延迟 1 tick**，从根本上杜绝「事件处理器内再触发事件」导致的无限递归。
 
-### 4.3 deny 分层
+### 4.4 deny 分层
 
 | 层 | 职责 |
 |----|------|
@@ -188,7 +205,7 @@ flush = drain 队列 → 逐个 dispatch → 新 post 进入下一刻
 
 内置拦截点（引擎预注册）：`MeNetworkExtract`、`MeNetworkInsert` 等 AE2 存储操作。
 
-### 4.4 资源解析（接口 + 注入）
+### 4.5 资源解析（接口 + 注入）
 
 kaptor 不依赖 AE2，定义接口由 common 提供实现。JIT 编译期静态解析（编译时 AE2 资源表已就绪），冲突时强制要求写全限定。资源类型（`Item`/`Fluid`/`Energy`/`Mana`/`Virtual` 等）动态来源于 AE2 的 `AEKeyType` 注册表，非语法硬编码。
 
@@ -246,25 +263,32 @@ A2sSandbox:
 ```
 sub/kaptor/
 ├── antlr/
-│   ├── A2sLexer.g4              # 词法（RESOURCE_REF 反引号 token）
+│   ├── A2sLexer.g4              # 词法（RESOURCE_REF 反引号 token、$$ 转义）
 │   └── A2sParser.g4             # 语法（类 Kotlin 简化）
 └── src/kaptor/a2s/
+    ├── gen/
+    │   └── GenHost.kt           # hidden class lookup 宿主（与生成类同包）
     ├── parser/
     │   └── A2sVisitor.kt        # ParseTree → IR
     ├── ir/
     │   ├── A2sIr.kt             # 事件/资源/Stack/post 等 IR 节点
-    │   └── A2sType.kt           # i32/i64/.../BigInt/Rational/Item/Stack/List 类型
+    │   └── A2sType.kt           # i32/i64/.../BigInt/Rational/事件/Stack/List 类型
     ├── compiler/
-    │   ├── A2sCompiler.kt
-    │   ├── A2sExpressionCompiler.kt
-    │   └── A2sStatementCompiler.kt
+    │   ├── A2sCompiler.kt        # 顶层编译编排（脚本 → 事件类 + 脚本类字节码）
+    │   ├── A2sClassCompiler.kt   # 事件类 / 脚本类生成
+    │   ├── A2sExprCompiler.kt    # 表达式编译（数值/字段/调用/字符串）
+    │   ├── A2sStmtCompiler.kt    # 语句编译（控制流/post）
+    │   ├── A2sSymbolTable.kt     # 符号表 + 类型推断
+    │   ├── A2sTypeCodegen.kt     # 装箱/拆箱/数值提升/类型转换
+    │   ├── A2sCompileContext.kt  # 编译上下文（局部变量槽/循环标签/事件字段）
+    │   └── A2sNames.kt           # 生成类命名约定
     ├── runtime/
-    │   ├── A2sEngine.kt         # 多实例引擎
-    │   ├── A2sEventRegistry.kt  # 事件类型注册（内置+自定义）
-    │   ├── A2sEventQueue.kt     # post 队列 + flush
-    │   ├── A2sScriptManager.kt  # 加载/编译/热重载
-    │   ├── A2sSandbox.kt        # 多层沙盒
-    │   └── A2sEventObject.kt    # 事件基类（含 isDenied、deny()）
+    │   ├── A2sEngine.kt          # 多实例引擎（编译/注册/分发/post）
+    │   ├── A2sEventObject.kt     # 事件基类（含 isDenied/deny()、isHandled/handled()）
+    │   ├── A2sEventQueue.kt      # post 队列 + flush
+    │   ├── A2sHiddenClassLoader.kt # defineHiddenClass + MethodHandle
+    │   ├── A2sRuntime.kt         # 脚本内置函数桥接（println/listOf/资源解析）
+    │   └── Rational.kt           # 有理数运行时（分数）
     └── resource/
         └── ResourceResolver.kt  # 接口（common 注入实现）
 ```
@@ -315,11 +339,12 @@ sub/kaptor/
 ### 7.5 运算提升规则
 
 ```
-BigInt op BigInt      → BigInt
+BigInt op BigInt      → BigInt（除法除外）
 Rational op Rational  → Rational
 BigInt op Rational    → Rational
 i64 op BigInt         → BigInt（定长提升为大数）
 i64 op i64            → i64（定长保持）
+BigInt / BigInt       → Rational（整数除法精确得分数，1/2 → 1/2 (0.5)）
 ```
 
 ### 7.6 溢出与转换
@@ -344,6 +369,7 @@ Stack == Stack            → 比较 key + 数量
 标量：i32, i64, u32, u64, f32, f64, Boolean, String
 大数：BigInt（默认整数）, Rational（默认小数）
 资源：Item, Fluid, Energy, Mana, Virtual（动态来源于 AE2 注册表，非硬编码）
+事件：A2sEventType（引用 event 声明的事件类，支持字段类型推断）
 容器：Stack（key + 数量）, List<T>
 特殊：Any, Null, Unit
 ```
@@ -351,17 +377,43 @@ Stack == Stack            → 比较 key + 数量
 - 资源类型动态来源于 AE2 的 `AEKeyType` 注册表，其他模组也可注册新类型。脚本中未注册的类型名在编译期报错。
 - `` `diamond` `` 是 **Item 类型**，`` `diamond` * 10 `` 是 **Stack 类型**，编译器严格区分二者。
 - **完整空安全**：`String?` 可空类型、`?.`、`?:`、`!!` 全支持。
+- 事件类型用于事件字段访问的类型推断：`e.arg` 中 `e` 为事件类型时，`arg` 编译为 `GETFIELD`。
 
 ---
 
 ## 九、实施步骤
 
-| 步骤 | 内容 | 预计 |
+| 步骤 | 内容 | 状态 |
 |------|------|------|
-| 1 | ANTLR 词法 + 语法（`RESOURCE_REF` 反引号 token、`event`/`on`/`before`/`after`/`post`/`handled`/`deny` 关键字） | 3-4 天 |
-| 2 | A2sVisitor（ParseTree → IR，全语句/表达式覆盖） | 3-4 天 |
-| 3 | 编译器（ASM 编译、资源字面量、`*` 数量、事件字段 `getfield`） | 3-4 天 |
-| 4 | 多实例引擎 + 队列 + 沙盒（`A2sEngine`、post flush、deny 标记、多层沙盒） | 3-4 天 |
+| 1 | ANTLR 词法 + 语法（`RESOURCE_REF` 反引号 token、`$$` 转义、`event`/`on`/`before`/`after`/`post`/`handled`/`deny` 关键字） | ✅ 完成 |
+| 2 | A2sVisitor（ParseTree → IR，全语句/表达式覆盖） | ✅ 完成 |
+| 3 | 编译器（ASM 编译、数值运算 BigInt/Rational/定长、事件字段 `GETFIELD`、post） | ✅ 完成 |
+| 4 | Hidden Class + MethodHandle（`defineHiddenClass`，可 GC、不写磁盘） | ✅ 完成 |
+| 5 | 多实例引擎 + 事件分发（before/on/after）+ post 队列 | ✅ 完成 |
+| 6 | lambda 闭包捕获、try-catch 完整实现、多层沙盒注入 | ⏳ 待做 |
+
+### 9.1 JIT 编译管线
+
+```
+.a2s 源码
+  → A2sLexer/A2sParser（ANTLR）
+  → A2sVisitor（ParseTree → A2sIr）
+  → A2sCompiler（A2sIr → ASM 字节码）
+  → defineHiddenClass（字节码 → 隐藏类）
+  → MethodHandle 绑定 + 引擎分发
+```
+
+编译产物（Hidden Class）：
+
+- **事件类**：`event Xxx(val a: i32)` → 继承 `A2sEventObject` 的隐藏类，字段 + 构造器 + getter + 方法
+- **脚本类**：一个脚本 → 一个隐藏类，顶层 `val`/`var` 为字段，`fun`/handler 为方法
+
+### 9.2 关键实现细节
+
+- **数值语义**：默认 BigInt/Rational，`1 / 2` 精确得到 `Rational(1/2)`；混合运算自动提升（BigInt + Rational → Rational）；定长类型装箱存储、运算时拆箱用原生指令。
+- **Hidden Class 约束**：隐藏类必须与 lookup 宿主类同包（`kaptor.a2s.gen.GenHost`）；隐藏类之间无法互相按名引用，故 `post` 走运行时构造器 MethodHandle，而非直接 `NEW`。
+- **事件字段访问**：编译期类型推断识别事件类型，字段访问编译为 `CHECKCAST` + `GETFIELD`；事件方法内可直接访问字段（`GETFIELD`）。
+- **标识符解析**：局部变量走 `ALOAD`，事件字段/顶层变量走 `GETFIELD`。
 
 ---
 
@@ -422,7 +474,7 @@ on PlayerRightClick { e ->
     val count = 123              // BigInt
     val ratio = 3.14             // Rational(157/50)
     val exact = 1 / 3            // Rational(1/3)，永不失真
-    println(exact)               // 输出: 1/3 (0.3333)
+    println(exact)               // 输出: 1/3 (0.33333333)
 
     val fast = 123_i64           // 定长 i64
     val f = 3.14_f32             // 定长 f32
