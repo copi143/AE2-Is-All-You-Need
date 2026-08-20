@@ -4,15 +4,13 @@ import allyouneed.cell.creative.CreativeMeCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
 import allyouneed.cell.item.ItemStorageCell
 import allyouneed.cell.item.ItemStorageCellHandler
-import allyouneed.logic.aekey.EnergyKey
-import allyouneed.logic.aekey.ManaKey
-import allyouneed.logic.aekey.VirtualKey
+import allyouneed.logic.aekey.AllKeys
 import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.net.http.HttpModule
 import allyouneed.parts.p2p.EntityP2PTunnelPart
-import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
+import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
 import allyouneed.util.*
 import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
@@ -42,9 +40,7 @@ object Main {
      * during the mod initializer.
      */
     fun registerAEKeyTypes() {
-        AEKeyTypes.register(EnergyKey.Type)
-        AEKeyTypes.register(ManaKey.Type)
-        AEKeyTypes.register(VirtualKey.Type)
+        AllKeys.entries.forEach { AEKeyTypes.register(it.type) }
     }
 
     /**

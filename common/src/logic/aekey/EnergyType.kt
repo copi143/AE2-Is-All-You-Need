@@ -22,7 +22,9 @@ enum class EnergyType(val id: String, val unit: String, val energyPerAE: Double 
     GtceuEu("gtceu", "EU"), //
     ;
 
-    val granularity = (EnergyKey.ENERGY_GRANULARITY / energyPerAE).roundToInt()
+    val typeKey: EnergyKey = EnergyKey(this)
+
+    val granularity: Int = (EnergyKey.ENERGY_GRANULARITY / energyPerAE).roundToInt()
 
     override fun toString(): String = id
 

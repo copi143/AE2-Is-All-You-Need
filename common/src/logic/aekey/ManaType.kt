@@ -22,7 +22,9 @@ enum class ManaType(val id: String, val unit: String, val manaPerAM: Double = Pl
     ArsNouveauMana("ars_nouveau", "Mana"), //
     ;
 
-    val granularity = (ManaKey.MANA_GRANULARITY / manaPerAM).roundToInt()
+    val typeKey: ManaKey = ManaKey(this)
+
+    val granularity: Int = (ManaKey.MANA_GRANULARITY / manaPerAM).roundToInt()
 
     override fun toString(): String = id
 

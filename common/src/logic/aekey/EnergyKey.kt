@@ -26,7 +26,7 @@ import net.minecraft.world.level.Level
  */
 data class EnergyKey(val metric: EnergyType, val level: Int = 0) : AEKey() {
     override fun getType(): Type = Type
-    override fun dropSecondary(): EnergyKey = EnergyKey(metric)
+    override fun dropSecondary(): EnergyKey = metric.typeKey
     override fun getPrimaryKey(): EnergyType = metric
     override fun getId(): ResourceLocation = (if (level > 0) "$TYPE_ID/$metric/$level" else "$TYPE_ID/$metric").rlAE
 
@@ -73,6 +73,10 @@ data class EnergyKey(val metric: EnergyType, val level: Int = 0) : AEKey() {
     companion object {
         const val TYPE_ID = "e"
         const val ENERGY_PER_BYTE = 64
+
+        /**
+         * 存储时使用的粒度，即内部整数表示使用的乘数，以便支持非整数的数量
+         */
         const val ENERGY_GRANULARITY = 1024
     }
 }
