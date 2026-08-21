@@ -1,5 +1,6 @@
 package allyouneed.logic.aekey
 
+import allyouneed.item.packet.AllPackets
 import allyouneed.util.MODID
 import allyouneed.util.rlAE
 import appeng.api.stacks.AEKey
@@ -16,6 +17,7 @@ import kotlin.reflect.KClass
 
 abstract class LevelOnlyKey : AEKey() {
     abstract val level: Int
+    abstract val packetType: String
     abstract override fun getType(): Type<out LevelOnlyKey>
     override fun dropSecondary(): LevelOnlyKey = type.level0
     override fun getPrimaryKey(): Unit = Unit
@@ -32,6 +34,8 @@ abstract class LevelOnlyKey : AEKey() {
     }
 
     override fun addDrops(amount: Long, drops: MutableList<ItemStack>, level: Level, pos: BlockPos) {
+        if (amount <= 0) return
+        drops.add(AllPackets.createLevelPacket(packetType, this.level, amount))
     }
 
     override fun isTagged(tag: TagKey<*>): Boolean = false

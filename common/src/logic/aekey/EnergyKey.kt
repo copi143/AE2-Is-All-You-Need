@@ -1,5 +1,6 @@
 package allyouneed.logic.aekey
 
+import allyouneed.item.packet.AllPackets
 import allyouneed.util.MODID
 import allyouneed.util.rlAE
 import appeng.api.stacks.AEKey
@@ -43,6 +44,8 @@ data class EnergyKey(val metric: EnergyType, val level: Int = 0) : AEKey() {
     }
 
     override fun addDrops(amount: Long, drops: MutableList<ItemStack>, level: Level, pos: BlockPos) {
+        if (amount <= 0) return
+        drops.add(AllPackets.createEnergyPacket(metric, amount))
     }
 
     override fun isTagged(tag: TagKey<*>): Boolean = false

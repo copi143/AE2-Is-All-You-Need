@@ -1,5 +1,6 @@
 package allyouneed.logic.aekey
 
+import allyouneed.item.packet.AllPackets
 import allyouneed.util.MODID
 import allyouneed.util.rlAE
 import appeng.api.stacks.AEKey
@@ -43,6 +44,8 @@ data class ManaKey(val metric: ManaType, val level: Int = 0) : AEKey() {
     }
 
     override fun addDrops(amount: Long, drops: MutableList<ItemStack>, level: Level, pos: BlockPos) {
+        if (amount <= 0) return
+        drops.add(AllPackets.createManaPacket(metric, amount))
     }
 
     override fun isTagged(tag: TagKey<*>): Boolean = false

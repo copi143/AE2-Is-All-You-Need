@@ -232,6 +232,23 @@ fun main(args: Array<String>) {
         item("machine_pattern", "Machine Pattern")
         itemLang("pattern_encoding_terminal", "ME Pattern Encoding Terminal")
         itemLang("pseudo_pattern", "Pseudo Pattern")
+
+        // Packet items: layered model (layer0=content icon, layer1=packet overlay)
+        packetItem("e_packet", "Energy Packet", "item/energy_icon")
+        packetItem("m_packet", "Mana Packet", "item/mana_icon")
+        packetItem("f_packet", "Fluid Packet", "item/fluid_icon")
+        packetItem("i_packet", "Item Packet", "item/item_icon")
+        packetItem("hp_packet", "HP Packet", "item/hp_icon")
+        packetItem("sta_packet", "STA Packet", "item/sta_icon")
+        packetItem("xp_packet", "XP Packet", "item/xp_icon")
+
+        translation("packet.$modId.type.energy", "Energy")
+        translation("packet.$modId.type.mana", "Mana")
+        translation("packet.$modId.type.fluid", "Fluid")
+        translation("packet.$modId.type.item", "Item")
+        translation("packet.$modId.type.hp", "HP")
+        translation("packet.$modId.type.sta", "STA")
+        translation("packet.$modId.type.xp", "XP")
     }
 
     retexture(output) {
@@ -440,6 +457,14 @@ fun main(args: Array<String>) {
     if (apTex.exists()) {
         apTex.copyTo(itemTexOut.resolve("adaptive_pattern.png"), overwrite = true)
         apTex.copyTo(itemTexOut.resolve("machine_pattern.png"), overwrite = true)
+    }
+
+    // Packet item textures: copy content icons + overlay
+    for (tex in listOf("packet_overlay", "energy_icon", "mana_icon", "fluid_icon", "item_icon", "hp_icon", "sta_icon", "xp_icon")) {
+        val src = sourceTextures.resolve("packet/$tex.png")
+        if (src.exists()) {
+            src.copyTo(itemTexOut.resolve("$tex.png"), overwrite = true)
+        }
     }
 
     // Async synthesis blocks: dedicated pixel-art textures (unformed + formed). Written straight to

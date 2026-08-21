@@ -3,6 +3,7 @@ package allyouneed
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.item.ItemStorageCell
+import allyouneed.item.packet.AllPackets
 import allyouneed.pattern.ModItems
 import allyouneed.util.rl
 import appeng.core.MainCreativeTab
@@ -46,5 +47,10 @@ object AllRegistries {
         MainCreativeTab.add(DIMENSIONAL_CELL)
         items += CREATIVE_ME_CELL
         items += DIMENSIONAL_CELL
+
+        // Register packet items
+        AllPackets.init()
+        @Suppress("UNCHECKED_CAST")
+        AllPackets.all.forEach { items += it as ItemDefinition<Item> }
     }
 }

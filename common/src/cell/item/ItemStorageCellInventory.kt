@@ -1,6 +1,7 @@
 package allyouneed.cell.item
 
 import allyouneed.cell.buildPartitionList
+import allyouneed.item.packet.AllPackets
 import appeng.api.config.Actionable
 import appeng.api.config.IncludeExclude
 import appeng.api.networking.security.IActionSource
@@ -140,6 +141,7 @@ class ItemStorageCellInventory(
         source: IActionSource?,
     ): Long {
         if (amount == 0L || !keyType.contains(what)) return 0
+        if (what is AEItemKey && AllPackets.isPacket(what.toStack())) return 0
         if (!partitionList.matchesFilter(what, partitionListMode)) return 0
 
         val inserted = innerInsert(what, amount, mode)

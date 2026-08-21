@@ -2,6 +2,7 @@ package allyouneed.cell.dimensional
 
 import allyouneed.api.BigStackSource
 import allyouneed.cell.buildPartitionList
+import allyouneed.item.packet.AllPackets
 import allyouneed.util.bigint.BigKeyCounter
 import allyouneed.util.saturateToLong
 import appeng.api.config.Actionable
@@ -71,6 +72,7 @@ class DimensionalCellInventory(
 
     override fun insert(what: AEKey, amount: Long, mode: Actionable, source: IActionSource): Long {
         if (amount <= 0) return 0
+        if (what is AEItemKey && AllPackets.isPacket(what.toStack())) return 0
         if (!partitionList.matchesFilter(what, partitionListMode)) return 0
 
         // Block recursive non-empty cells

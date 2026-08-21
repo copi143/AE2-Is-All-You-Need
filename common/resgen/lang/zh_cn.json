@@ -73,5 +73,19 @@
   "gui.ae2isallyouneed.machine.smelting": "熔炼",
   "gui.ae2isallyouneed.machine.blasting": "高炉冶炼",
   "gui.ae2isallyouneed.machine.smoking": "烟熏",
-  "gui.ae2isallyouneed.machine.example_custom": "示例自定义机器"
+  "gui.ae2isallyouneed.machine.example_custom": "示例自定义机器",
+  "item.ae2isallyouneed.e_packet": "能量封包",
+  "item.ae2isallyouneed.m_packet": "魔力封包",
+  "item.ae2isallyouneed.f_packet": "流体封包",
+  "item.ae2isallyouneed.i_packet": "物品封包",
+  "item.ae2isallyouneed.hp_packet": "生命封包",
+  "item.ae2isallyouneed.sta_packet": "体力封包",
+  "item.ae2isallyouneed.xp_packet": "经验封包",
+  "packet.ae2isallyouneed.type.energy": "能量",
+  "packet.ae2isallyouneed.type.mana": "魔力",
+  "packet.ae2isallyouneed.type.fluid": "流体",
+  "packet.ae2isallyouneed.type.item": "物品",
+  "packet.ae2isallyouneed.type.hp": "生命",
+  "packet.ae2isallyouneed.type.sta": "体力",
+  "packet.ae2isallyouneed.type.xp": "经验"
 }

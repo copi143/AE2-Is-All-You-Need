@@ -86,6 +86,19 @@ class AssetGen(
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
     }
 
+    fun packetItem(name: String, displayName: String, contentTexture: String, overlayTexture: String = "item/packet_overlay") {
+        translations["item.$modId.$name"] = displayName
+
+        val itemJson = JsonObject().apply {
+            addProperty("parent", "minecraft:item/generated")
+            add("textures", JsonObject().apply {
+                addProperty("layer0", "$modId:$contentTexture")
+                addProperty("layer1", "$modId:$overlayTexture")
+            })
+        }
+        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+    }
+
     /**
      * Storage cell item: generated model with a tintable status-LED layer on top
      * (layer1 tinted via ItemColors, like vanilla item_storage_cell).
