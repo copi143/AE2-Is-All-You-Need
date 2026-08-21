@@ -32,7 +32,7 @@ WLAN 管理器是方块放置的网络设备，属于 AE2 原版方块 `ME 无�
 
 - 每个 ME 网络最多允许存在 **1 个** WLAN 管理器。
 - 若放置多个 WLAN 管理器到同一 ME 网络，则**所有** WLAN 管理器将进入无效状态，停止广播功能。
-- 通过监听 AE2 的网格合并事件 (`GridEventType.GRID_MERGE`)，在网格合并后检查是否存在多个 WLAN 管理器，若存在则全部失效。
+- AE2 15.4 没有 `GridEventType.GRID_MERGE`。网格合并时被吞节点会进入幸存 Grid 的 `IGridServiceProvider.addNode`；在下一 tick 复检数量，若存在多个则全部失效。
 
 ### 绑定逻辑
 

@@ -11,6 +11,8 @@ import allyouneed.cell.item.ItemStorageCellItem
 import allyouneed.gtceu.multiblock.AsyncStructureGtStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.iodrive.MEIODriveScreen
+import allyouneed.parts.logger.NetworkLoggerMenu
+import allyouneed.parts.logger.NetworkLoggerScreen
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.parts.machineassembler.MachineAssemblerScreen
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
@@ -82,6 +84,9 @@ object ForgeClientEvents {
             MenuScreens.register(MEIODriveMenu.TYPE) { menu, inv, title ->
                 val style = StyleManager.loadStyleDoc("/screens/drive.json")
                 MEIODriveScreen(menu, inv, title, style)
+            }
+            MenuScreens.register(NetworkLoggerMenu.TYPE) { menu, inv, title ->
+                NetworkLoggerScreen(menu, inv, title)
             }
             MenuScreens.register(MachineAssemblerMenu.TYPE) { menu, inv, title ->
                 val style = StyleManager.loadStyleDoc("/screens/machine_assembler.json")

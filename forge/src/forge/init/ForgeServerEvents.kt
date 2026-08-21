@@ -1,6 +1,7 @@
 package allyouneed.forge.init
 
 import allyouneed.cell.dimensional.DimensionalCellStore
+import allyouneed.parts.logger.LogStore
 import allyouneed.logic.machine.MachineTypeReloadListener
 import allyouneed.logic.machine.ManualMachineRecipeReloadListener
 import allyouneed.util.MODID
@@ -24,10 +25,12 @@ object ForgeServerEvents {
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
         DimensionalCellStore.attach(event.server)
         MacAddressRegistry.attach(event.server)
+        LogStore.attach(event.server)
     }
 
     @SubscribeEvent
     fun onServerStopping(event: ServerStoppingEvent) {
+        LogStore.detach()
         MacAddressRegistry.detach()
         DimensionalCellStore.detach()
     }

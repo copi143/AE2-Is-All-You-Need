@@ -2,6 +2,7 @@ package allyouneed.fabric.init
 
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
+import allyouneed.parts.logger.NetworkLoggerMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
@@ -16,6 +17,8 @@ object FabricMenus {
         @Suppress("UNUSED_VARIABLE") val _pt: MenuType<*> = UnifiedPatternEncodingTermMenu.TYPE
 
         @Suppress("UNUSED_VARIABLE") val _io: MenuType<*> = MEIODriveMenu.TYPE
+
+        @Suppress("UNUSED_VARIABLE") val _nl: MenuType<*> = NetworkLoggerMenu.TYPE
 
         @Suppress("UNUSED_VARIABLE") val _ac: MenuType<*> = AsyncCraftingStatusMenu.TYPE
     }

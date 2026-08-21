@@ -2,10 +2,15 @@ package allyouneed.mixin.ae2;
 
 import allyouneed.logic.TaskScheduler;
 import allyouneed.logic.crafting.ACraftingCalculation;
+import allyouneed.parts.logger.NetworkLogHooks;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.CalculationStrategy;
+import appeng.api.networking.crafting.ICraftingCPU;
 import appeng.api.networking.crafting.ICraftingPlan;
+import appeng.api.networking.crafting.ICraftingRequester;
 import appeng.api.networking.crafting.ICraftingSimulationRequester;
+import appeng.api.networking.crafting.ICraftingSubmitResult;
+import appeng.api.networking.security.IActionSource;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.me.service.CraftingService;
@@ -15,6 +20,9 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.concurrent.Future;
 
@@ -46,5 +54,17 @@ public abstract class CraftingServiceMixin {
                 level, this.grid, simRequester, new GenericStack(what, amount), strategy);
 
         return TaskScheduler.submit((Function0<? extends ICraftingPlan>) job::run);
+    }
+
+    @Inject(method = "submitJob", at = @At("RETURN"))
+    private void allyouneed$logSubmit(
+        ICraftingPlan job,
+        ICraftingRequester requestingMachine,
+        ICraftingCPU target,
+        boolean prioritizePower,
+        IActionSource src,
+        CallbackInfoReturnable<ICraftingSubmitResult> cir
+    ) {
+        NetworkLogHooks.onSubmitJob(this.grid, job, cir.getReturnValue());
     }
 }

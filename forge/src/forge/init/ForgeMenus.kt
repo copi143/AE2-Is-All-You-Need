@@ -4,6 +4,7 @@ import allyouneed.Platform
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
 import allyouneed.gtceu.multiblock.AsyncStructureGtStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
+import allyouneed.parts.logger.NetworkLoggerMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
@@ -27,6 +28,9 @@ object ForgeMenus {
         MENUS.register("pattern_encoding_terminal") { UnifiedPatternEncodingTermMenu.TYPE }
 
     val ME_IO_DRIVE: RegistryObject<MenuType<MEIODriveMenu>> = MENUS.register("me_io_drive") { MEIODriveMenu.TYPE }
+
+    val NETWORK_LOGGER: RegistryObject<MenuType<NetworkLoggerMenu>> =
+        MENUS.register("network_logger") { NetworkLoggerMenu.TYPE }
 
     val ASYNC_CRAFTING_STATUS: RegistryObject<MenuType<AsyncCraftingStatusMenu>> =
         MENUS.register("async_crafting_status") { AsyncCraftingStatusMenu.TYPE }

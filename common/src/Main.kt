@@ -7,6 +7,7 @@ import allyouneed.cell.item.ItemStorageCellHandler
 import allyouneed.logic.aekey.AllKeys
 import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.net.http.HttpModule
+import allyouneed.parts.logger.NetworkLogHooks
 import allyouneed.parts.p2p.EntityP2PTunnelPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
@@ -31,6 +32,7 @@ object Main {
         ModPatternDecoders.register()
         BuiltinMachineTypes.registerAll()
         HttpModule.register()
+        NetworkLogHooks.register()
         registerParts()
     }
 

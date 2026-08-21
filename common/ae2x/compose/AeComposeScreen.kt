@@ -27,6 +27,8 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
     style: ScreenStyle = AeComposeStyles.blank(),
 ) : AEBaseScreen<M>(menu, playerInventory, title, style), AeComposeHost {
 
+    override val menu: M get() = super.menu
+
     protected val layer = ComposeLayer()
     private val exclusions = ExclusionAccumulator()
     private val panelBounds = ArrayList<IntRect>(4)

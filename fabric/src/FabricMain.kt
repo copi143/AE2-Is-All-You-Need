@@ -3,6 +3,7 @@ package allyouneed
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.dimensional.DimensionalCellStore
+import allyouneed.parts.logger.LogStore
 import allyouneed.fabric.init.FabricBlocks
 import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
@@ -76,8 +77,10 @@ fun init() {
     ServerLifecycleEvents.SERVER_STARTING.register { server ->
         DimensionalCellStore.attach(server)
         MacAddressRegistry.attach(server)
+        LogStore.attach(server)
     }
     ServerLifecycleEvents.SERVER_STOPPING.register {
+        LogStore.detach()
         MacAddressRegistry.detach()
         DimensionalCellStore.detach()
     }

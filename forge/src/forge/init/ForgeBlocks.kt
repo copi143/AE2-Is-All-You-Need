@@ -15,6 +15,9 @@ import allyouneed.multiblock.async.AsyncStructureInterfaceBlock
 import allyouneed.parts.iodrive.MEIODriveBlock
 import allyouneed.parts.iodrive.MEIODriveBlockEntity
 import allyouneed.parts.iodrive.MEIODriveRegistration
+import allyouneed.parts.logger.NetworkLoggerBlock
+import allyouneed.parts.logger.NetworkLoggerBlockEntity
+import allyouneed.parts.logger.NetworkLoggerRegistration
 import allyouneed.parts.machineassembler.MachineAssemblerBlock
 import allyouneed.parts.machineassembler.MachineAssemblerBlockEntity
 import allyouneed.parts.machineassembler.MachineAssemblerRegistration
@@ -100,6 +103,33 @@ object ForgeBlocks {
         BlockDefinition("ME IO Drive", "me_io_drive".rl, ME_IO_DRIVE_INSTANCE, ME_IO_DRIVE_ITEM_INSTANCE).also {
             MainCreativeTab.add(it)
         }
+
+    val NETWORK_LOGGER_INSTANCE = NetworkLoggerBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f))
+    val NETWORK_LOGGER_ITEM_INSTANCE = BlockItem(NETWORK_LOGGER_INSTANCE, Item.Properties())
+
+    val NETWORK_LOGGER: RegistryObject<NetworkLoggerBlock> =
+        BLOCKS.register("network_logger") { NETWORK_LOGGER_INSTANCE }
+
+    val NETWORK_LOGGER_BE: RegistryObject<BlockEntityType<NetworkLoggerBlockEntity>> =
+        BLOCK_ENTITIES.register("network_logger") {
+            val type = BlockEntityType.Builder.of(
+                { pos, state -> NetworkLoggerBlockEntity(NETWORK_LOGGER_BE.get(), pos, state) },
+                NETWORK_LOGGER.get(),
+            ).build(null as com.mojang.datafixers.types.Type<*>?)
+            @Suppress("UNCHECKED_CAST")
+            (NETWORK_LOGGER_INSTANCE as appeng.block.AEBaseEntityBlock<NetworkLoggerBlockEntity>).setBlockEntity(
+                NetworkLoggerBlockEntity::class.java, type, null, null,
+            )
+            NetworkLoggerRegistration.setBlockEntityType(type)
+            type
+        }
+
+    val NETWORK_LOGGER_ITEM: RegistryObject<BlockItem> =
+        ForgeItems.ITEMS.register("network_logger") { NETWORK_LOGGER_ITEM_INSTANCE }
+
+    val NETWORK_LOGGER_DEF: BlockDefinition<NetworkLoggerBlock> = BlockDefinition(
+        "ME Network Logger", "network_logger".rl, NETWORK_LOGGER_INSTANCE, NETWORK_LOGGER_ITEM_INSTANCE,
+    ).also { MainCreativeTab.add(it) }
 
     // -------------------------------------------------------------------------------------------
     // Async synthesis structures (the 16-block set). The controllers and connectors are registered

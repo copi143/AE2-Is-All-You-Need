@@ -6,7 +6,9 @@ import allyouneed.util.id.mac.MacAddress;
 import allyouneed.util.id.mac.MacAddressRegistry;
 import allyouneed.util.id.mac.MacNbt;
 import allyouneed.util.id.mac.MacPolicy;
+import allyouneed.parts.logger.NetworkLogHooks;
 import appeng.api.networking.IGridNode;
+import appeng.api.networking.IGridNodeListener;
 import appeng.me.GridNode;
 import net.minecraft.nbt.CompoundTag;
 import org.spongepowered.asm.mixin.Mixin;
@@ -76,6 +78,11 @@ public abstract class GridNodeMixin implements AsyncChannelNodeHolder, IMacAddre
             MacNbt.writeNodeMac(nodeTag, this.allyouneed$macAddress);
             nodeData.put(name, nodeTag);
         }
+    }
+
+    @Inject(method = "notifyStatusChange", at = @At("HEAD"))
+    private void allyouneed$logStatus(IGridNodeListener.State reason, CallbackInfo ci) {
+        NetworkLogHooks.onNodeStatus((IGridNode) this, reason);
     }
 
     @Inject(method = "destroy", at = @At("HEAD"))

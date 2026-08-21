@@ -14,6 +14,9 @@ import allyouneed.multiblock.async.AsyncStructureInterfaceBlock
 import allyouneed.parts.iodrive.MEIODriveBlock
 import allyouneed.parts.iodrive.MEIODriveBlockEntity
 import allyouneed.parts.iodrive.MEIODriveRegistration
+import allyouneed.parts.logger.NetworkLoggerBlock
+import allyouneed.parts.logger.NetworkLoggerBlockEntity
+import allyouneed.parts.logger.NetworkLoggerRegistration
 import allyouneed.parts.machineassembler.MachineAssemblerBlock
 import allyouneed.parts.machineassembler.MachineAssemblerBlockEntity
 import allyouneed.parts.machineassembler.MachineAssemblerRegistration
@@ -43,6 +46,12 @@ object FabricBlocks {
     )
 
     lateinit var ME_IO_DRIVE_BE: BlockEntityType<MEIODriveBlockEntity>
+
+    val NETWORK_LOGGER: NetworkLoggerBlock = NetworkLoggerBlock(
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.5f)
+    )
+
+    lateinit var NETWORK_LOGGER_BE: BlockEntityType<NetworkLoggerBlockEntity>
 
     fun register() {
         // Machine Assembler
@@ -83,6 +92,22 @@ object FabricBlocks {
         Registry.register(BuiltInRegistries.ITEM, ioDriveId, ioDriveItem)
 
         BlockDefinition("ME IO Drive", ioDriveId, ME_IO_DRIVE, ioDriveItem).also {
+            MainCreativeTab.add(it)
+        }
+
+        val loggerId = "network_logger".rl
+        NETWORK_LOGGER_BE = FabricBlockEntityTypeBuilder.create(
+            { pos, state -> NetworkLoggerBlockEntity(NETWORK_LOGGER_BE, pos, state) }, NETWORK_LOGGER
+        ).build()
+        @Suppress("UNCHECKED_CAST") (NETWORK_LOGGER as AEBaseEntityBlock<NetworkLoggerBlockEntity>).setBlockEntity(
+            NetworkLoggerBlockEntity::class.java, NETWORK_LOGGER_BE, null, null
+        )
+        NetworkLoggerRegistration.setBlockEntityType(NETWORK_LOGGER_BE)
+        Registry.register(BuiltInRegistries.BLOCK, loggerId, NETWORK_LOGGER)
+        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, loggerId, NETWORK_LOGGER_BE)
+        val loggerItem = BlockItem(NETWORK_LOGGER, Item.Properties())
+        Registry.register(BuiltInRegistries.ITEM, loggerId, loggerItem)
+        BlockDefinition("ME Network Logger", loggerId, NETWORK_LOGGER, loggerItem).also {
             MainCreativeTab.add(it)
         }
 
