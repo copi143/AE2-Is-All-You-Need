@@ -24,6 +24,6 @@ class ItemStorageCell(size: Long = -1) : ICellItem(size, "Item Storage Cell") {
     }
 
     companion object {
-        val entries = sizeList.map { ItemStorageCell(it) } + ItemStorageCell()
+        val entries = sizeList.map { ItemStorageCell(it) }
     }
 }
