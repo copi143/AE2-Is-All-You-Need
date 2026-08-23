@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.state.BlockState
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
-abstract class ICell(val size: Long) {
+sealed class ICell(val size: Long) {
     val isCreative: Boolean = size < 0
 
     val sizeExp: Int = if (size < 0) -1 else size.countTrailingZeroBits()
@@ -51,9 +51,11 @@ abstract class ICell(val size: Long) {
     }
 }
 
-abstract class ICellBlock(size: Long, val postfix: String) : ICell(size) {
+abstract class ICellBlock(size: Long, val postfix: String, protected val postfix2: String = postfix) : ICell(size) {
     open val blockName: String = "$prefixUpper $postfix"
+    protected val blockName2: String = "$prefixUpper $postfix2"
     open val blockId: ResourceLocation = idify("$prefixUpper $postfix").rl
+    protected val blockId2: ResourceLocation = idify("$prefixUpper $postfix2").rl
     abstract val blockSupplier: Supplier<Block>
     open val define: BlockDefinition<Block> by lazy {
         val block = blockSupplier.get()
@@ -70,8 +72,10 @@ abstract class ICellBlock(size: Long, val postfix: String) : ICell(size) {
     open val blockEntityFactory: BiFunction<BlockPos, BlockState, BlockEntity>? = null
 }
 
-abstract class ICellItem(size: Long, val postfix: String) : ICell(size) {
+abstract class ICellItem(size: Long, val postfix: String, protected val postfix2: String = postfix) : ICell(size) {
     open val itemName: String = "$prefixUpper $postfix"
+    protected val itemName2: String = "$prefixUpper $postfix2"
     open val itemId: ResourceLocation = idify("$prefixUpper $postfix").rl
+    protected val itemId2: ResourceLocation = idify("$prefixUpper $postfix2").rl
     abstract val define: ItemDefinition<*>
 }
