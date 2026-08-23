@@ -1,6 +1,7 @@
 package allyouneed.logic.aekey
 
 import allyouneed.Platform
+import allyouneed.util.logger
 import kotlin.math.roundToInt
 
 /**
@@ -15,16 +16,20 @@ import kotlin.math.roundToInt
  * Instantiated as [ManaKey] for actual use.
  * Must be registered to AE2's [appeng.api.stacks.AEKeyTypes] during mod initialization.
  */
-enum class ManaType(val id: String, val unit: String, val manaPerAM: Double = Platform.manaUnitRatio(id)) {
+enum class ManaType(
+    override val id: String,
+    val unit: String,
+    val manaPerAM: Double = Platform.manaUnitRatio(id),
+) : MetricLevelKey.Metric<ManaKey> {
     AM("ae2", "AM", 1.0), //
     BotaniaMana("botania", "Mana"), //
     BloodMagicLP("bloodmagic", "LP"), //
     ArsNouveauMana("ars_nouveau", "Mana"), //
     ;
 
-    val typeKey: ManaKey = ManaKey(this)
+    override val typeKey: ManaKey = ManaKey(this)
 
-    val granularity: Int = (ManaKey.MANA_GRANULARITY / manaPerAM).roundToInt()
+    override val granularity: Int = (ManaKey.MANA_GRANULARITY / manaPerAM).roundToInt()
 
     override fun toString(): String = id
 
@@ -35,6 +40,10 @@ enum class ManaType(val id: String, val unit: String, val manaPerAM: Double = Pl
         @JvmStatic
         fun ratioOf(pair: Pair<ManaType, ManaType>): Double {
             return pair.second.manaPerAM / pair.first.manaPerAM
+        }
+
+        init {
+            logger.info("Applied Magicks ...")
         }
     }
 }

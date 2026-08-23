@@ -1,13 +1,14 @@
 package allyouneed.item.packet
 
 import allyouneed.logic.aekey.*
+import allyouneed.logic.aekey.MetricLevelKey.Metric
 import allyouneed.util.rl
 import appeng.api.config.Actionable
 import appeng.api.stacks.AEFluidKey
 import appeng.api.stacks.AEItemKey
 import appeng.api.stacks.AEKey
-import appeng.core.definitions.ItemDefinition
 import appeng.core.MainCreativeTab
+import appeng.core.definitions.ItemDefinition
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
@@ -87,22 +88,26 @@ object AllPackets {
                 val metric = EnergyType.idMap[tag.getString(TAG_METRIC)] ?: return null
                 EnergyKey(metric)
             }
+
             TYPE_MANA -> {
                 val metric = ManaType.idMap[tag.getString(TAG_METRIC)] ?: return null
                 ManaKey(metric)
             }
+
             TYPE_FLUID -> {
                 val fluidId = ResourceLocation(tag.getString(TAG_FLUID))
                 val fluid = BuiltInRegistries.FLUID.get(fluidId)
                 val extraTag = if (tag.contains(TAG_FLUID_TAG)) tag.getCompound(TAG_FLUID_TAG) else null
                 AEFluidKey.of(fluid, extraTag)
             }
+
             TYPE_ITEM -> {
                 val itemId = ResourceLocation(tag.getString(TAG_ITEM))
                 val item = BuiltInRegistries.ITEM.get(itemId)
                 val extraTag = if (tag.contains(TAG_ITEM_TAG)) tag.getCompound(TAG_ITEM_TAG) else null
                 AEItemKey.of(item, extraTag)
             }
+
             TYPE_HP -> HpKey(tag.getInt(TAG_LEVEL))
             TYPE_STA -> StaKey(tag.getInt(TAG_LEVEL))
             TYPE_XP -> XpKey(tag.getInt(TAG_LEVEL))
@@ -166,6 +171,14 @@ object AllPackets {
         if (a == 0L || b == 0L) return 0L
         if (a > Long.MAX_VALUE / b) return Long.MAX_VALUE
         return a * b
+    }
+
+    fun createMetricLevelPacket(metric: Metric<MetricLevelKey>, level: Int, amount: Long): ItemStack {
+        return when (metric) {
+            is EnergyType -> createEnergyPacket(metric, amount)
+            is ManaType -> createManaPacket(metric, amount)
+            else -> throw IllegalArgumentException("Unknown metric level packet type.")
+        }
     }
 
     fun createEnergyPacket(metric: EnergyType, amount: Long): ItemStack {

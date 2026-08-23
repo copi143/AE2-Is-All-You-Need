@@ -5,14 +5,21 @@ package allyouneed.util
 import net.minecraft.resources.ResourceLocation
 import java.math.BigInteger
 
-fun idify(value: String): String =
-    value.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
+fun idify(value: String): String = value.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
 
 fun String.rl(ns: String) = ResourceLocation(ns, this)
 val String.rl get() = this.rl(MODID)
 val String.rlMC get() = this.rl("minecraft")
 val String.rlAE get() = this.rl("ae2")
 val String.rlGT get() = this.rl("gtceu")
+
+fun ResourceLocation.joinParent(parent: String): ResourceLocation {
+    return "$parent/$path".rl(namespace)
+}
+
+fun ResourceLocation.joinChild(child: String): ResourceLocation {
+    return "$path/$child".rl(namespace)
+}
 
 fun formatScaledUnit(exp: Int, name: String? = null) = run {
     val prefix = when {

@@ -9,7 +9,6 @@ import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.net.http.HttpModule
 import allyouneed.parts.logger.NetworkLogHooks
 import allyouneed.parts.p2p.EntityP2PTunnelPart
-import allyouneed.parts.planebus.PlaneBusPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
@@ -18,7 +17,6 @@ import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
 import appeng.api.stacks.AEKeyTypes
 import appeng.api.storage.StorageCells
-import appeng.core.definitions.AEItems
 import appeng.core.localization.GuiText
 import appeng.items.parts.PartModelsHelper
 
@@ -56,7 +54,7 @@ object Main {
         StorageCellModels.registerModel(ModItems.CREATIVE_ME_CELL, "block/drive/cells/creative_cell".rlAE)
         StorageCellModels.registerModel(ModItems.DIMENSIONAL_CELL, "block/drive/cells/creative_cell".rlAE)
         for (cell in ItemStorageCell.entries) {
-            StorageCellModels.registerModel(cell.define, "block/drive/cells/${cell.driveCellId.path}".rl)
+            StorageCellModels.registerModel(cell.define, cell.driveCellId.joinParent("block/drive/cells"))
         }
         val cellGroup = GuiText.StorageCells.translationKey
         ModItems.DIMENSIONAL_CELL.registerSupportedUpgrade(cellGroup).with(
@@ -67,8 +65,8 @@ object Main {
             cell.define.asItem().registerSupportedUpgrade(cellGroup).with(
                 ExtRef.inverterCard to 1,
                 ExtRef.fuzzyCard to 1,
-                AEItems.EQUAL_DISTRIBUTION_CARD to 1,
-                AEItems.VOID_CARD to 1,
+                ExtRef.equalDistributionCard to 1,
+                ExtRef.voidCard to 1,
             )
         }
     }
