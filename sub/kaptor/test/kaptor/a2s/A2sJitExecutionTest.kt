@@ -255,4 +255,71 @@ class A2sJitExecutionTest {
         )
         assertEquals(31L, r)
     }
+
+    // ── val 不可变性 ──
+
+    @Test
+    fun `val 局部变量赋值编译期报错`() {
+        assertFailsWith<kaptor.a2s.compiler.A2sCompileError> {
+            invokeFunction(
+                """
+                fun test(): i64 {
+                    val x = 1_i64
+                    x = 2_i64
+                    return x
+                }
+                """, "test"
+            )
+        }
+    }
+
+    // ── RANGE / for-in ──
+
+    @Test
+    fun `range for 求和`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                var sum = 0_i64
+                for (i in 1_i64..5_i64) {
+                    sum = sum + i
+                }
+                return sum
+            }
+            """, "test"
+        )
+        assertEquals(15L, r)
+    }
+
+    @Test
+    fun `range 单元素`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                var count = 0_i64
+                for (i in 3_i64..3_i64) {
+                    count = count + 1_i64
+                }
+                return count
+            }
+            """, "test"
+        )
+        assertEquals(1L, r)
+    }
+
+    @Test
+    fun `range 空范围`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                var count = 0_i64
+                for (i in 5_i64..2_i64) {
+                    count = count + 1_i64
+                }
+                return count
+            }
+            """, "test"
+        )
+        assertEquals(0L, r)
+    }
 }

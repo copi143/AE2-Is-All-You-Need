@@ -19,6 +19,9 @@ class A2sSymbolTable(
     private val topLevelVarTypes: Map<String, A2sType> =
         topLevelVars.associate { it.name to (it.type ?: inferLiteralType(it.initializer)) }
 
+    private val topLevelVarMutable: Map<String, Boolean> =
+        topLevelVars.associate { it.name to it.mutable }
+
     private fun inferLiteralType(expr: A2sExpr?): A2sType = when (expr) {
         is A2sBigIntLiteral -> A2sBigInt
         is A2sRationalLiteral -> A2sRational
@@ -36,6 +39,8 @@ class A2sSymbolTable(
     fun isTopLevelVar(name: String): Boolean = topLevelVarTypes.containsKey(name)
 
     fun topLevelVarType(name: String): A2sType = topLevelVarTypes[name] ?: A2sUnknown
+
+    fun isTopLevelVarMutable(name: String): Boolean = topLevelVarMutable[name] ?: false
 
     fun eventFieldType(eventType: String, field: String): A2sType =
         eventFields[eventType]?.get(field) ?: A2sUnknown

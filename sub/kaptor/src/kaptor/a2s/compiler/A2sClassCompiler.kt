@@ -79,8 +79,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
     }
 
     private fun generateEventMethod(cw: ClassWriter, internalName: String, decl: A2sEventDecl, method: A2sFunctionDecl) {
-        val paramDescs = method.params.joinToString("") { A2sTypeCodegen.boxedDescriptor(it.type) }
-        val desc = "($paramDescs)Ljava/lang/Object;"
+        val desc = "(" + "Ljava/lang/Object;".repeat(method.params.size) + ")Ljava/lang/Object;"
         val mv = cw.visitMethod(ACC_PUBLIC, method.name, desc, null, null)
         mv.visitCode()
 
@@ -170,8 +169,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
     }
 
     private fun generateScriptFunction(cw: ClassWriter, internalName: String, f: A2sFunctionDecl) {
-        val paramDescs = f.params.joinToString("") { A2sTypeCodegen.boxedDescriptor(it.type) }
-        val desc = "($paramDescs)Ljava/lang/Object;"
+        val desc = "(" + "Ljava/lang/Object;".repeat(f.params.size) + ")Ljava/lang/Object;"
         val mv = cw.visitMethod(ACC_PUBLIC, f.name, desc, null, null)
         mv.visitCode()
 

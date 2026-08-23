@@ -123,7 +123,25 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
             A2sBinaryOp.LESS_EQUAL -> compileComparison(ctx, expr, "<=")
             A2sBinaryOp.GREATER -> compileComparison(ctx, expr, ">")
             A2sBinaryOp.GREATER_EQUAL -> compileComparison(ctx, expr, ">=")
-            A2sBinaryOp.RANGE -> compile(ctx, expr.left)
+            A2sBinaryOp.RANGE -> {
+                // a..b → new A2sRange(toLong(a), toLong(b))
+                compile(ctx, expr.left)
+                val leftTmp = ctx.allocateTemp()
+                ctx.mv.visitVarInsn(ASTORE, leftTmp)
+                compile(ctx, expr.right)
+                val rightTmp = ctx.allocateTemp()
+                ctx.mv.visitVarInsn(ASTORE, rightTmp)
+                // NEW A2sRange, DUP, load left, unbox, load right, unbox, <init>
+                ctx.mv.visitTypeInsn(NEW, "kaptor/a2s/runtime/A2sRange")
+                ctx.mv.visitInsn(DUP)
+                ctx.mv.visitVarInsn(ALOAD, leftTmp)
+                A2sTypeCodegen.unbox(ctx.mv, A2sI64)
+                ctx.mv.visitVarInsn(ALOAD, rightTmp)
+                A2sTypeCodegen.unbox(ctx.mv, A2sI64)
+                ctx.mv.visitMethodInsn(
+                    INVOKESPECIAL, "kaptor/a2s/runtime/A2sRange", "<init>", "(JJ)V", false
+                )
+            }
         }
     }
 
@@ -185,7 +203,9 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
                 ctx.mv.visitMethodInsn(INVOKESTATIC, "java/math/BigInteger", "valueOf", "(J)Ljava/math/BigInteger;", false)
             }
 
-            else -> {}
+            else -> {
+                ctx.mv.visitTypeInsn(CHECKCAST, "java/math/BigInteger")
+            }
         }
     }
 
@@ -193,6 +213,7 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
     private fun convertToRational(ctx: A2sCompileContext, type: A2sType) {
         when (type) {
             A2sBigInt -> {
+                ctx.mv.visitTypeInsn(CHECKCAST, "java/math/BigInteger")
                 ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RATIONAL, "of", "(Ljava/math/BigInteger;)L$TYPE_RATIONAL;", false)
             }
 
@@ -353,7 +374,9 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
                         A2sI64, A2sU64 -> ctx.mv.visitInsn(LNEG)
                         A2sF32 -> ctx.mv.visitInsn(FNEG)
                         A2sF64 -> ctx.mv.visitInsn(DNEG)
-                        else -> {}
+            else -> {
+                ctx.mv.visitTypeInsn(CHECKCAST, TYPE_RATIONAL)
+            }
                     }
                     A2sTypeCodegen.box(ctx.mv, operandType)
                 }

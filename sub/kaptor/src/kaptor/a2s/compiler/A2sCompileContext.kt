@@ -7,9 +7,9 @@ import org.objectweb.asm.MethodVisitor
 class A2sCompileError(message: String) : RuntimeException(message)
 
 /**
- * 局部变量（槽号 + 类型）。
+ * 局部变量（槽号 + 类型 + 可变性）。
  */
-class A2sLocal(val slot: Int, val type: A2sType)
+class A2sLocal(val slot: Int, val type: A2sType, val mutable: Boolean)
 
 /**
  * 统一编译上下文：管理局部变量槽分配、类型环境、循环标签与栈深度。
@@ -44,10 +44,10 @@ class A2sCompileContext(
 
     fun eventFieldType(name: String): kaptor.a2s.ir.A2sType = eventFields[name] ?: kaptor.a2s.ir.A2sUnknown
 
-    fun declareLocal(name: String, type: A2sType): Int {
+    fun declareLocal(name: String, type: A2sType, mutable: Boolean = true): Int {
         locals[name]?.let { return it.slot }
         val slot = nextLocal++
-        locals[name] = A2sLocal(slot, type)
+        locals[name] = A2sLocal(slot, type, mutable)
         maxLocals = maxOf(maxLocals, nextLocal)
         return slot
     }
@@ -60,6 +60,8 @@ class A2sCompileContext(
     fun localTypes(): Map<String, A2sType> = locals.mapValues { it.value.type } + eventFields
 
     fun hasLocal(name: String): Boolean = locals.containsKey(name)
+
+    fun isMutableLocal(name: String): Boolean = locals[name]?.mutable ?: false
 
     fun loadVariable(name: String) {
         mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, getLocal(name).slot)

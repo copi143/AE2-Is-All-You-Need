@@ -47,7 +47,7 @@ class A2sStmtCompiler(
             ctx.mv.visitInsn(ACONST_NULL)
         }
         val type = stmt.type ?: initializer?.let { symbols.inferType(it, ctx.localTypes()) } ?: A2sUnknown
-        ctx.declareLocal(stmt.name, type)
+        ctx.declareLocal(stmt.name, type, stmt.mutable)
         ctx.storeVariable(stmt.name)
     }
 
@@ -56,6 +56,9 @@ class A2sStmtCompiler(
             val name = (stmt.target as A2sIdentifier).name
             when {
                 ctx.hasLocal(name) -> {
+                    if (!ctx.isMutableLocal(name)) {
+                        throw A2sCompileError("无法赋值给 val 变量: $name")
+                    }
                     exprCompiler.compile(ctx, stmt.value)
                     ctx.storeVariable(name)
                 }
@@ -67,6 +70,9 @@ class A2sStmtCompiler(
                     ctx.mv.visitFieldInsn(PUTFIELD, ctx.className, name, desc)
                 }
                 symbols.isTopLevelVar(name) -> {
+                    if (!symbols.isTopLevelVarMutable(name)) {
+                        throw A2sCompileError("无法赋值给 val 变量: $name")
+                    }
                     ctx.mv.visitVarInsn(ALOAD, ctx.scriptObjSlot)
                     exprCompiler.compile(ctx, stmt.value)
                     val desc = A2sTypeCodegen.boxedDescriptor(symbols.topLevelVarType(name))
