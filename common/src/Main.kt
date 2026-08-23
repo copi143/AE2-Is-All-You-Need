@@ -9,6 +9,7 @@ import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.net.http.HttpModule
 import allyouneed.parts.logger.NetworkLogHooks
 import allyouneed.parts.p2p.EntityP2PTunnelPart
+import allyouneed.parts.planebus.PlaneBusPart
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
@@ -74,7 +75,9 @@ object Main {
 
     fun registerParts() {
         PartModels.registerModels(PartModelsHelper.createModels(EntityP2PTunnelPart::class.java))
+        // 专用线缆是真线缆部件（CablePart），没有静态面板模型需要注册。
         PartModels.registerModels(PartModelsHelper.createModels(UnifiedPatternEncodingTermPart::class.java))
         ModItems.PATTERN_ENCODING_TERMINAL_DEF
+        ModItems.PLANE_BUS_DEF
     }
 }

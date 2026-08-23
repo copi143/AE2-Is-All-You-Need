@@ -164,6 +164,12 @@ fun main(args: Array<String>) {
         gui("mac_named", "MAC (%s): %s")
         gui("mac_item", "MAC: %s")
         translation("config.jade.plugin_$modId.mac", "MAC Address")
+        translation(
+            "tooltip.$modId.plane_bus.members",
+            "Annihilation planes: %s | Formation planes: %s",
+        )
+        translation("tooltip.$modId.plane_bus.unformed", "Structure not formed")
+        translation("tooltip.$modId.plane_bus.buses", "Interconnected plane buses: %s")
 
         gui("machine.crafting", "Crafting")
         gui("machine.smelting", "Smelting")
@@ -271,6 +277,7 @@ fun main(args: Array<String>) {
         item("machine_pattern", "Machine Pattern")
         itemLang("pattern_encoding_terminal", "ME Pattern Encoding Terminal")
         itemLang("pseudo_pattern", "Pseudo Pattern")
+        itemLang("plane_bus", "ME Annihilation/Formation Plane Bus")
 
         // Packet items: layered model (layer0=content icon, layer1=packet overlay)
         packetItem("e_packet", "Energy Packet", "item/energy_icon")
