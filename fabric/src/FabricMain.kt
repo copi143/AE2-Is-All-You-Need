@@ -3,16 +3,15 @@ package allyouneed
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.dimensional.DimensionalCellStore
-import allyouneed.parts.logger.LogStore
 import allyouneed.fabric.init.FabricBlocks
 import allyouneed.fabric.init.FabricItems
 import allyouneed.fabric.init.FabricMenus
 import allyouneed.logic.machine.MachineTypeReloadListener
 import allyouneed.logic.machine.ManualMachineRecipeReloadListener
+import allyouneed.parts.logger.LogStore
 import allyouneed.util.MODID
 import allyouneed.util.id.mac.MacAddressRegistry
 import allyouneed.util.logger
-import allyouneed.util.rl
 import appeng.api.features.P2PTunnelAttunement
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
@@ -34,24 +33,15 @@ fun init() {
     FabricItems.register()
     FabricBlocks.register()
 
-    EnergyCell.registerSelfPoweredBEType()
-    EnergyCell.entries.forEach { it.registerBEType() }
-    CraftingStorage.registerBEType()
+    EnergyCell.entries.forEach { it.registerBlockEntity() }
+    CraftingStorage.entries.forEach { it.registerBlockEntity() }
 
     EnergyCell.entries.forEach { cell ->
         val block = cell.define.block()
-        val id = ResourceLocation(MODID, cell.blockId.path)
-        Registry.register(BuiltInRegistries.BLOCK, id, block)
-        Registry.register(BuiltInRegistries.ITEM, id, cell.define.asItem())
-        if (!cell.isSelfPowered) {
-            Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id, cell.blockEntityType)
-        }
+        Registry.register(BuiltInRegistries.BLOCK, cell.blockId, block)
+        Registry.register(BuiltInRegistries.ITEM, cell.blockId, cell.define.asItem())
     }
-    Registry.register(
-        BuiltInRegistries.BLOCK_ENTITY_TYPE,
-        "self_powered_energy_cell".rl,
-        EnergyCell.selfPoweredBlockEntityType,
-    )
+    EnergyCell.registry.forEach { (name, type) -> Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, name, type) }
 
     CraftingStorage.entries.forEach { storage ->
         val block = storage.define.block()
@@ -61,7 +51,7 @@ fun init() {
     }
     Registry.register(
         BuiltInRegistries.BLOCK_ENTITY_TYPE,
-        "crafting_storage".rl,
+        "crafting_storage",
         CraftingStorage.blockEntityType,
     )
 

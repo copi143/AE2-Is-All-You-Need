@@ -3,11 +3,7 @@ package allyouneed
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.client.ForgeCreativeTab
-import allyouneed.forge.init.ForgeBlocks
-import allyouneed.forge.init.ForgeItems
-import allyouneed.forge.init.ForgeMenus
-import allyouneed.forge.init.GTAsyncCrafting
-import allyouneed.forge.init.GTAEPowerHatch
+import allyouneed.forge.init.*
 import allyouneed.logic.script.ScriptDsl
 import allyouneed.util.MODID
 import allyouneed.util.logger
@@ -21,19 +17,15 @@ class ForgeMain {
     init {
         logger.info("Initializing...")
 
-        EnergyCell.registerSelfPoweredBEType()
-        EnergyCell.entries.forEach { it.registerBEType() }
-        CraftingStorage.registerBEType()
+        EnergyCell.entries.forEach { it.registerBlockEntity() }
+        CraftingStorage.entries.forEach { it.registerBlockEntity() }
 
         AllRegistries.blocks.forEach { entry ->
             ForgeBlocks.BLOCKS.register(entry.id().path) { entry.block() }
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
         }
 
-        EnergyCell.entries.filter { !it.isSelfPowered }.forEach { cell ->
-            ForgeBlocks.BLOCK_ENTITIES.register(cell.blockId.path) { cell.blockEntityType }
-        }
-        ForgeBlocks.BLOCK_ENTITIES.register("self_powered_energy_cell") { EnergyCell.selfPoweredBlockEntityType }
+        EnergyCell.registry.forEach { (name, type) -> ForgeBlocks.BLOCK_ENTITIES.register(name) { type } }
         ForgeBlocks.BLOCK_ENTITIES.register("crafting_storage") { CraftingStorage.blockEntityType }
 
         AllRegistries.items.forEach { entry ->

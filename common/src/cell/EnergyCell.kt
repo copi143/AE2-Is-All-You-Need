@@ -3,8 +3,6 @@ package allyouneed.cell
 import allyouneed.logic.aekey.EnergyKey
 import allyouneed.util.idify
 import allyouneed.util.rl
-import appeng.block.AEBaseBlock
-import appeng.block.AEBaseBlockItem
 import appeng.block.AEBaseEntityBlock
 import appeng.block.networking.CreativeEnergyCellBlock
 import appeng.block.networking.EnergyCellBlock
@@ -12,14 +10,10 @@ import appeng.block.networking.EnergyCellBlockItem
 import appeng.blockentity.AEBaseBlockEntity
 import appeng.blockentity.networking.CreativeEnergyCellBlockEntity
 import appeng.blockentity.networking.EnergyCellBlockEntity
-import appeng.core.MainCreativeTab
-import appeng.core.definitions.BlockDefinition
-import com.mojang.datafixers.types.Type
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntityType
-import java.util.concurrent.atomic.AtomicReference
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
@@ -40,102 +34,74 @@ class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlo
         else -> Supplier<Block> { cellBlock(0) }
     }
 
-    val itemFactory = if (size < 0) null else BiFunction<Block, Item.Properties, BlockItem> { block, props ->
+    override val itemFactory = if (size < 0) null else BiFunction<Block, Item.Properties, BlockItem> { block, props ->
         EnergyCellBlockItem(block, props)
     }
 
-    override val define = run {
-        val block = blockSupplier.get()
-
-        val item = itemFactory?.apply(block, Item.Properties()) ?: if (block is AEBaseBlock) {
-            AEBaseBlockItem(block, Item.Properties())
-        } else {
-            BlockItem(block, Item.Properties())
-        }
-
-        BlockDefinition(blockName, blockId, block, item).apply {
-            MainCreativeTab.add(this)
+    private val blockEntityType: BlockEntityType<*> by lazy {
+        when {
+            isCreative -> creativeBlockEntityType
+            isSelfPowered -> selfPoweredBlockEntityType
+            else -> normalBlockEntityType
         }
     }
-
-    lateinit var blockEntityType: BlockEntityType<*>
-        private set
 
     @Suppress("UNCHECKED_CAST")
-    fun registerBEType() {
-        val block = define.block()
-        require(block is AEBaseEntityBlock<*>) { "EnergyCell block must be AEBaseEntityBlock" }
-
+    fun registerBlockEntity() {
         when {
-            isCreative -> {
-                val typeRef = AtomicReference<BlockEntityType<*>>()
-                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(BlockEntityType.Builder.of({ pos, state ->
-                    CreativeEnergyCellBlockEntity(
-                        typeRef.get() as BlockEntityType<CreativeEnergyCellBlockEntity>, pos, state
-                    )
-                }, block).build(null as Type<*>?))
-                blockEntityType = typeRef.get()
-                (block as AEBaseEntityBlock<CreativeEnergyCellBlockEntity>).setBlockEntity(
-                    CreativeEnergyCellBlockEntity::class.java,
-                    blockEntityType as BlockEntityType<CreativeEnergyCellBlockEntity>,
-                    null,
-                    null,
-                )
-                AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
-            }
+            isCreative -> (define.block() as AEBaseEntityBlock<CreativeEnergyCellBlockEntity>).setBlockEntity(
+                CreativeEnergyCellBlockEntity::class.java,
+                creativeBlockEntityType,
+                null,
+                null,
+            )
 
-            isSelfPowered -> {
-                // Shared BE type registered once via registerSelfPoweredBEType()
-                blockEntityType = selfPoweredBlockEntityType
-                (block as AEBaseEntityBlock<SelfPoweredEnergyCellBlockEntity>).setBlockEntity(
-                    SelfPoweredEnergyCellBlockEntity::class.java,
-                    blockEntityType as BlockEntityType<SelfPoweredEnergyCellBlockEntity>,
-                    null,
-                    null,
-                )
-                AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
-            }
+            isSelfPowered -> (define.block() as AEBaseEntityBlock<SelfPoweredEnergyCellBlockEntity>).setBlockEntity(
+                SelfPoweredEnergyCellBlockEntity::class.java,
+                selfPoweredBlockEntityType,
+                null,
+                null,
+            )
 
-            else -> {
-                val typeRef = AtomicReference<BlockEntityType<*>>()
-                @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(BlockEntityType.Builder.of({ pos, state ->
-                    EnergyCellBlockEntity(typeRef.get() as BlockEntityType<EnergyCellBlockEntity>, pos, state)
-                }, block).build(null as Type<*>?))
-                blockEntityType = typeRef.get()
-                (block as AEBaseEntityBlock<EnergyCellBlockEntity>).setBlockEntity(
-                    EnergyCellBlockEntity::class.java,
-                    blockEntityType as BlockEntityType<EnergyCellBlockEntity>,
-                    null,
-                    null,
-                )
-                AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
-            }
+            else -> (define.block() as AEBaseEntityBlock<EnergyCellBlockEntity>).setBlockEntity(
+                EnergyCellBlockEntity::class.java,
+                normalBlockEntityType,
+                null,
+                null,
+            )
         }
+        AEBaseBlockEntity.registerBlockEntityItem(blockEntityType, define.asItem())
     }
 
+    @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
     companion object {
         val entries = sizeList.map { EnergyCell(it) } + sizeList.map { EnergyCell(it, true) } + EnergyCell()
 
-        lateinit var selfPoweredBlockEntityType: BlockEntityType<SelfPoweredEnergyCellBlockEntity>
-            private set
-
-        private var selfPoweredRegistered = false
-
-        /** Must be called once before per-entry [registerBEType] for self-powered cells. */
-        @Suppress("UNCHECKED_CAST")
-        fun registerSelfPoweredBEType() {
-            if (selfPoweredRegistered) return
-            selfPoweredRegistered = true
-
-            val blocks = entries.filter { it.isSelfPowered }.map { it.define.block() }.toTypedArray()
-            val typeRef = AtomicReference<BlockEntityType<SelfPoweredEnergyCellBlockEntity>>()
-            @Suppress("TYPE_MISMATCH_BASED_ON_JAVA_ANNOTATIONS") typeRef.set(
-                BlockEntityType.Builder.of(
-                    { pos, state -> SelfPoweredEnergyCellBlockEntity(typeRef.get(), pos, state) },
-                    *blocks,
-                ).build(null as Type<*>?),
-            )
-            selfPoweredBlockEntityType = typeRef.get()
+        val creativeBlockEntityType: BlockEntityType<CreativeEnergyCellBlockEntity> by lazy {
+            BlockEntityType.Builder.of(
+                { pos, state -> CreativeEnergyCellBlockEntity(creativeBlockEntityType, pos, state) },
+                *entries.filter { it.isCreative }.map { it.define.block() }.toTypedArray(),
+            ).build(null)
         }
+
+        val selfPoweredBlockEntityType: BlockEntityType<SelfPoweredEnergyCellBlockEntity> by lazy {
+            BlockEntityType.Builder.of(
+                { pos, state -> SelfPoweredEnergyCellBlockEntity(selfPoweredBlockEntityType, pos, state) },
+                *entries.filter { it.isSelfPowered }.map { it.define.block() }.toTypedArray(),
+            ).build(null)
+        }
+
+        val normalBlockEntityType: BlockEntityType<EnergyCellBlockEntity> by lazy {
+            BlockEntityType.Builder.of(
+                { pos, state -> EnergyCellBlockEntity(normalBlockEntityType, pos, state) },
+                *entries.filter { !it.isCreative && !it.isSelfPowered }.map { it.define.block() }.toTypedArray(),
+            ).build(null)
+        }
+
+        val registry = mapOf(
+            "creative_energy_cell" to creativeBlockEntityType,
+            "self_powered_energy_cell" to selfPoweredBlockEntityType,
+            "energy_cell" to normalBlockEntityType,
+        )
     }
 }

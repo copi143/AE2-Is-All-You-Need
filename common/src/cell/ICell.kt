@@ -1,10 +1,19 @@
 package allyouneed.cell
 
 import allyouneed.util.*
+import appeng.block.AEBaseBlock
+import appeng.block.AEBaseBlockItem
+import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
 import appeng.core.definitions.ItemDefinition
+import net.minecraft.core.BlockPos
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.item.BlockItem
+import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.Block
+import net.minecraft.world.level.block.entity.BlockEntity
+import net.minecraft.world.level.block.state.BlockState
+import java.util.function.BiFunction
 import java.util.function.Supplier
 
 abstract class ICell(val size: Long) {
@@ -46,7 +55,19 @@ abstract class ICellBlock(size: Long, val postfix: String) : ICell(size) {
     open val blockName: String = "$prefixUpper $postfix"
     open val blockId: ResourceLocation = idify("$prefixUpper $postfix").rl
     abstract val blockSupplier: Supplier<Block>
-    abstract val define: BlockDefinition<Block>
+    open val define: BlockDefinition<Block> by lazy {
+        val block = blockSupplier.get()
+        val item = itemFactory?.apply(block, Item.Properties()) ?: if (block is AEBaseBlock) {
+            AEBaseBlockItem(block, Item.Properties())
+        } else {
+            BlockItem(block, Item.Properties())
+        }
+        BlockDefinition(blockName, blockId, block, item).apply {
+            MainCreativeTab.add(this)
+        }
+    }
+    open val itemFactory: BiFunction<Block, Item.Properties, BlockItem>? = null
+    open val blockEntityFactory: BiFunction<BlockPos, BlockState, BlockEntity>? = null
 }
 
 abstract class ICellItem(size: Long, val postfix: String) : ICell(size) {
