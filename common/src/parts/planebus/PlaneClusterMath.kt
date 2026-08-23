@@ -70,8 +70,9 @@ object PlaneClusterMath {
      *   相邻的宿主是别的线缆，其面板属于那个网络，不得吸入。
      * - 面板↔面板：永不连接。
      *
-     * 含至少一个线缆的连通分量构成集群并按数量上限判定成型；仅由孤立面板组成的
-     * 分组不算集群。
+     * [shouldUnion] 是可选的额外边过滤器（参数为成员下标），返回 false 时即便满足上述
+     * 几何规则也不合并——用于剔除“位置相邻但被面板/石英纤维等隔断、AE2 实际未连接”
+     * 的假邻居。默认恒真，即纯几何行为。
      *
      * Groups members into clusters using union-find:
      *
@@ -80,10 +81,15 @@ object PlaneClusterMath {
      *   so a host adjacent to the bus is a different cable whose planes belong elsewhere.
      * - plane↔plane: never.
      *
-     * Components containing at least one bus form a cluster whose formed state is decided by
-     * the size caps; groups of lone planes are not clusters at all.
+     * [shouldUnion] is an optional extra edge filter (member indices); returning false keeps
+     * the pair apart even when the geometric rules hold — used to reject "adjacent but actually
+     * disconnected by planes/quartz fibre etc." fake neighbours. Defaults to always true, i.e.
+     * pure geometry.
      */
-    fun compute(members: List<PlaneClusterMember>): PlaneClusterResult {
+    fun compute(
+        members: List<PlaneClusterMember>,
+        shouldUnion: (a: Int, b: Int) -> Boolean = { _, _ -> true },
+    ): PlaneClusterResult {
         val n = members.size
         val parent = IntArray(n) { it }
 
@@ -110,6 +116,7 @@ object PlaneClusterMath {
             // cable host, so a plane on an *adjacent* host belongs to that other cable and must
             // not be absorbed into this cluster.
             if (mi.isBus != mj.isBus && mi.pos != mj.pos) return
+            if (!shouldUnion(i, j)) return
             val ri = find(i)
             val rj = find(j)
             if (ri != rj) parent[ri] = rj

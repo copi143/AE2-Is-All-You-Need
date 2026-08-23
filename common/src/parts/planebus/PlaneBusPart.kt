@@ -7,10 +7,7 @@ import appeng.api.networking.IGridNodeListener
 import appeng.api.parts.IPartCollisionHelper
 import appeng.api.util.AECableType
 import appeng.api.util.AEColor
-import appeng.blockentity.networking.CableBusBlockEntity
 import appeng.items.parts.ColoredPartItem
-import appeng.parts.automation.AnnihilationPlanePart
-import appeng.parts.automation.FormationPlanePart
 import appeng.parts.networking.CablePart
 import net.minecraft.core.Direction
 import net.minecraft.world.entity.player.Player
@@ -68,30 +65,26 @@ class PlaneBusPart(partItem: ColoredPartItem<PlaneBusPart>) : CablePart(partItem
 
     /**
      * 集群成型时返回同集群全部成员的网格节点（总线与面板），供原版寻路按“整个结构一个
-     * 频道”处理；未成型、孤立或客户端侧一律为空。成员键来自注册表，但节点解析会核对部件
-     * 类型，避免注册表与方块实体短暂不同步时错误豁免无关部件。
+     * 频道”处理；未成型、孤立或客户端侧一律为空。集群由 [PlaneBusClusters.resolve] 基于
+     * 真实网格连接解析，被隔断的假邻居不会混入。
      *
      * Returns the grid nodes of every member of this cluster (buses and planes) when formed, so
      * vanilla pathing treats the whole structure as one channel; empty when unformed, isolated or
-     * on the client. Member keys come from the registry, but node resolution double-checks the
-     * part type in case the registry and block entities are briefly out of sync.
+     * on the client. Clusters are resolved by [PlaneBusClusters.resolve] against the live ME
+     * network, so fake neighbours cut off by blockers never leak in.
      */
     override fun getMultiblockNodes(): Iterator<IGridNode> {
         val be = blockEntity ?: return Collections.emptyIterator()
         val level = be.level ?: return Collections.emptyIterator()
         if (level.isClientSide) return Collections.emptyIterator()
 
-        val snapshot = PlaneBusClusters.snapshotFor(level.dimension())
-        val clusterId = snapshot.clusterIdAtPos[be.blockPos] ?: return Collections.emptyIterator()
-        if (!snapshot.formedById.getOrDefault(clusterId, false)) return Collections.emptyIterator()
+        val clusters = PlaneBusClusters.resolve(level)
+        val clusterId = clusters.idAt(be.blockPos, side) ?: return Collections.emptyIterator()
+        if (!clusters.formedById.getOrDefault(clusterId, false)) return Collections.emptyIterator()
 
-        return snapshot.membersOf(clusterId).asSequence().mapNotNull { key ->
-            val host = level.getBlockEntity(key.pos) as? CableBusBlockEntity ?: return@mapNotNull null
-            when (val part = host.getPart(key.side)) {
-                is PlaneBusPart, is AnnihilationPlanePart, is FormationPlanePart -> part.gridNode
-                else -> null
-            }
-        }.iterator()
+        return clusters.membersOf(clusterId).asSequence()
+            .mapNotNull { key -> PlaneBusClusters.memberNode(level, key) }
+            .iterator()
     }
 
     override fun getCableConnectionType(): AECableType = AECableType.SMART

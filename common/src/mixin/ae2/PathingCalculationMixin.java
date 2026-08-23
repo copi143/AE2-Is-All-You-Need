@@ -3,6 +3,7 @@ package allyouneed.mixin.ae2;
 import java.util.Set;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
 import appeng.api.networking.IGrid;
 import appeng.api.networking.IGridNode;
@@ -22,8 +23,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import allyouneed.api.AsyncChannelNodeHolder;
 import allyouneed.multiblock.async.IAsyncChannelSink;
-import allyouneed.parts.planebus.PlaneBusPart;
 import allyouneed.parts.planebus.PlaneBusClusters;
+import allyouneed.parts.planebus.PlaneBusClusters.PlaneClusters;
+import allyouneed.parts.planebus.PlaneBusPart;
 
 /**
  * 两处寻路调整：
@@ -89,29 +91,38 @@ public abstract class PathingCalculationMixin {
      */
     @Inject(method = "compute", at = @At(value = "INVOKE", target = "Lappeng/me/pathfinding/PathingCalculation;propagateAssignments()V"))
     private void allyouneed$reconcilePlaneBusClusters(CallbackInfo ci) {
-        PlaneBusClusters.Snapshot snapshot = null;
+        PlaneClusters clusters = null;
         for (var node : grid.getNodes()) {
             if (!(node instanceof GridNode gridNode)) {
                 continue;
             }
-            var owner = gridNode.getOwner();
             BlockPos pos;
+            Direction side;
+            var owner = gridNode.getOwner();
             if (owner instanceof PlaneBusPart bus) {
                 pos = bus.getBlockEntity().getBlockPos();
+                side = bus.getSide();
             } else if (owner instanceof FormationPlanePart plane) {
                 pos = plane.getBlockEntity().getBlockPos();
+                side = plane.getSide();
             } else if (owner instanceof AnnihilationPlanePart plane) {
                 pos = plane.getBlockEntity().getBlockPos();
+                side = plane.getSide();
             } else {
                 continue;
             }
 
             // 同一网格的节点必然位于同一维度。All nodes of a grid share one dimension.
-            if (snapshot == null) {
-                snapshot = PlaneBusClusters.snapshotFor(gridNode.getLevel().dimension());
+            if (clusters == null) {
+                clusters = PlaneBusClusters.resolve(gridNode.getLevel());
             }
-            var clusterId = snapshot.getClusterIdAtPos().get(pos);
-            if (clusterId == null || Boolean.TRUE.equals(snapshot.getFormedById().get(clusterId))) {
+
+            // 集群按真实 ME 网格连接解析（几何相邻但被隔断的不算同一集群），因此这里的
+            // 未成型判定与频道计算、tooltip 统计看到的是同一个拓扑。
+            // Clusters are resolved against the live ME network (adjacent-but-blocked buses are
+            // separate), so this formed check sees the same topology as pathing and tooltips do.
+            var clusterId = clusters.idAt(pos, side);
+            if (clusterId == null || Boolean.TRUE.equals(clusters.getFormedById().get(clusterId))) {
                 continue; // Not clustered, or formed: vanilla multiblock handling applies.
             }
 

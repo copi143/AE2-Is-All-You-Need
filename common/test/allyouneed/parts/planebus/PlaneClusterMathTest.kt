@@ -149,6 +149,39 @@ class PlaneClusterMathTest {
     }
 
     @Test
+    fun `blocked adjacency splits the chain into separate clusters`() {
+        // 几何相邻但 shouldUnion 判 false（AE2 实际未连接，如被面板/石英纤维隔断）：
+        // 两段各自成簇、各自按上限判成型。
+        // Geometrically adjacent but shouldUnion says no (actually disconnected in AE2, e.g.
+        // cut off by a plane/quartz fibre): both halves form their own cluster with their own
+        // formed check.
+        val members = listOf(member(0, 0, isBus = true), member(1, 0, isBus = true))
+        val blocked = PlaneClusterMath.compute(members) { _, _ -> false }
+        assertEquals(listOf(0, 1), blocked.clusterOfMember.toList())
+        assertTrue(blocked.clusterFormed.all { it })
+
+        // 同一输入、默认恒真过滤器 → 仍是一个集群（回归保护）。
+        // Same input with the default always-true filter → still one cluster (regression guard).
+        val connected = PlaneClusterMath.compute(members)
+        assertEquals(listOf(0, 0), connected.clusterOfMember.toList())
+        assertTrue(connected.clusterFormed[0])
+    }
+
+    @Test
+    fun `blocked adjacency re-evaluates caps per segment`() {
+        // 一条超上限的长链（MAX+1 条总线）在 x=16 处被实际隔断：拆成两段后各自不超过
+        // 上限，因此都应判成型；若仍按合并计算则整体不成型。
+        // A chain longer than the cap (MAX+1 buses) actually severed at x=16: both segments
+        // fit the caps individually and must be formed; counting them merged would not be.
+        val members = (0 until MAX_CLUSTER_BUSES + 1).map { member(it, 0, isBus = true) }
+        // 切断 x=16 与 x=17 之间的无向边（真实连接判定天然对称）。
+        // Cut the undirected edge between x=16 and x=17 (live connectivity checks are symmetric).
+        val severed = PlaneClusterMath.compute(members) { a, b -> (a != 16 || b != 17) && (a != 17 || b != 16) }
+        assertEquals(2, severed.clusterOfMember.distinct().size)
+        assertTrue(severed.clusterFormed.all { it })
+    }
+
+    @Test
     fun `same block different faces merge into one cluster entry`() {
         // 同一方块上的两个不同面（打包坐标相同）视为一体。
         val same = packPos(7, 7, 7)

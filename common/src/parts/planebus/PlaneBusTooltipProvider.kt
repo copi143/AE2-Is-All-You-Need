@@ -65,7 +65,10 @@ class PlaneBusTooltipProvider : TooltipProvider {
             if (!isRelevantPart(part)) return
             val be = (part as? AEBasePart)?.blockEntity ?: return
             val level = be.level ?: return
-            val info = PlaneBusClusters.snapshotFor(level.dimension()).infoAt(be.blockPos) ?: return
+            // 集群按真实 ME 网格连接解析：被面板/石英纤维等隔断的相邻线缆不会并入统计。
+            // Clusters are resolved against the live ME network: buses merely touching positions
+            // but cut off by planes/quartz fibre etc. are not merged into the stats.
+            val info = PlaneBusClusters.resolve(level).infoAt(be.blockPos) ?: return
             serverData.putBoolean(KEY_FORMED, info.formed)
             serverData.putInt(KEY_ANNIHILATIONS, info.annihilations)
             serverData.putInt(KEY_FORMINGS, info.formings)
