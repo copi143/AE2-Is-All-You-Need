@@ -6,6 +6,7 @@ import appeng.core.MainCreativeTab
 import appeng.core.definitions.ItemDefinition
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.Item
+import java.math.BigInteger
 
 /**
  * Shared data-side definition for resource storage cells (item / fluid / mana / energy / ...).
@@ -24,18 +25,6 @@ abstract class TypedStorageCell(size: Long, val label: String, override val keyT
 
     /** Component returned on disassembly (1K..256T). Null for creative (-1). */
     val componentItem get() = if (isCreative) null else StorageComponents.ofSize(size)?.asItem()
-
-    /**
-     * Whether this cell's max amount (`size * amountPerByte`) overflows `Long`.
-     * `true` → use BigInteger inventory, `false` → use fast long inventory.
-     */
-    val requiresBigInt: Boolean by lazy {
-        if (isCreative) false else {
-            val cap = java.math.BigInteger.valueOf(size)
-                .multiply(java.math.BigInteger.valueOf(keyType.amountPerByte.toLong()))
-            cap > java.math.BigInteger.valueOf(Long.MAX_VALUE)
-        }
-    }
 
     override val define: ItemDefinition<StorageCellItem> = ItemDefinition(
         itemName,

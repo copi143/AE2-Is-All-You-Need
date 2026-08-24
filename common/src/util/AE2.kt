@@ -10,13 +10,31 @@ import allyouneed.api.AsyncChannelNodeHolder
 import allyouneed.api.BigCpuCapacity
 import allyouneed.api.IMacAddressHolder
 import allyouneed.api.IManagedMacAddressHolder
+import allyouneed.logic.aekey.*
 import appeng.api.stacks.AEKey
+import appeng.api.stacks.AEKeyType
 import appeng.api.upgrades.IUpgradeableItem
 import appeng.api.upgrades.Upgrades
 import appeng.core.definitions.ItemDefinition
 import appeng.me.GridNode
 import appeng.me.ManagedGridNode
 import appeng.me.cluster.implementations.CraftingCPUCluster
+
+val AEKeyType.isItem: Boolean get() = this == AEKeyType.items()
+val AEKeyType.isFluid: Boolean get() = this == AEKeyType.fluids()
+val AEKeyType.isEnergy: Boolean get() = this == EnergyKey.Type
+val AEKeyType.isMana: Boolean get() = this == ManaKey.Type
+val AEKeyType.isHp: Boolean get() = this == HpKey.Type
+val AEKeyType.isSta: Boolean get() = this == StaKey.Type
+val AEKeyType.isXp: Boolean get() = this == XpKey.Type
+
+val AEKey.isItem: Boolean get() = this.type.isItem
+val AEKey.isFluid: Boolean get() = this.type.isFluid
+val AEKey.isEnergy: Boolean get() = this.type.isEnergy
+val AEKey.isMana: Boolean get() = this.type.isMana
+val AEKey.isHp: Boolean get() = this.type.isHp
+val AEKey.isSta: Boolean get() = this.type.isSta
+val AEKey.isXp: Boolean get() = this.type.isXp
 
 fun IUpgradeableItem.registerSupportedUpgrade(item: ItemDefinition<*>, max: Int = 1, tooltipGroup: String? = null) {
     Upgrades.add(item, this, max, tooltipGroup)

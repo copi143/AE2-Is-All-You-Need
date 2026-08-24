@@ -4,6 +4,7 @@ import allyouneed.cell.ICellItem
 import allyouneed.cell.appendPartitionInfo
 import allyouneed.cell.getFuzzyMode
 import allyouneed.cell.setFuzzyMode
+import allyouneed.util.isItem
 import appeng.api.config.FuzzyMode
 import appeng.api.storage.StorageCells
 import appeng.api.storage.cells.CellState
@@ -45,7 +46,7 @@ open class StorageCellItem(
         CellConfig.create(cell.keyType.filter(), stack)
 
     override fun getUpgrades(stack: ItemStack): IUpgradeInventory =
-        UpgradeInventories.forItem(stack, if (cell.keyType == appeng.api.stacks.AEKeyType.items()) 4 else 3)
+        UpgradeInventories.forItem(stack, if (cell.keyType.isItem) 4 else 3)
 
     override fun getFuzzyMode(stack: ItemStack): FuzzyMode = stack.getFuzzyMode()
 
