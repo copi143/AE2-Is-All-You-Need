@@ -1,4 +1,4 @@
-package allyouneed.cell.item
+package allyouneed.cell.storage
 
 import allyouneed.cell.ICellItem
 import allyouneed.cell.buildPartitionList
@@ -29,21 +29,21 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 
 /**
- * Storage inventory for [ItemStorageCellItem]. A faithful port of vanilla
+ * Storage inventory for [StorageCellItem]. A faithful port of vanilla
  * [appeng.me.cells.BasicCellInventory] where every byte/amount is `long`,
  * so tiers up to 256T (2^48 bytes, 2^51 items) fit without overflow.
  * Contents are stored on the item's NBT as `keys` + `amts`, like vanilla.
  *
- * Generic over the key space via the [keyType] parameter: item cells use
- * [AEKeyType.items], mana cells pass their own key type.
+ * Generic over the key space via the [keyType] parameter; the per-type capacity
+ * limit comes from [StorageCellTypeLimits] (63 items / 18 fluids / ...).
  */
-open class ItemStorageCellInventory(
+class StorageCellInventory(
     private val stack: ItemStack,
     private val container: ISaveProvider?,
-    keyType: AEKeyType = AEKeyType.items(),
+    keyType: AEKeyType,
 ) : StorageCell {
 
-    protected val cellItem: ResourceCellItem = stack.item as ResourceCellItem
+    protected val cellItem: StorageCellItem = stack.item as StorageCellItem
 
     /** Data-side definition (size tier, bytes per type, idle drain). */
     protected val cell: ICellItem = cellItem.cell
@@ -57,7 +57,7 @@ open class ItemStorageCellInventory(
     /** Bytes reserved per distinct item type (scales with tier, like vanilla). */
     private val bytesPerType: Long = cell.bytesPerType
 
-    private val maxItemTypes: Int = MAX_ITEM_TYPES
+    private val maxItemTypes: Int = StorageCellTypeLimits.of(keyType)
 
     private val partitionList: IPartitionList
     private val partitionListMode: IncludeExclude
@@ -293,6 +293,5 @@ open class ItemStorageCellInventory(
     companion object {
         private const val TAG_STACK_KEYS = "keys"
         private const val TAG_STACK_AMOUNTS = "amts"
-        private const val MAX_ITEM_TYPES = 63
     }
 }

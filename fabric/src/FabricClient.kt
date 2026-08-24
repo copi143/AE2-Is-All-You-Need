@@ -6,9 +6,8 @@ import allyouneed.multiblock.async.AsyncBlockRegistry
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
 import allyouneed.multiblock.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
-import allyouneed.cell.item.ItemStorageCell
-import allyouneed.cell.item.ResourceCellItem
-import allyouneed.cell.mana.ManaStorageCell
+import allyouneed.cell.storage.AllCells
+import allyouneed.cell.storage.StorageCellItem
 import minecraftx.compose.itemdetail.ItemDetailsKeyBind
 import allyouneed.client.CraftingStorageModels
 import allyouneed.parts.iodrive.MEIODriveMenu
@@ -42,9 +41,8 @@ fun initClient() {
     IayGuide.init()
     ItemDetailsKeyBind.init()
     ColorProviderRegistry.ITEM.register(
-        { stack, tintIndex -> ResourceCellItem.getColor(stack, tintIndex) },
-        *ItemStorageCell.entries.map { it.define.asItem() }.toTypedArray(),
-        *ManaStorageCell.entries.map { it.define.asItem() }.toTypedArray(),
+        { stack, tintIndex -> StorageCellItem.getColor(stack, tintIndex) },
+        *AllCells.all.map { it.define.asItem() }.toTypedArray(),
     )
     for (storage in CraftingStorage.entries) {
         val id = CraftingStorageModels.formedModelId(storage)

@@ -7,9 +7,8 @@ import allyouneed.multiblock.async.AsyncBlockRegistry
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
 import allyouneed.multiblock.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
-import allyouneed.cell.item.ItemStorageCell
-import allyouneed.cell.item.ResourceCellItem
-import allyouneed.cell.mana.ManaStorageCell
+import allyouneed.cell.storage.AllCells
+import allyouneed.cell.storage.StorageCellItem
 import allyouneed.gtceu.multiblock.AsyncStructureGtStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
 import allyouneed.parts.iodrive.MEIODriveScreen
@@ -54,9 +53,8 @@ object ForgeClientEvents {
     @SubscribeEvent
     fun onRegisterItemColors(event: RegisterColorHandlersEvent.Item) {
         event.register(
-            { stack, tintIndex -> ResourceCellItem.getColor(stack, tintIndex) },
-            *ItemStorageCell.entries.map { it.define.asItem() }.toTypedArray(),
-            *ManaStorageCell.entries.map { it.define.asItem() }.toTypedArray(),
+            { stack, tintIndex -> StorageCellItem.getColor(stack, tintIndex) },
+            *AllCells.all.map { it.define.asItem() }.toTypedArray(),
         )
     }
 

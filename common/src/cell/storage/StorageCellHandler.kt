@@ -1,6 +1,11 @@
-package allyouneed.cell.mana
+package allyouneed.cell.storage
 
-import allyouneed.cell.item.ItemStorageCellInventory
+import allyouneed.logic.aekey.EnergyKey
+import allyouneed.logic.aekey.HpKey
+import allyouneed.logic.aekey.ManaKey
+import allyouneed.logic.aekey.StaKey
+import allyouneed.logic.aekey.XpKey
+import appeng.api.stacks.AEKeyType
 import appeng.api.stacks.GenericStack
 import appeng.api.storage.cells.ICellHandler
 import appeng.api.storage.cells.ISaveProvider
@@ -11,19 +16,38 @@ import net.minecraft.world.inventory.tooltip.TooltipComponent
 import net.minecraft.world.item.ItemStack
 import java.util.*
 
-object ManaStorageCellHandler : ICellHandler {
-    override fun isCell(stack: ItemStack): Boolean =
-        !stack.isEmpty && stack.item is ManaStorageCellItem
+/**
+ * Max distinct keys a storage cell can hold, per key space. Item/fluid limits follow AE2
+ * vanilla ([appeng.me.cells.BasicCellInventory]); the mod's own key spaces use tighter caps.
+ */
+object StorageCellTypeLimits {
+    private val LIMITS = linkedMapOf(
+        AEKeyType.items() to 63,
+        AEKeyType.fluids() to 18,
+        EnergyKey.Type to 6,
+        ManaKey.Type to 6,
+        HpKey.Type to 3,
+        StaKey.Type to 3,
+        XpKey.Type to 3,
+    )
+
+    fun of(keyType: AEKeyType): Int = LIMITS[keyType] ?: LIMITS.getValue(AEKeyType.items())
+}
+
+/**
+ * Single cell handler for all [StorageCellItem]s: the inventory is built from the item data's
+ * [ICellItem.keyType], so one handler serves every key space (item / mana / energy / ...).
+ */
+object StorageCellHandler : ICellHandler {
+    override fun isCell(stack: ItemStack): Boolean = stack.item is StorageCellItem
 
     override fun getCellInventory(stack: ItemStack, container: ISaveProvider?): StorageCell? {
-        if (!stack.isEmpty && stack.item is ManaStorageCellItem) {
-            return ManaStorageCellInventory(stack, container)
-        }
-        return null
+        val item = stack.item as? StorageCellItem ?: return null
+        return StorageCellInventory(stack, container, item.cell.keyType)
     }
 
     fun getTooltipImage(stack: ItemStack): Optional<TooltipComponent> {
-        val inv = getCellInventory(stack, null) as? ItemStorageCellInventory ?: return Optional.empty()
+        val inv = getCellInventory(stack, null) as? StorageCellInventory ?: return Optional.empty()
 
         val upgrades: List<ItemStack> = if (AEConfig.instance().isTooltipShowCellUpgrades) {
             inv.getUpgradesInventory().toList()

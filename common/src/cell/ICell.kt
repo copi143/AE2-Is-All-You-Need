@@ -5,6 +5,7 @@ import appeng.block.AEBaseBlock
 import appeng.block.AEBaseBlockItem
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
+import appeng.api.stacks.AEKeyType
 import appeng.core.definitions.ItemDefinition
 import net.minecraft.core.BlockPos
 import net.minecraft.resources.ResourceLocation
@@ -77,5 +78,9 @@ abstract class ICellItem(size: Long, val postfix: String, protected val postfix2
     protected val itemName2: String = "$prefixUpper $postfix2"
     open val itemId: ResourceLocation = idify("$prefixUpper $postfix").rl
     protected val itemId2: ResourceLocation = idify("$prefixUpper $postfix2").rl
+
+    /** Key space this cell stores; drives the per-type capacity limit (63 items / 18 fluids / ...). */
+    open val keyType: AEKeyType = AEKeyType.items()
+
     abstract val define: ItemDefinition<*>
 }

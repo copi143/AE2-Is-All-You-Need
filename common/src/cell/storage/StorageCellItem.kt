@@ -1,4 +1,4 @@
-package allyouneed.cell.item
+package allyouneed.cell.storage
 
 import allyouneed.cell.ICellItem
 import allyouneed.cell.appendPartitionInfo
@@ -23,13 +23,13 @@ import net.minecraft.world.level.Level
 import java.util.*
 
 /**
- * Base item for resource storage cells (item / mana / ...). Holds the data-side [ICellItem]
- * definition and provides the shared cell-workbench plumbing (config, upgrades, fuzzy mode,
- * capacity tooltip). Concrete subclasses decide which [allyouneed.cell.ICell] they pair with.
+ * Generic item for resource storage cells (item / mana / energy / ...). Holds the data-side
+ * [ICellItem] definition (whose [ICellItem.keyType] selects the stored key space) and provides
+ * the shared cell-workbench plumbing (config, upgrades, fuzzy mode, capacity tooltip).
  */
-open class ResourceCellItem(
+open class StorageCellItem(
     properties: Properties,
-    /** Data-side definition providing size tier, bytes per type and idle drain. */
+    /** Data-side definition providing size tier, key space, bytes per type and idle drain. */
     val cell: ICellItem,
 ) : AEBaseItem(properties), ICellWorkbenchItem {
 
@@ -50,7 +50,7 @@ open class ResourceCellItem(
         lines: MutableList<Component>,
         advancedTooltips: TooltipFlag,
     ) {
-        val inv = StorageCells.getCellInventory(stack, null) as? ItemStorageCellInventory ?: return
+        val inv = StorageCells.getCellInventory(stack, null) as? StorageCellInventory ?: return
         lines.add(Tooltips.bytesUsed(inv.getUsedBytes(), inv.getTotalBytes()))
         lines.add(Tooltips.typesUsed(inv.getStoredItemTypes(), inv.getTotalItemTypes()))
         if (inv.isPreformatted()) {
@@ -61,6 +61,9 @@ open class ResourceCellItem(
             lines.add(Tooltips.of(line))
         }
     }
+
+    override fun getTooltipImage(stack: ItemStack): Optional<TooltipComponent> =
+        StorageCellHandler.getTooltipImage(stack)
 
     companion object {
         const val UPGRADE_SLOTS = 4
@@ -75,17 +78,4 @@ open class ResourceCellItem(
             return 0xFFFFFF
         }
     }
-}
-
-/**
- * Item storage cell (1K - 256T). Long-based capacity following the vanilla
- * `item_storage_cell` design; NBT storage with `keys`/`amts` tags.
- */
-open class ItemStorageCellItem(
-    properties: Properties,
-    cellType: ItemStorageCell,
-) : ResourceCellItem(properties, cellType) {
-
-    override fun getTooltipImage(stack: ItemStack): Optional<TooltipComponent> =
-        ItemStorageCellHandler.getTooltipImage(stack)
 }

@@ -2,10 +2,8 @@ package allyouneed
 
 import allyouneed.cell.creative.CreativeMeCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
-import allyouneed.cell.item.ItemStorageCell
-import allyouneed.cell.item.ItemStorageCellHandler
-import allyouneed.cell.mana.ManaStorageCell
-import allyouneed.cell.mana.ManaStorageCellHandler
+import allyouneed.cell.storage.AllCells
+import allyouneed.cell.storage.StorageCellHandler
 import allyouneed.logic.aekey.AllKeys
 import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.net.http.HttpModule
@@ -52,37 +50,24 @@ object Main {
     fun commonSetup() {
         StorageCells.addCellHandler(CreativeMeCellHandler)
         StorageCells.addCellHandler(DimensionalCellHandler)
-        StorageCells.addCellHandler(ItemStorageCellHandler)
-        StorageCells.addCellHandler(ManaStorageCellHandler)
+        StorageCells.addCellHandler(StorageCellHandler)
+
         StorageCellModels.registerModel(ModItems.CREATIVE_ME_CELL, "block/drive/cells/creative_cell".rlAE)
         StorageCellModels.registerModel(ModItems.DIMENSIONAL_CELL, "block/drive/cells/creative_cell".rlAE)
-        for (cell in ItemStorageCell.entries) {
-            StorageCellModels.registerModel(cell.define, cell.driveCellId.joinParent("block/drive/cells"))
-        }
-        for (cell in ManaStorageCell.entries) {
-            StorageCellModels.registerModel(cell.define, cell.driveCellId.joinParent("block/drive/cells"))
-        }
         val cellGroup = GuiText.StorageCells.translationKey
+        for (cell in AllCells.all) {
+            StorageCellModels.registerModel(cell.define, cell.driveCellId.joinParent("block/drive/cells"))
+            cell.define.asItem().registerSupportedUpgrade(cellGroup).with(
+                ExtRef.inverterCard to 1,
+                ExtRef.fuzzyCard to 1,
+                ExtRef.equalDistributionCard to 1,
+                ExtRef.voidCard to 1,
+            )
+        }
         ModItems.DIMENSIONAL_CELL.registerSupportedUpgrade(cellGroup).with(
             ExtRef.inverterCard to 1,
             ExtRef.fuzzyCard to 1,
         )
-        for (cell in ItemStorageCell.entries) {
-            cell.define.asItem().registerSupportedUpgrade(cellGroup).with(
-                ExtRef.inverterCard to 1,
-                ExtRef.fuzzyCard to 1,
-                ExtRef.equalDistributionCard to 1,
-                ExtRef.voidCard to 1,
-            )
-        }
-        for (cell in ManaStorageCell.entries) {
-            cell.define.asItem().registerSupportedUpgrade(cellGroup).with(
-                ExtRef.inverterCard to 1,
-                ExtRef.fuzzyCard to 1,
-                ExtRef.equalDistributionCard to 1,
-                ExtRef.voidCard to 1,
-            )
-        }
     }
 
     fun registerParts() {

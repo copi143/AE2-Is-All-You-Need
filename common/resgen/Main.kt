@@ -506,7 +506,7 @@ fun main(args: Array<String>) {
     val craftingTexOut = texOut.resolve("crafting")
     craftingTexOut.createDirectories()
 
-    // Status-LED item layer: single-pixel dot, tinted at runtime by ItemStorageCellItem.getColor.
+    // Status-LED item layer: single-pixel dot, tinted at runtime by StorageCellItem.getColor.
     val itemTexOut = output.resolve("textures/item")
     itemTexOut.createDirectories()
     sourceTextures.resolve("storage_cell/storage_cell_light.png")
