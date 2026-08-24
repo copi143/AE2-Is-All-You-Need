@@ -1,5 +1,6 @@
 package allyouneed.resgen
 
+import allyouneed.util.idify
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -10,10 +11,6 @@ import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
-
-/** Id form of a display string (lowercase snake), used for registry names. */
-fun idify(value: String): String =
-    value.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
 
 data class CellEntry(
     val displayName: String,
@@ -26,21 +23,6 @@ data class CellEntry(
     /** Id of the matching drive-cell block model/texture (`<tier>_<type>_cell`). */
     val itemCellId = id.removeSuffix("_storage_cell") + "_cell"
 }
-
-val tiers = listOf(
-    "1k", "4k", "16k", "64k", "256k",
-    "1m", "4m", "16m", "64m", "256m",
-    "1g", "4g", "16g", "64g", "256g",
-    "1t", "4t", "16t", "64t", "256t",
-).map { it.uppercase() }
-
-val gtMultiBlockTiers = listOf(
-    "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV", "MAX",
-)
-
-val gtSingleBlockTiers = listOf(
-    "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV",
-)
 
 private val energyCells = tiers.flatMapIndexed { i, tier ->
     listOf(
@@ -58,24 +40,12 @@ private fun storageCells(label: String) = tiers.mapIndexed { i, tier ->
     CellEntry("$tier $label Storage Cell", AE2_COLORS[i].hex)
 }
 
-private val itemStorageCells = storageCells("Item")
-private val fluidStorageCells = storageCells("Fluid")
-private val manaStorageCells = storageCells("Mana")
-private val energyStorageCells = storageCells("Energy")
-private val hpStorageCells = storageCells("HP")
-private val staStorageCells = storageCells("STA")
-private val xpStorageCells = storageCells("XP")
-
 /** All storage cell groups by key type id; drives bg derivation, textures and models. */
-val storageCellGroups = linkedMapOf(
-    "item" to itemStorageCells,
-    "fluid" to fluidStorageCells,
-    "mana" to manaStorageCells,
-    "energy" to energyStorageCells,
-    "hp" to hpStorageCells,
-    "sta" to staStorageCells,
-    "xp" to xpStorageCells,
-)
+val storageCellGroups = LinkedHashMap<String, List<CellEntry>>().apply {
+    for ((label, cells) in aeKeyLabels.associateWith { storageCells(it) }) {
+        set(label, cells)
+    }
+}
 
 /**
  * Async synthesis block definition. Both definition files (with/without GT) describe the same
@@ -139,7 +109,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) {
         println("Arguments: ${args.joinToString(" ")}")
         println("Error: No arguments are expected, as this is a simple asset generator.")
-        return
+        throw IllegalArgumentException("No arguments are expected")
     }
 
     val modId = "ae2isallyouneed"
@@ -524,11 +494,13 @@ fun main(args: Array<String>) {
                 })
             })
         }
+
         fun writeRecipe(relative: String, json: JsonObject) {
             val path = dataOutput.resolve("recipes/$relative.json")
             path.parent.createDirectories()
             path.writeText(gson.toJson(json))
         }
+
         fun shapedResult(item: String, count: Int = 1): JsonObject = JsonObject().apply {
             addProperty("item", item)
             if (count != 1) addProperty("count", count)
@@ -579,9 +551,12 @@ fun main(args: Array<String>) {
                         add("c", JsonObject().apply { addProperty("item", "ae2:logic_processor") })
                     })
                     add("result", shapedResult(compId))
-                    add("criteria", JsonObject().apply { add("has_logic_processor", criteriaFor("ae2:logic_processor")) })
+                    add(
+                        "criteria",
+                        JsonObject().apply { add("has_logic_processor", criteriaFor("ae2:logic_processor")) })
                     add("requirements", JsonArray().apply { add(JsonArray().apply { add("has_logic_processor") }) })
                 }
+
                 1 -> JsonObject().apply {
                     addProperty("type", "minecraft:crafting_shaped")
                     add("pattern", JsonArray().apply { add("aba"); add("cdc"); add("aca") })
@@ -595,6 +570,7 @@ fun main(args: Array<String>) {
                     add("criteria", JsonObject().apply { add("has_cell_component_1k", criteriaFor(prevComp!!)) })
                     add("requirements", JsonArray().apply { add(JsonArray().apply { add("has_cell_component_1k") }) })
                 }
+
                 2, 3 -> JsonObject().apply {
                     addProperty("type", "minecraft:crafting_shaped")
                     add("pattern", JsonArray().apply { add("aba"); add("cdc"); add("aca") })
@@ -608,6 +584,7 @@ fun main(args: Array<String>) {
                     add("criteria", JsonObject().apply { add("has_prev", criteriaFor(prevComp!!)) })
                     add("requirements", JsonArray().apply { add(JsonArray().apply { add("has_prev") }) })
                 }
+
                 else -> JsonObject().apply {
                     addProperty("type", "minecraft:crafting_shaped")
                     add("pattern", JsonArray().apply { add("aba"); add("cdc"); add("aca") })
@@ -771,11 +748,19 @@ fun main(args: Array<String>) {
     }
 
     // Packet item textures: copy content icons + overlay
-    for (tex in listOf("packet_overlay", "energy_icon", "mana_icon", "fluid_icon", "item_icon", "hp_icon", "sta_icon", "xp_icon")) {
+    for (tex in listOf(
+        "packet_overlay",
+        "energy_icon",
+        "mana_icon",
+        "fluid_icon",
+        "item_icon",
+        "hp_icon",
+        "sta_icon",
+        "xp_icon"
+    )) {
         val src = sourceTextures.resolve("packet/$tex.png")
-        if (src.exists()) {
-            src.copyTo(itemTexOut.resolve("$tex.png"), overwrite = true)
-        }
+        require(src.exists())
+        src.copyTo(itemTexOut.resolve("$tex.png"), overwrite = true)
     }
 
     // Async synthesis blocks: dedicated pixel-art textures (unformed + formed). Written straight to

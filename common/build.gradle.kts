@@ -165,6 +165,7 @@ sourceSets.test {
 
 sourceSets.create("resgen") {
     compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
     kotlin.srcDir("resgen")
 }.let {
     tasks.register<JavaExec>("generateAssets") {
