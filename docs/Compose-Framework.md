@@ -248,8 +248,10 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
 - `McColorScheme` 是语义颜色契约；自定义主题只需 override 有差异的槽。
 - 未包裹 `McTheme` 的组件回落到 [McThemeSettings]。
 - `McTheme` 用 `staticCompositionLocalOf`：切换 scheme 会整体重组合子树，全屏换肤即此语义。
-- 颜色以 `Color`（ULong ARGB）承载；落进 `GuiGraphics.drawString` 的文本用
-  `color.value.toInt()` 转回 `Int`（`0xAARRGGBB`，与 MC 一致）。
+- 颜色以 `Color`（ULong，ARGB 在高 32 位、低位是颜色空间标记）承载；落进
+  `GuiGraphics.drawString` / `fill` 的文本与矩形必须用 `color.toArgb()` 转回 `Int`
+  （`0xAARRGGBB`，与 MC 一致）。**切勿用 `value.toInt()`**——它截取的是低 32 位标记位，
+  对 sRGB 直构颜色恒为 0（全透明；`drawString` 会被 vanilla 兜底成白色，`fill` 则直接隐形）。
 
 ---
 

@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.foundation.McLine
 import minecraftx.compose.foundation.McVirtualColumn
@@ -68,7 +69,7 @@ class ComposeItemDetailsScreen(
     @Composable
     override fun Content() {
         val colors = McTheme.colors
-        val rows = remember(colors) { buildRows(colors.textPrimary.value.toInt()) }
+        val rows = remember(colors) { buildRows(colors.textPrimary.toArgb()) }
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,

@@ -1,5 +1,6 @@
 package ae2x.compose.widget
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,7 +40,7 @@ fun AeAmountDialog(
 ) {
     McPanel(width = width, height = height, modifier = modifier, colors = colors) {
         Column(Modifier.padding(8.dp)) {
-            McText(title, color = colors.textPrimary.value.toInt())
+            McText(title, color = colors.textPrimary.toArgb())
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!stack.isEmpty) {

@@ -1,5 +1,6 @@
 package minecraftx.compose.material
 
+import androidx.compose.ui.graphics.toArgb
 import allyouneed.client.compose.platform.LocalMcTextInputService
 import allyouneed.client.compose.platform.McGraphics
 import allyouneed.client.compose.platform.McScissor
@@ -232,8 +233,8 @@ private fun drawArea(
     colors: McColorScheme,
 ) {
     val border = if (focused) colors.inputBorderFocused else colors.inputBorder
-    g.fill(0, 0, width, height, border.value.toInt())
-    g.fill(1, 1, width - 1, height - 1, colors.inputBackground.value.toInt())
+    g.fill(0, 0, width, height, border.toArgb())
+    g.fill(1, 1, width - 1, height - 1, colors.inputBackground.toArgb())
 
     val matrix = g.pose().last().pose()
     val nodeX = matrix.m30()
@@ -274,10 +275,10 @@ private fun drawRows(
     for (i in firstRow..lastRow) {
         val row = layout.rows[i]
         val y = rowY(i, scrollY, rowHeightPx)
-        g.drawString(font, row.text, TEXT_PAD_LEFT, y, colors.textPrimary.value.toInt(), false)
+        g.drawString(font, row.text, TEXT_PAD_LEFT, y, colors.textPrimary.toArgb(), false)
     }
     if (value.text.isEmpty() && !placeholder.isNullOrEmpty()) {
-        g.drawString(font, placeholder, TEXT_PAD_LEFT, rowY(0, scrollY, rowHeightPx), colors.textSecondary.value.toInt(), false)
+        g.drawString(font, placeholder, TEXT_PAD_LEFT, rowY(0, scrollY, rowHeightPx), colors.textSecondary.toArgb(), false)
     }
 
     // Selection highlight, intersected with every visible row.
@@ -295,11 +296,11 @@ private fun drawRows(
                     y,
                     xInRow(font, row, b - row.start),
                     y + rowHeightPx,
-                    colors.textSelection.value.toInt(),
+                    colors.textSelection.toArgb(),
                 )
                 // A fully-covered empty row still gets a small highlight block.
                 selStart <= row.start && selEnd >= row.end && row.text.isEmpty() ->
-                    g.fill(TEXT_PAD_LEFT, y, TEXT_PAD_LEFT + 2, y + rowHeightPx, colors.textSelection.value.toInt())
+                    g.fill(TEXT_PAD_LEFT, y, TEXT_PAD_LEFT + 2, y + rowHeightPx, colors.textSelection.toArgb())
             }
         }
     }
@@ -310,7 +311,7 @@ private fun drawRows(
         if (caretRow in firstRow..lastRow) {
             val row = layout.rows[caretRow]
             val x = xInRow(font, row, value.selection.min - row.start)
-            g.fill(x, rowY(caretRow, scrollY, rowHeightPx), x + 2, rowY(caretRow, scrollY, rowHeightPx) + rowHeightPx, colors.textCaret.value.toInt())
+            g.fill(x, rowY(caretRow, scrollY, rowHeightPx), x + 2, rowY(caretRow, scrollY, rowHeightPx) + rowHeightPx, colors.textCaret.toArgb())
         }
     }
 
@@ -328,7 +329,7 @@ private fun drawRows(
                     y + rowHeightPx - 2,
                     xInRow(font, row, b - row.start),
                     y + rowHeightPx,
-                    colors.textCaret.value.toInt(),
+                    colors.textCaret.toArgb(),
                 )
             }
         }

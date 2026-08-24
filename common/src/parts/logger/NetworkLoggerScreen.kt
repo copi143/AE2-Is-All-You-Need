@@ -1,5 +1,6 @@
 package allyouneed.parts.logger
 
+import androidx.compose.ui.graphics.toArgb
 import ae2x.compose.AeComposeScreen
 import ae2x.compose.aePanelBounds
 import ae2x.compose.rememberGuiSync
@@ -53,7 +54,7 @@ class NetworkLoggerScreen(
         val lineHeight = 10
         val viewportW = 244
         val viewportH = 132
-        val infoColor = McTheme.colors.textPrimary.value.toInt()
+        val infoColor = McTheme.colors.textPrimary.toArgb()
         val lines = page.entries.mapIndexed { index, entry ->
             McLine(
                 text = entry.toComponent(),
@@ -75,11 +76,11 @@ class NetworkLoggerScreen(
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             McPanel(width = 280.dp, height = 200.dp, modifier = Modifier.aePanelBounds()) {
                 Column(Modifier.padding(8.dp)) {
-                    McText(Component.translatable("gui.$MODID.log.title"), color = McTheme.colors.textPrimary.value.toInt())
+                    McText(Component.translatable("gui.$MODID.log.title"), color = McTheme.colors.textPrimary.toArgb())
                     Spacer(Modifier.height(4.dp))
                     McText(
                         statusText(conflict, online, total),
-                        color = statusColor(conflict, online, McTheme.colors.textSecondary.value.toInt()),
+                        color = statusColor(conflict, online, McTheme.colors.textSecondary.toArgb()),
                     )
                     if (conflict == 1) {
                         Spacer(Modifier.height(2.dp))
@@ -116,7 +117,7 @@ class NetworkLoggerScreen(
                         McButton("<", onClick = { menu.olderPage() }, enabled = offset > 0)
                         McText(
                             Component.translatable("gui.$MODID.log.page", offset + 1, (offset + page.entries.size).coerceAtLeast(offset), total),
-                            color = McTheme.colors.textSecondary.value.toInt(),
+                            color = McTheme.colors.textSecondary.toArgb(),
                         )
                         McButton(">", onClick = { menu.newerPage() }, enabled = offset + LogStore.PAGE_SIZE < total)
                         McButton(

@@ -1,5 +1,6 @@
 package ae2x.compose.widget
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -40,7 +41,7 @@ fun <T : Enum<T>> AeSettingToggle(
             }
         },
     ) {
-        McText(label(value), color = McTheme.colors.textPrimary.value.toInt(), maxWidth = 80)
+        McText(label(value), color = McTheme.colors.textPrimary.toArgb(), maxWidth = 80)
     }
 }
 

@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.theme.McColorScheme
@@ -67,7 +68,7 @@ fun McButton(
 ) {
     McButton(onClick = onClick, modifier = modifier, enabled = enabled, colors = colors) {
         val color = if (enabled) colors.textPrimary else colors.textDisabled
-        McText(Component.literal(label), color = color.value.toInt())
+        McText(Component.literal(label), color = color.toArgb())
     }
 }
 

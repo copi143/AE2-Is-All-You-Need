@@ -1,5 +1,6 @@
 package minecraftx.compose.dock
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -87,7 +88,7 @@ fun McDockTabBar(
             )
             McText(
                 Component.literal("×"),
-                color = McTheme.colors.textSecondary.value.toInt(),
+                color = McTheme.colors.textSecondary.toArgb(),
                 modifier = Modifier.padding(end = 4.dp).clickable { onClose(tabId) },
             )
         }

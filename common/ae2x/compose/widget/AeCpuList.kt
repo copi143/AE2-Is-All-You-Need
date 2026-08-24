@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import appeng.api.config.CpuSelectionMode
 import appeng.core.localization.GuiText
@@ -101,11 +102,11 @@ private fun AeCpuRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            McText(cpuName(cpu), color = colors.textPrimary.value.toInt(), maxWidth = 90)
+            McText(cpuName(cpu), color = colors.textPrimary.toArgb(), maxWidth = 90)
             if (job != null) {
                 McText(
                     job.what().formatAmount(job.amount(), appeng.api.stacks.AmountFormat.SLOT),
-                    color = colors.textSecondary.value.toInt(),
+                    color = colors.textSecondary.toArgb(),
                     maxWidth = 90,
                 )
             } else {
@@ -118,7 +119,7 @@ private fun AeCpuRow(
                         else -> Unit
                     }
                 }
-                McText(extras, color = colors.textSecondary.value.toInt(), maxWidth = 90)
+                McText(extras, color = colors.textSecondary.toArgb(), maxWidth = 90)
             }
         }
         if (job != null) {

@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import appeng.api.client.AEKeyRendering
 import appeng.api.stacks.AEKey
@@ -101,7 +102,7 @@ private fun AeCraftCell(entry: AeCraftRow, modifier: Modifier, colors: McColorSc
     ) {
         Column(Modifier.weight(1f)) {
             entry.lines.forEach { line ->
-                McText(line, color = colors.textPrimary.value.toInt(), maxWidth = 44)
+                McText(line, color = colors.textPrimary.toArgb(), maxWidth = 44)
             }
         }
         Box {

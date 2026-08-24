@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import appeng.core.localization.GuiText
 import appeng.menu.SlotSemantics
@@ -111,7 +112,7 @@ fun AeProcessingEncoding(
                 Spacer(Modifier.width(4.dp))
                 Column {
                     McButton("▲", onClick = { scrollRow = (row - 1).coerceAtLeast(0) }, colors = colors)
-                    McText("${row + 1}/${maxScroll + 1}", color = colors.textSecondary.value.toInt())
+                    McText("${row + 1}/${maxScroll + 1}", color = colors.textSecondary.toArgb())
                     McButton("▼", onClick = { scrollRow = (row + 1).coerceAtMost(maxScroll) }, colors = colors)
                 }
             }
@@ -219,7 +220,7 @@ private fun AeStonecuttingRecipeGrid(
             Spacer(Modifier.height(2.dp))
             Row {
                 McButton("▲", onClick = { scrollRow = (row - 1).coerceAtLeast(0) }, colors = colors)
-                McText(" ${row + 1}/${maxScroll + 1} ", color = colors.textSecondary.value.toInt())
+                McText(" ${row + 1}/${maxScroll + 1} ", color = colors.textSecondary.toArgb())
                 McButton("▼", onClick = { scrollRow = (row + 1).coerceAtMost(maxScroll) }, colors = colors)
             }
         }

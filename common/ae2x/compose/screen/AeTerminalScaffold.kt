@@ -1,5 +1,6 @@
 package ae2x.compose.screen
 
+import androidx.compose.ui.graphics.toArgb
 import ae2x.compose.LocalAeHost
 import ae2x.compose.aePanelBounds
 import ae2x.compose.rememberGuiSync
@@ -65,7 +66,7 @@ fun AeTerminalScaffold(
             McPanel(width = width, height = height, modifier = modifier.aePanelBounds()) {
                 Column(Modifier.padding(7.dp)) {
                     Row {
-                        McText(title, color = McTheme.colors.textPrimary.value.toInt())
+                        McText(title, color = McTheme.colors.textPrimary.toArgb())
                         Spacer(Modifier.weight(1f))
                         AeSearchBar(
                             value = search,

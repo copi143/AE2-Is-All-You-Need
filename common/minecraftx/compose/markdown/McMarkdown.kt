@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
@@ -35,7 +36,7 @@ import kotlin.math.max
 fun McMarkdown(
     markdown: String,
     modifier: Modifier = Modifier,
-    color: Int = McTheme.colors.textPrimary.value.toInt(),
+    color: Int = McTheme.colors.textPrimary.toArgb(),
 ) {
     val engine = LocalMcTextEngine.current
     val colors = McTheme.colors

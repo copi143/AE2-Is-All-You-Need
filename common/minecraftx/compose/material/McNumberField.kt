@@ -1,5 +1,6 @@
 package minecraftx.compose.material
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -32,7 +33,7 @@ fun McNumberField(
     var text by remember(value) { mutableStateOf(TextFieldValue(value.toString(), TextRange(value.toString().length))) }
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         McIconButton(onClick = { onValueChange((value - step).coerceIn(min, max)) }, colors = colors) {
-            McText("-", maxWidth = 8, color = colors.textPrimary.value.toInt())
+            McText("-", maxWidth = 8, color = colors.textPrimary.toArgb())
         }
         Spacer(Modifier.width(2.dp))
         McTextField(
@@ -65,7 +66,7 @@ fun McNumberField(
         )
         Spacer(Modifier.width(2.dp))
         McIconButton(onClick = { onValueChange((value + step).coerceIn(min, max)) }, colors = colors) {
-            McText("+", maxWidth = 8, color = colors.textPrimary.value.toInt())
+            McText("+", maxWidth = 8, color = colors.textPrimary.toArgb())
         }
     }
 }

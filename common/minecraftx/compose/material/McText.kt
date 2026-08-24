@@ -8,6 +8,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainHeight
@@ -37,7 +38,7 @@ import kotlin.math.min
 fun McText(
     text: Component,
     modifier: Modifier = Modifier,
-    color: Int = McTheme.colors.textPrimary.value.toInt(),
+    color: Int = McTheme.colors.textPrimary.toArgb(),
     maxWidth: Int = Int.MAX_VALUE,
     clipFrame: Rect? = null,
 ) {
@@ -48,7 +49,7 @@ fun McText(
 fun McText(
     text: String,
     modifier: Modifier = Modifier,
-    color: Int = McTheme.colors.textPrimary.value.toInt(),
+    color: Int = McTheme.colors.textPrimary.toArgb(),
     maxWidth: Int = Int.MAX_VALUE,
     clipFrame: Rect? = null,
 ) {
@@ -57,7 +58,7 @@ fun McText(
 
 /** String convenience overload of [McText]. */
 @Composable
-fun Text(text: String, modifier: Modifier = Modifier, color: Int = McTheme.colors.textPrimary.value.toInt()) {
+fun Text(text: String, modifier: Modifier = Modifier, color: Int = McTheme.colors.textPrimary.toArgb()) {
     McText(text, modifier, color)
 }
 
@@ -93,7 +94,7 @@ private fun McTextInternal(
 fun McWrappedText(
     text: McStyledString,
     modifier: Modifier = Modifier,
-    color: Int = McTheme.colors.textPrimary.value.toInt(),
+    color: Int = McTheme.colors.textPrimary.toArgb(),
     maxLines: Int = Int.MAX_VALUE,
 ) {
     val engine = LocalMcTextEngine.current
@@ -119,7 +120,7 @@ fun McWrappedText(
 fun McWrappedText(
     text: String,
     modifier: Modifier = Modifier,
-    color: Int = McTheme.colors.textPrimary.value.toInt(),
+    color: Int = McTheme.colors.textPrimary.toArgb(),
     maxLines: Int = Int.MAX_VALUE,
 ) {
     McWrappedText(McStyledString(text), modifier, color, maxLines)

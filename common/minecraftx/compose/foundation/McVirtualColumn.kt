@@ -1,5 +1,6 @@
 package minecraftx.compose.foundation
 
+import androidx.compose.ui.graphics.toArgb
 import allyouneed.client.compose.platform.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -46,7 +47,7 @@ fun McVirtualColumn(
 ) {
     Box(modifier.mcScroll(state)) {
         val offset = state.display
-        val defaultColor = McTheme.colors.textPrimary.value.toInt()
+        val defaultColor = McTheme.colors.textPrimary.toArgb()
         for (line in lines) {
             val y = line.y - offset
             if (y >= -lineHeight.toFloat() && y < viewportHeight.toFloat()) {

@@ -1,5 +1,6 @@
 package ae2x.compose.screen
 
+import androidx.compose.ui.graphics.toArgb
 import ae2x.compose.LocalAeHost
 import ae2x.compose.aePanelBounds
 import ae2x.compose.slot.AePlayerInventory
@@ -35,7 +36,7 @@ fun AeMachineScaffold(
             leftBar()
             McPanel(width = width, height = height, modifier = modifier.aePanelBounds()) {
                 Column(Modifier.padding(7.dp)) {
-                    McText(title, color = McTheme.colors.textPrimary.value.toInt())
+                    McText(title, color = McTheme.colors.textPrimary.toArgb())
                     Spacer(Modifier.height(4.dp))
                     content()
                     Spacer(Modifier.height(6.dp))

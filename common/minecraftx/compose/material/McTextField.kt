@@ -1,5 +1,6 @@
 package minecraftx.compose.material
 
+import androidx.compose.ui.graphics.toArgb
 import allyouneed.client.compose.platform.LocalMcTextInputService
 import allyouneed.client.compose.platform.McGraphics
 import allyouneed.client.compose.platform.McScissor
@@ -173,8 +174,8 @@ private fun drawField(
     colors: McColorScheme,
 ) {
     val border = if (focused) colors.inputBorderFocused else colors.inputBorder
-    g.fill(0, 0, width, height, border.value.toInt())
-    g.fill(1, 1, width - 1, height - 1, colors.inputBackground.value.toInt())
+    g.fill(0, 0, width, height, border.toArgb())
+    g.fill(1, 1, width - 1, height - 1, colors.inputBackground.toArgb())
 
     val matrix = g.pose().last().pose()
     val nodeX = matrix.m30()
@@ -218,25 +219,25 @@ private fun drawContent(
     val drawX = TEXT_PAD_LEFT + prefixWidth - scrollX
     if (text.isEmpty()) {
         if (!placeholder.isNullOrEmpty()) {
-            g.drawString(font, placeholder, drawX.roundToInt(), textY, colors.textSecondary.value.toInt(), false)
+            g.drawString(font, placeholder, drawX.roundToInt(), textY, colors.textSecondary.toArgb(), false)
         }
     } else {
         val drawSub = text.substring(scrollOffset)
         val availPx = (visibleWidth + scrollX - prefixWidth).roundToInt().coerceAtLeast(0)
         val slice = if (font.width(drawSub) > availPx) font.plainSubstrByWidth(drawSub, availPx) else drawSub
-        g.drawString(font, slice, drawX.roundToInt(), textY, colors.textPrimary.value.toInt(), false)
+        g.drawString(font, slice, drawX.roundToInt(), textY, colors.textPrimary.toArgb(), false)
     }
 
     // Selection highlight or blinking caret.
     if (value.selection.collapsed) {
         if (focused && (blinkTick / CARET_BLINK_FRAMES) % 2 == 0) {
             val caretX = xForOffset(font, text, value.selection.min, scrollX)
-            g.fill(caretX, 2, caretX + 2, height - 2, colors.textCaret.value.toInt())
+            g.fill(caretX, 2, caretX + 2, height - 2, colors.textCaret.toArgb())
         }
     } else {
         val selStart = xForOffset(font, text, value.selection.min, scrollX)
         val selEnd = xForOffset(font, text, value.selection.max, scrollX)
-        g.fill(selStart, 2, selEnd, height - 2, colors.textSelection.value.toInt())
+        g.fill(selStart, 2, selEnd, height - 2, colors.textSelection.toArgb())
     }
 
     // Composing-text underline (IME preedit region, when the buffer reports one).
@@ -244,7 +245,7 @@ private fun drawContent(
     if (composition != null && !composition.collapsed) {
         val compStart = xForOffset(font, text, composition.min, scrollX)
         val compEnd = xForOffset(font, text, composition.max, scrollX)
-        g.fill(compStart, height - 3, compEnd, height - 1, colors.textCaret.value.toInt())
+        g.fill(compStart, height - 3, compEnd, height - 1, colors.textCaret.toArgb())
     }
 }
 

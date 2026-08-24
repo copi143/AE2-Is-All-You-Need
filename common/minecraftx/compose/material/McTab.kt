@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.theme.McColorScheme
 import minecraftx.compose.theme.McTheme
@@ -77,6 +78,6 @@ fun McTab(
         colors = colors,
     ) {
         val color = if (enabled) colors.textPrimary else colors.textDisabled
-        McText(Component.literal(label), color = color.value.toInt())
+        McText(Component.literal(label), color = color.toArgb())
     }
 }
