@@ -53,6 +53,7 @@ class McTextInputServiceTest {
         imeEnabled: Boolean = true,
         singleLine: Boolean = true,
         initial: TextFieldValue = TextFieldValue(""),
+        navigation: allyouneed.client.compose.platform.TextNavigation? = null,
     ) {
         commands.clear()
         current = initial
@@ -64,6 +65,7 @@ class McTextInputServiceTest {
             valueProvider = { current },
             onEditCommand = { commands += it },
             onImeActionPerformed = { action = it },
+            navigation = navigation,
         )
     }
 
@@ -262,6 +264,59 @@ class McTextInputServiceTest {
         assertFalse(service.onKeyPressed(67, 2))
         assertFalse(service.onKeyPressed(88, 2))
         assertFalse(service.onKeyPressed(86, 2))
+    }
+
+    // ---- Multi-line navigation hook ------------------------------------------------------
+
+    private class FakeNavigation : allyouneed.client.compose.platform.TextNavigation {
+        var lastVertical: Pair<Int, Boolean>? = null
+        var lastBoundary: Triple<Boolean, Boolean, Int>? = null
+        override fun moveVertically(deltaRows: Int, select: Boolean) {
+            lastVertical = deltaRows to select
+        }
+
+        override fun toLineBoundary(toStart: Boolean, select: Boolean) {
+            lastBoundary = Triple(toStart, select, 0)
+        }
+    }
+
+    @Test
+    fun `up and down route through the navigation hook`() {
+        val nav = FakeNavigation()
+        register(imeEnabled = false, singleLine = false, navigation = nav)
+        assertTrue(service.onKeyPressed(265, 0)) // KEY_UP
+        assertEquals(-1 to false, nav.lastVertical)
+        assertTrue(service.onKeyPressed(264, 1)) // SHIFT + KEY_DOWN
+        assertEquals(1 to true, nav.lastVertical)
+        assertTrue(commands.isEmpty())
+    }
+
+    @Test
+    fun `home and end route through the navigation hook when present`() {
+        val nav = FakeNavigation()
+        register(imeEnabled = false, singleLine = false, navigation = nav)
+        assertTrue(service.onKeyPressed(268, 1)) // SHIFT + KEY_HOME -> row start, selecting
+        assertEquals(Triple(true, true, 0), nav.lastBoundary)
+        assertTrue(service.onKeyPressed(269, 0)) // KEY_END -> row end
+        assertEquals(Triple(false, false, 0), nav.lastBoundary)
+    }
+
+    @Test
+    fun `vertical keys fall through without a navigation hook`() {
+        register(imeEnabled = false, initial = TextFieldValue("x"))
+        assertFalse(service.onKeyPressed(265, 0)) // KEY_UP
+        assertFalse(service.onKeyPressed(264, 0)) // KEY_DOWN
+        // Home / end keep their whole-document semantics for single-line fields.
+        assertTrue(service.onKeyPressed(268, 0))
+        assertEquals(SetSelectionCommand(0, 0), last())
+    }
+
+    @Test
+    fun `unregistering clears the navigation hook`() {
+        val nav = FakeNavigation()
+        register(imeEnabled = false, singleLine = false, navigation = nav)
+        service.unregisterSession(7)
+        assertFalse(service.onKeyPressed(265, 0))
     }
 
     private class FakeClipboard(var stored: String? = null) : allyouneed.client.compose.platform.TextClipboard {

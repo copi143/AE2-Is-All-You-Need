@@ -53,6 +53,20 @@ interface TextClipboard {
     fun setText(text: String)
 }
 
+/**
+ * Optional per-session hook for multi-line fields ([McTextArea]): vertical caret movement and
+ * line-boundary jumps are *visual* concepts — with soft wrapping only the field itself knows which
+ * row an offset belongs to — so the service delegates those keys to the active field instead of
+ * computing them from the raw text.
+ */
+interface TextNavigation {
+    /** Moves the caret [deltaRows] visual rows down (positive) or up; extends the selection on shift. */
+    fun moveVertically(deltaRows: Int, select: Boolean)
+
+    /** Moves to the start / end of the current visual row; extends the selection on shift. */
+    fun toLineBoundary(toStart: Boolean, select: Boolean)
+}
+
 class McTextInputService : PlatformTextInputService {
 
     var clipboard: TextClipboard? = null
@@ -61,6 +75,7 @@ class McTextInputService : PlatformTextInputService {
     private var onImeActionPerformed: ((ImeAction) -> Unit)? = null
     private var valueProvider: () -> TextFieldValue = { TextFieldValue("") }
     private var singleLine = true
+    private var navigation: TextNavigation? = null
 
     /** Snapshot state: id of the currently-active text field; recomposes fields on focus change. */
     var activeSession: Int by mutableIntStateOf(NO_SESSION)
@@ -85,6 +100,7 @@ class McTextInputService : PlatformTextInputService {
         valueProvider: () -> TextFieldValue,
         onEditCommand: (List<EditCommand>) -> Unit,
         onImeActionPerformed: (ImeAction) -> Unit,
+        navigation: TextNavigation? = null,
     ) {
         activeSession = id
         this.imeEnabled = imeEnabled
@@ -92,6 +108,7 @@ class McTextInputService : PlatformTextInputService {
         this.valueProvider = valueProvider
         this.onEditCommand = onEditCommand
         this.onImeActionPerformed = onImeActionPerformed
+        this.navigation = navigation
     }
 
     /** Releases the session only if [id] is still the active field. */
@@ -100,6 +117,7 @@ class McTextInputService : PlatformTextInputService {
         activeSession = NO_SESSION
         onEditCommand = null
         onImeActionPerformed = null
+        navigation = null
     }
 
     /** Requests focus for the field with [id] without touching its command callbacks yet. */
@@ -133,8 +151,22 @@ class McTextInputService : PlatformTextInputService {
             KEY_DELETE -> onEditCommand(listOf(DeleteSurroundingTextCommand(0, 1)))
             KEY_LEFT -> if (shift) extendSelection(-1) else moveCursorBy(-1)
             KEY_RIGHT -> if (shift) extendSelection(1) else moveCursorBy(1)
-            KEY_HOME -> if (shift) extendSelectionToStart() else onEditCommand(listOf(SetSelectionCommand(0, 0)))
-            KEY_END -> if (shift) extendSelectionToEnd() else onEditCommand(listOf(SetSelectionCommand(Int.MAX_VALUE, Int.MAX_VALUE)))
+            KEY_UP, KEY_DOWN -> {
+                // Vertical movement needs the field's visual layout — without a navigation hook
+                // (single-line fields) the key falls through to vanilla.
+                val nav = navigation ?: return false
+                nav.moveVertically(if (keyCode == KEY_UP) -1 else 1, shift)
+            }
+            KEY_HOME -> {
+                val nav = navigation
+                if (nav != null) nav.toLineBoundary(true, shift)
+                else if (shift) extendSelectionToStart() else onEditCommand(listOf(SetSelectionCommand(0, 0)))
+            }
+            KEY_END -> {
+                val nav = navigation
+                if (nav != null) nav.toLineBoundary(false, shift)
+                else if (shift) extendSelectionToEnd() else onEditCommand(listOf(SetSelectionCommand(Int.MAX_VALUE, Int.MAX_VALUE)))
+            }
             KEY_ENTER, KEY_KP_ENTER -> {
                 if (singleLine) {
                     onImeActionPerformed?.invoke(ImeAction.Done)
@@ -269,6 +301,7 @@ class McTextInputService : PlatformTextInputService {
     override fun stopInput() {
         onEditCommand = null
         onImeActionPerformed = null
+        navigation = null
     }
 
     override fun showSoftwareKeyboard() {}

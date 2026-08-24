@@ -1,6 +1,7 @@
 package minecraftx.compose.demo
 
 import minecraftx.compose.material.ItemSlot
+import minecraftx.compose.material.McTextArea
 import minecraftx.compose.material.McTextField
 import minecraftx.compose.foundation.McLine
 import minecraftx.compose.foundation.McScrollBox
@@ -301,6 +302,20 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                 width = 276,
                 modifier = Modifier.padding(vertical = 2.dp),
                 placeholder = "纯 ASCII 模式:忽略输入法(Shift 映射符号)",
+            )
+
+            Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
+            // McTextArea 多行文本域:软折行、↑/↓/Home/End 行间导航、跨行选区、滚轮 + 滚动条。
+            Text("McTextArea (多行):", color = 0xFFCCCCCC.toInt())
+            var areaText by remember { mutableStateOf(TextFieldValue("")) }
+            McTextArea(
+                value = areaText,
+                onValueChange = { areaText = it },
+                width = 276,
+                height = 80,
+                modifier = Modifier.padding(vertical = 2.dp),
+                placeholder = "多行输入:回车换行,↑/↓ 移动光标",
             )
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
