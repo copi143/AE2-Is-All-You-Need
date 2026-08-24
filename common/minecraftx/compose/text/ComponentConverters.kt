@@ -1,7 +1,9 @@
 package minecraftx.compose.text
 
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.FormattedText
 import net.minecraft.network.chat.Style
+import java.util.Optional
 
 /**
  * Converters between MC's [Component] tree and the engine-agnostic [McStyledString] IR, plus
@@ -16,7 +18,15 @@ fun Component.toStyledString(): McStyledString {
     fun walk(node: Component, inherited: Style) {
         val effective = inheritVisual(inherited, node.style)
         val start = sb.length
-        sb.append(node.string)
+        // Only THIS node's contents: getString() would re-append the whole subtree. visit() also
+        // expands translatable/keybind contents the way the vanilla font renderer would.
+        node.contents.visit(
+            { _, text ->
+                sb.append(text)
+                Optional.empty<Unit>()
+            },
+            Style.EMPTY,
+        )
         if (sb.length > start) {
             effective.toMcSpanStyleOrNull()?.let { spans += McStyledString.Span(start, sb.length, it) }
         }
