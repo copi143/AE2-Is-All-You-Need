@@ -5,6 +5,7 @@ import allyouneed.logic.aekey.HpKey
 import allyouneed.logic.aekey.ManaKey
 import allyouneed.logic.aekey.StaKey
 import allyouneed.logic.aekey.XpKey
+import allyouneed.util.saturateToLong
 import appeng.api.stacks.AEKeyType
 import appeng.api.stacks.GenericStack
 import appeng.api.storage.cells.ICellHandler
@@ -43,23 +44,44 @@ object StorageCellHandler : ICellHandler {
 
     override fun getCellInventory(stack: ItemStack, container: ISaveProvider?): StorageCell? {
         val item = stack.item as? StorageCellItem ?: return null
-        return StorageCellInventory(stack, container, item.cell.keyType)
+        val typed = item.cell as? TypedStorageCell
+        return if (typed != null && typed.requiresBigInt) {
+            BigIntegerStorageCellInventory(stack, container, typed.keyType)
+        } else {
+            StorageCellInventory(stack, container, item.cell.keyType)
+        }
     }
 
     fun getTooltipImage(stack: ItemStack): Optional<TooltipComponent> {
-        val inv = getCellInventory(stack, null) as? StorageCellInventory ?: return Optional.empty()
+        val inv = getCellInventory(stack, null) ?: return Optional.empty()
 
         val upgrades: List<ItemStack> = if (AEConfig.instance().isTooltipShowCellUpgrades) {
-            inv.getUpgradesInventory().toList()
+            when (inv) {
+                is StorageCellInventory -> inv.getUpgradesInventory().toList()
+                is BigIntegerStorageCellInventory -> inv.getUpgradesInventory().toList()
+                else -> emptyList()
+            }
         } else {
             emptyList()
+        }
+
+        val isPreformatted = when (inv) {
+            is StorageCellInventory -> inv.isPreformatted()
+            is BigIntegerStorageCellInventory -> inv.isPreformatted()
+            else -> false
         }
 
         val content: List<GenericStack>
         val hasMoreContent: Boolean
         if (AEConfig.instance().isTooltipShowCellContent) {
             val maxCountShown = AEConfig.instance().tooltipMaxCellContentShown
-            val all = inv.getCellItems().map { (key, amount) -> GenericStack(key, amount) }
+            val all: List<GenericStack> = when (inv) {
+                is StorageCellInventory -> inv.getCellItems().map { (key, amount) -> GenericStack(key, amount) }
+                is BigIntegerStorageCellInventory -> inv.getCellItems().map { (key, amount) ->
+                    GenericStack(key, amount.saturateToLong())
+                }
+                else -> emptyList()
+            }
             hasMoreContent = all.size > maxCountShown
             content = if (all.size > maxCountShown) all.subList(0, maxCountShown) else all
         } else {
@@ -72,7 +94,7 @@ object StorageCellHandler : ICellHandler {
                 upgrades,
                 content,
                 hasMoreContent,
-                inv.isPreformatted(),
+                isPreformatted,
             ),
         )
     }
