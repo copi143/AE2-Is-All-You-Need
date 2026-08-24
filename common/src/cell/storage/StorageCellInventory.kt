@@ -151,6 +151,7 @@ class StorageCellInventory(
         if (amount == 0L || !keyType.contains(what)) return 0
         if (what is AEItemKey && AllPackets.isPacket(what.toStack())) return 0
         if (!partitionList.matchesFilter(what, partitionListMode)) return 0
+        if (cell.isBlackListed(stack, what)) return 0
 
         val inserted = innerInsert(what, amount, mode)
 

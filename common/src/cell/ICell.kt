@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockState
@@ -81,6 +82,12 @@ abstract class ICellItem(size: Long, val postfix: String, protected val postfix2
 
     /** Key space this cell stores; drives the per-type capacity limit (63 items / 18 fluids / ...). */
     open val keyType: AEKeyType = AEKeyType.items()
+
+    /**
+     * AE2 parity: allows fine-tuned blacklisting per cell. Mirrors
+     * [appeng.api.storage.cells.IBasicCellItem.isBlackListed].
+     */
+    open fun isBlackListed(stack: ItemStack, key: appeng.api.stacks.AEKey): Boolean = false
 
     abstract val define: ItemDefinition<*>
 }

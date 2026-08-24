@@ -23,6 +23,12 @@ abstract class TypedStorageCell(
     /** Drive-cell block model id (texture + model), e.g. `16k_item_cell`. */
     val driveCellId: ResourceLocation get() = itemId2
 
+    /** Housing returned on disassembly (AE2 parity: iron for items, copper for fluids). */
+    val housingItem get() = CellHousings.of(keyType)
+
+    /** Component returned on disassembly (1K..256T). Null for creative (-1). */
+    val componentItem get() = if (isCreative) null else StorageComponents.ofSize(size)?.asItem()
+
     override val define: ItemDefinition<StorageCellItem> = ItemDefinition(
         itemName,
         itemId,

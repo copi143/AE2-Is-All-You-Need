@@ -3,6 +3,8 @@ package allyouneed
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.storage.AllCells
+import allyouneed.cell.storage.CellHousings
+import allyouneed.cell.storage.StorageComponents
 import allyouneed.item.packet.AllPackets
 import allyouneed.pattern.ModItems
 import allyouneed.util.rl
@@ -40,6 +42,8 @@ object AllRegistries {
         AllCells.all.forEach {
             items += it.define
         }
+        StorageComponents.entries.forEach { items += it }
+        CellHousings.all.forEach { items += it }
 
         // Appear in AE2's main creative tab (same path as EnergyCell)
         MainCreativeTab.add(CREATIVE_ME_CELL)
