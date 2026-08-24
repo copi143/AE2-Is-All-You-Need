@@ -26,14 +26,29 @@ enum class McThemeId(val id: String) {
 
 object McThemeSettings {
     private const val KEY = "theme"
+    private const val ENGINE_KEY = "textEngine"
     private var loaded = false
 
     private var idState by mutableStateOf(McThemeId.Dark)
+    private var engineIdState by mutableStateOf("vanilla")
 
     val id: McThemeId
         get() {
             ensureLoaded()
             return idState
+        }
+
+    /** Raw active text-engine id (resolved leniently by [minecraftx.compose.text.McTextEngines]). */
+    var textEngineId: String
+        get() {
+            ensureLoaded()
+            return engineIdState
+        }
+        set(value) {
+            ensureLoaded()
+            if (engineIdState == value) return
+            engineIdState = value
+            save()
         }
 
     val colorScheme: McColorScheme
@@ -59,6 +74,7 @@ object McThemeSettings {
             val props = Properties()
             file.inputStream().use { props.load(it) }
             idState = McThemeId.fromId(props.getProperty(KEY))
+            engineIdState = props.getProperty(ENGINE_KEY) ?: engineIdState
         }
     }
 
@@ -68,6 +84,7 @@ object McThemeSettings {
             file.parentFile?.mkdirs()
             val props = Properties()
             props.setProperty(KEY, idState.id)
+            props.setProperty(ENGINE_KEY, engineIdState)
             file.outputStream().use { props.store(it, "$MODID client") }
         }
     }

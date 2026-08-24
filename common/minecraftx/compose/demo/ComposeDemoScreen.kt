@@ -50,7 +50,9 @@ import minecraftx.compose.dock.DockAxis
 import minecraftx.compose.dock.DockNode
 import minecraftx.compose.dock.DockState
 import minecraftx.compose.dock.McDockHost
+import minecraftx.compose.markdown.McMarkdown
 import minecraftx.compose.material.McPanel
+import minecraftx.compose.text.McTextEngines
 import minecraftx.compose.theme.McTheme
 import minecraftx.compose.theme.McThemeId
 import minecraftx.compose.theme.McThemeSettings
@@ -98,6 +100,15 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                     if (McThemeSettings.id == McThemeId.Dark) "切到亮色主题" else "切到暗色主题",
                     onClick = { McThemeSettings.toggle() },
                 )
+                Spacer(Modifier.size(8.dp))
+                // 双层切换的全局层:改配置里的引擎 id,所有文本组件立即换渲染路径
+                for (engine in McTextEngines.all) {
+                    McButton(
+                        if (McThemeSettings.textEngineId == engine.id) "[${engine.id}]" else engine.id,
+                        onClick = { McThemeSettings.textEngineId = engine.id },
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
             }
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
@@ -294,6 +305,21 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
+            // McMarkdown:GFM 全集渲染 + 实时编辑预览(文本引擎切换对它同样生效)
+            Text("McMarkdown (GFM, 实时预览):", color = 0xFFCCCCCC.toInt())
+            var mdSource by remember { mutableStateOf(TextFieldValue(DEMO_MARKDOWN)) }
+            McTextField(
+                value = mdSource,
+                onValueChange = { mdSource = it },
+                imeEnabled = true,
+                width = 276,
+                modifier = Modifier.padding(vertical = 2.dp),
+                placeholder = "输入 Markdown 源文本",
+            )
+            McMarkdown(mdSource.text, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+
+            Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
             Text("McDockHost (拖标签 / 拖分隔条):", color = 0xFFCCCCCC.toInt())
             var dock by remember {
                 mutableStateOf(
@@ -381,5 +407,35 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                 )
             }
         }
+    }
+
+    private companion object {
+        /** GFM 全集演示源:标题/强调/删除线/行内码/链接/嵌套列表/任务列表/引用/代码块/表格/分隔线。 */
+        val DEMO_MARKDOWN = """# Markdown 预览
+## 二级标题
+普通段落:**粗体** *斜体* ~~删除线~~ `inline code` 与 [链接](https://ae2.is)
+以及一段足够长的中文文本用来验证自动折行:元素收容设施通过物质炮从虚空中抓取样本,再由ME网络统一分拣、压缩与存储,整个过程无需人工搬运。
+
+- 无序列表项
+  - 嵌套子项
+1. 有序第一
+2. 有序第二
+- [x] 已完成任务
+- [ ] 待办任务
+
+> 引用块:支持 **内联样式** 与 `code`
+> 第二行引用
+
+```kotlin
+fun hello() = "world"
+```
+
+| 物品 | 数量 | 说明 |
+|------|------|------|
+| 计算器 | 64 | ME 网络核心 |
+| 处理器 | 16 | 合成材料 |
+
+---
+以上为分隔线之后的结尾段落。"""
     }
 }

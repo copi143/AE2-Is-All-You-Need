@@ -38,6 +38,8 @@ kotlinx-coroutines-core = "1.11.0"
 mixin = "0.8.5"
 compose = "1.12.0-beta03"
 ojalgo = "57.1.0"
+# JetBrains KMP Markdown 解析器(Apache-2.0,零第三方依赖),供 McMarkdown 使用
+markdown = "0.7.9"
 # 必须与 MC 1.20.1 / Forge 47.3.0 自带 Netty 对齐，不能升 4.2+
 netty = "4.1.82.Final"
 
@@ -85,6 +87,7 @@ compose-foundation-layout = { module = "org.jetbrains.compose.foundation:foundat
 compose-animation = { module = "org.jetbrains.compose.animation:animation-desktop", version.ref = "compose" }
 compose-material = { module = "org.jetbrains.compose.material:material-desktop", version.ref = "compose" }
 ojalgo = { module = "org.ojalgo:ojalgo", version.ref = "ojalgo" }
+jetbrains-markdown = { module = "org.jetbrains:markdown-jvm", version.ref = "markdown" }
 netty-codec-http = { module = "io.netty:netty-codec-http", version.ref = "netty" }
 
 mui-core = { module = "icyllis.modernui:ModernUI-Core", version.ref = "mui-core" }

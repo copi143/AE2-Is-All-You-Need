@@ -85,6 +85,9 @@ dependencies {
     jarJar(project(":averith"))
 
     jarJar(libs.ojalgo)
+    jarJar(libs.jetbrains.markdown) {
+        isTransitive = false
+    }
     jarJar(libs.netty.codec.http) {
         isTransitive = false
     }

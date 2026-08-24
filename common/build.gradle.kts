@@ -31,6 +31,7 @@ dependencies {
         libs.compose.animation,
         libs.compose.material,
         libs.ojalgo,
+        libs.jetbrains.markdown,
         libs.netty.codec.http,
     ).forEach {
         api(it)

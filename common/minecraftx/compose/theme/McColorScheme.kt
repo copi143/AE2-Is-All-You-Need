@@ -67,4 +67,12 @@ interface McColorScheme {
     val toggleThumb: Color get() = Color(0xFFE0E0E6)
 
     val error: Color get() = Color(0xFFE05555)
+
+    /** Markdown rendering tokens ([McMarkdown] code blocks, quotes, rules, headings, links). */
+    val mdCodeBackground: Color get() = Color(0xFF1E1E28)
+    val mdCodeText: Color get() = Color(0xFFD8B36A)
+    val mdQuoteBar: Color get() = Color(0xFF6BA3D4)
+    val mdRuleLine: Color get() = Color(0xFF3A3A46)
+    val mdHeadingAccent: Color get() = Color(0xFF6BA3D4)
+    val mdLink: Color get() = Color(0xFF7FB3E0)
 }

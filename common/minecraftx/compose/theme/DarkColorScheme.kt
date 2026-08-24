@@ -68,4 +68,11 @@ object LightColorScheme : McColorScheme {
     override val toggleThumb: Color get() = Color(0xFFF4F2EC)
 
     override val error: Color get() = Color(0xFFC04040)
+
+    override val mdCodeBackground: Color get() = Color(0xFFE8E2D4)
+    override val mdCodeText: Color get() = Color(0xFF7A5210)
+    override val mdQuoteBar: Color get() = Color(0xFF2D6A94)
+    override val mdRuleLine: Color get() = Color(0xFFC6C0B0)
+    override val mdHeadingAccent: Color get() = Color(0xFF2D6A94)
+    override val mdLink: Color get() = Color(0xFF1E5A88)
 }

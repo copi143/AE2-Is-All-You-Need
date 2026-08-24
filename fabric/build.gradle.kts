@@ -24,6 +24,7 @@ dependencies {
     modImplementation(libs.flk)
 
     include(libs.ojalgo)
+    include(libs.jetbrains.markdown)
     include(libs.netty.codec.http) {
         isTransitive = false
     }
