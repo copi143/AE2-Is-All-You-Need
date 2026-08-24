@@ -14,8 +14,8 @@ import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntityType
 
 object AllRegistries {
-    var blocks: Array<BlockDefinition<Block>> = arrayOf()
-    var items: Array<ItemDefinition<Item>> = arrayOf()
+    var blocks: Array<BlockDefinition<out Block>> = arrayOf()
+    var items: Array<ItemDefinition<out Item>> = arrayOf()
     var blockEntityTypes: Array<BlockEntityType<*>> = arrayOf()
 
     val CREATIVE_ME_CELL: ItemDefinition<Item> = ItemDefinition(
@@ -38,8 +38,7 @@ object AllRegistries {
             blocks += it.define
         }
         ItemStorageCell.entries.forEach {
-            @Suppress("UNCHECKED_CAST")
-            items += it.define as ItemDefinition<Item>
+            items += it.define
         }
 
         // Appear in AE2's main creative tab (same path as EnergyCell)
@@ -50,7 +49,6 @@ object AllRegistries {
 
         // Register packet items
         AllPackets.init()
-        @Suppress("UNCHECKED_CAST")
-        AllPackets.all.forEach { items += it as ItemDefinition<Item> }
+        AllPackets.all.forEach { items += it }
     }
 }

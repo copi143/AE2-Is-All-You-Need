@@ -1,5 +1,9 @@
 @file:Suppress("CAST_NEVER_SUCCEEDS")
 
+/**
+ * Mixin 添加的接口实现 IDE 无法获取到，所以全部在这里注册扩展函数然后抑制警告
+ */
+
 package allyouneed.util
 
 import allyouneed.api.AsyncChannelNodeHolder

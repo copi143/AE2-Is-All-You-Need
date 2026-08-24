@@ -31,9 +31,12 @@ val tiers = listOf(
     "1t", "4t", "16t", "64t", "256t",
 ).map { it.uppercase() }
 
-// GT AE power hatch tier display names, matching GTCEu's tier naming used by GTAEPowerHatch.
-val gtAEPowerHatchTiers = listOf(
+val gtMultiBlockTiers = listOf(
     "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV", "MAX",
+)
+
+val gtSingleBlockTiers = listOf(
+    "ULV", "LV", "MV", "HV", "EV", "IV", "LuV", "ZPM", "UV", "UHV", "UEV", "UIV", "UXV", "OpV",
 )
 
 private val energyCells = tiers.flatMapIndexed { i, tier ->
@@ -214,7 +217,7 @@ fun main(args: Array<String>) {
         // so the machine renders GT's tiered hull + overlay port without running datagen. Only the
         // emissive arrow is ours, re-themed to AE purple (AsyncTextures.generateGtAEPowerHatchOverlays);
         // the tinted plate and ring are GT's own assets referenced directly.
-        gtAEPowerHatchBlock(gtAEPowerHatchTiers)
+        gtAEPowerHatchBlock(gtMultiBlockTiers)
         block("ae_power_hatch.tooltip", "The ME network draws the stored EU directly (EU to FE to AE)")
 
         simpleBlock("me_io_drive", "ME IO Drive")
