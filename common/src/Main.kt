@@ -2,7 +2,7 @@ package allyouneed
 
 import allyouneed.cell.creative.CreativeMeCellHandler
 import allyouneed.cell.dimensional.DimensionalCellHandler
-import allyouneed.cell.storage.AllCells
+import allyouneed.cell.storage.AllStorageCells
 import allyouneed.cell.storage.StorageCellHandler
 import allyouneed.logic.aekey.AllKeys
 import allyouneed.logic.machine.BuiltinMachineTypes
@@ -55,7 +55,7 @@ object Main {
         StorageCellModels.registerModel(ModItems.CREATIVE_ME_CELL, "block/drive/cells/creative_cell".rlAE)
         StorageCellModels.registerModel(ModItems.DIMENSIONAL_CELL, "block/drive/cells/creative_cell".rlAE)
         val cellGroup = GuiText.StorageCells.translationKey
-        for (cell in AllCells.all) {
+        for (cell in AllStorageCells.entries) {
             StorageCellModels.registerModel(cell.define, cell.driveCellId.joinParent("block/drive/cells"))
             cell.define.asItem().registerSupportedUpgrade(cellGroup).with(
                 ExtRef.inverterCard to 1,

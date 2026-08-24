@@ -26,6 +26,9 @@ data class ManaKey(override val metric: ManaType, override val level: Int = 0) :
     )
 
     companion object {
+        /**
+         * 每字节存储的魔力
+         */
         const val MANA_PER_BYTE = 64
 
         /**

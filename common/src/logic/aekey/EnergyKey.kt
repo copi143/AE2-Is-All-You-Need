@@ -26,6 +26,9 @@ data class EnergyKey(override val metric: EnergyType, override val level: Int = 
     )
 
     companion object {
+        /**
+         * 每字节存储的能量
+         */
         const val ENERGY_PER_BYTE = 64
 
         /**

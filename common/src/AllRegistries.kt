@@ -2,7 +2,7 @@ package allyouneed
 
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.CraftingStorage
-import allyouneed.cell.storage.AllCells
+import allyouneed.cell.storage.AllStorageCells
 import allyouneed.cell.storage.CellHousings
 import allyouneed.cell.storage.StorageComponents
 import allyouneed.item.packet.AllPackets
@@ -39,7 +39,7 @@ object AllRegistries {
         CraftingStorage.entries.forEach {
             blocks += it.define
         }
-        AllCells.all.forEach {
+        AllStorageCells.entries.forEach {
             items += it.define
         }
         StorageComponents.entries.forEach { items += it }

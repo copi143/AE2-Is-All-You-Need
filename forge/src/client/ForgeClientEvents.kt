@@ -7,7 +7,7 @@ import allyouneed.multiblock.async.AsyncBlockRegistry
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
 import allyouneed.multiblock.async.AsyncCraftingStatusScreen
 import allyouneed.cell.CraftingStorage
-import allyouneed.cell.storage.AllCells
+import allyouneed.cell.storage.AllStorageCells
 import allyouneed.cell.storage.StorageCellItem
 import allyouneed.gtceu.multiblock.AsyncStructureGtStatusMenu
 import allyouneed.parts.iodrive.MEIODriveMenu
@@ -54,7 +54,7 @@ object ForgeClientEvents {
     fun onRegisterItemColors(event: RegisterColorHandlersEvent.Item) {
         event.register(
             { stack, tintIndex -> StorageCellItem.getColor(stack, tintIndex) },
-            *AllCells.all.map { it.define.asItem() }.toTypedArray(),
+            *AllStorageCells.entries.map { it.define.asItem() }.toTypedArray(),
         )
     }
 

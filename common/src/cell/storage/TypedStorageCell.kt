@@ -13,12 +13,8 @@ import net.minecraft.world.item.Item
  * the vanilla `<tier>_<type>_cell` naming (e.g. `16k_mana_cell`) and the definition is added
  * to AE2's main creative tab.
  */
-abstract class TypedStorageCell(
-    size: Long,
-    label: String,
-    driveLabel: String,
-    override val keyType: AEKeyType,
-) : ICellItem(size, label, driveLabel) {
+abstract class TypedStorageCell(size: Long, val label: String, override val keyType: AEKeyType) :
+    ICellItem(size, "$label Storage Cell", "$label Cell") {
 
     /** Drive-cell block model id (texture + model), e.g. `16k_item_cell`. */
     val driveCellId: ResourceLocation get() = itemId2
