@@ -60,31 +60,15 @@ open class StorageCellItem(
         lines: MutableList<Component>,
         advancedTooltips: TooltipFlag,
     ) {
-        val inv = StorageCells.getCellInventory(stack, null) ?: return
-        when (inv) {
-            is StorageCellInventory -> {
-                lines.add(Tooltips.bytesUsed(inv.getUsedBytes(), inv.getTotalBytes()))
-                lines.add(Tooltips.typesUsed(inv.getStoredItemTypes(), inv.getTotalItemTypes()))
-                if (inv.isPreformatted()) {
-                    val line = GuiText.Partitioned.withSuffix(" - ").appendPartitionInfo(
-                        inv.getPartitionListMode(),
-                        inv.isFuzzy(),
-                    )
-                    lines.add(Tooltips.of(line))
-                }
-            }
-            is BigIntegerStorageCellInventory -> {
-                lines.add(Tooltips.bytesUsed(inv.getUsedBytes(), inv.getTotalBytes()))
-                lines.add(Tooltips.typesUsed(inv.getStoredItemTypes(), inv.getTotalItemTypes()))
-                if (inv.isPreformatted()) {
-                    val line = GuiText.Partitioned.withSuffix(" - ").appendPartitionInfo(
-                        inv.getPartitionListMode(),
-                        inv.isFuzzy(),
-                    )
-                    lines.add(Tooltips.of(line))
-                }
-            }
-            else -> return
+        val inv = StorageCells.getCellInventory(stack, null) as? StorageCellView ?: return
+        lines.add(Tooltips.bytesUsed(inv.getUsedBytes(), inv.getTotalBytes()))
+        lines.add(Tooltips.typesUsed(inv.getStoredItemTypes(), inv.getTotalItemTypes()))
+        if (inv.isPreformatted()) {
+            val line = GuiText.Partitioned.withSuffix(" - ").appendPartitionInfo(
+                inv.getPartitionListMode(),
+                inv.isFuzzy(),
+            )
+            lines.add(Tooltips.of(line))
         }
     }
 

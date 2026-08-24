@@ -53,35 +53,21 @@ object StorageCellHandler : ICellHandler {
     }
 
     fun getTooltipImage(stack: ItemStack): Optional<TooltipComponent> {
-        val inv = getCellInventory(stack, null) ?: return Optional.empty()
+        val inv = getCellInventory(stack, null) as? StorageCellView ?: return Optional.empty()
 
         val upgrades: List<ItemStack> = if (AEConfig.instance().isTooltipShowCellUpgrades) {
-            when (inv) {
-                is StorageCellInventory -> inv.getUpgradesInventory().toList()
-                is BigIntegerStorageCellInventory -> inv.getUpgradesInventory().toList()
-                else -> emptyList()
-            }
+            inv.getUpgradeStacks()
         } else {
             emptyList()
         }
 
-        val isPreformatted = when (inv) {
-            is StorageCellInventory -> inv.isPreformatted()
-            is BigIntegerStorageCellInventory -> inv.isPreformatted()
-            else -> false
-        }
+        val isPreformatted = inv.isPreformatted()
 
         val content: List<GenericStack>
         val hasMoreContent: Boolean
         if (AEConfig.instance().isTooltipShowCellContent) {
             val maxCountShown = AEConfig.instance().tooltipMaxCellContentShown
-            val all: List<GenericStack> = when (inv) {
-                is StorageCellInventory -> inv.getCellItems().map { (key, amount) -> GenericStack(key, amount) }
-                is BigIntegerStorageCellInventory -> inv.getCellItems().map { (key, amount) ->
-                    GenericStack(key, amount.saturateToLong())
-                }
-                else -> emptyList()
-            }
+            val all = inv.getTooltipStacks()
             hasMoreContent = all.size > maxCountShown
             content = if (all.size > maxCountShown) all.subList(0, maxCountShown) else all
         } else {

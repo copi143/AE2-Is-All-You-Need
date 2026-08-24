@@ -19,8 +19,9 @@ import appeng.core.definitions.AEItems
 import appeng.util.ConfigInventory
 import appeng.util.prioritylist.FuzzyPriorityList
 import appeng.util.prioritylist.IPartitionList
-import it.unimi.dsi.fastutil.longs.LongArrayList
+import appeng.api.stacks.GenericStack
 import it.unimi.dsi.fastutil.objects.Object2LongMap
+import it.unimi.dsi.fastutil.objects.Object2LongMaps
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.ListTag
@@ -34,14 +35,13 @@ import net.minecraft.world.item.ItemStack
  * so tiers up to 256T (2^48 bytes, 2^51 items) fit without overflow.
  * Contents are stored on the item's NBT as `keys` + `amts`, like vanilla.
  *
- * Generic over the key space via the [keyType] parameter; the per-type capacity
- * limit comes from [StorageCellTypeLimits] (63 items / 18 fluids / ...).
+ * Optimized: lazy NBT parsing + fastIterable to avoid per-tick allocation.
  */
 class StorageCellInventory(
     private val stack: ItemStack,
     private val container: ISaveProvider?,
     keyType: AEKeyType,
-) : StorageCell {
+) : StorageCell, StorageCellView {
 
     protected val cellItem: StorageCellItem = stack.item as StorageCellItem
 
@@ -64,9 +64,11 @@ class StorageCellInventory(
     private val hasVoidUpgrade: Boolean
     private val maxItemsPerType: Long
 
+    // Lazy-loaded storage
     private var storedItemCount: Long = 0
-    private val storedAmounts: Object2LongMap<AEKey> = Object2LongOpenHashMap()
-    private var isPersisted = false
+    private var storedAmounts: Object2LongMap<AEKey>? = null
+    private var isPersisted = true
+    private var isLoaded = false
 
     init {
         val upgrades = getUpgradesInventory()
@@ -91,12 +93,61 @@ class StorageCellInventory(
         } else {
             Long.MAX_VALUE
         }
-
-        loadCellItems()
+        // lazy: do NOT loadCellItems() here
+        // isPersisted stays true until mutation
     }
 
+    /** Lazily parse NBT into map, mimicking BasicCellInventory.getCellItems(). */
+    private fun getCellItemsInternal(): Object2LongMap<AEKey> {
+        var map = storedAmounts
+        if (map != null) return map
+        if (isLoaded) {
+            // already loaded but empty
+            map = Object2LongOpenHashMap()
+            storedAmounts = map
+            return map
+        }
+        map = Object2LongOpenHashMap()
+        storedAmounts = map
+        isLoaded = true
+        // Fill from NBT - 不创建空标签，避免空盘 NBT 污染
+        val tag = stack.tag
+        if (tag == null) {
+            storedItemCount = 0
+            return map
+        }
+        val amts = tag.getLongArray(TAG_STACK_AMOUNTS)
+        val keys = tag.getList(TAG_STACK_KEYS, Tag.TAG_COMPOUND.toInt())
+        if (amts.isEmpty() && keys.isEmpty()) {
+            storedItemCount = 0
+            return map
+        }
+        if (amts.size != keys.size) {
+            // corrupted: keep empty but mark loaded
+            return map
+        }
+        var count = 0L
+        for (i in amts.indices) {
+            val amount = amts[i]
+            if (amount <= 0) continue
+            val key = AEKey.fromTagGeneric(keys.getCompound(i)) ?: continue
+            map.put(key, amount)
+            count += amount
+        }
+        storedItemCount = count
+        return map
+    }
+
+    /** Public accessor for workbench/tooltip paths; ensures loaded. */
+    fun getCellItemsPublic(): Object2LongMap<AEKey> = getCellItemsInternal()
+
     override fun getAvailableStacks(out: KeyCounter) {
-        for (entry in storedAmounts.object2LongEntrySet()) {
+        val map = storedAmounts ?: run {
+            // fast path: if not loaded, peek NBT without full parse for empty check?
+            // still need to load to enumerate
+            getCellItemsInternal()
+        }
+        for (entry in Object2LongMaps.fastIterable(map)) {
             out.add(entry.key, entry.longValue)
         }
     }
@@ -104,40 +155,78 @@ class StorageCellInventory(
     override fun getIdleDrain(): Double = cell.idleDrain
 
     override fun getStatus(): CellState {
+        // fast path without full load: check NBT size
+        if (!isLoaded && storedAmounts == null) {
+            val tag = stack.tag
+            val count = tag?.getList(TAG_STACK_KEYS, Tag.TAG_COMPOUND.toInt())?.size ?: 0
+            if (count == 0) return CellState.EMPTY
+            // need full state
+        }
         if (getStoredItemTypes() == 0L) return CellState.EMPTY
         if (canHoldNewItem()) return CellState.NOT_EMPTY
         if (getRemainingItemCount() > 0) return CellState.TYPES_FULL
         return CellState.FULL
     }
 
-    override fun canFitInsideCell(): Boolean = storedAmounts.isEmpty()
+    override fun canFitInsideCell(): Boolean {
+        val map = storedAmounts
+        if (map != null) return map.isEmpty()
+        if (!isLoaded) {
+            val tag = stack.tag ?: return true
+            val keys = tag.getList(TAG_STACK_KEYS, Tag.TAG_COMPOUND.toInt())
+            return keys.isEmpty()
+        }
+        return getCellItemsInternal().isEmpty()
+    }
 
     override fun getDescription(): Component = stack.hoverName
 
     override fun persist() {
         if (isPersisted) return
-
-        val amts = LongArrayList(storedAmounts.size)
-        val keys = ListTag()
-        var count = 0L
-        for (entry in storedAmounts.object2LongEntrySet()) {
-            val amount = entry.longValue
-            if (amount > 0) {
-                count += amount
-                keys.add(entry.key.toTagGeneric())
-                amts.add(amount)
-            }
+        val map = storedAmounts
+        // if never loaded and no mutation, nothing to persist
+        if (map == null && !isLoaded) {
+            isPersisted = true
+            return
         }
-
+        val actualMap = map ?: getCellItemsInternal()
+        if (actualMap.isEmpty()) {
+            // 空盘删除 NBT：移除存储标签，若 CompoundTag 变空则清除整标签避免遗留 {}
+            stack.tag?.let { tag ->
+                tag.remove(TAG_STACK_KEYS)
+                tag.remove(TAG_STACK_AMOUNTS)
+                if (tag.isEmpty) stack.tag = null
+            }
+            storedItemCount = 0
+            isPersisted = true
+            return
+        }
+        val keys = ListTag()
+        // Count as we iterate
+        var count = 0L
+        // Use fastIterable for speed
+        // Need parallel LongArray for amts
+        val amtsArray = LongArray(actualMap.size)
+        var idx = 0
+        for (entry in Object2LongMaps.fastIterable(actualMap)) {
+            val amount = entry.longValue
+            if (amount <= 0) continue
+            keys.add(entry.key.toTagGeneric())
+            amtsArray[idx++] = amount
+            count += amount
+        }
+        // Trim if filtered
+        val trimmed = if (idx != amtsArray.size) amtsArray.copyOf(idx) else amtsArray
+        // If filtered out all, remove keys
         val tag = stack.getOrCreateTag()
         if (keys.isEmpty()) {
             tag.remove(TAG_STACK_KEYS)
             tag.remove(TAG_STACK_AMOUNTS)
+            if (tag.isEmpty) stack.tag = null
         } else {
             tag.put(TAG_STACK_KEYS, keys)
-            tag.putLongArray(TAG_STACK_AMOUNTS, amts.toLongArray())
+            tag.putLongArray(TAG_STACK_AMOUNTS, trimmed)
         }
-
         storedItemCount = count
         isPersisted = true
     }
@@ -157,7 +246,7 @@ class StorageCellInventory(
 
         // A void card on a full unformatted cell must not void items it isn't even storing.
         if (!isPreformatted() && hasVoidUpgrade && !canHoldNewItem()) {
-            return if (storedAmounts.containsKey(what)) amount else inserted
+            return if (getCellItemsInternal().containsKey(what)) amount else inserted
         }
         return if (hasVoidUpgrade) amount else inserted
     }
@@ -168,22 +257,21 @@ class StorageCellInventory(
         mode: Actionable,
         source: IActionSource?,
     ): Long {
-        val current = storedAmounts.getLong(what)
-        if (current > 0) {
-            if (amount >= current) {
-                if (mode == Actionable.MODULATE) {
-                    storedAmounts.remove(what as Any, current)
-                    saveChanges()
-                }
-                return current
-            }
+        val map = getCellItemsInternal()
+        val current = map.getLong(what)
+        if (current <= 0) return 0
+        if (amount >= current) {
             if (mode == Actionable.MODULATE) {
-                storedAmounts.put(what, current - amount)
+                map.remove(what as Any, current)
                 saveChanges()
             }
-            return amount
+            return current
         }
-        return 0
+        if (mode == Actionable.MODULATE) {
+            map.put(what, current - amount)
+            saveChanges()
+        }
+        return amount
     }
 
     private fun innerInsert(what: AEKey, amount: Long, mode: Actionable): Long {
@@ -194,7 +282,8 @@ class StorageCellInventory(
             }
         }
 
-        val currentTotal = storedAmounts.getLong(what)
+        val map = getCellItemsInternal()
+        val currentTotal = map.getLong(what)
         var remaining = getRemainingItemCount()
         if (currentTotal <= 0) {
             if (!canHoldNewItem()) return 0
@@ -205,7 +294,7 @@ class StorageCellInventory(
         val usable = minOf(amount, remaining)
 
         if (mode == Actionable.MODULATE && usable > 0) {
-            storedAmounts.put(what, currentTotal + usable)
+            map.put(what, currentTotal + usable)
             saveChanges()
         }
         return usable
@@ -213,30 +302,20 @@ class StorageCellInventory(
 
     private fun getTag(): CompoundTag = stack.getOrCreateTag()
 
-    private fun loadCellItems() {
-        storedAmounts.clear()
-        storedItemCount = 0
-
-        val tag = getTag()
-        val amts = tag.getLongArray(TAG_STACK_AMOUNTS)
-        val keys = tag.getList(TAG_STACK_KEYS, Tag.TAG_COMPOUND.toInt())
-        if (amts.size != keys.size) {
-            return
-        }
-
-        for (i in amts.indices) {
-            val amount = amts[i]
-            if (amount <= 0) continue
-            val key = AEKey.fromTagGeneric(keys.getCompound(i)) ?: continue
-            storedAmounts.put(key, amount)
-            storedItemCount += amount
-        }
-    }
-
     private fun saveChanges() {
+        val map = storedAmounts
         var count = 0L
-        for (entry in storedAmounts.object2LongEntrySet()) {
-            count += entry.longValue
+        if (map != null) {
+            for (entry in Object2LongMaps.fastIterable(map)) {
+                count += entry.longValue
+            }
+        } else if (isLoaded) {
+            // empty
+        } else {
+            // if not loaded, we mutated via getCellItemsInternal, so map != null
+            for (entry in Object2LongMaps.fastIterable(getCellItemsInternal())) {
+                count += entry.longValue
+            }
         }
         storedItemCount = count
         isPersisted = false
@@ -253,20 +332,27 @@ class StorageCellInventory(
 
     fun getConfigInventory(): ConfigInventory = cellItem.getConfigInventory(stack)
 
-    fun getCellItems(): Object2LongMap<AEKey> = storedAmounts
+    fun getCellItems(): Object2LongMap<AEKey> = getCellItemsInternal()
 
-    fun getStoredItemCount(): Long = storedItemCount
+    fun getStoredItemCount(): Long {
+        // ensure loaded to have accurate count
+        getCellItemsInternal()
+        return storedItemCount
+    }
 
-    fun getStoredItemTypes(): Long = storedAmounts.size.toLong()
+    override fun getStoredItemTypes(): Long = getCellItemsInternal().size.toLong()
 
-    fun getTotalItemTypes(): Long = maxItemTypes.toLong()
+    override fun getTotalItemTypes(): Long = maxItemTypes.toLong()
 
-    fun getTotalBytes(): Long = totalBytes
+    override fun getTotalBytes(): Long = totalBytes
 
     fun getBytesPerType(): Long = bytesPerType
 
-    fun getUsedBytes(): Long =
-        (storedItemCount + getUnusedItemCount()) / amountPerByte + getStoredItemTypes() * bytesPerType
+    override fun getUsedBytes(): Long {
+        // ensure count is up to date
+        getCellItemsInternal()
+        return (storedItemCount + getUnusedItemCount()) / amountPerByte + getStoredItemTypes() * bytesPerType
+    }
 
     fun getFreeBytes(): Long = totalBytes - getUsedBytes()
 
@@ -283,13 +369,25 @@ class StorageCellInventory(
 
     fun canHoldNewItem(): Boolean =
         (getFreeBytes() > bytesPerType || (getFreeBytes() == bytesPerType && getUnusedItemCount() > 0)) &&
-                getRemainingItemTypes() > 0
+            getRemainingItemTypes() > 0
 
-    fun isPreformatted(): Boolean = !partitionList.isEmpty
+    override fun isPreformatted(): Boolean = !partitionList.isEmpty
 
-    fun getPartitionListMode(): IncludeExclude = partitionListMode
+    override fun getPartitionListMode(): IncludeExclude = partitionListMode
 
-    fun isFuzzy(): Boolean = partitionList is FuzzyPriorityList
+    override fun isFuzzy(): Boolean = partitionList is FuzzyPriorityList
+
+    // ---- StorageCellView ----
+    override fun getUpgradeStacks(): List<ItemStack> = getUpgradesInventory().toList()
+
+    override fun getTooltipStacks(): List<GenericStack> =
+        getCellItemsInternal().let { map ->
+            ArrayList<GenericStack>(map.size).also { out ->
+                for (e in Object2LongMaps.fastIterable(map)) {
+                    out.add(GenericStack(e.key, e.longValue))
+                }
+            }
+        }
 
     companion object {
         private const val TAG_STACK_KEYS = "keys"
