@@ -50,6 +50,10 @@ dependencies {
     compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
     modCompileOnly(libs.gtceu)
 
+    // Botania mana integration compiles against the api classifier (Xplat interfaces +
+    // BotaniaForgeCapabilities). Runtime is optional; registration only happens when loaded.
+    modCompileOnly(variantOf(libs.botania) { classifier("api") })
+
     // Mixin's IMixinConfigPlugin declares org.objectweb.asm.tree.ClassNode (and the shaded
     // mixin jar does not bundle ASM), so the plugin needs it on the compile classpath.
     compileOnly(libs.asm.tree)

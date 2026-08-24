@@ -47,11 +47,15 @@ interface PlatformHelper {
 
     /**
      * 一单位的 AE2 魔力对应目标魔力的数值。
+     *
+     * 汇率以 AE 能源为锚：AM ≡ AE ≡ 2 FE（见 [energyUnitRatio]），外部能量按其官方
+     * X↔FE 转换率折算。Botania 官方唯一转换器魔力磁场 (Mana Fluxfield) 固定
+     * 10 FE = 1 Mana，故 1 Mana = 10 FE = 5 AE = 5 AM，即 1 AM = 0.2 Mana。
      */
     fun manaUnitRatio(id: String): Double {
         return when (id) {
             "ae2" -> 1.0
-            "botania" -> 1.0
+            "botania" -> 0.2 // 1 Mana = 10 FE = 5 AM (Mana Fluxfield + energyUnitRatio)
             "bloodmagic" -> 1.0
             "ars_nouveau" -> 1.0
             else -> 1.0

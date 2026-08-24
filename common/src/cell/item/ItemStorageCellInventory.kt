@@ -1,5 +1,6 @@
 package allyouneed.cell.item
 
+import allyouneed.cell.ICellItem
 import allyouneed.cell.buildPartitionList
 import allyouneed.item.packet.AllPackets
 import appeng.api.config.Actionable
@@ -32,22 +33,29 @@ import net.minecraft.world.item.ItemStack
  * [appeng.me.cells.BasicCellInventory] where every byte/amount is `long`,
  * so tiers up to 256T (2^48 bytes, 2^51 items) fit without overflow.
  * Contents are stored on the item's NBT as `keys` + `amts`, like vanilla.
+ *
+ * Generic over the key space via the [keyType] parameter: item cells use
+ * [AEKeyType.items], mana cells pass their own key type.
  */
-class ItemStorageCellInventory(
+open class ItemStorageCellInventory(
     private val stack: ItemStack,
     private val container: ISaveProvider?,
+    keyType: AEKeyType = AEKeyType.items(),
 ) : StorageCell {
 
-    private val cellType: ItemStorageCellItem = stack.item as ItemStorageCellItem
+    protected val cellItem: ResourceCellItem = stack.item as ResourceCellItem
 
-    private val keyType: AEKeyType = AEKeyType.items()
+    /** Data-side definition (size tier, bytes per type, idle drain). */
+    protected val cell: ICellItem = cellItem.cell
+
+    protected val keyType: AEKeyType = keyType
     private val amountPerByte: Long = keyType.amountPerByte.toLong()
 
     /** Total capacity in bytes (long, unlike vanilla's int). */
-    private val totalBytes: Long = cellType.cellType.size
+    private val totalBytes: Long = cell.size
 
     /** Bytes reserved per distinct item type (scales with tier, like vanilla). */
-    private val bytesPerType: Long = cellType.cellType.bytesPerType
+    private val bytesPerType: Long = cell.bytesPerType
 
     private val maxItemTypes: Int = MAX_ITEM_TYPES
 
@@ -93,7 +101,7 @@ class ItemStorageCellInventory(
         }
     }
 
-    override fun getIdleDrain(): Double = cellType.cellType.idleDrain
+    override fun getIdleDrain(): Double = cell.idleDrain
 
     override fun getStatus(): CellState {
         if (getStoredItemTypes() == 0L) return CellState.EMPTY
@@ -240,9 +248,9 @@ class ItemStorageCellInventory(
 
     // ---- Cell workbench / metadata accessors (mirrors BasicCellInventory) ----
 
-    fun getUpgradesInventory(): IUpgradeInventory = cellType.getUpgrades(stack)
+    fun getUpgradesInventory(): IUpgradeInventory = cellItem.getUpgrades(stack)
 
-    fun getConfigInventory(): ConfigInventory = cellType.getConfigInventory(stack)
+    fun getConfigInventory(): ConfigInventory = cellItem.getConfigInventory(stack)
 
     fun getCellItems(): Object2LongMap<AEKey> = storedAmounts
 

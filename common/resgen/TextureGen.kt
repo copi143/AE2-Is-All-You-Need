@@ -75,6 +75,48 @@ class TextureGen(private val output: Path) {
         sourceColorHz = RGB(color).toJzCzHz()
     }
 
+    /**
+     * Derive a source template by retinting it from the theme of [themeFrom] to the theme of
+     * [themeTo], writing `<srcDir>/<output>.png`. [source] only provides pixel structure.
+     *
+     * Unlike [recolorImage]'s proportional chroma scaling, chroma is shifted additively
+     * (`c + toC - fromC`): a near-neutral source plate keeps its low per-pixel chroma under
+     * scaling and comes out washed out, while the shift lifts the whole plate onto the target
+     * theme's saturation level. Lightness stays proportional. Idempotent: never reads its own
+     * output, safe to run every generateAssets pass.
+     */
+    fun deriveTemplate(srcDir: Path, source: String, themeFrom: String, themeTo: String, output: String) {
+        val srcFile = srcDir.resolve("$source.png")
+        val fromFile = srcDir.resolve("$themeFrom.png")
+        val toFile = srcDir.resolve("$themeTo.png")
+        if (!srcFile.exists() || !fromFile.exists() || !toFile.exists()) {
+            println("[texture] missing derive inputs for $output (need $source/$themeFrom/$themeTo in $srcDir)")
+            return
+        }
+        val from = themePixelHz(fromFile)
+        val to = themePixelHz(toFile)
+        val derived = shiftImage(
+            ensureArgb(ImageIO.read(srcFile.toFile())),
+            hueShift = to.h - from.h,
+            chromaShift = to.c - from.c,
+            lightnessScale = if (from.j > 0.001f) to.j / from.j else 1f,
+        )
+        ImageIO.write(derived, "png", srcDir.resolve("$output.png").toFile())
+        println("[texture] derived $srcDir/$output.png ($themeFrom -> $themeTo)")
+    }
+
+    /** Theme color of a plate: the bottom-right pixel (see [deriveTemplate] for the convention). */
+    private fun themePixelHz(file: Path): JzCzHz {
+        val img = ensureArgb(ImageIO.read(file.toFile()))
+        val argb = img.getRGB(img.width - 1, img.height - 1)
+        require((argb ushr 24) and 0xFF != 0) { "bottom-right theme pixel is transparent in $file" }
+        return RGB(
+            ((argb shr 16) and 0xFF) / 255f,
+            ((argb shr 8) and 0xFF) / 255f,
+            (argb and 0xFF) / 255f,
+        ).toJzCzHz()
+    }
+
     private fun currentSourceHz(): JzCzHz =
         sourceColorHz ?: error("Call source() before registering texture targets")
 
@@ -390,6 +432,46 @@ $frames
                 )
                 val rgb = mapped.toSRGB().toRGBInt()
                 // Preserve original alpha
+                val out = (a shl 24) or (rgb.argb.toInt() and 0x00FFFFFF)
+                dst.setRGB(x, y, out)
+            }
+        }
+        return dst
+    }
+
+    /**
+     * Additive JzCzHz shift: hue/chroma translate, lightness scales. Unlike [recolorImage],
+     * chroma is not multiplied per-pixel, so near-neutral plates still reach the target
+     * saturation instead of staying washed out. Out-of-gamut results are gamut-mapped.
+     */
+    private fun shiftImage(
+        srcImage: BufferedImage,
+        hueShift: Float,
+        chromaShift: Float,
+        lightnessScale: Float,
+    ): BufferedImage {
+        val src = ensureArgb(srcImage)
+        val dst = BufferedImage(src.width, src.height, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until src.height) {
+            for (x in 0 until src.width) {
+                val argb = src.getRGB(x, y)
+                val a = (argb ushr 24) and 0xFF
+                if (a == 0) {
+                    dst.setRGB(x, y, 0)
+                    continue
+                }
+                val r = ((argb shr 16) and 0xFF) / 255f
+                val g = ((argb shr 8) and 0xFF) / 255f
+                val b = (argb and 0xFF) / 255f
+                val pixelHz = RGB(r, g, b).toJzCzHz()
+                val mapped = gamutMap(
+                    JzCzHz(
+                        j = pixelHz.j * lightnessScale,
+                        c = pixelHz.c + chromaShift,
+                        h = pixelHz.h + hueShift,
+                    ),
+                )
+                val rgb = mapped.toSRGB().toRGBInt()
                 val out = (a shl 24) or (rgb.argb.toInt() and 0x00FFFFFF)
                 dst.setRGB(x, y, out)
             }

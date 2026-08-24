@@ -115,6 +115,10 @@ dependencies {
     modRuntimeOnly(variantOf(libs.mek) { classifier("additions") })
     modRuntimeOnly(variantOf(libs.mek) { classifier("generators") })
     modRuntimeOnly(variantOf(libs.mek) { classifier("tools") })
+
+    // Botania: compile against the api classifier; no runtime dependency here (players provide
+    // the full jar, which additionally requires Patchouli/Curios).
+    modCompileOnly(variantOf(libs.botania) { classifier("api") })
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
     testImplementation(libs.asm.tree)

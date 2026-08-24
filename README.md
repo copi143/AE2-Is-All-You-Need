@@ -46,6 +46,7 @@ AE2 Is All You Need 是一个以在整合包末期继续提升产能为目标的
    - `EMI`
    - `Jade` / `WTHIT` / `TOP` *使用 AE2 的 igtooltip 机制支持，不另外做兼容*
    - `GregTechCEu Modern`
+   - `Botania` *魔力存储元件与总线对接*
 3. 兼容模组
    - `Mekanism` *TODO*
    - `Create` *TODO*
@@ -109,6 +110,7 @@ AE2 Is All You Need 是一个以在整合包末期继续提升产能为目标的
 - [ ] `移除` 创造 ME 物品元件、创造 ME 流体元件
 - [x] `添加` 创造 ME 存储元件
 - [x] `添加` 维度存储元件
+- [x] `添加` 魔力存储元件 $1 \text{Ki}$ ~ $256 \text{Ti}$
 - [ ] `添加` 所有存储元件的 $1 \text{Ki}$ 到 $256 \text{Ti}$ 版本
 
 ### 合成
@@ -189,6 +191,33 @@ $256 \text{Ti}$ 物品压成一个压缩奇点！
 - [ ] 机器样板
 - [ ] 异步合成
 - [ ] 机器人
+- [ ] 魔力 (Mana)
+
+### 魔力 (Mana)
+
+科技与魔法的融合从"魔力即资源"开始：所有魔力系统被抽象为 [ManaKey](common/src/logic/aekey/ManaKey.kt) 注册进 ME 网络，像物品、流体一样可存储、可统计、可通过输入/输出总线搬运。
+
+#### 汇率
+
+以 AE 能源为锚：$AM \equiv AE \equiv 2\ FE$。外部能量按其官方 X↔FE 转换率折算：
+
+| 系统 | 官方转换依据 | 汇率 |
+|------|--------------|------|
+| AM（本模组基准） | — | $1\ AM = 1\ AE = 2\ FE$ |
+| Botania Mana | 魔力磁场固定 $10\ FE = 1\ Mana$ | $1\ Mana = 5\ AM = 5\ AE$ |
+| Blood Magic LP | TODO | — |
+| Ars Nouveau Mana | TODO | — |
+
+#### 存储元件
+
+- [x] `魔力存储元件` $1 \text{Ki}$ ~ $256 \text{Ti}$，每字节存 $64\ AM$，与能源元件一致
+- 支持分区/反相/均分/溢出毁灭卡，与物品元件一致
+
+#### 总线对接 (Botania)
+
+- [x] 输入总线面朝任意 `MANA_RECEIVER`（魔力池、魔力磁场等）即可抽取魔力入网
+- [x] 输出总线可将 ME 内魔力注回相邻接收器；注入量按接收器实际增量记账，绝不丢失
+- [x] 软依赖：未安装 Botania 时相关内容自动禁用
 
 ### 机器样板 (Machine Pattern)
 

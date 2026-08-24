@@ -3,6 +3,7 @@ package allyouneed
 import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.cell.item.ItemStorageCell
+import allyouneed.cell.mana.ManaStorageCell
 import allyouneed.item.packet.AllPackets
 import allyouneed.pattern.ModItems
 import allyouneed.util.rl
@@ -38,6 +39,9 @@ object AllRegistries {
             blocks += it.define
         }
         ItemStorageCell.entries.forEach {
+            items += it.define
+        }
+        ManaStorageCell.entries.forEach {
             items += it.define
         }
 

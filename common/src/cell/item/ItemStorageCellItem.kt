@@ -1,5 +1,6 @@
 package allyouneed.cell.item
 
+import allyouneed.cell.ICellItem
 import allyouneed.cell.appendPartitionInfo
 import allyouneed.cell.getFuzzyMode
 import allyouneed.cell.setFuzzyMode
@@ -22,12 +23,14 @@ import net.minecraft.world.level.Level
 import java.util.*
 
 /**
- * Item storage cell (1K - 256T). Long-based capacity following the vanilla
- * `item_storage_cell` design; NBT storage with `keys`/`amts` tags.
+ * Base item for resource storage cells (item / mana / ...). Holds the data-side [ICellItem]
+ * definition and provides the shared cell-workbench plumbing (config, upgrades, fuzzy mode,
+ * capacity tooltip). Concrete subclasses decide which [allyouneed.cell.ICell] they pair with.
  */
-class ItemStorageCellItem(
+open class ResourceCellItem(
     properties: Properties,
-    val cellType: ItemStorageCell,
+    /** Data-side definition providing size tier, bytes per type and idle drain. */
+    val cell: ICellItem,
 ) : AEBaseItem(properties), ICellWorkbenchItem {
 
     override fun getConfigInventory(stack: ItemStack): ConfigInventory = CellConfig.create(stack)
@@ -59,9 +62,6 @@ class ItemStorageCellItem(
         }
     }
 
-    override fun getTooltipImage(stack: ItemStack): Optional<TooltipComponent> =
-        ItemStorageCellHandler.getTooltipImage(stack)
-
     companion object {
         const val UPGRADE_SLOTS = 4
 
@@ -75,4 +75,17 @@ class ItemStorageCellItem(
             return 0xFFFFFF
         }
     }
+}
+
+/**
+ * Item storage cell (1K - 256T). Long-based capacity following the vanilla
+ * `item_storage_cell` design; NBT storage with `keys`/`amts` tags.
+ */
+open class ItemStorageCellItem(
+    properties: Properties,
+    cellType: ItemStorageCell,
+) : ResourceCellItem(properties, cellType) {
+
+    override fun getTooltipImage(stack: ItemStack): Optional<TooltipComponent> =
+        ItemStorageCellHandler.getTooltipImage(stack)
 }

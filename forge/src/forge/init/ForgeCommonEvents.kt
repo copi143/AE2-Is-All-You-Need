@@ -1,6 +1,8 @@
 package allyouneed.forge.init
 
 import allyouneed.Main
+import allyouneed.Platform
+import allyouneed.forge.botania.BotaniaManaCompat
 import allyouneed.util.MODID
 import appeng.api.features.P2PTunnelAttunement
 import appeng.api.ids.AECreativeTabIds
@@ -16,6 +18,10 @@ object ForgeCommonEvents {
     fun onCommonSetup(event: FMLCommonSetupEvent) {
         event.enqueueWork {
             Main.commonSetup()
+            // Optional Botania integration: mana import/export bus strategies.
+            if (Platform.isModLoaded("botania")) {
+                BotaniaManaCompat.register()
+            }
             P2PTunnelAttunement.registerAttunementTag(ForgeItems.ENTITY_P2P_TUNNEL.get())
         }
     }

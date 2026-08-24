@@ -20,8 +20,8 @@ data class CellEntry(
 ) {
     val id = idify(displayName)
 
-    /** Id of the matching drive-cell block model/texture (item cell → drive cell). */
-    val itemCellId = id.removeSuffix("_item_storage_cell") + "_item_cell"
+    /** Id of the matching drive-cell block model/texture (`<tier>_<type>_cell`). */
+    val itemCellId = id.removeSuffix("_storage_cell") + "_cell"
 }
 
 val tiers = listOf(
@@ -50,10 +50,29 @@ private val craftingStorages = tiers.mapIndexed { i, tier ->
     CellEntry("$tier Crafting Storage", AE2_COLORS[i].hex)
 } + CellEntry("Creative Crafting Storage", AE2_COLOR_CREATIVE.hex, isCreative = true)
 
-// Item storage cell tiers, colored per AE2_COLORS like the other storage tiers.
-private val itemStorageCells = tiers.mapIndexed { i, tier ->
-    CellEntry("$tier Item Storage Cell", AE2_COLORS[i].hex)
+// ME storage cell groups, one per key type, colored per AE2_COLORS like the other tiers.
+private fun storageCells(label: String) = tiers.mapIndexed { i, tier ->
+    CellEntry("$tier $label Storage Cell", AE2_COLORS[i].hex)
 }
+
+private val itemStorageCells = storageCells("Item")
+private val fluidStorageCells = storageCells("Fluid")
+private val manaStorageCells = storageCells("Mana")
+private val energyStorageCells = storageCells("Energy")
+private val hpStorageCells = storageCells("HP")
+private val staStorageCells = storageCells("STA")
+private val xpStorageCells = storageCells("XP")
+
+/** All storage cell groups by key type id; drives bg derivation, textures and models. */
+val storageCellGroups = linkedMapOf(
+    "item" to itemStorageCells,
+    "fluid" to fluidStorageCells,
+    "mana" to manaStorageCells,
+    "energy" to energyStorageCells,
+    "hp" to hpStorageCells,
+    "sta" to staStorageCells,
+    "xp" to xpStorageCells,
+)
 
 /**
  * Async synthesis block definition. Both definition files (with/without GT) describe the same
@@ -180,6 +199,12 @@ fun main(args: Array<String>) {
         gui("machine.smoking", "Smoking")
         gui("machine.example_custom", "Example Custom")
 
+        // Mana key display names (MetricLevelKey: gui.<modid>.<type>.<metric>)
+        gui("mana.ae2", "AM")
+        gui("mana.botania", "Botania Mana")
+        gui("mana.bloodmagic", "Blood Magic LP")
+        gui("mana.ars_nouveau", "Ars Nouveau Mana")
+
         for (cell in energyCells) {
             if (cell.isCreative) {
                 simpleBlock(cell.id, cell.displayName)
@@ -264,10 +289,12 @@ fun main(args: Array<String>) {
         // Adaptive Pattern item (just an item model, no block)
         item("adaptive_pattern", "Adaptive Pattern")
 
-        // Item storage cells: LED item model + drive-cell block model
-        for (cell in itemStorageCells) {
-            cellItem(cell.id, cell.displayName)
-            driveCellModel(cell.itemCellId)
+        // Storage cells: LED item model + drive-cell block model pipeline, one group per key type
+        for ((_, cells) in storageCellGroups) {
+            for (cell in cells) {
+                cellItem(cell.id, cell.displayName)
+                driveCellModel(cell.itemCellId)
+            }
         }
 
         itemLang("creative_me_cell", "Creative ME Storage Cell")
@@ -334,33 +361,51 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Item storage cell FG base hue (dominant opaque ≈ rgb 154,130,255)
-        source(sourceTextures, "#9A82FF")
-
-        // Item storage cells: bg (no tint) + fg (tint per tier), output to textures/item
-        for (cell in itemStorageCells) {
-            layeredTarget(
-                bg = "item_storage_cell_bg",
-                mid = "item_storage_cell_fg",
-                top = null,
-                outputPrefix = cell.id,
-                color = cell.color,
-                levels = null,
-                dir = "item",
+        // Non-item cell backgrounds: derived from the item-cell template (unified style),
+        // retinted from the item drive-cell theme to each type's drive-cell theme. The theme
+        // references are the tinted drive plates; the near-neutral item bg itself would be an
+        // unstable chroma source. Written back under resgen/textures.
+        for (type in storageCellGroups.keys - "item") {
+            deriveTemplate(
+                srcDir = sourceTextures.resolve("storage_cell"),
+                source = "item_storage_cell_bg",
+                themeFrom = "drive_item_cell_bg",
+                themeTo = "drive_${type}_cell_bg",
+                output = "${type}_storage_cell_bg",
             )
         }
 
-        // Drive cell faces: bg (opaque plate) + fg (tint per tier). The drive_cell model
+        // Item storage cell FG base hue (dominant opaque ≈ rgb 154,130,255)
+        source(sourceTextures, "#9A82FF")
+
+        // Storage cells: bg (type-tinted, no tint applied here) + fg (tint per tier), output to textures/item
+        for ((type, cells) in storageCellGroups) {
+            for (cell in cells) {
+                layeredTarget(
+                    bg = "storage_cell/${type}_storage_cell_bg",
+                    mid = "storage_cell/storage_cell_fg",
+                    top = null,
+                    outputPrefix = cell.id,
+                    color = cell.color,
+                    levels = null,
+                    dir = "item",
+                )
+            }
+        }
+
+        // Drive cell faces: bg (opaque plate, per type) + fg (tint per tier). The drive_cell model
         // samples only rows 0-6 / cols 0-6, so these templates are designed for that region.
-        for (cell in itemStorageCells) {
-            layeredTarget(
-                bg = "drive_item_cell_bg",
-                mid = "drive_item_cell_fg",
-                top = null,
-                outputPrefix = "drive/cells/${cell.itemCellId}",
-                color = cell.color,
-                levels = null,
-            )
+        for ((type, cells) in storageCellGroups) {
+            for (cell in cells) {
+                layeredTarget(
+                    bg = "storage_cell/drive_${type}_cell_bg",
+                    mid = "storage_cell/drive_cell_fg",
+                    top = null,
+                    outputPrefix = "drive/cells/${cell.itemCellId}",
+                    color = cell.color,
+                    levels = null,
+                )
+            }
         }
 
         // Crafting storage FG base hue (dominant opaque ≈ rgb 235,142,75)
@@ -464,7 +509,7 @@ fun main(args: Array<String>) {
     // Status-LED item layer: single-pixel dot, tinted at runtime by ItemStorageCellItem.getColor.
     val itemTexOut = output.resolve("textures/item")
     itemTexOut.createDirectories()
-    sourceTextures.resolve("item_storage_cell_light.png")
+    sourceTextures.resolve("storage_cell/storage_cell_light.png")
         .copyTo(itemTexOut.resolve("item_storage_cell_light.png"), overwrite = true)
 
     // Light overlays live under block/crafting/; ensure atlas + dummy model stitch them
