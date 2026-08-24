@@ -1,6 +1,7 @@
 package allyouneed.client
 
 import allyouneed.Platform
+import allyouneed.client.guide.IayGuide
 import allyouneed.multiblock.async.AsyncBlockKind
 import allyouneed.multiblock.async.AsyncBlockRegistry
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
@@ -45,6 +46,8 @@ object ForgeClientEvents {
                 CraftingStorageModels.createFormedModel(storage),
             )
         }
+        // Register the GuideME guidebook as early as AE2 does (mod construction).
+        IayGuide.init()
     }
 
     @SubscribeEvent

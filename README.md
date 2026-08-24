@@ -39,12 +39,12 @@ AE2 Is All You Need 是一个以在整合包末期继续提升产能为目标的
 1. 必选依赖
    - `Kotlin for Forge`
    - `Fabric Language Kotlin`
-   - `GuideME` *TODO*
+   - `GuideME`（指南已接入，内容持续补充中）
    - `Applied Energistics 2`
 2. 可选依赖
    - `Just Enough Items`
    - `EMI`
-   - `Jade` *TODO*
+   - `Jade` / `WTHIT` / `TOP` *使用 AE2 的 igtooltip 机制支持，不另外做兼容*
    - `GregTechCEu Modern`
 3. 兼容模组
    - `Mekanism` *TODO*

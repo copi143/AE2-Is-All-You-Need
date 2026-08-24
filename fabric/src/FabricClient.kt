@@ -1,5 +1,6 @@
 package allyouneed
 
+import allyouneed.client.guide.IayGuide
 import allyouneed.multiblock.async.AsyncBlockKind
 import allyouneed.multiblock.async.AsyncBlockRegistry
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
@@ -37,6 +38,7 @@ fun initClient() {
     DesktopNotify.focusProbe = DesktopNotify.FocusProbe {
         Minecraft.getInstance().isWindowActive
     }
+    IayGuide.init()
     ItemDetailsKeyBind.init()
     ColorProviderRegistry.ITEM.register(
         { stack, tintIndex -> ItemStorageCellItem.getColor(stack, tintIndex) },
