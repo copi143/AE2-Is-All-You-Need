@@ -12,7 +12,6 @@ import allyouneed.parts.logger.LogStore
 import allyouneed.util.MODID
 import allyouneed.util.id.mac.MacAddressRegistry
 import allyouneed.util.logger
-import appeng.api.features.P2PTunnelAttunement
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper
@@ -56,10 +55,8 @@ fun init() {
     )
 
     Main.init()
-    Main.registerAEKeyTypes()
-    Main.commonSetup()
-
-    P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)
+    // Main.registerAEKeyTypes / Main.commonSetup 与 Forge 的 RegisterEvent / FMLCommonSetupEvent 对齐，
+    // 由 Mixin: InitKeyTypesMixin 在 appeng.init.client.InitKeyTypes.init() TAIL 统一触发，保证 AEConfig 已就绪
 
     registerServerDataReloadListener("machine_types", MachineTypeReloadListener())
     registerServerDataReloadListener("machine_recipes", ManualMachineRecipeReloadListener())

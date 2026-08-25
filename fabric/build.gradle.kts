@@ -23,6 +23,10 @@ dependencies {
 
     modImplementation(libs.flk)
 
+    modImplementation(libs.ojalgo)
+    modImplementation(libs.jetbrains.markdown)
+    modImplementation(libs.netty.codec.http)
+    modImplementation("teamreborn:energy:3.0.0")
     include(libs.ojalgo)
     include(libs.jetbrains.markdown)
     include(libs.netty.codec.http) {

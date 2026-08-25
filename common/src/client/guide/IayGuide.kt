@@ -33,8 +33,14 @@ object IayGuide {
         if (::guide.isInitialized) {
             return
         }
-        guide = Guide.builder(GUIDE_ID)
-            .folder("guide")
-            .build()
+        try {
+            guide = Guide.builder(GUIDE_ID)
+                .folder("guide")
+                .build()
+        } catch (e: Throwable) {
+            // guideme 与当前 mappings/parchment 不匹配时 ExtraCodecs.f_252442_ 缺失，直接降级为无指南模式
+            allyouneed.util.logger.warn("IayGuide init failed, guide will be disabled", e)
+            return
+        }
     }
 }

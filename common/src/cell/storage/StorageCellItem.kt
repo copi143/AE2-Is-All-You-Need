@@ -14,7 +14,6 @@ import appeng.api.upgrades.UpgradeInventories
 import appeng.core.localization.GuiText
 import appeng.core.localization.PlayerMessages
 import appeng.core.localization.Tooltips
-import appeng.hooks.AEToolItem
 import appeng.items.AEBaseItem
 import appeng.items.contents.CellConfig
 import appeng.util.ConfigInventory
@@ -40,7 +39,7 @@ open class StorageCellItem(
     properties: Properties,
     /** Data-side definition providing size tier, key space, bytes per type and idle drain. */
     val cell: ICellItem,
-) : AEBaseItem(properties), ICellWorkbenchItem, AEToolItem {
+) : AEBaseItem(properties), ICellWorkbenchItem {
 
     override fun getConfigInventory(stack: ItemStack): ConfigInventory =
         CellConfig.create(cell.keyType.filter(), stack)

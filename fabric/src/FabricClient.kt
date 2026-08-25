@@ -20,9 +20,11 @@ import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalScreen
 import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermScreen
+import allyouneed.fabric.init.FabricItems
 import allyouneed.util.notify.DesktopNotify
 import allyouneed.util.MODID
 import allyouneed.util.logger
+import appeng.api.features.P2PTunnelAttunement
 import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
@@ -35,10 +37,17 @@ import net.minecraft.resources.ResourceLocation
 
 fun initClient() {
     logger.info("Initializing Client...")
+    // 与 Forge FMLCommonSetupEvent 对齐，AE2 已完成 AEConfig/注册表初始化后执行，保证单次成功（由 AppEngClient 初始化后触发）
+    Main.commonSetup()
+    P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)
+    try {
+        IayGuide.init()
+    } catch (e: Throwable) {
+        logger.warn("IayGuide init failed, skipping guide", e)
+    }
     DesktopNotify.focusProbe = DesktopNotify.FocusProbe {
         Minecraft.getInstance().isWindowActive
     }
-    IayGuide.init()
     ItemDetailsKeyBind.init()
     ColorProviderRegistry.ITEM.register(
         { stack, tintIndex -> StorageCellItem.getColor(stack, tintIndex) },

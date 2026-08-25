@@ -40,10 +40,10 @@ private fun storageCells(label: String) = tiers.mapIndexed { i, tier ->
     CellEntry("$tier $label Storage Cell", AE2_COLORS[i].hex)
 }
 
-/** All storage cell groups by key type id; drives bg derivation, textures and models. */
+/** All storage cell groups by key type id (lowercase, matches CellHousings/registered ids); drives bg derivation, textures and models. */
 val storageCellGroups = LinkedHashMap<String, List<CellEntry>>().apply {
     for ((label, cells) in aeKeyLabels.associateWith { storageCells(it) }) {
-        set(label, cells)
+        set(label.lowercase(), cells)
     }
 }
 

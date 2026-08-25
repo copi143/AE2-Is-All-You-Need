@@ -4,7 +4,9 @@
   "package": "allyouneed.mixin",
   "refmap": "${mod_id}.refmap.json",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [],
+  "mixins": [
+    "InitKeyTypesMixin"
+  ],
   "client": [],
   "server": [],
   "injectors": {

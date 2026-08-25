@@ -11,7 +11,7 @@ package allyouneed.resgen
  * GT simple machines are tiered: `{tier}_electric_furnace`, etc.
  */
 
-private fun gtTiered(name: String): List<String> = gtSingleBlockTiers.map { "gtceu:${it}_${name.lowercase()}" }
+private fun gtTiered(name: String): List<String> = gtSingleBlockTiers.map { "gtceu:${it.lowercase()}_${name.lowercase()}" }
 
 private fun gtSteam(name: String): List<String> = listOf(
     "gtceu:lp_steam_$name",

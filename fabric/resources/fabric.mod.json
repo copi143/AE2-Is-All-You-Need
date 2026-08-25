@@ -31,6 +31,12 @@
         "value": "allyouneed.FabricClientKt::initClient"
       }
     ],
+    "server": [
+      {
+        "adapter": "kotlin",
+        "value": "allyouneed.FabricServer"
+      }
+    ],
     "emi": [
       {
         "adapter": "kotlin",

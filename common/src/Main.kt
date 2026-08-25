@@ -30,16 +30,21 @@ object Main {
         // Register our pattern decoders and part models
         ModPatternDecoders.register()
         BuiltinMachineTypes.registerAll()
-        HttpModule.register()
+        try {
+            HttpModule.register()
+        } catch (e: Throwable) {
+            logger.error("HttpModule not available, skipping", e)
+        }
         NetworkLogHooks.register()
         registerParts()
     }
 
     /**
      * Registers the custom AEKeyTypes. Must run before AE2's keytype registry freezes: on Forge
-     * during the ae2:keytypes RegisterEvent (FMLCommonSetupEvent is already too late), on Fabric
-     * during the mod initializer.
+     * during the ae2:keytypes RegisterEvent, on Fabric via Mixin into [appeng.init.client.InitKeyTypes.init].
+     * 调用时机由平台保证只执行一次。
      */
+    @JvmStatic
     fun registerAEKeyTypes() {
         AllKeys.entries.forEach { AEKeyTypes.register(it.type) }
     }
@@ -47,6 +52,7 @@ object Main {
     /**
      * Must run during common setup (after AE2 init). Registers cell handlers etc.
      */
+    @JvmStatic
     fun commonSetup() {
         StorageCells.addCellHandler(CreativeMeCellHandler)
         StorageCells.addCellHandler(DimensionalCellHandler)
