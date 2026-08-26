@@ -78,7 +78,11 @@ listOf("apiElements", "runtimeElements", "sourcesElements", "javadocElements").f
 }
 
 tasks.named<Jar>("sourcesJar") {
-    dependsOn(":common:generateAssets")
+    if (project.path == ":common") {
+        dependsOn("generateAssets")
+    } else {
+        dependsOn(":common:generateAssets")
+    }
     from(rootProject.file("LICENSE"))
 }
 
@@ -105,6 +109,14 @@ configure<DokkaExtension> {
         skipDeprecated.set(false)
         reportUndocumented.set(false)
         sourceRoots.from(project.the<JavaPluginExtension>().sourceSets["main"].allSource)
+    }
+}
+
+tasks.named("dokkaGeneratePublicationJavadoc") {
+    if (project.path == ":common") {
+        dependsOn("generateAssets")
+    } else {
+        dependsOn(":common:generateAssets")
     }
 }
 
