@@ -7,6 +7,7 @@ import allyouneed.cell.storage.CellHousings
 import allyouneed.cell.storage.StorageComponents
 import allyouneed.item.packet.AllPackets
 import allyouneed.pattern.ModItems
+import allyouneed.util.NeedRegisterBlockEntity
 import allyouneed.util.rl
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition
@@ -16,9 +17,10 @@ import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntityType
 
 object AllRegistries {
-    var blocks: Array<BlockDefinition<out Block>> = arrayOf()
-    var items: Array<ItemDefinition<out Item>> = arrayOf()
-    var blockEntityTypes: Array<BlockEntityType<*>> = arrayOf()
+    val blocks: ArrayList<BlockDefinition<out Block>> = arrayListOf()
+    val items: ArrayList<ItemDefinition<out Item>> = arrayListOf()
+    val blockEntityTypes: ArrayList<BlockEntityType<*>> = arrayListOf()
+    val needRegisterBlockEntity :  ArrayList<NeedRegisterBlockEntity> = arrayListOf()
 
     val CREATIVE_ME_CELL: ItemDefinition<Item> = ItemDefinition(
         "Creative ME Storage Cell",
@@ -35,9 +37,11 @@ object AllRegistries {
     init {
         EnergyCell.entries.forEach {
             blocks += it.define
+            needRegisterBlockEntity += it
         }
         CraftingStorage.entries.forEach {
             blocks += it.define
+            needRegisterBlockEntity += it
         }
         AllStorageCells.entries.forEach {
             items += it.define

@@ -32,8 +32,7 @@ fun init() {
     FabricItems.register()
     FabricBlocks.register()
 
-    EnergyCell.entries.forEach { it.registerBlockEntity() }
-    CraftingStorage.entries.forEach { it.registerBlockEntity() }
+    AllRegistries.needRegisterBlockEntity.forEach { it.registerBlockEntity() }
 
     EnergyCell.entries.forEach { cell ->
         val block = cell.define.block()

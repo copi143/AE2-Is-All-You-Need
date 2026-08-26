@@ -1,6 +1,7 @@
 package allyouneed.cell
 
 import allyouneed.logic.aekey.EnergyKey
+import allyouneed.util.NeedRegisterBlockEntity
 import allyouneed.util.idify
 import allyouneed.util.rl
 import appeng.block.AEBaseEntityBlock
@@ -17,7 +18,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
-class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlock(size, "Energy Cell") {
+class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlock(size, "Energy Cell"),
+    NeedRegisterBlockEntity {
     private fun cellBlock(priority: Int): Block = EnergyCellBlock(
         size.toDouble() * EnergyKey.ENERGY_PER_BYTE,
         size * 4.0,
@@ -47,7 +49,7 @@ class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlo
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun registerBlockEntity() {
+    override fun registerBlockEntity() {
         when {
             isCreative -> (define.block() as AEBaseEntityBlock<CreativeEnergyCellBlockEntity>).setBlockEntity(
                 CreativeEnergyCellBlockEntity::class.java,

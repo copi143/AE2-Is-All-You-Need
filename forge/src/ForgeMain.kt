@@ -17,9 +17,6 @@ class ForgeMain {
     init {
         logger.info("Initializing...")
 
-        EnergyCell.entries.forEach { it.registerBlockEntity() }
-        CraftingStorage.entries.forEach { it.registerBlockEntity() }
-
         AllRegistries.blocks.forEach { entry ->
             ForgeBlocks.BLOCKS.register(entry.id().path) { entry.block() }
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
@@ -31,6 +28,8 @@ class ForgeMain {
         AllRegistries.items.forEach { entry ->
             ForgeItems.ITEMS.register(entry.id().path) { entry.asItem() }
         }
+
+        AllRegistries.needRegisterBlockEntity.forEach { it.registerBlockEntity() }
 
         // AE2 key types must be registered during the ae2:keytypes registry's RegisterEvent, before
         // Forge freezes that registry. FMLCommonSetupEvent (Main.commonSetup) is already too late:

@@ -1,5 +1,6 @@
 package allyouneed.cell
 
+import allyouneed.util.NeedRegisterBlockEntity
 import appeng.block.AEBaseEntityBlock
 import appeng.block.crafting.CraftingUnitBlock
 import appeng.block.crafting.ICraftingUnitType
@@ -11,7 +12,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType
 import java.math.BigInteger
 import java.util.function.Supplier
 
-class CraftingStorage(size: Long = -1) : ICellBlock(size, "Crafting Storage"), ICraftingUnitType {
+class CraftingStorage(size: Long = -1) : ICellBlock(size, "Crafting Storage"), ICraftingUnitType,
+    NeedRegisterBlockEntity {
     override val blockSupplier = Supplier<Block> { CraftingUnitBlock(this) }
 
     override fun getStorageBytes(): Long = if (isCreative) Long.MAX_VALUE else size
@@ -28,7 +30,7 @@ class CraftingStorage(size: Long = -1) : ICellBlock(size, "Crafting Storage"), I
     override fun getItemFromType(): Item = define.asItem()
 
     @Suppress("UNCHECKED_CAST")
-    fun registerBlockEntity() {
+    override fun registerBlockEntity() {
         (define.block() as AEBaseEntityBlock<CraftingBlockEntity>).setBlockEntity(
             CraftingBlockEntity::class.java,
             blockEntityType,
