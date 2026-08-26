@@ -7,6 +7,11 @@ plugins {
 
 val modId = project.property("modId") as String
 
+val embeddedProjects = listOf(
+    ":common" to "composeClasses",
+    ":msdftext" to "msdftextClasses",
+)
+
 configurations {
     create("commonJava") {
         isCanBeResolved = true
@@ -17,9 +22,11 @@ configurations {
     create("commonResources") {
         isCanBeResolved = true
     }
-    create("composeClasses") {
-        isCanBeResolved = true
-        isCanBeConsumed = false
+    embeddedProjects.forEach { (path, configuration) ->
+        create(configuration) {
+            isCanBeResolved = true
+            isCanBeConsumed = false
+        }
     }
 }
 
@@ -34,16 +41,24 @@ dependencies {
     "commonResources"(project(path = ":common", configuration = "commonResources"))
     // Compose runtime classes are merged straight into the loader jar by :common (no jar-in-jar), and
     // the same resolved files feed the dev classpath.
-    "composeClasses"(project(path = ":common", configuration = "composeClasses"))
+    //
     // Dev runs use the merged class directory instead of the official jars, because ModLauncher's
     // ModuleClassLoader cannot create modules for jars without an Automatic-Module-Name manifest
     // attribute (official ui-desktop/foundation have none) and silently skips them.
-    "runtimeOnly"(project(path = ":common", configuration = "composeClasses"))
+    //
+    // msdftext is compiled as a separate module but merged directly into common/fabric/forge jars
+    // (no jar-in-jar). Keep the same pattern as composeClasses so runClient and final jars see it.
+    embeddedProjects.forEach { (path, configuration) ->
+        configuration(project(path = path, configuration = configuration))
+        "runtimeOnly"(project(path = path, configuration = configuration))
+    }
 }
 
 tasks.named<Jar>("jar") {
-    dependsOn(configurations["composeClasses"])
-    from(configurations["composeClasses"])
+    embeddedProjects.forEach { (path, configuration) ->
+        dependsOn(configurations[configuration])
+        from(configurations[configuration])
+    }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
@@ -67,8 +82,10 @@ tasks.named<ProcessResources>("processResources") {
     dependsOn(":common:generateAssets")
     // Compose classes go to the exploded dev resources so runClient sees them exactly like the
     // built jar does (the jar task merges the same configuration).
-    dependsOn(configurations["composeClasses"])
-    from(configurations["composeClasses"])
+    embeddedProjects.forEach { (path, configuration) ->
+        dependsOn(configurations[configuration])
+        from(configurations[configuration])
+    }
 }
 
 tasks.named<Jar>("sourcesJar") {

@@ -22,11 +22,9 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-include("common")
-include("fabric")
-include("forge")
+listOf("common", "fabric", "forge").forEach { name -> include(name) }
 
-listOf("averith", "graphicsrepl", "kaptor", "transformer").forEach { name ->
+listOf("averith", "graphicsrepl", "kaptor", "msdftext", "transformer").forEach { name ->
     include(name)
     project(":$name").projectDir = file("sub/$name")
 }

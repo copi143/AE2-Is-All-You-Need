@@ -1,13 +1,13 @@
-package minecraftx.compose.text.msdf
+package allyouneed.client.msdftext
 
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL12
 import org.lwjgl.system.MemoryUtil
 import java.nio.ByteBuffer
 
-internal data class GlyphKey(val family: String, val codePoint: Int)
+data class GlyphKey(val family: String, val codePoint: Int)
 
-internal class AtlasSlot(
+class AtlasSlot(
     val key: GlyphKey,
     val x: Int,
     val y: Int,
@@ -18,7 +18,7 @@ internal class AtlasSlot(
     val pxRange: Float,
 )
 
-internal class GlyphAtlas(
+class GlyphAtlas(
     initialSize: Int = 512,
     private val maxSize: Int = 2048,
     private val gap: Int = 1,

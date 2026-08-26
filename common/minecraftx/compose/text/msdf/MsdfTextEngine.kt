@@ -1,6 +1,11 @@
 package minecraftx.compose.text.msdf
 
 import allyouneed.client.compose.platform.McGraphics
+import allyouneed.client.msdftext.AtlasSlot
+import allyouneed.client.msdftext.GlyphAtlas
+import allyouneed.client.msdftext.GlyphKey
+import allyouneed.client.msdftext.MsdfGenerator
+import allyouneed.client.msdftext.SystemFonts
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.toArgb

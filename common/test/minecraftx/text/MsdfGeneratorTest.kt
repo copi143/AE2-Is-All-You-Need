@@ -1,10 +1,10 @@
 package minecraftx.text
 
-import minecraftx.compose.text.msdf.GlyphAtlas
-import minecraftx.compose.text.msdf.GlyphKey
-import minecraftx.compose.text.msdf.MsdfGenerator
-import minecraftx.compose.text.msdf.MsdfPoint
-import minecraftx.compose.text.msdf.SystemFonts
+import allyouneed.client.msdftext.GlyphAtlas
+import allyouneed.client.msdftext.GlyphKey
+import allyouneed.client.msdftext.MsdfGenerator
+import allyouneed.client.msdftext.MsdfPoint
+import allyouneed.client.msdftext.SystemFonts
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 

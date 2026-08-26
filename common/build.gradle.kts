@@ -23,6 +23,7 @@ dependencies {
     api(libs.kotlinx.coroutines.core)
     api(project(":kaptor"))
     api(project(":averith"))
+    api(project(":msdftext"))
     listOf(
         libs.compose.runtime,
         libs.compose.ui,
@@ -135,6 +136,26 @@ artifacts {
     add("composeClasses", layout.buildDirectory.dir("composeClasses").map { it.asFile }) {
         builtBy(unpackComposeClasses)
     }
+}
+
+configurations.create("msdftextClasses") {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+dependencies {
+    "msdftextClasses"(project(path = ":msdftext", configuration = "msdftextClasses"))
+}
+
+tasks.named<Jar>("jar") {
+    dependsOn(configurations["msdftextClasses"])
+    from(configurations["msdftextClasses"])
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named<ProcessResources>("processResources") {
+    dependsOn(configurations["msdftextClasses"])
+    from(configurations["msdftextClasses"])
 }
 
 configurations {

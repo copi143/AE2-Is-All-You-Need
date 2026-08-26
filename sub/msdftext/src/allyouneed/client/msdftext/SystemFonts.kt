@@ -1,4 +1,4 @@
-package minecraftx.compose.text.msdf
+package allyouneed.client.msdftext
 
 import java.awt.Font
 import java.awt.GraphicsEnvironment
@@ -7,7 +7,7 @@ import java.awt.font.GlyphVector
 import java.awt.geom.AffineTransform
 import kotlin.math.roundToInt
 
-internal class AwtFontFace(val font: Font, val frc: FontRenderContext) {
+class AwtFontFace(val font: Font, val frc: FontRenderContext) {
     val family: String = font.family
     private val metrics = font.getLineMetrics("Ag中", frc)
     val ascent: Float = metrics.ascent
@@ -25,7 +25,7 @@ internal class AwtFontFace(val font: Font, val frc: FontRenderContext) {
     }
 }
 
-internal class FontChain(val faces: List<AwtFontFace>, val genPx: Float, val drawPx: Float) {
+class FontChain(val faces: List<AwtFontFace>, val genPx: Float, val drawPx: Float) {
     val primary: AwtFontFace = faces.first()
     val lineHeight: Int = primary.lineHeight
     val ascent: Float = primary.ascent
@@ -42,7 +42,7 @@ internal class FontChain(val faces: List<AwtFontFace>, val genPx: Float, val dra
     fun advance(cp: Int): Float = faceFor(cp).advance(cp)
 }
 
-internal object SystemFonts {
+object SystemFonts {
     private val latin = listOf(
         "Inter", "Segoe UI", "SF Pro Text", "Helvetica Neue", "Noto Sans",
         "DejaVu Sans", "Liberation Sans", "FreeSans", "Arial", Font.SANS_SERIF,

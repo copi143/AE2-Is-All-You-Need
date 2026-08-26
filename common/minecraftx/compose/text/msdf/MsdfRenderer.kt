@@ -1,5 +1,6 @@
 package minecraftx.compose.text.msdf
 
+import allyouneed.client.msdftext.GlyphAtlas
 import allyouneed.util.logger
 import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.client.gui.GuiGraphics

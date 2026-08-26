@@ -1,4 +1,4 @@
-package minecraftx.compose.text.msdf
+package allyouneed.client.msdftext
 
 import java.awt.Color
 import java.awt.geom.PathIterator
@@ -12,9 +12,9 @@ import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-internal data class MsdfPoint(val x: Float, val y: Float)
+data class MsdfPoint(val x: Float, val y: Float)
 
-internal class MsdfEdge(
+class MsdfEdge(
     val ax: Float, val ay: Float,
     val bx: Float, val by: Float,
     val channels: Int,
@@ -39,7 +39,7 @@ object MsdfGenerator {
     private const val WHITE = 7
     private val CROSS_THRESH = sin(3.0).toFloat()
 
-    internal fun generate(face: AwtFontFace, cp: Int, pxRange: Float = PX_RANGE): MsdfBitmap? {
+    fun generate(face: AwtFontFace, cp: Int, pxRange: Float = PX_RANGE): MsdfBitmap? {
         val outline = face.glyphVector(cp).getGlyphOutline(0)
         val bounds = outline.bounds2D
         if (bounds.width <= 0.0 && bounds.height <= 0.0) return null
@@ -58,10 +58,10 @@ object MsdfGenerator {
         return raster(segs, w, h, x0, y0, pxRange, rasterMask(outline, w, h, x0, y0))
     }
 
-    internal fun generate(edges: List<MsdfEdge>, width: Int, height: Int, originX: Float, originY: Float, pxRange: Float): MsdfBitmap =
+    fun generate(edges: List<MsdfEdge>, width: Int, height: Int, originX: Float, originY: Float, pxRange: Float): MsdfBitmap =
         raster(edges.map { Seg.line(it.ax, it.ay, it.bx, it.by, it.channels) }, width, height, originX, originY, pxRange, null)
 
-    internal fun colorEdges(contours: List<List<MsdfPoint>>): List<MsdfEdge> {
+    fun colorEdges(contours: List<List<MsdfPoint>>): List<MsdfEdge> {
         val segs = contours.map { pts ->
             val closed = closeContour(pts)
             closed.indices.map { i ->
