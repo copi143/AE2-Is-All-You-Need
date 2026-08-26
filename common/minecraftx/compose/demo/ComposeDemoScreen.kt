@@ -426,7 +426,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
     private companion object {
         /** GFM 全集演示源:标题/强调/删除线/行内码/链接/嵌套列表/任务列表/引用/代码块/表格/分隔线。 */
-        val DEMO_MARKDOWN = """# Markdown 预览
+        const val DEMO_MARKDOWN = """# Markdown 预览
 ## 二级标题
 普通段落:**粗体** *斜体* ~~删除线~~ `inline code` 与 [链接](https://ae2.is)
 以及一段足够长的中文文本用来验证自动折行:元素收容设施通过物质炮从虚空中抓取样本,再由ME网络统一分拣、压缩与存储,整个过程无需人工搬运。

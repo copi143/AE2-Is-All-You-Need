@@ -7,7 +7,6 @@ import org.slf4j.MarkerFactory
 /**
  * 来自 common 模块的 util/MarkedLogger 不要在此处修改！
  */
-@Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
 class MarkedLogger(private val target: Logger, private val attached: Marker) : Logger by target {
     override fun isTraceEnabled(): Boolean = target.isTraceEnabled(attached)
     override fun trace(msg: String) = target.trace(attached, msg)

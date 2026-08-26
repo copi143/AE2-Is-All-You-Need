@@ -21,7 +21,7 @@ public abstract class GenericStackInvMixin {
 
     @ModifyVariable(method = "setStack", at = @At("HEAD"), argsOnly = true)
     private GenericStack allyouneed$convertPacketStack(GenericStack stack) {
-        if (stack == null) return stack;
+        if (stack == null) return null;
         if (!(stack.what() instanceof AEItemKey itemKey)) return stack;
         var itemStack = itemKey.toStack();
         if (!AllPackets.INSTANCE.isPacket(itemStack)) return stack;

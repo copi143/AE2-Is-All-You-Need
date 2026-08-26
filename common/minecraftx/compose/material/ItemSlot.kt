@@ -147,7 +147,7 @@ fun ItemSlot(
                 renderer.drawStack(graphics, stack, 1, 1)
                 if (disabled) drawRect(color = colors.slotDisabledOverlay)
                 if (missing) drawRect(color = colors.slotMissingOverlay)
-                if (amount != null && amount.isNotEmpty()) {
+                if (!amount.isNullOrEmpty()) {
                     val font = Minecraft.getInstance().font
                     graphics.pose().pushPose()
                     graphics.pose().translate(1f, 1f, 200f)

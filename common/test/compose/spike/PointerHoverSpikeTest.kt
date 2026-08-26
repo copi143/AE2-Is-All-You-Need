@@ -183,7 +183,7 @@ class PointerHoverSpikeTest {
         )
         val outside = host.events.last()
         assertTrue(
-            outside.pos.x > 18f || outside.pos.x < 0f || outside.pos.y > 18f || outside.pos.y < 0f,
+            outside.pos.x !in 0f..18f || outside.pos.y > 18f || outside.pos.y < 0f,
             "expected an out-of-bounds local position, got $outside",
         )
     }
@@ -237,7 +237,7 @@ class PointerHoverSpikeTest {
 
         // After the in-bounds enter, every subsequent event must be out of bounds.
         val outOfBounds = host.events.drop(1).map { r ->
-            r.pos.x < 0f || r.pos.x > 18f || r.pos.y < 0f || r.pos.y > 18f
+            r.pos.x !in 0f..18f || r.pos.y < 0f || r.pos.y > 18f
         }
         assertTrue(
             outOfBounds.all { it },

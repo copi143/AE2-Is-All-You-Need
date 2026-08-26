@@ -127,10 +127,10 @@ class NetworkLoggerMenu(
         val previousTotal = total
         total = LogStore.count(host.loggerId, filter)
         val atTail = offset + LogStore.PAGE_SIZE >= previousTotal
-        if (forceLatest || atTail) {
-            offset = (total - LogStore.PAGE_SIZE).coerceAtLeast(0)
+        offset = if (forceLatest || atTail) {
+            (total - LogStore.PAGE_SIZE).coerceAtLeast(0)
         } else {
-            offset = offset.coerceIn(0, total)
+            offset.coerceIn(0, total)
         }
         val next = LogStore.query(host.loggerId, offset, filter, LogStore.PAGE_SIZE)
         if (page != next) {

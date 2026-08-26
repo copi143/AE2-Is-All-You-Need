@@ -108,11 +108,11 @@ class A2sVisitorTest {
     @Test
     fun `字符串模板与插值`() {
         val script = parse(
-            """
+            $$$"""
             on PlayerRightClick { e ->
-                val a = "价格: ${'$'}{e.count}"
-                val b = "名称: ${'$'}name"
-                val c = "字面量: ${'$'}${'$'}name"
+                val a = "价格: ${e.count}"
+                val b = "名称: $name"
+                val c = "字面量: $$name"
                 val d = "纯文本"
             }
             """
@@ -125,7 +125,7 @@ class A2sVisitorTest {
         // b: $name 变量引用插值
         assertIs<A2sStringInterpolation>(decls[1].initializer)
         // c: $$ 转义 + 文本，全是纯文本 → 合并为字符串字面量
-        assertEquals("字面量: \$name", (decls[2].initializer as A2sStringLiteral).value)
+        assertEquals($$"字面量: $name", (decls[2].initializer as A2sStringLiteral).value)
         // d: 纯文本
         assertEquals("纯文本", (decls[3].initializer as A2sStringLiteral).value)
     }

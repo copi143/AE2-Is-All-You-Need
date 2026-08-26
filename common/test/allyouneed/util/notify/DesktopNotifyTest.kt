@@ -158,10 +158,10 @@ class DesktopNotifyTest {
     @Test
     fun `windows toast passes text via env not argv interpolation`() {
         val tools = windowsTools { "powershell.exe" }
-        val cmd = tools.first { it.name == "powershell-toast" }.build("powershell.exe", "ti\$tle", "bo\"dy")
-        assertEquals("ti\$tle", cmd.env["AYN_NOTIFY_TITLE"])
+        val cmd = tools.first { it.name == "powershell-toast" }.build("powershell.exe", $$"ti$tle", "bo\"dy")
+        assertEquals($$"ti$tle", cmd.env["AYN_NOTIFY_TITLE"])
         assertEquals("bo\"dy", cmd.env["AYN_NOTIFY_BODY"])
-        assertFalse(cmd.argv.any { it.contains("ti\$tle") || it.contains("bo\"dy") })
+        assertFalse(cmd.argv.any { it.contains($$"ti$tle") || it.contains("bo\"dy") })
     }
 }
 

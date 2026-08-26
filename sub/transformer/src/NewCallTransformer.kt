@@ -19,9 +19,9 @@ object NewCallTransformer {
     const val INTERNER_OWNER = "allyouneed/core/KeyInterner"
     const val AE_KEY = "appeng/api/stacks/AEKey"
     const val AE_KEY_ASM = "allyouneed/core/AEKeyAsm"
-    const val ASM_EQUALS = "asm\$equals"
-    const val ASM_HASH = "asm\$hashCode"
-    const val ASM_DROP = "asm\$dropSecondary"
+    const val ASM_EQUALS = $$"asm$equals"
+    const val ASM_HASH = $$"asm$hashCode"
+    const val ASM_DROP = $$"asm$dropSecondary"
     const val DROP_SECONDARY = "dropSecondary"
 
     fun apply(cn: ClassNode, keyClasses: Set<String>): Int {

@@ -24,9 +24,9 @@ object KeyClassScanner {
     )
 
     val SEED_SITES = arrayOf(
-        "allyouneed/logic/aekey/EnergyKey\$Type",
-        "allyouneed/logic/aekey/ManaKey\$Type",
-        "allyouneed/logic/aekey/VirtualKey\$Type",
+        $$"allyouneed/logic/aekey/EnergyKey$Type",
+        $$"allyouneed/logic/aekey/ManaKey$Type",
+        $$"allyouneed/logic/aekey/VirtualKey$Type",
     )
 
     fun scanKeyClasses(paths: Iterable<Path>): Set<String> {

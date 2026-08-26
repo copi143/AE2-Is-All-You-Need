@@ -32,6 +32,7 @@ class RationalTest {
     }
 
     @Test
+    @Suppress("KotlinMisorderedAssertEqualsArguments")
     fun `fromDecimalString 精确解析`() {
         assertEquals(Rational.of(BigInteger("157"), BigInteger("50")), Rational.fromDecimalString("3.14"))
         assertEquals(Rational.ONE, Rational.fromDecimalString("1"))

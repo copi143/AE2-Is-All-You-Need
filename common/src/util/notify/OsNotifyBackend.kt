@@ -215,26 +215,26 @@ private fun notifyEnv(title: String, body: String) = mapOf(
     "AYN_NOTIFY_BODY" to body,
 )
 
-private const val WINDOWS_TOAST_SCRIPT = """
-${'$'}ErrorActionPreference = 'Stop'
-${'$'}title = [System.Security.SecurityElement]::Escape(${'$'}env:AYN_NOTIFY_TITLE)
-${'$'}body = [System.Security.SecurityElement]::Escape(${'$'}env:AYN_NOTIFY_BODY)
+private const val WINDOWS_TOAST_SCRIPT = $$"""
+$ErrorActionPreference = 'Stop'
+$title = [System.Security.SecurityElement]::Escape($env:AYN_NOTIFY_TITLE)
+$body = [System.Security.SecurityElement]::Escape($env:AYN_NOTIFY_BODY)
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
-${'$'}xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-${'$'}xml.LoadXml(('<toast><visual><binding template="ToastGeneric"><text>' + ${'$'}title + '</text><text>' + ${'$'}body + '</text></binding></visual></toast>'))
-${'$'}toast = [Windows.UI.Notifications.ToastNotification]::new(${'$'}xml)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('AE2 Is All You Need').Show(${'$'}toast)
+$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+$xml.LoadXml(('<toast><visual><binding template="ToastGeneric"><text>' + $title + '</text><text>' + $body + '</text></binding></visual></toast>'))
+$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('AE2 Is All You Need').Show($toast)
 """
 
-private const val WINDOWS_BALLOON_SCRIPT = """
-${'$'}ErrorActionPreference = 'Stop'
+private const val WINDOWS_BALLOON_SCRIPT = $$"""
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-${'$'}n = New-Object System.Windows.Forms.NotifyIcon
-${'$'}n.Icon = [System.Drawing.SystemIcons]::Information
-${'$'}n.Visible = ${'$'}true
-${'$'}n.ShowBalloonTip(5000, ${'$'}env:AYN_NOTIFY_TITLE, ${'$'}env:AYN_NOTIFY_BODY, [System.Windows.Forms.ToolTipIcon]::Info)
+$n = New-Object System.Windows.Forms.NotifyIcon
+$n.Icon = [System.Drawing.SystemIcons]::Information
+$n.Visible = $true
+$n.ShowBalloonTip(5000, $env:AYN_NOTIFY_TITLE, $env:AYN_NOTIFY_BODY, [System.Windows.Forms.ToolTipIcon]::Info)
 Start-Sleep -Milliseconds 5500
-${'$'}n.Dispose()
+$n.Dispose()
 """

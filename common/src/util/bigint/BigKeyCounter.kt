@@ -58,14 +58,14 @@ class BigKeyCounter(
 
     /** Diff keys whose amounts differ from [other] (including keys only present on one side). */
     fun collectChangedKeys(other: BigKeyCounter, out: Consumer<AEKey>) {
-        for (entry in amounts.object2ObjectEntrySet()) {
-            if (entry.value.compareTo(other.get(entry.key)) != 0) {
-                out.accept(entry.key)
+        for ((key, value) in amounts.object2ObjectEntrySet()) {
+            if (value.compareTo(other[key]) != 0) {
+                out.accept(key)
             }
         }
-        for (entry in other.amounts.object2ObjectEntrySet()) {
-            if (!amounts.containsKey(entry.key)) {
-                out.accept(entry.key)
+        for ((key, value) in other.amounts.object2ObjectEntrySet()) {
+            if (!amounts.containsKey(key)) {
+                out.accept(key)
             }
         }
     }

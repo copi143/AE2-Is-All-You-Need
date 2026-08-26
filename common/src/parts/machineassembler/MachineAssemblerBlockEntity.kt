@@ -114,13 +114,12 @@ class MachineAssemblerBlockEntity(
 
     override fun getCraftingMachineInfo(): PatternContainerGroup {
         val machineType = installedMachine()
-        val name = if (machineType != null) {
-            machineType.name
-        } else if (hasCustomName()) {
-            customName
-        } else {
-            MachineAssemblerRegistration.block.asItem().description
-        }
+        val name = machineType?.name
+            ?: if (hasCustomName()) {
+                customName
+            } else {
+                MachineAssemblerRegistration.block.asItem().description
+            }
         val icon = if (machineType != null) {
             AEItemKey.of(machineType.icon)
         } else {

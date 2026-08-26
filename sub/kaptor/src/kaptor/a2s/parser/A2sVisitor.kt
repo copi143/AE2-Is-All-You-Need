@@ -185,8 +185,7 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
     }
 
     override fun visitExprStatement(ctx: A2sParser.ExprStatementContext): A2sStmt {
-        val expr = visit(ctx.expression()) as A2sExpr
-        return when (expr) {
+        return when (val expr = visit(ctx.expression()) as A2sExpr) {
             is A2sIfExpr -> A2sIf(expr.condition, expr.thenBody, expr.elseBody)
             is A2sWhenExpr -> A2sWhen(expr.subject, expr.entries)
             else -> A2sExprStmt(expr)

@@ -24,14 +24,13 @@ class UnifiedPatternEncodingTermScreen(
 
     private val kindTabs: Map<EncodingKind, TabButton> = EncodingKind.entries.associateWith { kind ->
         val tab = TabButton(kind.icon(), kind.tooltip()) { menu.setKind(kind) }
-        tab.setStyle(TabButton.Style.HORIZONTAL)
+        tab.style = TabButton.Style.HORIZONTAL
         widgets.add("kindTabButton${kind.ordinal}", tab)
         tab
     }
 
     private val machineSlot = MachineSlotWidget(menu).also { widgets.add("machineSlot", it) }
 
-    @Suppress("UsePropertyAccessSyntax")
     private val probabilityField = widgets.addTextField("adaptiveProbability").apply {
         setMaxLength(8)
         message = Component.translatable("gui.ae2isallyouneed.adaptive_probability")
@@ -39,7 +38,6 @@ class UnifiedPatternEncodingTermScreen(
         setResponder { value -> parseDouble(value)?.let { menu.setProbability(it) } }
     }
 
-    @Suppress("UsePropertyAccessSyntax")
     private val timeoutField = widgets.addTextField("adaptiveTimeout").apply {
         setMaxLength(5)
         message = Component.translatable("gui.ae2isallyouneed.adaptive_timeout")

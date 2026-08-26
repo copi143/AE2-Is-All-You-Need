@@ -389,7 +389,7 @@ class KotlinSubsetVisitor(
         if (ctx.inOperator().isNotEmpty() && ctx.elvisExpression().size > 1) {
             val right = parseElvisExpression(ctx.elvisExpression(1))
             left = IrFunctionCall("_contains", listOf(right as IrExpression, left as IrExpression))
-        } else if (!ctx.isOperator().isEmpty() && ctx.type().isNotEmpty()) {
+        } else if (ctx.isOperator().isNotEmpty() && ctx.type().isNotEmpty()) {
             val typeName = parseType(ctx.type(0))
             left = IrFunctionCall("_isType", listOf(left as IrExpression, IrStringLiteral(typeName)))
         }

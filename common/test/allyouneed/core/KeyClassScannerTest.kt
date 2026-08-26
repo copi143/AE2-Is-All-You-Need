@@ -31,7 +31,7 @@ class KeyClassScannerTest {
         assertTrue("demo/UsesKey" in sites)
         assertTrue("demo/Unrelated" !in sites)
         assertTrue("allyouneed/logic/aekey/EnergyKey" in keys)
-        assertTrue("allyouneed/logic/aekey/EnergyKey\$Type" in sites)
+        assertTrue($$"allyouneed/logic/aekey/EnergyKey$Type" in sites)
     }
 
     @Test

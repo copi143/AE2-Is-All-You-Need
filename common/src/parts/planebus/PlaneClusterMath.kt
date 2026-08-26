@@ -1,5 +1,7 @@
 package allyouneed.parts.planebus
 
+import kotlin.math.abs
+
 /**
  * 破坏/成型面板专用线缆的集群规模上限：单结构最多 32 个线缆部件、64 个面板
  * （破坏与成型合计）。超出任一上限则整个结构不成型，所有成员（线缆与面板）
@@ -39,9 +41,9 @@ fun unpackPosZ(p: Long): Int = ((p shl 26) shr 38).toInt()
 /** 相同方块或六向相邻返回 true。Equal block or directly adjacent (6-way). */
 fun adjacentOrEqual(a: Long, b: Long): Boolean =
     a == b ||
-        Math.abs(unpackPosX(a) - unpackPosX(b)) +
-        Math.abs(unpackPosY(a) - unpackPosY(b)) +
-        Math.abs(unpackPosZ(a) - unpackPosZ(b)) == 1
+        abs(unpackPosX(a) - unpackPosX(b)) +
+            abs(unpackPosY(a) - unpackPosY(b)) +
+            abs(unpackPosZ(a) - unpackPosZ(b)) == 1
 
 /**
  * 集群划分结果。

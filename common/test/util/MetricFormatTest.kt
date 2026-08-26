@@ -56,6 +56,7 @@ class MetricFormatTest {
     // ── façades ──────────────────────────────────────────────────
 
     @Test
+    @Suppress("KotlinMisorderedAssertEqualsArguments")
     fun `MetricFormat facade methods match si and iec`() {
         assertEquals(MetricFormat.si(4).format(12_345), MetricFormat.siFormat(12_345L, 4))
         assertEquals(

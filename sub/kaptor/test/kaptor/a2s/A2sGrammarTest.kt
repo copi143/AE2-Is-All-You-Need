@@ -52,7 +52,7 @@ class A2sGrammarTest {
     @Test
     fun `事件声明与 post`() {
         parse(
-            """
+            $$"""
             event MyEvent(val count: i32) {
                 fun doubled() = count * 2
             }
@@ -62,7 +62,7 @@ class A2sGrammarTest {
             }
 
             on MyEvent { e ->
-                println("收到事件，count 翻倍 = ${'$'}{e.doubled()}")
+                println("收到事件，count 翻倍 = ${e.doubled()}")
             }
             """
         )
@@ -150,12 +150,12 @@ class A2sGrammarTest {
     @Test
     fun `错误处理`() {
         parse(
-            """
+            $$"""
             on MeCraftingComplete { e ->
                 try {
-                    println("合成完成: ${'$'}{e.result}")
+                    println("合成完成: ${e.result}")
                 } catch (err) {
-                    println("处理失败: ${'$'}{err.message}")
+                    println("处理失败: ${err.message}")
                 } finally {
                     println("完成")
                 }
@@ -194,10 +194,10 @@ class A2sGrammarTest {
     @Test
     fun `字符串美元转义`() {
         parse(
-            """
+            $$"""
             on PlayerRightClick { e ->
-                val a = "价格: ${'$'}${'$'}100"
-                val b = "名称: ${'$'}{name}"
+                val a = "价格: $$100"
+                val b = "名称: ${name}"
             }
             """
         )
@@ -206,11 +206,11 @@ class A2sGrammarTest {
     @Test
     fun `美元转义token不为变量引用`() {
         // $$name 应拆为 LineStrEscapedDollar($$) + LineStrText(name)，而非 LineStrRef($name)
-        val tokens = lexStringTokens("\"\$\$name\"")
+        val tokens = lexStringTokens($$$"\"$$name\"")
         assertEquals(
             listOf(
                 "QUOTE_OPEN:\"",
-                "LineStrEscapedDollar:\$\$",
+                $$"LineStrEscapedDollar:$$",
                 "LineStrText:name",
                 "QUOTE_CLOSE:\"",
             ),
@@ -221,11 +221,11 @@ class A2sGrammarTest {
     @Test
     fun `单个美元后跟标识符仍为变量引用`() {
         // $name 应匹配 LineStrRef($name)
-        val tokens = lexStringTokens("\"\$name\"")
+        val tokens = lexStringTokens($$"\"$name\"")
         assertEquals(
             listOf(
                 "QUOTE_OPEN:\"",
-                "LineStrRef:\$name",
+                $$"LineStrRef:$name",
                 "QUOTE_CLOSE:\"",
             ),
             tokens

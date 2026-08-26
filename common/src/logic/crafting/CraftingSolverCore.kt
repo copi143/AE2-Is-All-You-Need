@@ -264,7 +264,7 @@ class CraftingSolverCore(
         val xs = LongArray(mRecipes)
         for ((r, v) in vars.withIndex()) {
             val value = v.value ?: continue
-            val count = Math.round(value.toDouble())
+            val count = value.toDouble().roundToLong()
             xs[r] = if (count > 0) count else 0
         }
         return xs

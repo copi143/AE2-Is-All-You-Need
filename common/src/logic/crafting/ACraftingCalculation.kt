@@ -83,10 +83,7 @@ class ACraftingCalculation(
     }
 
     private fun computePlan(): ICraftingPlan {
-        val snap = snapshot
-        if (snap == null) {
-            throw IllegalStateException("No crafting inventory snapshot available")
-        }
+        val snap = snapshot ?: throw IllegalStateException("No crafting inventory snapshot available")
 
         val planner = MipCraftingPlanner(snap, level, output, requestedAmount)
         val mip = planner.plan()

@@ -74,7 +74,7 @@ class BigIntegerStorageCellInventory(
 
         maxItemsPerType = if (upgrades.isInstalled(AEItems.EQUAL_DISTRIBUTION_CARD)) {
             val partitionKeyCount =
-                if (!isFuzzy && partitionListMode == IncludeExclude.WHITELIST && !config.keySet().isEmpty()) {
+                if (!isFuzzy && partitionListMode == IncludeExclude.WHITELIST && config.keySet().isNotEmpty()) {
                     config.keySet().size
                 } else {
                     maxItemTypes
