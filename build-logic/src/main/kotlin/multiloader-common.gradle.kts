@@ -1,4 +1,4 @@
-import org.jetbrains.dokka.gradle.DokkaTaskPartial
+import org.jetbrains.dokka.gradle.DokkaExtension
 
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
@@ -6,7 +6,7 @@ plugins {
     `java-library`
     `maven-publish`
     id("org.jetbrains.kotlin.jvm")
-    id("org.jetbrains.dokka")
+    id("org.jetbrains.dokka-javadoc")
 }
 
 val modId = project.property("modId") as String
@@ -100,12 +100,10 @@ tasks.named<Jar>("jar") {
     }
 }
 
-tasks.withType<DokkaTaskPartial>().configureEach {
+configure<DokkaExtension> {
     dokkaSourceSets.configureEach {
-        includeNonPublic.set(false)
         skipDeprecated.set(false)
         reportUndocumented.set(false)
-        jdkVersion.set(libs.versions.java.get().toInt())
         sourceRoots.from(project.the<JavaPluginExtension>().sourceSets["main"].allSource)
     }
 }
@@ -118,8 +116,8 @@ tasks.named<Javadoc>("javadoc") {
 
 // Make the javadoc jar take in the Dokka output
 tasks.named<Jar>("javadocJar") {
-    dependsOn(tasks.named("dokkaJavadoc"))
-    from(tasks.named("dokkaJavadoc"))
+    dependsOn(tasks.named("dokkaGeneratePublicationJavadoc"))
+    from(tasks.named("dokkaGeneratePublicationJavadoc"))
 }
 
 tasks.named<ProcessResources>("processResources") {

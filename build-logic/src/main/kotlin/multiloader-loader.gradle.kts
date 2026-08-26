@@ -1,4 +1,4 @@
-import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.dokka.gradle.DokkaExtension
 
 plugins {
     id("multiloader-common")
@@ -87,17 +87,20 @@ tasks.named<Jar>("sourcesJar") {
 // Use dokka to generate javadoc for both Java and Kotlin sources
 // instead of using the builtin javadoc tools. This allows mixing
 // Kotlin and Java
-tasks.named<DokkaTask>("dokkaJavadoc") {
+tasks.named("dokkaGeneratePublicationJavadoc") {
     dependsOn(configurations["commonJava"])
     dependsOn(configurations["commonKotlin"])
     // Dokka resolves the full compile classpath to type-check sources, which transitively pulls in
     // :common, :kaptor and :averith build outputs. dependsOn the resolved configuration so Gradle
     // declares explicit dependencies on those producer tasks instead of relying on implicit ones.
     dependsOn(configurations["compileClasspath"])
-    dokkaSourceSets.configureEach {
+}
+
+configure<DokkaExtension> {
+    dokkaSourceSets.named("main") {
         sourceRoots.from(
-            configurations["commonJava"].singleFile,
-            configurations["commonKotlin"].singleFile
+            configurations["commonJava"],
+            configurations["commonKotlin"]
         )
         classpath.from(configurations["compileClasspath"])
     }

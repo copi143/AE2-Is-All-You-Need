@@ -2,10 +2,9 @@
 java = "17"
 kotlin = "2.4.10"
 # kotlin-dsl = "6.7.6"
-# dokka = "2.2.0"
+dokka = "2.2.0"
 moddev = "2.0.143"
 loom = "1.17.12"
-dokka = "1.9.20"
 
 minecraft = "1.20.1"
 minecraftRange = "[1.20.1, 1.20.2)"
