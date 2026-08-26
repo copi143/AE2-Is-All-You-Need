@@ -3,7 +3,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "AE2-Is-All-You-Need"
 
 pluginManagement {
-    // includeBuild("build-logic")
+    includeBuild("build-logic")
     repositories {
         gradlePluginPortal()
         mavenCentral()
@@ -13,6 +13,7 @@ pluginManagement {
         }
     }
     plugins {
+        kotlin("jvm") version "2.4.10"
         kotlin("kapt") version "2.4.10"
     }
 }
