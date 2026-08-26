@@ -10,22 +10,21 @@
 
 ```
 # 基础兼容层（保留在 allyouneed 下，仅依赖 MC + androidx.compose.ui）
-common/src/main/kotlin/allyouneed/client/compose/
-└── platform/
-    ├── ComposeOwner.kt          # 官方 Owner 实现：Recomposer 帧时钟 + LayoutNode 根 + 输入桥接
-    ├── ComposeLayer.kt          # ★ 嵌入面：任意 vanilla Screen 内嵌/全屏托管一个 Compose 子树
-    ├── ComposeScreen.kt         # 全屏 Screen 薄适配器（内部持有一个全屏 ComposeLayer）
-    ├── ComposeContainerScreen.kt# 容器型全屏屏（EMI 返回栈兼容）
-    ├── ComposeApi.kt            # TooltipHost / MousePosition / FrameCallbackHost / Local* 共享 API
-    ├── ScrollState.kt           # target/display 双值平滑滚动 + rememberScrollState（帧回调驱动）
-    ├── McGraphics.kt            # 当前 GuiGraphics 的公开持有者（渲染桥接）
-    ├── McCanvas.kt              # Canvas → GuiGraphics 指令桥（含 flush / scissor 透传）
-    ├── McTextInputService.kt    # 文本输入桥：无 IME（服务端）时的原生键盘码 → EditCommand 映射
-    ├── McPointerCursor.kt       # PointerIcon → GLFW 系统光标
-    └── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
+common/src/client/compose/platform/             # 实际 sourceSet: common/src (见 common/build.gradle.kts kotlin.srcDirs("src","minecraftx","ae2x"))
+├── ComposeOwner.kt          # 官方 Owner 实现：Recomposer 帧时钟 + LayoutNode 根 + 输入桥接
+├── ComposeLayer.kt          # ★ 嵌入面：任意 vanilla Screen 内嵌/全屏托管一个 Compose 子树
+├── ComposeScreen.kt         # 全屏 Screen 薄适配器（内部持有一个全屏 ComposeLayer）
+├── ComposeContainerScreen.kt# 容器型全屏屏（EMI 返回栈兼容）
+├── ComposeApi.kt            # TooltipHost / MousePosition / FrameCallbackHost / Local* 共享 API
+├── ScrollState.kt           # target/display 双值平滑滚动 + rememberScrollState（帧回调驱动）
+├── McGraphics.kt            # 当前 GuiGraphics 的公开持有者（渲染桥接）
+├── McCanvas.kt              # Canvas → GuiGraphics 指令桥（含 flush / scissor 透传）
+├── McTextInputService.kt    # 文本输入桥：无 IME（服务端）时的原生键盘码 → EditCommand 映射
+├── McPointerCursor.kt       # PointerIcon → GLFW 系统光标
+└── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
 
 # 界面定义层（minecraftx.compose.*，全部基于基础兼容层构建）
-common/src/main/kotlin/minecraftx/compose/
+common/minecraftx/compose/                      # 实际 sourceSet: common/minecraftx
 ├── theme/
 │   ├── McTheme.kt               # CompositionLocal 提供者 + McTheme.colors/typography/shapes 访问
 │   ├── McColorScheme.kt         # 语义颜色契约（接口默认值 = 暗色主题）
@@ -152,7 +151,7 @@ class MyScreen : Screen(...) {
 
 | 组件 | 说明 |
 | --- | --- |
-| `McText(Component|String, color, modifier, maxWidth, clipFrame)` | 统一文本；`clipFrame` 给逻辑矩形 → scissor 像素裁剪（半行平滑滚动必需）；`color` 默认取 `McTheme.colors.textPrimary` |
+| `McText(Component|String, color, modifier, maxWidth, clipFrame)` | 统一文本（内部经 `ComponentConverters.toStyledString()`→`McTextEngine.layout/paint`，见 `docs/Text-Engine.md`，可切 vanilla / MSDF）；`clipFrame` 给逻辑矩形 → scissor 像素裁剪（半行平滑滚动必需）；`color` 默认取 `McTheme.colors.textPrimary` |
 | `McPanel(width, height, colors) { BoxScope }` | 固定尺寸带边框面板，背景/边框来自主题（`colors` 可单节点覆盖） |
 | `McCloseButton(onClose, colors)` | ✕ 关闭按钮（默认 14×14），主题化 |
 | `McVirtualColumn(lines, state, viewportW/H, lineHeight)` | 虚拟化文本列：不可见行不组合；容器带 `mcScroll` 滚轮；`McLine.color` 为 null 时取主题主色 |
@@ -180,7 +179,7 @@ IME 会话（Minecraft 内没有 Android IME），而是由 `McTextInputService`
 - 编辑键：方向键/Home/End（含 Shift 选区）、Backspace、Delete、Ctrl+A/C/V/X、回车
   （单行触发 `ImeAction.Done`，多行插入换行）。
 - 光标渲染：插入点绘制两态闪烁（无选区时按 `System.currentTimeMillis` 亮灭，透明合成，
-  blend 开启），有选区时半透明高亮。
+  blend 开启），有选区时半透明高亮。测宽 / 绘制走当前 `McTextEngine`。
 - 输入默认居中、仅绘制可视片段；内容超出时水平滚动，光标位置自动滚入视野。
 - 键盘转发路径：`ComposeScreen`/`ComposeContainerScreen`/`AeComposeScreen` 的 `keyPressed/keyReleased/charTyped`
   → `ComposeLayer` → `ComposeOwner.onKeyPressed/onCharTyped` → 焦点节点的 `McTextField`。

@@ -26,10 +26,13 @@ import androidx.compose.ui.text.input.SetSelectionCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.translate
+import minecraftx.compose.text.LocalMcTextEngine
+import minecraftx.compose.text.McStyledString
+import minecraftx.compose.text.McTextEngine
 import minecraftx.compose.theme.McColorScheme
 import minecraftx.compose.theme.McTheme
-import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphics
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -47,7 +50,7 @@ import kotlin.math.roundToInt
  *    codes with a US-layout shift table (see [McTextInputService]).
  *
  * Editing keys (backspace, delete, arrows with shift-selection, home/end, Enter, Ctrl+A) work in
- * both modes. The field draws with the Minecraft font, shows a blinking caret, a selection
+ * both modes. The field draws with the active [McTextEngine], shows a blinking caret, a selection
  * highlight and a composing-text underline, and scrolls horizontally to keep the caret visible.
  *
  * Clicking the field moves the caret to the click position and takes input focus (only one field is
@@ -72,7 +75,7 @@ fun McTextField(
     colors: McColorScheme = McTheme.colors,
     onImeActionPerformed: (ImeAction) -> Unit = {},
 ) {
-    val font = Minecraft.getInstance().font
+    val engine = LocalMcTextEngine.current
     val service = LocalMcTextInputService.current
     val id = remember { nextFieldId() }
     val processor = remember { EditProcessor().apply { reset(value, null) } }
@@ -114,7 +117,7 @@ fun McTextField(
 
     // Keep the caret visible while typing / moving.
     LaunchedEffect(internal) {
-        scrollX = computeTargetScroll(font, internal, scrollX, width)
+        scrollX = computeTargetScroll(engine, internal, scrollX, width)
     }
 
     Box(
@@ -135,7 +138,7 @@ fun McTextField(
                         val offset = if (internal.text.isEmpty()) {
                             0
                         } else {
-                            font.plainSubstrByWidth(internal.text, max(0, clickPx.roundToInt())).length
+                            engine.indexAtWidth(internal.text, max(0, clickPx.roundToInt()))
                         }
                         val newValue = processor.apply(listOf(SetSelectionCommand(offset, offset)))
                         internal = newValue
@@ -147,7 +150,7 @@ fun McTextField(
                 val g = McGraphics.current ?: return@drawBehind
                 drawField(
                     g = g,
-                    font = font,
+                    engine = engine,
                     value = internal,
                     scrollX = scrollX,
                     blinkTick = blinkTick,
@@ -161,9 +164,9 @@ fun McTextField(
     )
 }
 
-private fun drawField(
+private fun DrawScope.drawField(
     g: GuiGraphics,
-    font: Font,
+    engine: McTextEngine,
     value: TextFieldValue,
     scrollX: Float,
     blinkTick: Int,
@@ -190,16 +193,16 @@ private fun drawField(
     if (clipRight > clipLeft && clipBottom > clipTop) {
         McScissor.push(g, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
         try {
-            drawContent(g, font, value, scrollX, blinkTick, focused, width, height, placeholder, colors)
+            drawContent(g, engine, value, scrollX, blinkTick, focused, width, height, placeholder, colors)
         } finally {
             McScissor.pop(g)
         }
     }
 }
 
-private fun drawContent(
+private fun DrawScope.drawContent(
     g: GuiGraphics,
-    font: Font,
+    engine: McTextEngine,
     value: TextFieldValue,
     scrollX: Float,
     blinkTick: Int,
@@ -210,53 +213,48 @@ private fun drawContent(
     colors: McColorScheme,
 ) {
     val text = value.text
-    val scrollOffset = if (text.isEmpty()) 0 else font.plainSubstrByWidth(text, scrollX.roundToInt()).length
-    val prefixWidth = font.width(text.substring(0, scrollOffset))
-    val textY = (height - font.lineHeight) / 2
-
-    // Visible text slice, offset so glyph `scrollOffset` sits at drawX.
-    val visibleWidth = width - TEXT_PAD_LEFT - TEXT_PAD_RIGHT
-    val drawX = TEXT_PAD_LEFT + prefixWidth - scrollX
+    val textY = (height - engine.lineHeight) / 2
+    val drawX = TEXT_PAD_LEFT - scrollX
     if (text.isEmpty()) {
         if (!placeholder.isNullOrEmpty()) {
-            g.drawString(font, placeholder, drawX.roundToInt(), textY, colors.textSecondary.toArgb(), false)
+            val layout = engine.layout(McStyledString(placeholder), Int.MAX_VALUE, true)
+            translate(drawX, textY.toFloat()) {
+                with(engine) { paint(layout, colors.textSecondary) }
+            }
         }
     } else {
-        val drawSub = text.substring(scrollOffset)
-        val availPx = (visibleWidth + scrollX - prefixWidth).roundToInt().coerceAtLeast(0)
-        val slice = if (font.width(drawSub) > availPx) font.plainSubstrByWidth(drawSub, availPx) else drawSub
-        g.drawString(font, slice, drawX.roundToInt(), textY, colors.textPrimary.toArgb(), false)
+        val layout = engine.layout(McStyledString(text), Int.MAX_VALUE, true)
+        translate(drawX, textY.toFloat()) {
+            with(engine) { paint(layout, colors.textPrimary) }
+        }
     }
 
-    // Selection highlight or blinking caret.
     if (value.selection.collapsed) {
         if (focused && (blinkTick / CARET_BLINK_FRAMES) % 2 == 0) {
-            val caretX = xForOffset(font, text, value.selection.min, scrollX)
+            val caretX = xForOffset(engine, text, value.selection.min, scrollX)
             g.fill(caretX, 2, caretX + 2, height - 2, colors.textCaret.toArgb())
         }
     } else {
-        val selStart = xForOffset(font, text, value.selection.min, scrollX)
-        val selEnd = xForOffset(font, text, value.selection.max, scrollX)
+        val selStart = xForOffset(engine, text, value.selection.min, scrollX)
+        val selEnd = xForOffset(engine, text, value.selection.max, scrollX)
         g.fill(selStart, 2, selEnd, height - 2, colors.textSelection.toArgb())
     }
 
-    // Composing-text underline (IME preedit region, when the buffer reports one).
     val composition = value.composition
     if (composition != null && !composition.collapsed) {
-        val compStart = xForOffset(font, text, composition.min, scrollX)
-        val compEnd = xForOffset(font, text, composition.max, scrollX)
+        val compStart = xForOffset(engine, text, composition.min, scrollX)
+        val compEnd = xForOffset(engine, text, composition.max, scrollX)
         g.fill(compStart, height - 3, compEnd, height - 1, colors.textCaret.toArgb())
     }
 }
 
-/** Screen-space x of the text offset [offset] given the current scroll. */
-private fun xForOffset(font: Font, text: String, offset: Int, scrollX: Float): Int =
-    (TEXT_PAD_LEFT + font.width(text.substring(0, offset)) - scrollX).roundToInt()
+private fun xForOffset(engine: McTextEngine, text: String, offset: Int, scrollX: Float): Int =
+    (TEXT_PAD_LEFT + engine.widthOf(text.substring(0, offset)) - scrollX).roundToInt()
 
-private fun computeTargetScroll(font: Font, value: TextFieldValue, current: Float, width: Int): Float {
+private fun computeTargetScroll(engine: McTextEngine, value: TextFieldValue, current: Float, width: Int): Float {
     val visibleWidth = width - TEXT_PAD_LEFT - TEXT_PAD_RIGHT
-    val maxScroll = max(0, font.width(value.text) - visibleWidth).toFloat()
-    val caretX = font.width(value.text.substring(0, value.selection.max)).toFloat()
+    val maxScroll = max(0, engine.widthOf(value.text) - visibleWidth).toFloat()
+    val caretX = engine.widthOf(value.text.substring(0, value.selection.max)).toFloat()
     var target = current
     if (caretX - target < 0f) {
         target = caretX

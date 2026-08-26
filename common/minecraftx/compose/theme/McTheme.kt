@@ -5,6 +5,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
+import minecraftx.compose.text.LocalMcTextEngine
+import minecraftx.compose.text.McTextEngines
 
 /**
  * Theme plumbing for the Minecraft component set.
@@ -27,10 +29,12 @@ fun McTheme(
     content: @Composable () -> Unit,
 ) {
     val resolved = colorScheme ?: McThemeSettings.colorScheme
+    val engine = McTextEngines.byId(McThemeSettings.textEngineId)
     CompositionLocalProvider(
         LocalColorScheme provides resolved,
         LocalTypography provides typography,
         LocalShapes provides shapes,
+        LocalMcTextEngine provides engine,
         content = content,
     )
 }

@@ -29,11 +29,14 @@ import androidx.compose.ui.text.input.EditProcessor
 import androidx.compose.ui.text.input.SetSelectionCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.translate
 import minecraftx.compose.foundation.mcScroll
+import minecraftx.compose.text.LocalMcTextEngine
+import minecraftx.compose.text.McStyledString
+import minecraftx.compose.text.McTextEngine
 import minecraftx.compose.theme.McColorScheme
 import minecraftx.compose.theme.McTheme
-import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphics
 import kotlin.math.max
 import kotlin.math.min
@@ -64,7 +67,7 @@ fun McTextArea(
     placeholder: String? = null,
     colors: McColorScheme = McTheme.colors,
 ) {
-    val font = Minecraft.getInstance().font
+    val engine = LocalMcTextEngine.current
     val service = LocalMcTextInputService.current
     val id = remember { nextFieldId() }
     val processor = remember { EditProcessor().apply { reset(value, null) } }
@@ -90,10 +93,10 @@ fun McTextArea(
     }
 
     val contentWidth = width - TEXT_PAD_LEFT - TEXT_AREA_PAD_RIGHT
-    val rowHeightPx = font.lineHeight
+    val rowHeightPx = engine.lineHeight
     val viewHeight = (height - 2 * TEXT_AREA_PAD_V).coerceAtLeast(rowHeightPx)
     // Rebuilt unconditionally so the navigation hook and the draw pass always see current text.
-    val layout = buildTextAreaLayout(font, internal.text, contentWidth)
+    val layout = buildTextAreaLayout(engine, internal.text, contentWidth)
     scrollState.maxScroll = max(0, layout.rows.size * rowHeightPx - viewHeight).toFloat()
     if (scrollState.display > scrollState.maxScroll) scrollState.seek(scrollState.maxScroll)
     layoutHolder.layout = layout
@@ -131,10 +134,10 @@ fun McTextArea(
                         val from = layoutHolder.layout.rowForOffset(internal.selection.max)
                         val fromRow = rows[from]
                         val desiredX =
-                            font.width(fromRow.text.substring(0, (internal.selection.max - fromRow.start).coerceIn(0, fromRow.text.length)))
+                            engine.widthOf(fromRow.text.substring(0, (internal.selection.max - fromRow.start).coerceIn(0, fromRow.text.length)))
                                 .toFloat()
                         val targetRow = rows[(from + deltaRows).coerceIn(0, rows.lastIndex)]
-                        applySelection(select, targetRow.start + font.plainSubstrByWidth(targetRow.text, max(0, desiredX.roundToInt())).length)
+                        applySelection(select, targetRow.start + engine.indexAtWidth(targetRow.text, max(0, desiredX.roundToInt())))
                     }
 
                     override fun toLineBoundary(toStart: Boolean, select: Boolean) {
@@ -174,7 +177,7 @@ fun McTextArea(
                             .coerceIn(0, rows.lastIndex)
                         val row = rows[rowIdx]
                         val clickX = (press.x - TEXT_PAD_LEFT).roundToInt().coerceAtLeast(0)
-                        val offset = row.start + font.plainSubstrByWidth(row.text, clickX).length
+                        val offset = row.start + engine.indexAtWidth(row.text, clickX)
                         applyEdit(listOf(SetSelectionCommand(offset, offset)))
                     }
                 }
@@ -183,7 +186,7 @@ fun McTextArea(
                 val g = McGraphics.current ?: return@drawBehind
                 drawArea(
                     g = g,
-                    font = font,
+                    engine = engine,
                     value = internal,
                     layout = layout,
                     scrollY = scrollState.display,
@@ -217,9 +220,9 @@ private class LayoutHolder {
     lateinit var layout: TextAreaLayout
 }
 
-private fun drawArea(
+private fun DrawScope.drawArea(
     g: GuiGraphics,
-    font: Font,
+    engine: McTextEngine,
     value: TextFieldValue,
     layout: TextAreaLayout,
     scrollY: Float,
@@ -249,16 +252,16 @@ private fun drawArea(
     if (clipRight > clipLeft && clipBottom > clipTop) {
         McScissor.push(g, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
         try {
-            drawRows(g, font, value, layout, scrollY, viewHeight, blinkTick, focused, rowHeightPx, placeholder, colors)
+            drawRows(g, engine, value, layout, scrollY, viewHeight, blinkTick, focused, rowHeightPx, placeholder, colors)
         } finally {
             McScissor.pop(g)
         }
     }
 }
 
-private fun drawRows(
+private fun DrawScope.drawRows(
     g: GuiGraphics,
-    font: Font,
+    engine: McTextEngine,
     value: TextFieldValue,
     layout: TextAreaLayout,
     scrollY: Float,
@@ -275,10 +278,16 @@ private fun drawRows(
     for (i in firstRow..lastRow) {
         val row = layout.rows[i]
         val y = rowY(i, scrollY, rowHeightPx)
-        g.drawString(font, row.text, TEXT_PAD_LEFT, y, colors.textPrimary.toArgb(), false)
+        val rowLayout = engine.layout(McStyledString(row.text), Int.MAX_VALUE, true)
+        translate(TEXT_PAD_LEFT.toFloat(), y.toFloat()) {
+            with(engine) { paint(rowLayout, colors.textPrimary) }
+        }
     }
     if (value.text.isEmpty() && !placeholder.isNullOrEmpty()) {
-        g.drawString(font, placeholder, TEXT_PAD_LEFT, rowY(0, scrollY, rowHeightPx), colors.textSecondary.toArgb(), false)
+        val ph = engine.layout(McStyledString(placeholder), Int.MAX_VALUE, true)
+        translate(TEXT_PAD_LEFT.toFloat(), rowY(0, scrollY, rowHeightPx).toFloat()) {
+            with(engine) { paint(ph, colors.textSecondary) }
+        }
     }
 
     // Selection highlight, intersected with every visible row.
@@ -292,9 +301,9 @@ private fun drawRows(
             val b = min(selEnd, row.end)
             when {
                 a < b -> g.fill(
-                    xInRow(font, row, a - row.start),
+                    xInRow(engine, row, a - row.start),
                     y,
-                    xInRow(font, row, b - row.start),
+                    xInRow(engine, row, b - row.start),
                     y + rowHeightPx,
                     colors.textSelection.toArgb(),
                 )
@@ -310,7 +319,7 @@ private fun drawRows(
         val caretRow = layout.rowForOffset(value.selection.min)
         if (caretRow in firstRow..lastRow) {
             val row = layout.rows[caretRow]
-            val x = xInRow(font, row, value.selection.min - row.start)
+            val x = xInRow(engine, row, value.selection.min - row.start)
             g.fill(x, rowY(caretRow, scrollY, rowHeightPx), x + 2, rowY(caretRow, scrollY, rowHeightPx) + rowHeightPx, colors.textCaret.toArgb())
         }
     }
@@ -325,9 +334,9 @@ private fun drawRows(
             val b = min(composition.max, row.end)
             if (a < b) {
                 g.fill(
-                    xInRow(font, row, a - row.start),
+                    xInRow(engine, row, a - row.start),
                     y + rowHeightPx - 2,
-                    xInRow(font, row, b - row.start),
+                    xInRow(engine, row, b - row.start),
                     y + rowHeightPx,
                     colors.textCaret.toArgb(),
                 )
@@ -340,8 +349,8 @@ private fun rowY(rowIndex: Int, scrollY: Float, rowHeightPx: Int): Int =
     (TEXT_AREA_PAD_V + rowIndex * rowHeightPx - scrollY).roundToInt()
 
 /** Screen-space x of a local character offset within its row. */
-private fun xInRow(font: Font, row: TextAreaLayout.Row, localOffset: Int): Int =
-    TEXT_PAD_LEFT + font.width(row.text.substring(0, localOffset.coerceIn(0, row.text.length)))
+private fun xInRow(engine: McTextEngine, row: TextAreaLayout.Row, localOffset: Int): Int =
+    TEXT_PAD_LEFT + engine.widthOf(row.text.substring(0, localOffset.coerceIn(0, row.text.length)))
 
 /**
  * Soft-wrapped visual rows of the textarea buffer. A row is the half-open character range
@@ -360,15 +369,15 @@ internal class TextAreaLayout(val rows: List<Row>) {
 }
 
 /**
- * Wraps [text] into visual rows of at most [maxWidth] pixels ([Font.width] semantics, matching the
- * click mapping via `plainSubstrByWidth`). Prefers breaking after a space; long words break hard.
+ * Wraps [text] into visual rows of at most [maxWidth] pixels ([McTextEngine.widthOf] semantics).
+ * Prefers breaking after a space; long words break hard.
  */
-internal fun buildTextAreaLayout(font: Font, text: String, maxWidth: Int): TextAreaLayout {
+internal fun buildTextAreaLayout(engine: McTextEngine, text: String, maxWidth: Int): TextAreaLayout {
     val rows = ArrayList<TextAreaLayout.Row>()
     var lineStart = 0
     for (i in 0..text.length) {
         if (i == text.length || text[i] == '\n') {
-            appendWrappedRows(font, text, lineStart, i, maxWidth, rows)
+            appendWrappedRows(engine, text, lineStart, i, maxWidth, rows)
             lineStart = i + 1
         }
     }
@@ -376,7 +385,7 @@ internal fun buildTextAreaLayout(font: Font, text: String, maxWidth: Int): TextA
 }
 
 private fun appendWrappedRows(
-    font: Font,
+    engine: McTextEngine,
     text: String,
     start: Int,
     endExcl: Int,
@@ -386,17 +395,16 @@ private fun appendWrappedRows(
     var segStart = start
     do {
         val seg = text.substring(segStart, endExcl)
-        if (seg.isEmpty() || font.width(seg) <= maxWidth) {
+        if (seg.isEmpty() || engine.widthOf(seg) <= maxWidth) {
             out += TextAreaLayout.Row(segStart, endExcl, seg)
             return
         }
-        // Binary-search the longest prefix that fits, then prefer breaking after the last space.
         var lo = 1
         var hi = seg.length - 1
         var fit = 1
         while (lo <= hi) {
             val mid = (lo + hi) ushr 1
-            if (font.width(seg.substring(0, mid)) <= maxWidth) {
+            if (engine.widthOf(seg.substring(0, mid)) <= maxWidth) {
                 fit = mid
                 lo = mid + 1
             } else {

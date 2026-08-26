@@ -17,7 +17,7 @@
 ### 第一步(已实施):引擎抽象 + Vanilla + Markdown
 
 ```
-common/src/main/kotlin/minecraftx/compose/
+common/minecraftx/compose/                          # 实际 sourceSet: common/minecraftx (见 common/build.gradle.kts kotlin.srcDirs)
 ├── text/                              # ★ 文本引擎层(新增)
 │   ├── McTextEngine.kt                # 接口:layout(McStyledString) → McTextLayout + DrawScope.paint
 │   ├── McStyledString.kt              # IR:McStyledString(文本+非重叠 span)+ McSpanStyle + McSemantic
@@ -28,7 +28,8 @@ common/src/main/kotlin/minecraftx/compose/
 │   │                                  #   (空格断行/CJK 逐字断行/超宽硬断,支持字间距变体),
 │   │                                  #   paint 经 FormattedCharSequence→GuiGraphics 直绘
 │   ├── LocalMcTextEngine.kt           # CompositionLocal 注入 + 引擎注册表 + rememberTextLayout 缓存
-│   └── ComponentConverters.kt         # Component 树展平 → McStyledString(含 MC Style 继承解析)
+│   └── ComponentConverters.kt         # Component 树展平 → McStyledString(含 MC Style 继承解析;
+│   │                                  #   以 contents.visit 而非 getString() 避免 siblings 重复拼接，已修复)
 ├── material/
 │   ├── McText.kt                      # API 不变,内部改走 engine;新增 McWrappedText 多行组件
 │   └── ...                            # 其余显示组件经 McText/McWrappedText 间接走 engine
@@ -58,33 +59,32 @@ common/src/main/kotlin/minecraftx/compose/
   CHECK_BOX 内建;fabric include + forge jarJar 已随包分发) |
 | Markdown v1 简化 | 表格对齐标记忽略、图片渲染为 alt 文本、链接有样式不可点击、输入组件光标定位未迁 |
 
-### 第二步(规划中):`MsdfTextEngine` —— 无 stb 版 MSDF 矢量字体
+### 第二步(已落地):`MsdfTextEngine` —— 系统字体 + 纯 JVM MSDF
 
-调研结论(kool-engine/kool,Apache-2.0):
+> 现状:已接入。Demo 的引擎按钮可切 `vanilla` / `spaced` / `msdf`。
 
-- kool 文本栈三层:**纯 Kotlin 排版测量层**(Font/MsdfFont/wrapText)、
-  **MSDF 图集生成**(运行时从 TTF 生成,LWJGL 绑定)、**KSL 渲染 shader**(需翻译成 GLSL)。
-- kool 用了**两套字体解析**(冗余):轮廓提取走 msdfgen 自带 freetype(`msdf_ft_*`),
-  stb_truetype 只做 metrics/存在性检查。
-- **去 stb 方案(已定)**:JVM 自带 AWT 全部接管 ——
-  - `Font.createFonts()`:TTF/TTC/OTF 原生支持(TTC 集合免 offset 处理)
-  - metrics:`GlyphVector.getGlyphMetrics()` / `getGlyphPixelBounds()` / `font.getLineMetrics()`
-  - 存在性:`canDisplay(codePoint)`
-  - 轮廓:`getGlyphOutline()` → PathIterator(SEG_MOVETO/LINETO/QUADTO/CUBIC 与
-    TrueType 二次/CFF 三次曲线一一对应)→ msdfgen 低级 shape API 手工构造
-    (`msdf_shape_create/add_contour/add_edge`);若绑定未暴露该 API,回落
-    `msdf_ft_*`(freetype 随 lwjgl-msdfgen 自带,仍无 stb)
-- **动态图集**(应对 CJK 大字符集):初始 atlas 预生成 ASCII → 运行时 miss 收集批量生成 →
-  shelf packing 增量打包 + `glTexSubImage2D` 局部上传 → 满则翻倍扩容(≤2048²)+
-  内存 LRU 缓存各字形 SDF 位图(扩容重打包免重算)。
-- **渲染**:GLSL 翻译自 MsdfUiShader(~30 行核心:median3 三通道取中、SDF/MSDF 双通道
-  按 pxRange 平滑混合、premultiplied alpha),MVP 接 MC pose matrix,与 McCanvas 直绘共用 context。
-- **字体来源**:系统字体目录枚举(win/linux/mac)+ 常见中文字体自动探测
-  (YaHei/Noto CJK/WenQuanYi/PingFang)+ 配置文件覆盖。
-- **新增依赖**:仅 `org.lwjgl:lwjgl-msdfgen:3.3.x`(与 MC LWJGL 主版本对齐)+ 三平台 natives。
-- **vendored 合规**:kool 子集源码(Apache-2.0)保留版权头。
+相对初稿的路线修正:
 
-两步通过 `McTextEngine` 接口完全解耦,第二步零改动已有组件代码。
+- **不引入 `lwjgl-msdfgen`**。MC 1.20.1 自带 LWJGL 3.3.1,再塞一套 3.3.4 natives
+  会和 Forge/Fabric 的 native 解压、classloader 打架;kool 现用的也是预烘焙图集,不是运行时
+  绑 msdfgen。轮廓距离场在 JVM 里直接算。
+- **不 vendor kool 源码**。排版已有 `TextWrap`;shader 只翻译了 MsdfUiShader 的
+  median3 / SDF+MSDF 按 pxRange 混合 / premultiplied alpha(~30 行 GLSL)。
+- AWT 仍负责字体:family 探测、`canDisplay`、metrics、`getGlyphOutline` → 展平 PathIterator。
+
+实现要点:
+
+- **字体链**:按平台挑 Latin UI 字体 + CJK(YaHei / Noto Sans CJK / PingFang / 文泉驿…) +
+  `SansSerif` 兜底;缺字按码点走下一面。
+- **动态图集**:ASCII 后台预热;miss 进单 worker 算 MSDF;主线程每帧预算
+  `glTexSubImage2D`;满则 CPU 缓冲翻倍(≤2048²)整张重传。本帧 miss 跳过,下帧渐现。
+- **渲染**:自管 program / VAO / VBO,MVP = `RenderSystem` 投影 × (modelview × pose);
+  绑 VAO 以免改掉 MC 字体的 VAO。bold 走 SDF weight,italic 走顶边 shear。
+- **共享折行**:`TextWrap`(空格 / CJK / 硬断 / `\n`),Vanilla 与 MSDF 共用。
+- **输入框**:`McTextField` / `McTextArea` 的测宽、点选、绘制都走 `McTextEngine`,
+  不再写死 `Minecraft.font`。
+
+两步仍通过 `McTextEngine` 解耦;`McText` / `McWrappedText` / `McMarkdown` 不用改调用方。
 
 ## 3. 风险备忘
 
@@ -93,6 +93,7 @@ common/src/main/kotlin/minecraftx/compose/
 | StringSplitter 1.20.1 mojmap 签名差异 | 兜底自写逐字折行 |
 | GFM 表格列宽启发式 | 两遍测宽按内容比例分配;极端输入可接受 |
 | bold 字形加宽导致折行偏差 | 测量统一走带 Style 的宽度 API |
-| msdfgen shape 构造 API 暴露情况 | 第二步实施首日 spike 验证,缺失即走 freetype 回落 |
-| atlas 扩容瞬间帧尖峰 | LRU 位图缓存 + 可选异步生成 |
-| 自定义 GL pass 状态管理 | RenderSystem 状态保存/恢复模板 |
+| AWT 轮廓 winding / 展平误差 | 用非零环绕数定号;曲线交给 AWT `PathIterator(flatness)` |
+| atlas 扩容瞬间帧尖峰 | 后台生成 + 主线程预算上传;扩容只 memcpy CPU 缓冲再整张上传 |
+| 自定义 GL pass 状态管理 | 自管 program/VAO,保存/恢复 blend/cull/texture/program(参考 McCanvas.fillTriangle) |
+| MC 版本 | `gradle/libs.versions.toml` 锁定 `minecraft 1.20.1` / `forge 47.3.0` / `neoForm 1.20.1`，文档标题 1.20.1 为准 |

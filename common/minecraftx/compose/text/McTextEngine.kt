@@ -33,4 +33,23 @@ interface McTextEngine {
      * color use [fallbackColor].
      */
     fun DrawScope.paint(layout: McTextLayout, fallbackColor: Color)
+
+    /** Advance width of [text] in px, equivalent to a single-line unbounded [layout]. */
+    fun widthOf(text: String, style: McSpanStyle? = null): Int =
+        layout(styled(text, style), Int.MAX_VALUE, singleLine = true).width
+
+    /**
+     * Largest UTF-16 index such that `text.substring(0, index)` fits in [width] px (vanilla
+     * `plainSubstrByWidth` semantics).
+     */
+    fun indexAtWidth(text: String, width: Int, style: McSpanStyle? = null): Int {
+        if (text.isEmpty() || width <= 0) return 0
+        val kept = layout(styled(text, style), width, singleLine = true)
+            .lines.firstOrNull()?.runs?.joinToString("") { it.text } ?: ""
+        return kept.length
+    }
 }
+
+private fun styled(text: String, style: McSpanStyle?): McStyledString =
+    if (style == null || style.isDefault) McStyledString(text)
+    else McStyledString(text, listOf(McStyledString.Span(0, text.length, style)))

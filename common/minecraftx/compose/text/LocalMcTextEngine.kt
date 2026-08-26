@@ -3,14 +3,17 @@ package minecraftx.compose.text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import minecraftx.compose.text.msdf.MsdfTextEngine
 import minecraftx.compose.theme.McThemeSettings
 
-/** Built-in engines. Step 2 registers the MSDF engine here as well. */
+/** Built-in engines. */
 object McTextEngines {
     val vanilla = VanillaTextEngine("vanilla")
     val spaced = VanillaTextEngine("spaced", letterSpacing = 2)
+    val msdf: McTextEngine by lazy { MsdfTextEngine() }
 
-    val all: List<McTextEngine> = listOf(vanilla, spaced)
+    val all: List<McTextEngine>
+        get() = listOf(vanilla, spaced, msdf)
 
     fun byId(id: String): McTextEngine = all.firstOrNull { it.id == id } ?: vanilla
 }

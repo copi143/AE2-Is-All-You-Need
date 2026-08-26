@@ -10,9 +10,8 @@ import net.minecraft.util.FormattedCharSequence
 
 /**
  * Reference [McTextEngine] drawing through the vanilla bitmap font ([Minecraft.font] +
- * [McGraphics]). Layout wraps text with its own greedy line breaker (space breaks for latin
- * scripts, per-character breaks for CJK ranges, hard breaks for oversized words); painting goes
- * through [GuiGraphics.drawString] exactly like the legacy components did.
+ * [McGraphics]). Layout wraps text with [TextWrap]; painting goes through
+ * [net.minecraft.client.gui.GuiGraphics.drawString].
  *
  * [letterSpacing] inserts extra px between characters — used to instantiate demo variants without
  * needing a second rendering stack.
@@ -26,103 +25,25 @@ class VanillaTextEngine(
         get() = Minecraft.getInstance().font.lineHeight
 
     override fun layout(text: McStyledString, maxWidth: Int, singleLine: Boolean): McTextLayout {
-        val emptyLine = McTextLayout(listOf(TextLine(emptyList(), 0)), lineHeight)
-        if (text.text.isEmpty()) return emptyLine
-        if (maxWidth <= 0) return McTextLayout.EMPTY.takeIf { !singleLine } ?: emptyLine
-
         val font = Minecraft.getInstance().font
-        val runs = text.toMcRuns()
-
-        // Flatten runs into per-codepoint parallel arrays for the wrapper.
-        val sb = StringBuilder()
-        val cps = ArrayList<Int>(text.text.length)
-        val starts = ArrayList<Int>(text.text.length + 1) // UTF-16 offset of each codepoint (+ sentinel)
-        val styleIdx = ArrayList<Int>(text.text.length)
-        val widths = ArrayList<Int>(text.text.length)
-
-        for ((runIdx, run) in runs.withIndex()) {
-            val s = run.text
-            var i = 0
-            while (i < s.length) {
-                val cp = s.codePointAt(i)
-                val piece = String(Character.toChars(cp))
-                cps += cp
-                starts += sb.length
-                styleIdx += runIdx
-                widths += font.width(FormattedCharSequence.forward(piece, run.style)) + letterSpacing
-                sb.append(piece)
-                i += Character.charCount(cp)
-            }
+        return TextWrap.layout(text, maxWidth, singleLine, lineHeight) { cp, style ->
+            val piece = String(Character.toChars(cp))
+            font.width(FormattedCharSequence.forward(piece, style?.toMcStyle() ?: Style.EMPTY)) + letterSpacing
         }
-        starts += sb.length
-        val spanStyles = runs.map { it.visual }
-        val n = cps.size
+    }
 
-        val lines = mutableListOf<TextLine>()
-        var lineStart = 0
-        var x = 0
-        var lastBreak = -1 // cp index right after a legal break point
-        var breakX = 0     // pen x at lastBreak
+    override fun widthOf(text: String, style: McSpanStyle?): Int {
+        if (text.isEmpty()) return 0
+        val font = Minecraft.getInstance().font
+        return font.width(FormattedCharSequence.forward(text, style?.toMcStyle() ?: Style.EMPTY)) +
+            letterSpacing * text.codePointCount(0, text.length).coerceAtLeast(0)
+    }
 
-        fun widthBetween(from: Int, to: Int): Int {
-            var w = 0
-            for (i in from until to) w += widths[i]
-            return w
-        }
-
-        fun emitLine(from: Int, toRaw: Int, rawWidth: Int) {
-            var to = toRaw
-            var w = rawWidth
-            while (to > from && cps[to - 1] == ' '.code) { // trim trailing spaces off drawn lines
-                w -= widths[to - 1]
-                to--
-            }
-            val outRuns = mutableListOf<StyledRun>()
-            var g = from
-            var gx = 0
-            while (g < to) {
-                val st = styleIdx[g]
-                var ge = g + 1
-                while (ge < to && styleIdx[ge] == st) ge++
-                val txt = sb.substring(starts[g], starts[ge])
-                outRuns += StyledRun(gx, txt, spanStyles[st])
-                for (i in g until ge) gx += widths[i]
-                g = ge
-            }
-            lines += TextLine(outRuns, w.coerceAtLeast(gx))
-        }
-
-        var i = 0
-        while (i < n) {
-            val advance = widths[i]
-            if (x + advance > maxWidth && i > lineStart) {
-                if (singleLine) { // truncate: keep only what fit before this char
-                    emitLine(lineStart, i, x)
-                    return McTextLayout(lines, lineHeight)
-                }
-                if (lastBreak > lineStart) {
-                    emitLine(lineStart, lastBreak, breakX)
-                    var next = lastBreak
-                    while (next < n && cps[next] == ' '.code) next++ // drop leading spaces
-                    lineStart = next
-                    x = widthBetween(lineStart, i)
-                } else { // hard break inside an unbreakable word
-                    emitLine(lineStart, i, x)
-                    lineStart = i
-                    x = 0
-                }
-                lastBreak = -1
-                breakX = 0
-            }
-            x += advance
-            if (isBreakableAfter(cps[i])) {
-                lastBreak = i + 1
-                breakX = x
-            }
-            i++
-        }
-        emitLine(lineStart, n, x)
-        return McTextLayout(lines, lineHeight)
+    override fun indexAtWidth(text: String, width: Int, style: McSpanStyle?): Int {
+        if (text.isEmpty() || width <= 0) return 0
+        val font = Minecraft.getInstance().font
+        val kept = font.plainSubstrByWidth(text, width)
+        return kept.length
     }
 
     override fun DrawScope.paint(layout: McTextLayout, fallbackColor: Color) {
@@ -132,23 +53,10 @@ class VanillaTextEngine(
         for ((li, line) in layout.lines.withIndex()) {
             val y = li * layout.lineHeight
             for (run in line.runs) {
-                val style = run.style?.toMcStyle() ?: Style.EMPTY
+                val mcStyle = run.style?.toMcStyle() ?: Style.EMPTY
                 val argb = run.style?.color?.let { it.toArgb() } ?: fbArgb
-                g.drawString(font, FormattedCharSequence.forward(run.text, style), run.x, y, argb, false)
+                g.drawString(font, FormattedCharSequence.forward(run.text, mcStyle), run.x, y, argb, false)
             }
-        }
-    }
-
-    private companion object {
-        /** Space always breaks; CJK-family ranges break after every character. */
-        fun isBreakableAfter(cp: Int): Boolean = when {
-            cp == ' '.code -> true
-            cp in 0x2E80..0x9FFF -> true // CJK radicals, kana, unified ideographs
-            cp in 0xAC00..0xD7AF -> true // hangul syllables
-            cp in 0xF900..0xFAFF -> true // compatibility ideographs
-            cp in 0xFF00..0xFFEF -> true // fullwidth forms
-            cp >= 0x20000 -> true        // supplementary plane ideographs
-            else -> false
         }
     }
 }
