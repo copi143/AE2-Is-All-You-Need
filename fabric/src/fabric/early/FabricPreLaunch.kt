@@ -2,6 +2,7 @@ package allyouneed.fabric.early
 
 import allyouneed.transformer.KeyClassScanner
 import allyouneed.transformer.NewCallTransformer
+import allyouneed.transformer.RuntimeClasses
 import allyouneed.transformer.logger
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint
 import net.fabricmc.loader.impl.game.GameProvider
@@ -21,6 +22,7 @@ class FabricPreLaunch : PreLaunchEntrypoint {
     }
 
     private fun install() {
+        RuntimeClasses.install()
         val paths = scanPaths()
         logger.info("Fabric preLaunch starting, {} scan paths", paths.size)
         val scan = KeyClassScanner.scan(paths)

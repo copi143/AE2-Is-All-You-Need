@@ -19,6 +19,25 @@ sourceSets.main {
     resources.setSrcDirs(listOf("resources"))
 }
 
+sourceSets.create("inject") {
+    kotlin.setSrcDirs(listOf("inject"))
+    java.setSrcDirs(emptyList<Any>())
+}
+
+configurations.create("injectClasses") {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+}
+
+val injectJar = tasks.register<Jar>("injectJar") {
+    from(sourceSets["inject"].output)
+    archiveClassifier.set("inject")
+}
+
+artifacts {
+    add("injectClasses", injectJar)
+}
+
 val embed = configurations.create("embed")
 val r8 = configurations.create("r8")
 val r8Lib = configurations.create("r8Lib")
@@ -41,7 +60,10 @@ dependencies {
     r8Lib("cpw.mods:modlauncher:10.0.9")
     r8Lib("net.minecraftforge:forgespi:7.0.1")
     r8Lib(libs.fml) { isTransitive = false }
+    "injectCompileOnly"(kotlin("stdlib"))
+    "injectCompileOnly"(libs.ae2.forge)
     testImplementation(kotlin("stdlib"))
+    testImplementation(sourceSets["inject"].output)
     testImplementation(libs.asm.tree)
     testImplementation(libs.asm.analysis)
     testImplementation(libs.junit)
@@ -106,11 +128,51 @@ val r8Jar = tasks.register<JavaExec>("r8Jar") {
     )
 }
 
+val injectR8Rules = layout.projectDirectory.file("inject-r8.pro")
+val injectR8Output = layout.buildDirectory.file("r8/inject.jar")
+
+val r8InjectJar = tasks.register<JavaExec>("r8InjectJar") {
+    group = "build"
+    description = "Shrink inject Kotlin + stdlib into appeng.api.stacks"
+    dependsOn(injectJar)
+    classpath = r8
+    mainClass.set("com.android.tools.r8.R8")
+    inputs.files(injectJar)
+    inputs.files(project.configurations.getByName("injectCompileClasspath"))
+    inputs.file(injectR8Rules)
+    outputs.file(injectR8Output)
+    argumentProviders.add(
+        CommandLineArgumentProvider {
+            val out = injectR8Output.get().asFile
+            out.parentFile.mkdirs()
+            out.delete()
+            buildList {
+                add("--release")
+                add("--classfile")
+                add("--output")
+                add(out.absolutePath)
+                add("--pg-conf")
+                add(injectR8Rules.asFile.absolutePath)
+                add("--lib")
+                add(r8Jdk.get().metadata.installationPath.asFile.absolutePath)
+                val injectCp = project.configurations.getByName("injectCompileClasspath")
+                injectCp.filter { "appliedenergistics" in it.name }.forEach {
+                    add("--lib")
+                    add(it.absolutePath)
+                }
+                add(injectJar.get().archiveFile.get().asFile.absolutePath)
+                injectCp.filter { "kotlin-stdlib" in it.name }.forEach { add(it.absolutePath) }
+            }
+        },
+    )
+}
+
 val pluginJar = tasks.register("pluginJar") {
     group = "build"
     description = "Package R8 output as the plugin jar"
-    dependsOn(r8Jar)
+    dependsOn(r8Jar, r8InjectJar)
     inputs.file(r8Output)
+    inputs.file(injectR8Output)
     outputs.file(pluginOutput)
     doLast {
         val src = r8Output.get().asFile
@@ -138,9 +200,39 @@ val pluginJar = tasks.register("pluginJar") {
                     out.write(bytes)
                     out.closeEntry()
                 }
+                val injectNames = ArrayList<String>()
+                ZipFile(injectR8Output.get().asFile).use { inj ->
+                    val injEntries = inj.entries()
+                    while (injEntries.hasMoreElements()) {
+                        val entry = injEntries.nextElement()
+                        val name = entry.name
+                        if (!name.endsWith(".class") || name.contains("module-info")) continue
+                        out.putNextEntry(ZipEntry("META-INF/inject/$name"))
+                        out.write(inj.getInputStream(entry).readBytes())
+                        out.closeEntry()
+                        injectNames.add(name.removeSuffix(".class").replace('/', '.'))
+                    }
+                }
+                val ordered = injectNames.sortedWith(
+                    compareBy<String> {
+                        when {
+                            it.endsWith(".KeyContent") -> 0
+                            it.endsWith(".AEKeyAsm") -> 3
+                            it.endsWith(".KeyInterner") -> 2
+                            else -> 1
+                        }
+                    }.thenBy { it },
+                )
+                out.putNextEntry(ZipEntry("META-INF/inject/classes.txt"))
+                out.write(ordered.joinToString("\n").toByteArray())
+                out.closeEntry()
             }
         }
     }
+}
+
+tasks.named("classes") {
+    dependsOn(sourceSets["inject"].classesTaskName)
 }
 
 tasks.named("assemble") {

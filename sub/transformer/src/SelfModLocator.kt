@@ -2,43 +2,58 @@ package allyouneed.transformer
 
 import net.minecraftforge.fml.loading.FMLPaths
 import net.minecraftforge.fml.loading.moddiscovery.AbstractJarFileModLocator
+import java.net.URI
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.util.stream.Stream
 import java.util.zip.ZipFile
 
 class SelfModLocator : AbstractJarFileModLocator() {
+    private val filesystems = ArrayList<FileSystem>()
+
     override fun name(): String = "ae2isallyouneed_self"
 
     override fun initArguments(arguments: Map<String, *>) {}
 
     override fun scanCandidates(): Stream<Path> {
-        val nested = extractNested() ?: return Stream.empty()
-        return Stream.of(nested)
-    }
-
-    private fun extractNested(): Path? {
-        val self = selfJar() ?: return null
-        if (!Files.isRegularFile(self)) return null
-        ZipFile(self.toFile()).use { zip ->
-            val entry = zip.getEntry(NESTED) ?: return null
-            val destDir = FMLPaths.GAMEDIR.get().resolve(".ae2isallyouneed")
-            Files.createDirectories(destDir)
-            val dest = destDir.resolve("game.jar")
-            zip.getInputStream(entry).use { input ->
-                Files.copy(input, dest, StandardCopyOption.REPLACE_EXISTING)
+        val mods = FMLPaths.MODSDIR.get()
+        if (!Files.isDirectory(mods)) return Stream.empty()
+        val found = ArrayList<Path>()
+        try {
+            Files.newDirectoryStream(mods, "*.jar").use { stream ->
+                for (jar in stream) {
+                    nestedGame(jar)?.let { found.add(it) }
+                }
             }
-            logger.info("extracted embedded game jar to {}", dest)
-            return dest
+        } catch (t: Throwable) {
+            logger.error("embedded game jar scan failed", t)
         }
+        if (found.isEmpty()) {
+            logger.info("no embedded META-INF/mod/game.jar in mods/ (dev exploded run)")
+        }
+        return found.stream()
     }
 
-    private fun selfJar(): Path? {
-        val url = javaClass.protectionDomain.codeSource?.location ?: return null
+    private fun nestedGame(wrapper: Path): Path? {
+        if (!Files.isRegularFile(wrapper)) return null
         return try {
-            Path.of(url.toURI())
-        } catch (_: Exception) {
+            ZipFile(wrapper.toFile()).use { zip ->
+                if (zip.getEntry(NESTED) == null) return null
+            }
+            val uri = URI("jar:" + wrapper.toAbsolutePath().toUri())
+            val fs = FileSystems.newFileSystem(uri, emptyMap<String, Any>())
+            filesystems.add(fs)
+            val nested = fs.getPath(NESTED)
+            if (!Files.isRegularFile(nested)) {
+                logger.warn("embedded {} missing in {}", NESTED, wrapper.fileName)
+                return null
+            }
+            logger.info("located embedded game jar in {}", wrapper.fileName)
+            nested
+        } catch (t: Throwable) {
+            logger.error("failed to open embedded game jar from {}", wrapper, t)
             null
         }
     }

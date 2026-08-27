@@ -1,5 +1,6 @@
 package allyouneed.core
 
+import appeng.api.stacks.KeyInterner
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

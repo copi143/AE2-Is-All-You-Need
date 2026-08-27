@@ -128,21 +128,33 @@ dependencies {
 val copyTransformerToRunMods = tasks.register("copyTransformerToRunMods") {
     group = "build"
     dependsOn(":transformer:pluginJar")
+    val src = project(":transformer").layout.buildDirectory.file("libs/ae2isallyouneed-transformer.jar")
+    val dest = layout.projectDirectory.file("run/mods/ae2isallyouneed-transformer.jar")
+    inputs.file(src)
+    outputs.file(dest)
     doLast {
-        val src = project(":transformer").tasks.named("pluginJar").get().outputs.files.singleFile
-        val dir = layout.projectDirectory.dir("run/mods").asFile
-        dir.mkdirs()
-        src.copyTo(dir.resolve("ae2isallyouneed-transformer.jar"), overwrite = true)
+        val destFile = dest.asFile
+        destFile.parentFile.mkdirs()
+        src.get().asFile.copyTo(destFile, overwrite = true)
     }
 }
 
-tasks.matching { it.name.startsWith("prepare") && it.name.contains("Run") }.configureEach {
+fun org.gradle.api.Task.usesTransformerJar() {
     dependsOn(copyTransformerToRunMods)
 }
 
+tasks.matching {
+    val n = it.name
+    n.startsWith("run") || (n.startsWith("prepare") && n.contains("Run"))
+}.configureEach { usesTransformerJar() }
+
 afterEvaluate {
-    listOf("prepareClientRun", "prepareServerRun", "prepareDataRun").forEach { name ->
-        tasks.findByName(name)?.dependsOn(copyTransformerToRunMods)
+    listOf(
+        "runClient", "runServer", "runData",
+        "prepareClientRun", "prepareServerRun", "prepareDataRun",
+        "prepareRunClient", "prepareRunServer", "prepareRunData",
+    ).forEach { name ->
+        tasks.findByName(name)?.usesTransformerJar()
     }
 }
 

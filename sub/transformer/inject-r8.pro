@@ -1,0 +1,10 @@
+-allowaccessmodification
+-dontwarn **
+-dontnote **
+-keepattributes Signature,InnerClasses,EnclosingMethod
+-keep,allowoptimization interface appeng.api.stacks.KeyContent { *; }
+-keep,allowoptimization class appeng.api.stacks.KeyInterner { *; }
+-keep,allowoptimization class appeng.api.stacks.Slot { *; }
+-keep,allowoptimization class appeng.api.stacks.Ref { *; }
+-keep,allowoptimization class appeng.api.stacks.AEKeyAsm { *; }
+-repackageclasses appeng.api.stacks

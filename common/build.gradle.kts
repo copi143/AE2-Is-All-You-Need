@@ -61,6 +61,7 @@ dependencies {
     testImplementation(libs.asm.tree)
     testImplementation(libs.asm.analysis)
     testImplementation(project(":transformer"))
+    testImplementation(project(path = ":transformer", configuration = "injectClasses"))
     testImplementation(libs.slf4j)
 
     testImplementation(libs.junit)

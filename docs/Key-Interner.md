@@ -10,13 +10,15 @@ Forge 发行单 jar：外壳是 ITransformationService（PLUGIN），内嵌 META
 由 SelfModLocator 抽出后当普通模组加载。开发时仍把 transformer 拷到 run/mods。
 
 fabric jar
-  ├─ include(:transformer) + PreLaunch
-  ├─ allyouneed.core.KeyInterner
-  └─ @Mod 业务
+   ├─ include(:transformer) + PreLaunch
+   └─ @Mod 业务
 ```
 
-**时序**：插件层 `onLoad` → 扫描 mods 注册 `ITransformer` → AE2 加载 `AEItemKey` →
-`NEW+<init>` 后插入 `KeyInterner.intern`。
+生产里 `AEKeyAsm` / `KeyInterner` 在首次 transform 时 `defineClass` 进 AE2 的
+`appeng.api.stacks` 包（与 `AEItemKey` 同模块），避免跨模组父类找不到。
+
+**时序**：插件层 `onLoad` → 扫描 mods 注册 `ITransformer` → 首次变换注入运行时类 →
+AE2 加载 `AEItemKey` → `NEW+<init>` 后插入 `KeyInterner.intern`。
 
 Fabric：PreLaunch 包装 Knot `GameTransformer`，对目标类实时调用同一套 ASM。
 
@@ -30,7 +32,7 @@ NEW   <keyClass>
 DUP
 <构造参数，可含跳转>
 INVOKESPECIAL <keyClass>.<init>(<desc>)V
-INVOKESTATIC allyouneed/core/KeyInterner.intern(Ljava/lang/Object;)Ljava/lang/Object;
+INVOKESTATIC appeng/api/stacks/KeyInterner.intern(Ljava/lang/Object;)Ljava/lang/Object;
 CHECKCAST <keyClass>
 ```
 

@@ -1,12 +1,7 @@
-package allyouneed.core
+package appeng.api.stacks
 
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
-
-internal interface KeyContent {
-    fun `asm$equals`(other: Any?): Boolean
-    fun `asm$hashCode`(): Int
-}
 
 object KeyInterner {
     private val lock = Any()
@@ -107,9 +102,9 @@ object KeyInterner {
 
     private fun mix(h: Int): Int = h xor (h ushr 16)
 
-    private class Slot(val hash: Int, val ref: Ref, var next: Slot?)
-
-    private class Ref(referent: Any, val hash: Int, queue: ReferenceQueue<Any>) : WeakReference<Any>(referent, queue)
-
     private const val INITIAL_CAP = 16
 }
+
+internal class Slot(val hash: Int, val ref: Ref, var next: Slot?)
+
+internal class Ref(referent: Any, val hash: Int, queue: ReferenceQueue<Any>) : WeakReference<Any>(referent, queue)

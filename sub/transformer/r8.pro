@@ -6,6 +6,9 @@
     public <init>();
     public <methods>;
 }
+-keep class allyouneed.transformer.RuntimeClasses {
+    public static <methods>;
+}
 -keep,allowoptimization class allyouneed.transformer.KeyInternClassTransformer {
     public <init>(...);
     public <methods>;

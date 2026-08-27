@@ -11,7 +11,7 @@ import java.util.zip.ZipInputStream
 
 object KeyClassScanner {
     const val AE_KEY = "appeng/api/stacks/AEKey"
-    const val AE_KEY_ASM = "allyouneed/core/AEKeyAsm"
+    const val AE_KEY_ASM = "appeng/api/stacks/AEKeyAsm"
     const val AE_ITEM_KEY = "appeng/api/stacks/AEItemKey"
     const val AE_FLUID_KEY = "appeng/api/stacks/AEFluidKey"
 

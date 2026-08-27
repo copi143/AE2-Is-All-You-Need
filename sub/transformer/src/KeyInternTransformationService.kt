@@ -57,6 +57,7 @@ class KeyInternClassTransformer(
     private val targets: Set<String>,
 ) : ITransformer<ClassNode> {
     override fun transform(input: ClassNode, context: ITransformerVotingContext): ClassNode {
+        RuntimeClasses.install()
         NewCallTransformer.apply(input, keyClasses)
         return input
     }

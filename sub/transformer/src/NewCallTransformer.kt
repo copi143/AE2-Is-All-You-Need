@@ -16,9 +16,9 @@ import org.objectweb.asm.tree.analysis.SourceInterpreter
 import org.objectweb.asm.tree.analysis.SourceValue
 
 object NewCallTransformer {
-    const val INTERNER_OWNER = "allyouneed/core/KeyInterner"
+    const val INTERNER_OWNER = "appeng/api/stacks/KeyInterner"
     const val AE_KEY = "appeng/api/stacks/AEKey"
-    const val AE_KEY_ASM = "allyouneed/core/AEKeyAsm"
+    const val AE_KEY_ASM = "appeng/api/stacks/AEKeyAsm"
     const val ASM_EQUALS = $$"asm$equals"
     const val ASM_HASH = $$"asm$hashCode"
     const val ASM_DROP = $$"asm$dropSecondary"

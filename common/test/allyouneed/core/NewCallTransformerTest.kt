@@ -1,6 +1,7 @@
 package allyouneed.core
 
 import allyouneed.transformer.NewCallTransformer
+import appeng.api.stacks.KeyInterner
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test

@@ -1,6 +1,4 @@
-package allyouneed.core
-
-import appeng.api.stacks.AEKey
+package appeng.api.stacks
 
 abstract class AEKeyAsm : AEKey(), KeyContent {
     @Transient
@@ -16,10 +14,6 @@ abstract class AEKeyAsm : AEKey(), KeyContent {
         cachedSecondaryDropped = dropped
         return dropped
     }
-
-    abstract override fun `asm$equals`(other: Any?): Boolean
-
-    abstract override fun `asm$hashCode`(): Int
 
     abstract fun `asm$dropSecondary`(): AEKey
 }
