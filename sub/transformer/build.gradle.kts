@@ -29,6 +29,16 @@ configurations.create("injectClasses") {
     isCanBeResolved = false
 }
 
+configurations.create("plugin") {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+}
+
+configurations.create("withInject") {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+}
+
 val injectJar = tasks.register<Jar>("injectJar") {
     from(sourceSets["inject"].output)
     archiveClassifier.set("inject")
@@ -233,6 +243,57 @@ val pluginJar = tasks.register("pluginJar") {
 
 tasks.named("classes") {
     dependsOn(sourceSets["inject"].classesTaskName)
+}
+
+val injectIndex = layout.buildDirectory.file("generated/inject-index/META-INF/inject/classes.txt")
+
+val writeInjectIndex = tasks.register("writeInjectIndex") {
+    dependsOn(r8InjectJar)
+    inputs.file(injectR8Output)
+    outputs.file(injectIndex)
+    doLast {
+        val names = ArrayList<String>()
+        ZipFile(injectR8Output.get().asFile).use { inj ->
+            val entries = inj.entries()
+            while (entries.hasMoreElements()) {
+                val name = entries.nextElement().name
+                if (!name.endsWith(".class") || name.contains("module-info")) continue
+                names.add(name.removeSuffix(".class").replace('/', '.'))
+            }
+        }
+        val ordered = names.sortedWith(
+            compareBy<String> {
+                when {
+                    it.endsWith(".KeyContent") -> 0
+                    it.endsWith(".AEKeyAsm") -> 3
+                    it.endsWith(".KeyInterner") -> 2
+                    else -> 1
+                }
+            }.thenBy { it },
+        )
+        val file = injectIndex.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText(ordered.joinToString("\n"))
+    }
+}
+
+val withInjectJar = tasks.register<Jar>("withInjectJar") {
+    archiveClassifier.set("withInject")
+    dependsOn(tasks.jar, r8InjectJar, writeInjectIndex)
+    from(tasks.jar.map { zipTree(it.archiveFile) })
+    from({ zipTree(injectR8Output.get().asFile) }) {
+        into("META-INF/inject")
+        include("**/*.class")
+        exclude("**/module-info.class")
+    }
+    from(layout.buildDirectory.dir("generated/inject-index"))
+}
+
+artifacts {
+    add("plugin", pluginOutput) {
+        builtBy(pluginJar)
+    }
+    add("withInject", withInjectJar)
 }
 
 tasks.named("assemble") {
