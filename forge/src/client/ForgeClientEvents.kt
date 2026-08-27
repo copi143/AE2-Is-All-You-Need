@@ -48,6 +48,8 @@ object ForgeClientEvents {
         }
         // Register the GuideME guidebook as early as AE2 does (mod construction).
         IayGuide.init()
+        // 自定义 AEKey 的客户端渲染器需尽早注册，避免终端渲染时 Missing render handler
+        allyouneed.client.render.AEKeyRenderers.init()
     }
 
     @SubscribeEvent

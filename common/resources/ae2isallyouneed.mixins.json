@@ -13,6 +13,7 @@
     "ae2.AEFluidKeyAddDropsMixin",
     "ae2.AEItemKeyAddDropsMixin",
     "ae2.AnnihilationPlanePartMixin",
+    "ae2.ItemPickupStrategyMixin",
     "ae2.AppEngSlotMixin",
     "ae2.BasicCellInventoryMixin",
     "ae2.CompositeStorageMixin",

@@ -37,6 +37,7 @@ import net.minecraft.resources.ResourceLocation
 
 fun initClient() {
     logger.info("Initializing Client...")
+    allyouneed.client.render.AEKeyRenderers.init()
     // 与 Forge FMLCommonSetupEvent 对齐，AE2 已完成 AEConfig/注册表初始化后执行，保证单次成功（由 AppEngClient 初始化后触发）
     Main.commonSetup()
     P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)

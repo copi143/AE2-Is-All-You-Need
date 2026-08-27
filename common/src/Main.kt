@@ -9,10 +9,13 @@ import allyouneed.logic.machine.BuiltinMachineTypes
 import allyouneed.net.http.HttpModule
 import allyouneed.parts.logger.NetworkLogHooks
 import allyouneed.parts.p2p.EntityP2PTunnelPart
+import allyouneed.logic.aekey.XpKey
+import allyouneed.parts.automation.XpPickupStrategy
 import allyouneed.pattern.ModItems
 import allyouneed.pattern.ModPatternDecoders
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
 import allyouneed.util.*
+import appeng.api.behaviors.PickupStrategy
 import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
 import appeng.api.stacks.AEKeyTypes
@@ -74,6 +77,9 @@ object Main {
             ExtRef.inverterCard to 1,
             ExtRef.fuzzyCard to 1,
         )
+
+        // 注册破坏面板经验吸收：经验球实体 -> XpKey(level=1)
+        PickupStrategy.register(XpKey.Type, ::XpPickupStrategy)
     }
 
     fun registerParts() {
