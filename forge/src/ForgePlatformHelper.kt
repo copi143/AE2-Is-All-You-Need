@@ -1,7 +1,7 @@
 package allyouneed
 
 import allyouneed.forge.init.ForgeKeyBindings
-import allyouneed.util.PlatformHelper
+import allyouneed.util.interfaces.PlatformHelper
 import appeng.api.config.PowerUnits
 import com.gregtechceu.gtceu.api.capability.compat.FeCompat
 import net.minecraft.client.KeyMapping

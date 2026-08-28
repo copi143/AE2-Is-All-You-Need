@@ -7,7 +7,7 @@ import allyouneed.cell.storage.CellHousings
 import allyouneed.cell.storage.StorageComponents
 import allyouneed.item.packet.AllPackets
 import allyouneed.pattern.ModItems
-import allyouneed.util.NeedRegisterBlockEntity
+import allyouneed.util.interfaces.NeedRegisterBlockEntity
 import allyouneed.util.rl
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.BlockDefinition

@@ -3,7 +3,8 @@ package allyouneed.mixin.ae2;
 import allyouneed.api.BigStackSource;
 import allyouneed.item.packet.AllPackets;
 import allyouneed.util.bigint.BigAmounts;
-import allyouneed.util.bigint.BigKeyCounter;
+import allyouneed.util.bigint.ObjectCounter;
+import appeng.api.stacks.AEKey;
 import appeng.api.networking.energy.IEnergySource;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
@@ -45,18 +46,18 @@ public abstract class MEStorageMenuMixin {
     private IncrementalUpdateHelper updateHelper;
 
     @Unique
-    private BigKeyCounter allyouneed$previousBigStacks = new BigKeyCounter();
+    private ObjectCounter<AEKey> allyouneed$previousBigStacks = new ObjectCounter<>();
 
     @Redirect(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/api/storage/MEStorage;getAvailableStacks()Lappeng/api/stacks/KeyCounter;", remap = false))
     private KeyCounter allyouneed$captureBigStacks(MEStorage storage) {
         KeyCounter stacks = storage.getAvailableStacks();
-        BigKeyCounter big;
+        ObjectCounter<AEKey> big;
         if (storage instanceof BigStackSource source && source.getLastBigStacks() != null) {
             big = source.getLastBigStacks().copy();
         } else {
-            big = BigKeyCounter.fromKeyCounter(stacks);
+            big = ObjectCounter.fromKeyCounter(stacks);
             if (big == null) {
-                big = new BigKeyCounter();
+                big = new ObjectCounter<>();
             }
         }
         BigAmounts.setCurrent(big);
@@ -65,7 +66,7 @@ public abstract class MEStorageMenuMixin {
 
     @Inject(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/menu/me/common/IncrementalUpdateHelper;hasChanges()Z", remap = false))
     private void allyouneed$detectBigChanges(CallbackInfo ci) {
-        BigKeyCounter current = BigAmounts.getCurrent();
+        ObjectCounter<AEKey> current = BigAmounts.getCurrent();
         if (current == null) {
             return;
         }
@@ -74,7 +75,7 @@ public abstract class MEStorageMenuMixin {
 
     @Inject(method = "broadcastChanges", at = @At("RETURN"))
     private void allyouneed$finishBigSnapshot(CallbackInfo ci) {
-        BigKeyCounter current = BigAmounts.getCurrent();
+        ObjectCounter<AEKey> current = BigAmounts.getCurrent();
         if (current != null) {
             this.allyouneed$previousBigStacks = current;
         }

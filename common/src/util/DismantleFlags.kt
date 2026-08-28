@@ -5,9 +5,12 @@ object DismantleFlags {
 
     @JvmStatic
     fun setWrenchDismantling(value: Boolean) {
-        wrenching.set(value)
+        if (value) wrenching.set(true) else wrenching.remove()
     }
 
     @JvmStatic
     fun isWrenchDismantling(): Boolean = wrenching.get()
+
+    @JvmStatic
+    fun clear() = wrenching.remove()
 }

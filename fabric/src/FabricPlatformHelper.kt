@@ -1,6 +1,6 @@
 package allyouneed
 
-import allyouneed.util.PlatformHelper
+import allyouneed.util.interfaces.PlatformHelper
 import appeng.api.config.PowerUnits
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper

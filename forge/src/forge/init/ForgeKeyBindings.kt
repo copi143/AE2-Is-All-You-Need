@@ -10,7 +10,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 
 /**
- * Forge-side wiring for key bindings registered through [allyouneed.util.PlatformHelper].
+ * Forge-side wiring for key bindings registered through [allyouneed.util.interfaces.PlatformHelper].
  *
  * The common [ItemDetailsKeyBind] is initialised inside the `RegisterKeyMappingsEvent` handler so
  * that its `KeyMapping` is guaranteed to be registered in the game before the event fires.

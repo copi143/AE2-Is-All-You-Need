@@ -1,26 +1,9 @@
 plugins {
-    id("java-library")
-    id("org.jetbrains.kotlin.jvm")
+    id("multiloader-base")
 }
 
 group = "allyouneed.client.msdftext"
 version = "0.0.0"
-
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
-    withSourcesJar()
-}
-
-kotlin {
-    jvmToolchain(libs.versions.java.get().toInt())
-}
-
-sourceSets.main {
-    kotlin.setSrcDirs(listOf("src"))
-}
-sourceSets.test {
-    kotlin.setSrcDirs(listOf("test"))
-}
 
 dependencies {
     implementation(kotlin("stdlib"))

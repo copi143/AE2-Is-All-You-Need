@@ -1,6 +1,6 @@
 package allyouneed.cell
 
-import allyouneed.util.NeedRegisterBlockEntity
+import allyouneed.util.interfaces.NeedRegisterBlockEntity
 import appeng.block.AEBaseEntityBlock
 import appeng.block.crafting.CraftingUnitBlock
 import appeng.block.crafting.ICraftingUnitType

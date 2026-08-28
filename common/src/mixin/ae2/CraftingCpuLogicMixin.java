@@ -1,7 +1,7 @@
 package allyouneed.mixin.ae2;
 
-import allyouneed.api.BigCpuCapacity;
 import allyouneed.parts.logger.NetworkLogHooks;
+import allyouneed.util.AE2Kt;
 import allyouneed.util.bigint.BigCpuStorage;
 import appeng.api.networking.IGrid;
 import appeng.api.networking.crafting.ICraftingPlan;
@@ -39,7 +39,7 @@ public class CraftingCpuLogicMixin {
     private void allyouneed$rejectTooSmall(IGrid grid, ICraftingPlan plan, IActionSource src, ICraftingRequester requester, CallbackInfoReturnable<ICraftingSubmitResult> cir) {
         // Only handle the size dimension here when unbounded / big path differs from long.
         // Busy/offline still handled by vanilla after we don't cancel.
-        if (BigCpuStorage.hasClusterEntry(cluster) || ((BigCpuCapacity) (Object) cluster).isUnboundedCapacity()) {
+        if (AE2Kt.isUnboundedCapacity(cluster) || AE2Kt.getBigStorage(cluster).signum() > 0) {
             if (!BigCpuStorage.canHold(cluster, plan.bytes())) {
                 cir.setReturnValue(CraftingSubmitResult.CPU_TOO_SMALL);
             }

@@ -15,38 +15,34 @@ import java.math.BigInteger
  * Match key: exact [AEKey], wildcard [Ingredient], or empty slot.
  */
 class BigIngredient private constructor(
-    private val exactKey: AEKey?,
-    private val wildcard: Ingredient?,
-    val valLong: Long,
-    private val bigInt: BigInteger?,
-) {
+    key: AEKey?,
+    val wildcard: Ingredient?,
+    valLong: Long,
+    bigInt: BigInteger?,
+) : Object2BigInt<AEKey?>(key, valLong, bigInt) {
+    private constructor(mapping: Object2BigInt<AEKey?>, wildcard: Ingredient?) : this(
+        mapping.key, wildcard, mapping.valLong, mapping.bigInt
+    )
+
     init {
-        assert(exactKey == null || wildcard == null) {
+        require(key == null || wildcard == null) {
             "BigIngredient cannot be both exact and wildcard"
         }
-        assert(valLong >= 0 || (bigInt != null && bigInt > BigInteger.ZERO)) {
+        require(valLong >= 0 || (bigInt != null && bigInt.signum() > 0)) {
             "ingredient amount is negative"
         }
     }
 
-    val valIntSaturate: Int
-        get() = if (valLong < 0 || valLong > Int.MAX_VALUE.toLong()) Int.MAX_VALUE else valLong.toInt()
-    val valLongSaturate: Long get() = if (valLong < 0) Long.MAX_VALUE else valLong
-    val valBig: BigInteger get() = bigInt ?: BigInteger.valueOf(valLong)
-    val valString: String get() = bigInt?.toString() ?: valLong.toString()
-    val isZero: Boolean get() = valLong == 0L
-
     /** 空槽（无匹配键）。Empty slot (no match key). */
-    val isEmptySlot: Boolean get() = exactKey == null && wildcard == null
-
-    /** 精确 [AEKey]；非精确时为 null。 */
-    val key: AEKey? get() = exactKey
+    val isEmptySlot: Boolean get() = key == null && wildcard == null
 
     /** 通配 [Ingredient]；非通配时为 null。 */
     val ingredient: Ingredient? get() = wildcard
 
-    val isExact: Boolean get() = exactKey != null
+    val isExact: Boolean get() = key != null
     val isWildcard: Boolean get() = wildcard != null
+
+    fun toBigStackOrNull(): BigStack? = if (key == null) null else BigStack(key, valLong, bigInt)
 
     /**
      * 容器槽物品是否满足本规格（种类 + 数量下限）。
@@ -58,10 +54,11 @@ class BigIngredient private constructor(
         }
         if (stack.isEmpty) return false
         val kindOk = when {
-            exactKey != null -> {
+            key != null -> {
                 val k = AEItemKey.of(stack) ?: return false
-                k == exactKey
+                k == key
             }
+
             wildcard != null -> !wildcard.isEmpty && wildcard.test(stack)
             else -> false
         }
@@ -80,26 +77,13 @@ class BigIngredient private constructor(
         return copyAmount(value)
     }
 
-    operator fun times(scale: Long): BigIngredient {
-        require(scale >= 0) { "Cannot multiply by a negative number." }
-        return if (scale == 0L) {
-            setSize(0L)
-        } else if (bigInt != null) {
-            copyAmount(valBig * BigInteger.valueOf(scale))
-        } else {
-            val v = runCatching { Math.multiplyExact(valLong, scale) }.getOrNull()
-            if (v != null) {
-                copyAmount(v)
-            } else {
-                copyAmount(BigInteger.valueOf(valLong) * BigInteger.valueOf(scale))
-            }
-        }
-    }
+    override operator fun times(scale: Long): BigIngredient =
+        BigIngredient((this as Object2BigInt<AEKey?>).times(scale), wildcard)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is BigIngredient) return false
-        if (exactKey != other.exactKey) return false
+        if (key != other.key) return false
         if (wildcard != other.wildcard) return false
         if (valLong != other.valLong) return false
         if (bigInt != other.bigInt) return false
@@ -107,26 +91,24 @@ class BigIngredient private constructor(
     }
 
     override fun hashCode(): Int {
-        var h = exactKey.hashCode() xor wildcard.hashCode()
+        var h = key.hashCode() xor wildcard.hashCode()
         h = h xor if (valLong < 0) bigInt.hashCode() else valLong.hashCode()
         return h
     }
 
     override fun toString(): String = when {
         isEmptySlot -> "Empty*$valString"
-        exactKey != null -> "$exactKey*$valString"
+        key != null -> "$key*$valString"
         else -> "Ingredient*$valString"
     }
 
-    private fun copyAmount(value: Long): BigIngredient =
-        BigIngredient(exactKey, wildcard, value, null)
+    private fun copyAmount(value: Long): BigIngredient = BigIngredient(key, wildcard, value, null)
 
-    private fun copyAmount(value: BigInteger): BigIngredient =
-        if (value.bitLength() < 64) {
-            BigIngredient(exactKey, wildcard, value.toLong(), null)
-        } else {
-            BigIngredient(exactKey, wildcard, -1, value)
-        }
+    private fun copyAmount(value: BigInteger): BigIngredient = if (value.bitLength() < 64) {
+        BigIngredient(key, wildcard, value.toLong(), null)
+    } else {
+        BigIngredient(key, wildcard, -1, value)
+    }
 
     companion object {
         private val EMPTY = BigIngredient(null, null, 0L, null)

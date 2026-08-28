@@ -49,6 +49,7 @@ object BigAmounts {
     fun getCurrentAmount(key: AEKey?): BigInteger? {
         val current = CURRENT.get()
         if (current == null || key == null) return null
-        return current[key]
+        if (!current.containsKey(key)) return null
+        return current.getCounter(key).toBigInteger()
     }
 }

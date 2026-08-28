@@ -1,20 +1,12 @@
 plugins {
-    id("org.jetbrains.kotlin.jvm")
+    id("multiloader-base")
 }
 
 val compose = libs.versions.compose.get()
 
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
-}
-
-kotlin {
-    jvmToolchain(17)
-}
-
 dependencies {
     compileOnly("org.jetbrains.compose.ui:ui-graphics-desktop:$compose")
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib")
+    compileOnly(kotlin("stdlib"))
 }
 
 val officialUiGraphicsJar = configurations.detachedConfiguration(

@@ -1,7 +1,7 @@
 package allyouneed.cell
 
 import allyouneed.logic.aekey.EnergyKey
-import allyouneed.util.NeedRegisterBlockEntity
+import allyouneed.util.interfaces.NeedRegisterBlockEntity
 import allyouneed.util.idify
 import allyouneed.util.rl
 import appeng.block.AEBaseEntityBlock

@@ -8,20 +8,18 @@ import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 
 /**
- * 机器槽匹配：物品集合 ∪ 标签集合（OR）。
- * Machine slot matcher: items ∪ tags (OR).
+ * 机器槽匹配：物品集合 ∪ 标签集合。
+ *
+ * Machine slot matcher: items ∪ tags.
  */
-class MachineItemMatcher(
-    val items: Set<Item> = emptySet(),
-    val tags: Set<TagKey<Item>> = emptySet(),
-) {
+class MachineItemMatcher(val items: Set<Item> = emptySet(), val tags: Set<TagKey<Item>> = emptySet()) {
     constructor(vararg items: Item) : this(items.toSet(), emptySet())
+    constructor(vararg tags: TagKey<Item>) : this(emptySet(), tags.toSet())
 
     fun matches(stack: ItemStack): Boolean {
         if (stack.isEmpty) return false
         val item = stack.item
-        if (item in items) return true
-        return tags.any { item in it }
+        return item in items || tags.any { item in it }
     }
 
     companion object {

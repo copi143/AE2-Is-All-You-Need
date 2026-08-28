@@ -18,8 +18,7 @@ val LOGNAME = MODNAME.replace(" ", "")
 val logger: Logger = LoggerFactory.getLogger(LOGNAME)
 
 @JvmField
-val debugLogger: Logger = if (Platform.isDev) {
-    logger.marked("Debug")
-} else {
-    NOPLogger.NOP_LOGGER
-}
+val coreLogger: Logger = logger.marked("Core")
+
+@JvmField
+val debugLogger: Logger = if (Platform.isDev) logger.marked("Debug") else NOPLogger.NOP_LOGGER

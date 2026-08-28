@@ -1,7 +1,8 @@
 package allyouneed.mixin.ae2;
 
 import allyouneed.api.BigStackSource;
-import allyouneed.util.bigint.BigKeyCounter;
+import allyouneed.util.bigint.ObjectCounter;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.me.storage.NetworkStorage;
@@ -33,15 +34,15 @@ public abstract class NetworkStorageMixin implements BigStackSource {
     private boolean mountsInUse;
 
     @Unique
-    private BigKeyCounter allyouneed$lastBigStacks = new BigKeyCounter();
+    private ObjectCounter<AEKey> allyouneed$lastBigStacks = new ObjectCounter<>();
 
     @Override
-    public @Nullable BigKeyCounter getLastBigStacks() {
+    public @Nullable ObjectCounter<AEKey> getLastBigStacks() {
         return this.allyouneed$lastBigStacks;
     }
 
     @Override
-    public void getBigAvailableStacks(BigKeyCounter out) {
+    public void getBigAvailableStacks(ObjectCounter<AEKey> out) {
         out.addAll(this.allyouneed$lastBigStacks);
     }
 
@@ -54,7 +55,7 @@ public abstract class NetworkStorageMixin implements BigStackSource {
 
         this.mountsInUse = true;
         try {
-            BigKeyCounter big = new BigKeyCounter();
+            ObjectCounter<AEKey> big = new ObjectCounter<>();
             for (var invList : this.priorityInventory.values()) {
                 for (var inv : invList) {
                     if (!BigStackSource.collectBigStacks(inv, big)) {

@@ -22,7 +22,7 @@ import vazkii.botania.api.mana.ManaReceiver
  * The bus face pointing at a [ManaReceiver] (mana pool, mana flux field, ...) becomes a mana
  * port: the import bus pulls mana into the network as [ManaKey], the export bus pushes stored
  * mana back out. Unit conversion: 1 Mana = 5 AM = 5 × [ManaKey.MANA_GRANULARITY] internal
- * units ([ManaType.BotaniaMana.manaPerAM] = 0.2, see [allyouneed.util.PlatformHelper]).
+ * units ([ManaType.BotaniaMana.manaPerAM] = 0.2, see [allyouneed.util.interfaces.PlatformHelper]).
  *
  * Transfer accounting is loss-less on both sides:
  * - import clamps the withdrawal against the network's simulated insert;

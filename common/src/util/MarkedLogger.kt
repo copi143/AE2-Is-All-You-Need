@@ -41,6 +41,41 @@ class MarkedLogger(private val target: Logger, private val attached: Marker) : L
     override fun error(format: String, vararg arguments: Any?) = target.error(attached, format, *arguments)
     override fun error(msg: String, t: Throwable) = target.error(attached, msg, t)
 
+    override fun isTraceEnabled(marker: Marker?): Boolean = target.isTraceEnabled(attached)
+    override fun trace(marker: Marker?, msg: String) = target.trace(attached, msg)
+    override fun trace(marker: Marker?, format: String, arg: Any?) = target.trace(attached, format, arg)
+    override fun trace(marker: Marker?, format: String, arg1: Any?, arg2: Any?) = target.trace(attached, format, arg1, arg2)
+    override fun trace(marker: Marker?, format: String, vararg arguments: Any?) = target.trace(attached, format, *arguments)
+    override fun trace(marker: Marker?, msg: String, t: Throwable) = target.trace(attached, msg, t)
+
+    override fun isDebugEnabled(marker: Marker?): Boolean = target.isDebugEnabled(attached)
+    override fun debug(marker: Marker?, msg: String) = target.debug(attached, msg)
+    override fun debug(marker: Marker?, format: String, arg: Any?) = target.debug(attached, format, arg)
+    override fun debug(marker: Marker?, format: String, arg1: Any?, arg2: Any?) = target.debug(attached, format, arg1, arg2)
+    override fun debug(marker: Marker?, format: String, vararg arguments: Any?) = target.debug(attached, format, *arguments)
+    override fun debug(marker: Marker?, msg: String, t: Throwable) = target.debug(attached, msg, t)
+
+    override fun isInfoEnabled(marker: Marker?): Boolean = target.isInfoEnabled(attached)
+    override fun info(marker: Marker?, msg: String) = target.info(attached, msg)
+    override fun info(marker: Marker?, format: String, arg: Any?) = target.info(attached, format, arg)
+    override fun info(marker: Marker?, format: String, arg1: Any?, arg2: Any?) = target.info(attached, format, arg1, arg2)
+    override fun info(marker: Marker?, format: String, vararg arguments: Any?) = target.info(attached, format, *arguments)
+    override fun info(marker: Marker?, msg: String, t: Throwable) = target.info(attached, msg, t)
+
+    override fun isWarnEnabled(marker: Marker?): Boolean = target.isWarnEnabled(attached)
+    override fun warn(marker: Marker?, msg: String) = target.warn(attached, msg)
+    override fun warn(marker: Marker?, format: String, arg: Any?) = target.warn(attached, format, arg)
+    override fun warn(marker: Marker?, format: String, arg1: Any?, arg2: Any?) = target.warn(attached, format, arg1, arg2)
+    override fun warn(marker: Marker?, format: String, vararg arguments: Any?) = target.warn(attached, format, *arguments)
+    override fun warn(marker: Marker?, msg: String, t: Throwable) = target.warn(attached, msg, t)
+
+    override fun isErrorEnabled(marker: Marker?): Boolean = target.isErrorEnabled(attached)
+    override fun error(marker: Marker?, msg: String) = target.error(attached, msg)
+    override fun error(marker: Marker?, format: String, arg: Any?) = target.error(attached, format, arg)
+    override fun error(marker: Marker?, format: String, arg1: Any?, arg2: Any?) = target.error(attached, format, arg1, arg2)
+    override fun error(marker: Marker?, format: String, vararg arguments: Any?) = target.error(attached, format, *arguments)
+    override fun error(marker: Marker?, msg: String, t: Throwable) = target.error(attached, msg, t)
+
     companion object {
         fun Logger.marked(name: String) = MarkedLogger(this, MarkerFactory.getMarker(name))
     }

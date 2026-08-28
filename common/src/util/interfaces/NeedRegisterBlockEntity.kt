@@ -1,4 +1,4 @@
-package allyouneed.util
+package allyouneed.util.interfaces
 
 interface NeedRegisterBlockEntity {
     fun registerBlockEntity()

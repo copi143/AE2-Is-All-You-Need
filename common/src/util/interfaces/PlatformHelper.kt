@@ -1,5 +1,6 @@
-package allyouneed.util
+package allyouneed.util.interfaces
 
+import allyouneed.util.logger
 import net.minecraft.client.KeyMapping
 import java.util.*
 

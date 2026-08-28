@@ -73,7 +73,7 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
         if (k >= 0) return resources[k]
         debugLogger.info("addKey $key")
         val id = resources.size
-        resources.add(Resource(id, BigStack(key, snapshot.stored[key])))
+        resources.add(Resource(id, BigStack(key, snapshot.stored.getCounter(key).toBigInteger())))
         keyIndex[key] = id
         if (grid.craftingService.canEmitFor(key)) {
             addRecipe(-1, arrayListOf(), arrayListOf(ItemRef(id, 1)), arrayListOf())

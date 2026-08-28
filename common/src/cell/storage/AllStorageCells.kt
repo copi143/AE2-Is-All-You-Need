@@ -1,7 +1,7 @@
 package allyouneed.cell.storage
 
 import allyouneed.logic.aekey.*
-import allyouneed.util.WithEntries
+import allyouneed.util.interfaces.WithEntries
 import appeng.api.stacks.AEKeyType
 
 /** Registry of every storage cell group, keyed by key-type id (mirrors the resgen groups). */
