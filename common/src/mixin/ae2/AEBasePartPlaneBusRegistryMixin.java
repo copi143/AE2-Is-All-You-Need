@@ -12,11 +12,11 @@ import allyouneed.parts.planebus.PlaneBusClusters;
 import allyouneed.parts.planebus.PlaneKind;
 
 /**
- * 把原版湮灭面板与成型面板登记进专用线缆的集群注册表，使“整个结构只消耗
+ * 把原版破坏面板与成型面板登记进专用线缆的集群注册表，使“整个结构只消耗
  * 1 个频道”对面板生效。目标选在 {@link AEBasePart} 而不是面板类上：
  * {@code removeFromWorld} 仅声明于基类，Mixin 无法注入目标类中不存在的方法；
  * 用 instanceof 守卫限定只处理两类面板。
- *
+ * <p>
  * Registers vanilla annihilation and forming planes into the plane-bus cluster registry so
  * that the "one channel per structure" rule also covers planes. The target is
  * {@link AEBasePart} rather than the plane classes because {@code removeFromWorld} is only
