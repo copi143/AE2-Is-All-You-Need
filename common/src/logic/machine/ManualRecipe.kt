@@ -39,7 +39,7 @@ data class ManualMachineRecipe(
     fun primaryOutputStack(): ItemStack {
         val out = outputs.first()
         val key = out.key as? AEItemKey ?: return ItemStack.EMPTY
-        return key.toStack(out.valIntSaturate.coerceAtLeast(1))
+        return key.toStack(out.intSaturated.coerceAtLeast(1))
     }
 
     fun remainderStacks(containerSize: Int): List<ItemStack> {

@@ -24,6 +24,7 @@ class U128(internal val lo: ULong, internal val hi: ULong) : Number(), Comparabl
 
     val isZero: Boolean get() = lo == 0UL && hi == 0UL
     val isOne: Boolean get() = lo == 1UL && hi == 0UL
+    val signum: Int get() = if (isZero) 0 else 1
 
     @Contract(pure = true)
     operator fun plus(other: U128): U128 {
@@ -53,6 +54,7 @@ class U128(internal val lo: ULong, internal val hi: ULong) : Number(), Comparabl
         }
     }
 
+    @Contract(pure = true)
     infix fun shr(bits: Int): U128 {
         return when (val shift = bits and 127) {
             0 -> this
@@ -85,16 +87,18 @@ class U128(internal val lo: ULong, internal val hi: ULong) : Number(), Comparabl
     @Contract(pure = true)
     fun inv(): U128 = U128(lo.inv(), hi.inv())
 
+    @Contract(pure = true)
     fun numberOfLeadingZeros(): Int = if (hi == 0UL) 64 + lo.countLeadingZeroBits() else hi.countLeadingZeroBits()
 
+    @Contract(pure = true)
     fun bitLength(): Int = if (isZero) 0 else 128 - numberOfLeadingZeros()
 
     /** 原生实现：恢复式长除法，同时返回商和余数。 */
+    @Contract(pure = true)
     fun divmod(other: U128): Pair<U128, U128> {
         if (other.isZero) throw ArithmeticException("Division by zero")
         if (this < other) return MIN_VALUE to this
         if (other.isOne) return this to MIN_VALUE
-        // 快路径：双方都落在 64 位内，直接用 ULong 除法
         if (hi == 0UL && other.hi == 0UL) {
             return U128(lo / other.lo, 0UL) to U128(lo % other.lo, 0UL)
         }
@@ -114,24 +118,31 @@ class U128(internal val lo: ULong, internal val hi: ULong) : Number(), Comparabl
         return quotient to remainder
     }
 
+    @Contract(pure = true)
     operator fun div(other: U128): U128 = divmod(other).first
 
+    @Contract(pure = true)
     operator fun rem(other: U128): U128 = divmod(other).second
 
+    @Contract(pure = true)
     fun toBigInteger(): BigInteger = hi.toUnsignedBigInteger().shiftLeft(64).or(lo.toUnsignedBigInteger())
 
+    @Contract(pure = true)
     override fun compareTo(other: U128): Int {
         return if (this.hi != other.hi) this.hi.compareTo(other.hi) else this.lo.compareTo(other.lo)
     }
 
+    @Contract(pure = true)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is U128) return false
         return lo == other.lo && hi == other.hi
     }
 
+    @Contract(pure = true)
     override fun hashCode(): Int = 31 * hi.hashCode() + lo.hashCode()
 
+    @Contract(pure = true)
     override fun toString(): String = toBigInteger().toString()
 
     companion object {
