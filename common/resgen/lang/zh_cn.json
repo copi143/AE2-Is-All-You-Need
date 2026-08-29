@@ -139,6 +139,7 @@
   "gui.ae2isallyouneed.encoding.pseudo": "伪样板",
   "gui.ae2isallyouneed.encode_failed": "无法编码样板",
   "item.ae2isallyouneed.pattern_encoding_terminal": "ME 样板编码终端",
+  "item.ae2isallyouneed.wireless_omni_terminal": "无线全能终端",
   "item.ae2isallyouneed.pseudo_pattern": "伪样板",
   "item.ae2isallyouneed.plane_bus": "ME破坏/成型面板专用线缆",
   "gui.ae2isallyouneed.machine_slot": "机器",

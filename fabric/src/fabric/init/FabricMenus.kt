@@ -6,6 +6,7 @@ import allyouneed.parts.logger.NetworkLoggerMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
+import allyouneed.terminal.WirelessOmniTerminalMenu
 import net.minecraft.world.inventory.MenuType
 
 object FabricMenus {
@@ -21,5 +22,7 @@ object FabricMenus {
         @Suppress("UNUSED_VARIABLE") val _nl: MenuType<*> = NetworkLoggerMenu.TYPE
 
         @Suppress("UNUSED_VARIABLE") val _ac: MenuType<*> = AsyncCraftingStatusMenu.TYPE
+
+        @Suppress("UNUSED_VARIABLE") val _wo: MenuType<*> = WirelessOmniTerminalMenu.TYPE
     }
 }

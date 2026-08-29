@@ -8,6 +8,7 @@ import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
+import allyouneed.terminal.WirelessOmniTerminalItem
 import allyouneed.util.rl
 import appeng.core.MainCreativeTab
 import appeng.core.definitions.ItemDefinition
@@ -64,6 +65,18 @@ object ModItems {
             "ME Pattern Encoding Terminal",
             "pattern_encoding_terminal".rl,
             PATTERN_ENCODING_TERMINAL,
+        ).also { MainCreativeTab.add(it) }
+    }
+
+    val WIRELESS_OMNI_TERMINAL: WirelessOmniTerminalItem by lazy {
+        WirelessOmniTerminalItem(Item.Properties().stacksTo(1))
+    }
+
+    val WIRELESS_OMNI_TERMINAL_DEF: ItemDefinition<WirelessOmniTerminalItem> by lazy {
+        ItemDefinition(
+            "Wireless Omni Terminal",
+            "wireless_omni_terminal".rl,
+            WIRELESS_OMNI_TERMINAL,
         ).also { MainCreativeTab.add(it) }
     }
 

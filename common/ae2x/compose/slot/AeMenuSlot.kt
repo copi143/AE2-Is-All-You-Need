@@ -20,11 +20,11 @@ fun AeMenuSlot(
 ) {
     val optional = slot as? IOptionalSlot
     ItemSlot(
-        stack = slot.item,
+        stack = { slot.item },
         modifier = modifier.aeMenuSlot(slot),
         consumeClicks = false,
-        amount = amount,
-        craftable = craftable,
+        amount = { amount },
+        craftable = { craftable },
         disabled = optional?.isSlotEnabled == false,
         missing = missing,
         showTooltip = true,

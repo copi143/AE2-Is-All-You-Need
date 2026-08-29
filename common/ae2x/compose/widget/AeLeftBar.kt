@@ -1,6 +1,7 @@
 package ae2x.compose.widget
 
 import ae2x.compose.LocalAeHost
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ fun AeLeftBar(
                     (coords.size.height * scale).roundToInt(),
                 )
             },
+        verticalArrangement = Arrangement.spacedBy(1.dp),
         content = content,
     )
 }

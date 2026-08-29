@@ -16,12 +16,14 @@ import allyouneed.pattern.ModPatternDecoders
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
 import allyouneed.util.*
 import appeng.api.behaviors.PickupStrategy
+import appeng.api.features.GridLinkables
 import appeng.api.client.StorageCellModels
 import appeng.api.parts.PartModels
 import appeng.api.stacks.AEKeyTypes
 import appeng.api.storage.StorageCells
 import appeng.core.localization.GuiText
 import appeng.items.parts.PartModelsHelper
+import appeng.items.tools.powered.WirelessTerminalItem
 
 object Main {
     fun init() {
@@ -80,6 +82,9 @@ object Main {
 
         // 注册破坏面板经验吸收：经验球实体 -> XpKey(level=1)
         PickupStrategy.register(XpKey.Type, ::XpPickupStrategy)
+
+        GridLinkables.register(ModItems.WIRELESS_OMNI_TERMINAL, WirelessTerminalItem.LINKABLE_HANDLER)
+        ModItems.WIRELESS_OMNI_TERMINAL_DEF
     }
 
     fun registerParts() {

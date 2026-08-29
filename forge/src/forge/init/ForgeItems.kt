@@ -7,6 +7,7 @@ import allyouneed.pattern.adaptive.AdaptivePatternItem
 import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
+import allyouneed.terminal.WirelessOmniTerminalItem
 import allyouneed.util.MODID
 import appeng.items.parts.ColoredPartItem
 import appeng.items.parts.PartItem
@@ -35,6 +36,9 @@ object ForgeItems {
 
     val PATTERN_ENCODING_TERMINAL: RegistryObject<PartItem<UnifiedPatternEncodingTermPart>> =
         ITEMS.register("pattern_encoding_terminal") { ModItems.PATTERN_ENCODING_TERMINAL }
+
+    val WIRELESS_OMNI_TERMINAL: RegistryObject<WirelessOmniTerminalItem> =
+        ITEMS.register("wireless_omni_terminal") { ModItems.WIRELESS_OMNI_TERMINAL }
 
     fun register(bus: IEventBus) {
         ITEMS.register(bus)

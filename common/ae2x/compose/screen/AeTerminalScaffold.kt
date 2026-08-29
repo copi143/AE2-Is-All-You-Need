@@ -1,7 +1,6 @@
 package ae2x.compose.screen
 
 import androidx.compose.ui.graphics.toArgb
-import ae2x.compose.LocalAeHost
 import ae2x.compose.aePanelBounds
 import ae2x.compose.rememberGuiSync
 import ae2x.compose.slot.AePlayerInventory
@@ -29,7 +28,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import appeng.api.config.Settings
 import appeng.api.util.IConfigurableObject
-import minecraftx.compose.material.McCarriedStack
 import minecraftx.compose.material.McPanel
 import minecraftx.compose.material.McText
 import minecraftx.compose.theme.McTheme
@@ -45,7 +43,6 @@ fun AeTerminalScaffold(
     extraLeftBar: @Composable () -> Unit = {},
     extraContent: @Composable () -> Unit = {},
 ) {
-    val host = LocalAeHost.current
     val syncedSearch = rememberGuiSync { screen.searchText }
     var search by remember { mutableStateOf(TextFieldValue(syncedSearch)) }
     if (syncedSearch != search.text) {
@@ -89,6 +86,5 @@ fun AeTerminalScaffold(
                 }
             }
         }
-        McCarriedStack(host.menu.carried)
     }
 }

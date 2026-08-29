@@ -9,6 +9,7 @@ import allyouneed.pattern.machine.MachinePatternItem
 import allyouneed.pattern.pseudo.PseudoPatternItem
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalItem
 import allyouneed.pattern.term.UnifiedPatternEncodingTermPart
+import allyouneed.terminal.WirelessOmniTerminalItem
 import appeng.core.definitions.AEParts
 import allyouneed.util.rl
 import appeng.api.ids.AECreativeTabIds
@@ -29,6 +30,7 @@ object FabricItems {
     val PATTERN_ENCODING_TERMINAL: PartItem<UnifiedPatternEncodingTermPart> = ModItems.PATTERN_ENCODING_TERMINAL
     val WIRELESS_PSEUDO_PATTERN_TERMINAL: WirelessPseudoPatternTerminalItem =
         WirelessPseudoPatternTerminalItem(Item.Properties().stacksTo(1))
+    val WIRELESS_OMNI_TERMINAL: WirelessOmniTerminalItem = ModItems.WIRELESS_OMNI_TERMINAL
 
     fun register() {
         Registry.register(
@@ -55,6 +57,9 @@ object FabricItems {
         Registry.register(
             BuiltInRegistries.ITEM, "wireless_pseudo_pattern_terminal".rl, WIRELESS_PSEUDO_PATTERN_TERMINAL
         )
+        Registry.register(
+            BuiltInRegistries.ITEM, "wireless_omni_terminal".rl, WIRELESS_OMNI_TERMINAL
+        )
 
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register { entries ->
             entries.accept(PSEUDO_PATTERN)
@@ -66,6 +71,7 @@ object FabricItems {
             entries.accept(AllRegistries.CREATIVE_ME_CELL)
             entries.accept(AllRegistries.DIMENSIONAL_CELL)
             entries.accept(WIRELESS_PSEUDO_PATTERN_TERMINAL)
+            entries.accept(WIRELESS_OMNI_TERMINAL)
         }
 
         // AE2 main creative tab (Fabric does not use MainCreativeTab.initExternal)
@@ -73,6 +79,7 @@ object FabricItems {
             entries.accept(AllRegistries.CREATIVE_ME_CELL)
             entries.accept(AllRegistries.DIMENSIONAL_CELL)
             entries.accept(PATTERN_ENCODING_TERMINAL)
+            entries.accept(WIRELESS_OMNI_TERMINAL)
             entries.accept(PLANE_BUS)
             runCatching { entries.javaClass.getMethod("remove", net.minecraft.world.item.ItemStack::class.java)
                 .invoke(entries, AEParts.PATTERN_ENCODING_TERMINAL.stack()) }

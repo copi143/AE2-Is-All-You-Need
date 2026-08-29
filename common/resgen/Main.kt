@@ -301,6 +301,7 @@ fun main(args: Array<String>) {
         // Machine Pattern item (just an item model, no block)
         item("machine_pattern", "Machine Pattern")
         itemLang("pattern_encoding_terminal", "ME Pattern Encoding Terminal")
+        itemLang("wireless_omni_terminal", "Wireless Omni Terminal")
         itemLang("pseudo_pattern", "Pseudo Pattern")
         itemLang("plane_bus", "ME Annihilation/Formation Plane Bus")
 

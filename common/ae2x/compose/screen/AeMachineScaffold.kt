@@ -1,7 +1,6 @@
 package ae2x.compose.screen
 
 import androidx.compose.ui.graphics.toArgb
-import ae2x.compose.LocalAeHost
 import ae2x.compose.aePanelBounds
 import ae2x.compose.slot.AePlayerInventory
 import androidx.compose.foundation.layout.Box
@@ -16,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import minecraftx.compose.material.McCarriedStack
 import minecraftx.compose.material.McPanel
 import minecraftx.compose.material.McText
 import minecraftx.compose.theme.McTheme
@@ -30,7 +28,6 @@ fun AeMachineScaffold(
     leftBar: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
-    val host = LocalAeHost.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.Top) {
             leftBar()
@@ -44,6 +41,5 @@ fun AeMachineScaffold(
                 }
             }
         }
-        McCarriedStack(host.menu.carried)
     }
 }

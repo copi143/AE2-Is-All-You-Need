@@ -20,6 +20,8 @@ import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalScreen
 import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermScreen
+import allyouneed.terminal.WirelessOmniTerminalMenu
+import allyouneed.terminal.WirelessOmniTerminalScreen
 import allyouneed.util.notify.DesktopNotify
 import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
@@ -104,6 +106,9 @@ object ForgeClientEvents {
             MenuScreens.register(AsyncCraftingStatusMenu.TYPE) { menu, inv, title ->
                 val style = StyleManager.loadStyleDoc("/screens/async_crafting_status.json")
                 AsyncCraftingStatusScreen(menu, inv, title, style)
+            }
+            MenuScreens.register(WirelessOmniTerminalMenu.TYPE) { menu, inv, title ->
+                WirelessOmniTerminalScreen(menu, inv, title)
             }
             if (Platform.isModLoaded("gtceu")) {
                 MenuScreens.register(AsyncStructureGtStatusMenu.TYPE) { menu, inv, title ->

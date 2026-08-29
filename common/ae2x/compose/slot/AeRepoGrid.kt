@@ -51,7 +51,6 @@ fun AeRepoGrid(
         val pointer = mouse.position
         repeat(visible) { index ->
             val entry = repo.get(index)
-            val stack = entry?.what?.wrapForDisplayOrFilter() ?: ItemStack.EMPTY
             val col = index % columns
             val row = index / columns
             val cellX = gridPos.x + col * slotPx
@@ -75,13 +74,17 @@ fun AeRepoGrid(
                 }
             }
             ItemSlot(
-                stack = stack,
+                stack = {
+                    repo.get(index)?.what?.wrapForDisplayOrFilter() ?: ItemStack.EMPTY
+                },
                 modifier = Modifier.offset(slotSize * col, slotSize * row),
                 interactive = true,
                 consumeClicks = true,
-                amount = entry?.storedAmount?.takeIf { it > 0 }?.let { AeAmountFormat.slot(it) },
-                craftable = entry?.isCraftable == true,
-                onSlotClicked = { button, clickType -> onEntryClick(entry, button, clickType) },
+                amount = {
+                    repo.get(index)?.storedAmount?.takeIf { it > 0 }?.let { AeAmountFormat.slot(it) }
+                },
+                craftable = { repo.get(index)?.isCraftable == true },
+                onSlotClicked = { button, clickType -> onEntryClick(repo.get(index), button, clickType) },
             )
         }
     }

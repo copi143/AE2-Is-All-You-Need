@@ -8,6 +8,7 @@ import allyouneed.parts.logger.NetworkLoggerMenu
 import allyouneed.parts.machineassembler.MachineAssemblerMenu
 import allyouneed.pattern.pseudo.WirelessPseudoPatternTerminalMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
+import allyouneed.terminal.WirelessOmniTerminalMenu
 import allyouneed.util.MODID
 import net.minecraft.world.inventory.MenuType
 import net.minecraftforge.eventbus.api.IEventBus
@@ -34,6 +35,9 @@ object ForgeMenus {
 
     val ASYNC_CRAFTING_STATUS: RegistryObject<MenuType<AsyncCraftingStatusMenu>> =
         MENUS.register("async_crafting_status") { AsyncCraftingStatusMenu.TYPE }
+
+    val WIRELESS_OMNI_TERMINAL: RegistryObject<MenuType<WirelessOmniTerminalMenu>> =
+        MENUS.register("wireless_omni_terminal") { WirelessOmniTerminalMenu.TYPE }
 
     // The GT menu class only loads once its TYPE is first referenced. Registering it here (at menu
     // type registry time) both forces the early load and puts the type into the Forge registry;

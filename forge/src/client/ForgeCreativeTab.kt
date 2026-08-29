@@ -22,6 +22,7 @@ object ForgeCreativeTab {
             output.accept(allyouneed.AllRegistries.DIMENSIONAL_CELL)
             output.accept(ForgeBlocks.WIRELESS_PSEUDO_PATTERN_TERMINAL.get())
             output.accept(ForgeItems.PATTERN_ENCODING_TERMINAL.get())
+            output.accept(ForgeItems.WIRELESS_OMNI_TERMINAL.get())
         }.build()
 
     val MOD_TAB_ID = "main".rl

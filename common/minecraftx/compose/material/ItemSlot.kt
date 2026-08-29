@@ -12,12 +12,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEvent
@@ -37,29 +37,18 @@ import net.minecraft.world.inventory.ClickType
 import net.minecraft.world.item.ItemStack
 
 /**
- * A grid slot rendered by the Compose tree. The look (slot background, item icon, hover highlight)
- * matches vanilla containers; interaction depends on the mode:
- *
- *  - [interactive] = false (virtual): the slot shows [stack] and offers full EMI interaction
- *    (hover tooltip, click to view recipes / uses). Without EMI it falls back to the vanilla tooltip
- *    and JEI recipe lookup.
- *  - [interactive] = true: the slot is bound to a real container [ItemStack] and clicks are handed
- *    to [onSlotClicked] so the host can perform vanilla take/place logic.
- *
- * Tooltips are drawn as a floating layer via [LocalTooltipHost] after the tree has been drawn, so
- * they always paint on top. Hover is decided geometrically (mouse position vs. the node's current
- * bounds read at draw time) rather than from the pointer enter/exit state machine, which can miss
- * the exit on some move paths and leave the tooltip stuck.
+ * A grid slot rendered by the Compose tree. [stack] / [amount] / [craftable] are read at draw time
+ * so container GUIs stay live without a recomposition.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ItemSlot(
-    stack: ItemStack,
+    stack: () -> ItemStack,
     modifier: Modifier = Modifier,
     interactive: Boolean = false,
     consumeClicks: Boolean = true,
-    amount: String? = null,
-    craftable: Boolean = false,
+    amount: () -> String? = { null },
+    craftable: () -> Boolean = { false },
     disabled: Boolean = false,
     missing: Boolean = false,
     showTooltip: Boolean = true,
@@ -67,29 +56,30 @@ fun ItemSlot(
     colors: McColorScheme = McTheme.colors,
 ) {
     val renderer = remember { SlotRenderers.get() }
+    val latestClick = rememberUpdatedState(onSlotClicked)
+    val latestStack = rememberUpdatedState(stack)
+    val latestAmount = rememberUpdatedState(amount)
+    val latestCraftable = rememberUpdatedState(craftable)
     val tooltipHost = LocalTooltipHost.current
     val uiScale = LocalUiScale.current
     val mouse = LocalMousePosition.current
     val density = LocalDensity.current
     var nodePos by remember { mutableStateOf(Offset.Zero) }
 
-    DisposableEffect(tooltipHost, renderer, stack, uiScale, showTooltip) {
+    DisposableEffect(tooltipHost, renderer, uiScale, showTooltip) {
         if (!showTooltip) return@DisposableEffect onDispose { }
         val unregister = tooltipHost.register {
             val graphics = McGraphics.current ?: return@register
-            if (stack.isEmpty) return@register
-            // Authoritative geometric hover check: the pointer's logical position against the
-            // slot's current bounds, independent of the enter/exit state machine.
+            val held = latestStack.value()
+            if (held.isEmpty) return@register
             val p = mouse.inDensity(density)
             if (p.x !in nodePos.x.toInt()..(nodePos.x + SLOT_SIZE).toInt() ||
                 p.y !in nodePos.y.toInt()..(nodePos.y + SLOT_SIZE).toInt()
             ) {
                 return@register
             }
-            val tooltip = renderer.getTooltip(stack)
+            val tooltip = renderer.getTooltip(held)
             if (tooltip.isEmpty()) return@register
-            // mouse/inDensity are in logical root space; the tooltip draws on the raw GuiGraphics
-            // in screen pixels, so multiply back by the zoom factor.
             val anchor = Offset(p.x.toFloat(), p.y.toFloat()) * uiScale
             graphics.renderMcTooltip(
                 Minecraft.getInstance().font,
@@ -107,7 +97,7 @@ fun ItemSlot(
             .onGloballyPositioned { nodePos = it.positionInWindow() }
             .then(
                 if (!consumeClicks) Modifier
-                else Modifier.pointerInput(stack, interactive, renderer) {
+                else Modifier.pointerInput(interactive, renderer) {
                     var gestureButton: PointerButton? = null
                     awaitPointerEventScope {
                         while (true) {
@@ -120,16 +110,13 @@ fun ItemSlot(
                                     if (change.isConsumed) continue
                                     gestureButton = event.button
                                     change.consume()
+                                    if (interactive) {
+                                        latestClick.value?.invoke(mouseButtonOf(gestureButton), clickTypeOf(event))
+                                    }
                                 }
                                 PointerEventType.Release -> {
-                                    if (gestureButton != null && inBounds && !change.isConsumed) {
-                                        val button = mouseButtonOf(gestureButton)
-                                        val clickType = clickTypeOf(event)
-                                        if (interactive) {
-                                            onSlotClicked?.invoke(button, clickType)
-                                        } else {
-                                            renderer.onClick(stack, button)
-                                        }
+                                    if (!interactive && gestureButton != null && inBounds && !change.isConsumed) {
+                                        renderer.onClick(latestStack.value(), mouseButtonOf(gestureButton))
                                         change.consume()
                                     }
                                     gestureButton = null
@@ -142,22 +129,24 @@ fun ItemSlot(
             )
             .drawBehind {
                 val graphics = McGraphics.current ?: return@drawBehind
+                val held = latestStack.value()
+                val qty = latestAmount.value()
                 drawRect(color = colors.slotBackground)
                 drawRect(color = colors.slotBorder, style = Stroke(1f))
-                renderer.drawStack(graphics, stack, 1, 1)
+                renderer.drawStack(graphics, held, 1, 1)
                 if (disabled) drawRect(color = colors.slotDisabledOverlay)
                 if (missing) drawRect(color = colors.slotMissingOverlay)
-                if (!amount.isNullOrEmpty()) {
+                if (!qty.isNullOrEmpty()) {
                     val font = Minecraft.getInstance().font
                     graphics.pose().pushPose()
                     graphics.pose().translate(1f, 1f, 200f)
                     graphics.pose().scale(0.5f, 0.5f, 1f)
-                    val textX = SLOT_SIZE * 2 - 2 - font.width(amount)
+                    val textX = SLOT_SIZE * 2 - 2 - font.width(qty)
                     val textY = SLOT_SIZE * 2 - 2 - font.lineHeight
-                    graphics.drawString(font, amount, textX, textY, 0xFFFFFF, false)
+                    graphics.drawString(font, qty, textX, textY, 0xFFFFFF, false)
                     graphics.pose().popPose()
                 }
-                if (craftable) {
+                if (latestCraftable.value()) {
                     val font = Minecraft.getInstance().font
                     graphics.pose().pushPose()
                     graphics.pose().translate(1f, 1f, 200f)
@@ -172,6 +161,35 @@ fun ItemSlot(
                     drawRect(color = colors.slotHoverOverlay)
                 }
             },
+    )
+}
+
+@Composable
+fun ItemSlot(
+    stack: ItemStack,
+    modifier: Modifier = Modifier,
+    interactive: Boolean = false,
+    consumeClicks: Boolean = true,
+    amount: String? = null,
+    craftable: Boolean = false,
+    disabled: Boolean = false,
+    missing: Boolean = false,
+    showTooltip: Boolean = true,
+    onSlotClicked: ((button: Int, clickType: ClickType) -> Unit)? = null,
+    colors: McColorScheme = McTheme.colors,
+) {
+    ItemSlot(
+        stack = { stack },
+        modifier = modifier,
+        interactive = interactive,
+        consumeClicks = consumeClicks,
+        amount = { amount },
+        craftable = { craftable },
+        disabled = disabled,
+        missing = missing,
+        showTooltip = showTooltip,
+        onSlotClicked = onSlotClicked,
+        colors = colors,
     )
 }
 
@@ -190,11 +208,6 @@ private fun clickTypeOf(event: PointerEvent): ClickType = when {
     else -> ClickType.PICKUP
 }
 
-/**
- * Renders a stack inside an [ItemSlot] and drives its tooltip / click behaviour. The concrete
- * implementation is chosen at runtime: EMI when installed, otherwise the vanilla renderer with JEI
- * recipe lookup.
- */
 interface ItemSlotRenderer {
     fun drawStack(graphics: GuiGraphics, stack: ItemStack, x: Int, y: Int)
     fun getTooltip(stack: ItemStack): List<ClientTooltipComponent>
