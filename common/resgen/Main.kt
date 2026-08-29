@@ -7,6 +7,8 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import minecraftx.compose.itemdetail.ItemDetailsKeyBind
 import java.nio.file.Path
+import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
@@ -795,4 +797,19 @@ fun main(args: Array<String>) {
     guiSrc.resolve("machine_slot.png").copyTo(guiTexOut.resolve("machine_slot.png"), overwrite = true)
     guiSrc.resolve("molecular_assembler.png").copyTo(guiTexOut.resolve("molecular_assembler.png"), overwrite = true)
     guiSrc.resolve("async_crafting_status.png").copyTo(guiTexOut.resolve("async_crafting_status.png"), overwrite = true)
+    guiSrc.toFile().listFiles()
+        ?.filter { it.name.startsWith("sort_") && it.extension.equals("png", ignoreCase = true) }
+        ?.forEach { copyAlphaMaskIcon(it.toPath(), guiTexOut.resolve(it.name)) }
+}
+
+private fun copyAlphaMaskIcon(src: Path, dest: Path) {
+    val img = ImageIO.read(src.toFile())
+    val out = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
+    for (y in 0 until img.height) {
+        for (x in 0 until img.width) {
+            val a = (img.getRGB(x, y) ushr 24) and 0xFF
+            out.setRGB(x, y, (a shl 24) or 0x00FFFFFF)
+        }
+    }
+    ImageIO.write(out, "png", dest.toFile())
 }

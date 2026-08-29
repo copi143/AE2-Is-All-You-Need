@@ -8,6 +8,7 @@ import ae2x.compose.slot.AeRepoGrid
 import ae2x.compose.widget.AeLeftBar
 import ae2x.compose.widget.AeSearchBar
 import ae2x.compose.widget.AeSettingToggle
+import ae2x.compose.widget.AeSortToggle
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,8 +53,7 @@ fun AeTerminalScaffold(
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.Top) {
             AeLeftBar {
-                AeSettingToggle(configurable, Settings.SORT_BY)
-                AeSettingToggle(configurable, Settings.SORT_DIRECTION)
+                AeSortToggle(configurable)
                 AeSettingToggle(configurable, Settings.VIEW_MODE)
                 if (configurable.configManager.hasSetting(Settings.TYPE_FILTER)) {
                     AeSettingToggle(configurable, Settings.TYPE_FILTER)
