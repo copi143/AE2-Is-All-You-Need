@@ -22,8 +22,6 @@ open class Counter internal constructor(
     internal val hi: ULong,
     internal val bi: BigInteger?,
 ) : Number(), Comparable<Counter> {
-    constructor(value: UInt) : this(value.toULong(), 0UL, null)
-    constructor(value: ULong) : this(value, 0UL, null)
 
     constructor(value: Int) : this(value.toULong(), 0UL, null) {
         require(value >= 0) { "Try constructing `${Counter::class.qualifiedName}` using negative numbers." }
@@ -381,6 +379,9 @@ open class Counter internal constructor(
     }
 
     companion object {
+        operator fun invoke(value: UInt) = Counter(value.toULong(), 0UL, null)
+        operator fun invoke(value: ULong) = Counter(value, 0UL, null)
+
         @JvmField
         val ZERO: Counter = Counter(0uL, 0uL, null)
 

@@ -1,7 +1,5 @@
 package allyouneed.util.bigint
 
-import appeng.api.stacks.AEKey
-import appeng.api.stacks.GenericStack
 import java.math.BigInteger
 
 /**
@@ -16,9 +14,12 @@ open class Object2Counter<Key> internal constructor(
     hi: ULong,
     bi: BigInteger?,
 ) : Counter(lo, hi, bi) {
+    companion object {
+        operator fun <Key> invoke(key: Key, value: UInt) = Object2Counter(key, value.toULong(), 0UL, null)
+        operator fun <Key> invoke(key: Key, value: ULong) = Object2Counter(key, value, 0UL, null)
+    }
+
     constructor(key: Key, value: Counter) : this(key, value.lo, value.hi, value.bi)
-    constructor(key: Key, value: UInt) : this(key, value.toULong(), 0UL, null)
-    constructor(key: Key, value: ULong) : this(key, value, 0UL, null)
 
     constructor(key: Key, value: Int) : this(key, value.toULong(), 0UL, null) {
         require(value >= 0) { "Try constructing `${Object2Counter::class.qualifiedName}` using negative numbers." }
@@ -101,15 +102,4 @@ open class Object2Counter<Key> internal constructor(
     override fun hashCode(): Int = key.hashCode() xor (this as Counter).hashCode()
 
     override fun toString(): String = "$key*$stringValue"
-
-    companion object {
-        @JvmStatic
-        fun from(stack: GenericStack) = Object2Counter(stack.what, stack.amount)
-
-        @JvmStatic
-        fun from(key: AEKey, value: Long) = Object2Counter(key, value)
-
-        @JvmStatic
-        fun from(key: AEKey, value: BigInteger) = Object2Counter(key, value)
-    }
 }

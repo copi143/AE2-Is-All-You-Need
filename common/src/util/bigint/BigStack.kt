@@ -11,9 +11,12 @@ import java.math.BigInteger
  */
 class BigStack internal constructor(key: AEKey, lo: ULong, hi: ULong, bi: BigInteger?) :
     Object2Counter<AEKey>(key, lo, hi, bi) {
+    companion object {
+        operator fun invoke(key: AEKey, value: UInt) = BigStack(key, value.toULong(), 0UL, null)
+        operator fun invoke(key: AEKey, value: ULong) = BigStack(key, value, 0UL, null)
+    }
+
     constructor(key: AEKey, value: Counter) : this(key, value.lo, value.hi, value.bi)
-    constructor(key: AEKey, value: UInt) : this(key, value.toULong(), 0UL, null)
-    constructor(key: AEKey, value: ULong) : this(key, value, 0UL, null)
 
     constructor(key: AEKey, value: Int) : this(key, value.toULong(), 0UL, null) {
         require(value >= 0) { "AE2 stack size is negative" }
