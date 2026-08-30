@@ -38,7 +38,7 @@ class ACraftingCalculation(
 
     private val snapshot: CraftingInventorySnapshot? = if (level != null) {
         try {
-            CraftingInventorySnapshot(level, grid, BigStack.from(GenericStack(this.output, this.requestedAmount)))
+            CraftingInventorySnapshot(level, grid, BigStack(this.output, this.requestedAmount))
         } catch (e: Throwable) {
             logger.error("Failed to snapshot crafting inventory", e)
             null

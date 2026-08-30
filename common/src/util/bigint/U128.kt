@@ -76,13 +76,13 @@ class U128(internal val lo: ULong, internal val hi: ULong) : Number(), Comparabl
     }
 
     @Contract(pure = true)
-    infix fun and(other: U128): U128 = U128(lo and other.lo, hi and other.hi)
+    infix fun and(other: U128): U128 = U128(this.lo and other.lo, this.hi and other.hi)
 
     @Contract(pure = true)
-    infix fun or(other: U128): U128 = U128(lo or other.lo, hi or other.hi)
+    infix fun or(other: U128): U128 = U128(this.lo or other.lo, this.hi or other.hi)
 
     @Contract(pure = true)
-    infix fun xor(other: U128): U128 = U128(lo xor other.lo, hi xor other.hi)
+    infix fun xor(other: U128): U128 = U128(this.lo xor other.lo, this.hi xor other.hi)
 
     @Contract(pure = true)
     fun inv(): U128 = U128(lo.inv(), hi.inv())

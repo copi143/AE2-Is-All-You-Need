@@ -47,7 +47,7 @@ data class ManualMachineRecipe(
         return List(containerSize) { i ->
             val big = remainders.getOrNull(i) ?: return@List ItemStack.EMPTY
             val key = big.key as? AEItemKey ?: return@List ItemStack.EMPTY
-            val n = big.valIntSaturate
+            val n = big.intSaturated
             if (n <= 0) ItemStack.EMPTY else key.toStack(n)
         }
     }

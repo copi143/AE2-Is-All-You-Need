@@ -76,8 +76,8 @@ private val UNSIGNED_MULTIPLY_HIGH_HANDLE = runCatching {
 
 fun unsignedMultiplyHigh(x: ULong, y: ULong): ULong = if (UNSIGNED_MULTIPLY_HIGH_HANDLE == null) {
     val z = Math.multiplyHigh(x.toLong(), y.toLong()).toULong()
-    val fix = (if (x < 0UL) y else 0UL) + (if (y < 0UL) x else 0UL)
+    val fix = (if (x.toLong() < 0L) y else 0UL) + (if (y.toLong() < 0L) x else 0UL)
     z + fix
 } else {
-    (UNSIGNED_MULTIPLY_HIGH_HANDLE.invokeExact(x, y) as Long).toULong()
+    (UNSIGNED_MULTIPLY_HIGH_HANDLE.invokeExact(x.toLong(), y.toLong()) as Long).toULong()
 }

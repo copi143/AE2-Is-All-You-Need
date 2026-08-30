@@ -3,7 +3,6 @@ package allyouneed.logic.machine
 import allyouneed.util.bigint.BigIngredient
 import allyouneed.util.bigint.BigStack
 import allyouneed.util.logger
-import allyouneed.util.rl
 import appeng.api.stacks.AEItemKey
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -65,7 +64,7 @@ internal fun parseBigStack(json: JsonObject): BigStack {
     val amount = parseAmount(json)
     val key = AEItemKey.of(parseItemStack(json, amount))
         ?: throw IllegalArgumentException("invalid item for BigStack")
-    return BigStack.from(key, amount)
+    return BigStack(key, amount)
 }
 
 private fun parseBigIngredient(el: JsonElement?): BigIngredient {
@@ -126,15 +125,18 @@ class MachineTypeReloadListener : SimpleJsonResourceReloadListener(GSON, FOLDER)
                     if (s.startsWith("gui.") || s.contains('.')) Component.translatable(s)
                     else Component.literal(s)
                 }
+
                 else -> Component.Serializer.fromJson(nameEl) ?: Component.literal(id)
             }
 
             val icon = when {
                 json.has("icon") && json.get("icon").isJsonObject ->
                     parseItemStack(json.getAsJsonObject("icon"))
+
                 json.has("icon") -> ItemStack(
                     BuiltInRegistries.ITEM.get(ResourceLocation(json.get("icon").asString)),
                 )
+
                 else -> ItemStack(Items.CRAFTING_TABLE)
             }.let { if (it.isEmpty) ItemStack(Items.CRAFTING_TABLE) else it }
 
@@ -238,7 +240,7 @@ class ManualMachineRecipeReloadListener :
 
         private fun parseOutputs(json: JsonObject): List<BigStack> {
             val el = json.get("outputs") ?: json.get("output")
-                ?: throw IllegalArgumentException("missing outputs")
+            ?: throw IllegalArgumentException("missing outputs")
             return if (el.isJsonArray) {
                 el.asJsonArray.mapNotNull {
                     if (it == null || it.isJsonNull) null else parseBigStack(it.asJsonObject)
