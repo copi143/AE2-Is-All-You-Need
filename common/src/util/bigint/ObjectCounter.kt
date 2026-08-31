@@ -299,82 +299,65 @@ class ObjectCounter<K>(expected: Int = 16, val f: Float = Hash.DEFAULT_LOAD_FACT
     override fun object2ObjectEntrySet(): ObjectSet<Object2ObjectMap.Entry<K, Counter>> {
         return object : AbstractObjectSet<Object2ObjectMap.Entry<K, Counter>>() {
             override fun iterator(): ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
-                return object : ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
-                    var pos = n
-                    var last = -1
-                    var c = size
-                    var mustReturnNull = containsNullKey
-                    var currPos = -1
-                    override fun hasNext(): Boolean = c != 0
-                    override fun next(): Object2ObjectMap.Entry<K, Counter> {
-                        if (!hasNext()) throw NoSuchElementException()
-                        c--
-                        if (mustReturnNull) {
-                            mustReturnNull = false
-                            last = n
-                            currPos = n
-                        } else {
-                            while (true) {
-                                pos--
-                                if (key[pos] != null) {
-                                    last = pos; currPos = pos; break
-                                }
-                            }
-                        }
-                        val idx = currPos
-                        return object : Object2ObjectMap.Entry<K, Counter> {
-                            override val key: K get() = this@ObjectCounter.key[idx] as K
-                            override val value: Counter
-                                get() = if (idx == this@ObjectCounter.n) getCounterAtNull() else getCounterAt(
-                                    idx
-                                )
+return object : ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
+            // 快照迭代。remove 通过键走公开 remove()，不依赖数组里被 shiftKeys 移动过的槽位，
+            // 因此不会出现漏读/重复/索引越界。
+            private val snapshot = ArrayList<K>(size).also {
+                for (i in 0 until n) key[i]?.let { k -> it.add(k as K) }
+                if (containsNullKey) it.add(null as K)
+            }
+            private var cursor = 0
+            private var last = -1
+            private var pending = size
 
-                            override fun setValue(v: Counter): Counter {
-                                val old = value
-                                this@ObjectCounter.setCounterAt(idx, v)
-                                return old
-                            }
+            override fun hasNext(): Boolean = pending != 0
 
-                            override fun equals(other: Any?): Boolean {
-                                return other is Map.Entry<*, *> && other.key == key && other.value == value
-                            }
+            override fun next(): Object2ObjectMap.Entry<K, Counter> {
+                if (!hasNext()) throw NoSuchElementException()
+                val k = snapshot[cursor]
+                last = cursor
+                cursor++
+                pending--
+                return object : Object2ObjectMap.Entry<K, Counter> {
+                    override val key: K get() = k
+                    override val value: Counter get() = getCounter(k)
 
-                            override fun hashCode(): Int = key.hashCode() xor value.hashCode()
-                            override fun toString(): String = "$key=>$value"
-                        }
+                    override fun setValue(v: Counter): Counter {
+                        val old = value
+                        set(k, v)
+                        return old
                     }
 
-                    override fun remove() {
-                        if (last == -1) throw IllegalStateException()
-                        if (last == n) {
-                            containsNullKey = false
-                            key[n] = null
-                            lo[n] = 0L
-                            hi[n] = 0L
-                            bi[n] = null
-                        } else {
-                            // shiftKeys and adjust pos
-                            shiftKeys(last)
-                            // adjust pos if needed
-                            if (pos >= 0 && key[pos] == null) { /* already */
-                            }
-                        }
-                        this@ObjectCounter.size--
-                        last = -1
+                    override fun equals(other: Any?): Boolean {
+                        return other is Map.Entry<*, *> && other.key == key && other.value == value
                     }
 
-                    override fun skip(n: Int): Int {
-                        var i = 0
-                        while (i < n && hasNext()) {
-                            next(); i++
-                        }
-                        return i
-                    }
-
-                    override fun forEachRemaining(action: Consumer<in Object2ObjectMap.Entry<K, Counter>>) {
-                        while (hasNext()) action.accept(next())
-                    }
+                    override fun hashCode(): Int = (key?.hashCode() ?: 0) xor value.hashCode()
+                    override fun toString(): String = "$key=>$value"
                 }
+            }
+
+            override fun remove() {
+                if (last == -1) throw IllegalStateException()
+                val removeIdx = last
+                last = -1
+                this@ObjectCounter.remove(snapshot[removeIdx])
+                snapshot.removeAt(removeIdx)
+                cursor--
+            }
+
+            override fun skip(n: Int): Int {
+                var i = 0
+                while (i < n && hasNext()) {
+                    next(); i++
+                }
+                return i
+            }
+
+            override fun forEachRemaining(action: Consumer<in Object2ObjectMap.Entry<K, Counter>>) {
+                while (hasNext()) action.accept(next())
+            }
+        }
             }
 
             override val size: Int get() = this@ObjectCounter.size

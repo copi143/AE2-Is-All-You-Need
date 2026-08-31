@@ -99,10 +99,16 @@ class BigIngredient private constructor(
         if (other !is BigIngredient) return false
         if (key != other.key) return false
         if (wildcard != other.wildcard) return false
-        return (this as Counter) == (other as Counter)
+        // (this as Counter) == other counter would virtual-dispatch back here and overflow the stack.
+        return super.equals(other as Counter)
     }
 
-    override fun hashCode(): Int = key.hashCode() xor wildcard.hashCode() xor (this as Counter).hashCode()
+    override fun hashCode(): Int {
+        // key/wildcard 均可空（init 保证不同时非空），需 null-safe；
+        // (this as Counter).hashCode() 会虚拟分派回本方法导致栈溢出，改用字段自算值哈希。
+        val valueHash = if (bi != null) bi.hashCode() else 31 * hi.hashCode() + lo.hashCode()
+        return (key?.hashCode() ?: 0) xor (wildcard?.hashCode() ?: 0) xor valueHash
+    }
 
     override fun toString(): String = when {
         isEmptySlot -> "Empty*$stringValue"

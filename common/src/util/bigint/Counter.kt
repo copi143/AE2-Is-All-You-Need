@@ -165,8 +165,10 @@ open class Counter internal constructor(
         // general U128 add with overflow detection
         val newLo = lo + other.lo
         val carry = if (newLo < lo) 1uL else 0uL
-        val newHi = hi + other.hi + carry
-        val overflow = newHi < hi || newHi < other.hi
+        val sumHi = hi + other.hi
+        val hiOverflow = sumHi < hi
+        val newHi = sumHi + carry
+        val overflow = hiOverflow || newHi < sumHi
         if (overflow) {
             return of(toBigInteger().add(other.toBigInteger()))
         }

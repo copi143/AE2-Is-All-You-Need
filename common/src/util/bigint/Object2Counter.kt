@@ -96,10 +96,15 @@ open class Object2Counter<Key> internal constructor(
         if (this === other) return true
         if (other !is Object2Counter<Key>) return false
         if (this.key != other.key) return false
-        return (this as Counter) == (other as Counter)
+        // (this as Counter) == other counter would virtual-dispatch back here and overflow the stack.
+        return super.equals(other)
     }
 
-    override fun hashCode(): Int = key.hashCode() xor (this as Counter).hashCode()
+    override fun hashCode(): Int {
+        // (this as Counter).hashCode() would virtual-dispatch back here and overflow the stack.
+        val valueHash = if (bi != null) bi.hashCode() else 31 * hi.hashCode() + lo.hashCode()
+        return (key?.hashCode() ?: 0) xor valueHash
+    }
 
     override fun toString(): String = "$key*$stringValue"
 }
