@@ -69,6 +69,8 @@ dependencies {
     testRuntimeOnly(libs.junit.launcher)
     testImplementation("org.lwjgl:lwjgl:3.3.1")
     testRuntimeOnly("org.lwjgl:lwjgl:3.3.1:natives-linux")
+    // fastutil 由 Minecraft 内嵌提供（不在测试 classpath），这里仅为测试暴露其类。
+    testImplementation("it.unimi.dsi:fastutil:8.5.9")
 }
 
 configurations["testRuntimeClasspath"].exclude(

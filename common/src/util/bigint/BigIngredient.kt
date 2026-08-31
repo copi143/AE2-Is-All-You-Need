@@ -17,20 +17,34 @@ import java.math.BigInteger
 class BigIngredient private constructor(
     key: AEKey?,
     val wildcard: Ingredient?,
-    valLong: Long,
-    bigInt: BigInteger?,
-) : Object2BigInt<AEKey?>(key, valLong, bigInt) {
-    private constructor(mapping: Object2BigInt<AEKey?>, wildcard: Ingredient?) : this(
-        mapping.key, wildcard, mapping.valLong, mapping.bigInt
+    lo: ULong,
+    hi: ULong,
+    bi: BigInteger?,
+) : Object2Counter<AEKey?>(key, lo, hi, bi) {
+    private constructor(mapping: Object2Counter<AEKey?>, wildcard: Ingredient?) : this(
+        mapping.key, wildcard, mapping.lo, mapping.hi, mapping.bi
     )
 
+    constructor(key: AEKey?, wildcard: Ingredient?, value: Int) : this(key, wildcard, value.toULong(), 0UL, null) {
+        require(value >= 0) { "ingredient amount is negative" }
+    }
+
+    constructor(key: AEKey?, wildcard: Ingredient?, value: Long) : this(key, wildcard, value.toULong(), 0UL, null) {
+        require(value >= 0) { "ingredient amount is negative" }
+    }
+
+    constructor(key: AEKey?, wildcard: Ingredient?, value: BigInteger) : this(
+        key,
+        wildcard,
+        if (value.bitLength() <= 64) value.toLong().toULong() else ULong.MAX_VALUE,
+        if (value.bitLength() <= 128) (value.shiftRight(64)).toLong().toULong() else ULong.MAX_VALUE,
+        if (value.bitLength() <= 128) null else value,
+    ) {
+        require(value.signum() >= 0) { "ingredient amount is negative" }
+    }
+
     init {
-        require(key == null || wildcard == null) {
-            "BigIngredient cannot be both exact and wildcard"
-        }
-        require(valLong >= 0 || (bigInt != null && bigInt.signum() > 0)) {
-            "ingredient amount is negative"
-        }
+        require(key == null || wildcard == null) { "BigIngredient cannot be both exact and wildcard" }
     }
 
     /** 空槽（无匹配键）。Empty slot (no match key). */
@@ -42,7 +56,7 @@ class BigIngredient private constructor(
     val isExact: Boolean get() = key != null
     val isWildcard: Boolean get() = wildcard != null
 
-    fun toBigStackOrNull(): BigStack? = if (key == null) null else BigStack(key, valLong, bigInt)
+    fun toBigStackOrNull(): BigStack? = if (key == null) null else BigStack(key, lo, hi, bi)
 
     /**
      * 容器槽物品是否满足本规格（种类 + 数量下限）。
@@ -78,40 +92,40 @@ class BigIngredient private constructor(
     }
 
     override operator fun times(scale: Long): BigIngredient =
-        BigIngredient((this as Object2BigInt<AEKey?>).times(scale), wildcard)
+        BigIngredient((this as Object2Counter<AEKey?>).times(scale), wildcard)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is BigIngredient) return false
         if (key != other.key) return false
         if (wildcard != other.wildcard) return false
-        if (valLong != other.valLong) return false
-        if (bigInt != other.bigInt) return false
-        return true
+        // (this as Counter) == other counter would virtual-dispatch back here and overflow the stack.
+        return super.equals(other as Counter)
     }
 
     override fun hashCode(): Int {
-        var h = key.hashCode() xor wildcard.hashCode()
-        h = h xor if (valLong < 0) bigInt.hashCode() else valLong.hashCode()
-        return h
+        // key/wildcard 均可空（init 保证不同时非空），需 null-safe；
+        // (this as Counter).hashCode() 会虚拟分派回本方法导致栈溢出，改用字段自算值哈希。
+        val valueHash = if (bi != null) bi.hashCode() else 31 * hi.hashCode() + lo.hashCode()
+        return (key?.hashCode() ?: 0) xor (wildcard?.hashCode() ?: 0) xor valueHash
     }
 
     override fun toString(): String = when {
-        isEmptySlot -> "Empty*$valString"
-        key != null -> "$key*$valString"
-        else -> "Ingredient*$valString"
+        isEmptySlot -> "Empty*$stringValue"
+        key != null -> "$key*$stringValue"
+        else -> "Ingredient*$stringValue"
     }
 
-    private fun copyAmount(value: Long): BigIngredient = BigIngredient(key, wildcard, value, null)
+    private fun copyAmount(value: Long): BigIngredient = BigIngredient(key, wildcard, value)
 
     private fun copyAmount(value: BigInteger): BigIngredient = if (value.bitLength() < 64) {
-        BigIngredient(key, wildcard, value.toLong(), null)
+        BigIngredient(key, wildcard, value.toLong())
     } else {
-        BigIngredient(key, wildcard, -1, value)
+        BigIngredient(key, wildcard, value)
     }
 
     companion object {
-        private val EMPTY = BigIngredient(null, null, 0L, null)
+        private val EMPTY = BigIngredient(null, null, 0L)
 
         @JvmStatic
         fun ofEmpty(): BigIngredient = EMPTY
@@ -119,7 +133,7 @@ class BigIngredient private constructor(
         @JvmStatic
         fun from(key: AEKey, value: Long): BigIngredient {
             require(value >= 0) { "amount negative" }
-            return if (value == 0L) ofEmpty() else BigIngredient(key, null, value, null)
+            return if (value == 0L) ofEmpty() else BigIngredient(key, null, value)
         }
 
         @JvmStatic
@@ -127,9 +141,9 @@ class BigIngredient private constructor(
             require(value.signum() >= 0) { "amount negative" }
             if (value.signum() == 0) return ofEmpty()
             return if (value.bitLength() < 64) {
-                BigIngredient(key, null, value.toLong(), null)
+                BigIngredient(key, null, value.toLong())
             } else {
-                BigIngredient(key, null, -1, value)
+                BigIngredient(key, null, value)
             }
         }
 
@@ -140,7 +154,7 @@ class BigIngredient private constructor(
         fun from(ingredient: Ingredient, value: Long): BigIngredient {
             require(value >= 0) { "amount negative" }
             if (value == 0L || ingredient.isEmpty) return ofEmpty()
-            return BigIngredient(null, ingredient, value, null)
+            return BigIngredient(null, ingredient, value)
         }
 
         @JvmStatic
@@ -148,9 +162,9 @@ class BigIngredient private constructor(
             require(value.signum() >= 0) { "amount negative" }
             if (value.signum() == 0 || ingredient.isEmpty) return ofEmpty()
             return if (value.bitLength() < 64) {
-                BigIngredient(null, ingredient, value.toLong(), null)
+                BigIngredient(null, ingredient, value.toLong())
             } else {
-                BigIngredient(null, ingredient, -1, value)
+                BigIngredient(null, ingredient, value)
             }
         }
     }

@@ -17,26 +17,38 @@ import java.math.BigInteger
  * - [bi]!=null 时，数值 == bi (≥ 2^128 且 ≥0)
  * - 构造始终归一化：能用 128 位表示的值绝不保留 [bi]
  */
-class Counter private constructor(
-    private val lo: ULong,
-    private val hi: ULong,
-    private val bi: BigInteger?,
+open class Counter internal constructor(
+    internal val lo: ULong,
+    internal val hi: ULong,
+    internal val bi: BigInteger?,
 ) : Number(), Comparable<Counter> {
 
-    internal val rawLo: ULong get() = lo
-    internal val rawHi: ULong get() = hi
-    internal val rawBi: BigInteger? get() = bi
+    constructor(value: Int) : this(value.toULong(), 0UL, null) {
+        require(value >= 0) { "Try constructing `${Counter::class.qualifiedName}` using negative numbers." }
+    }
 
-    // Java-friendly accessors (avoid ULong mangling)
-    fun loAsLong(): Long = lo.toLong()
-    fun hiAsLong(): Long = hi.toLong()
-    fun biOrNull(): BigInteger? = bi
+    constructor(value: Long) : this(value.toULong(), 0UL, null) {
+        require(value >= 0) { "Try constructing `${Counter::class.qualifiedName}` using negative numbers." }
+    }
 
-    constructor(value: Int) : this(value.toULong().also { require(value >= 0) { "Counter can't be negative" } }, 0uL, null)
+    constructor(value: BigInteger) : this(
+        if (value.bitLength() <= 64) value.toLong().toULong() else ULong.MAX_VALUE,
+        if (value.bitLength() <= 128) (value.shiftRight(64)).toLong().toULong() else ULong.MAX_VALUE,
+        if (value.bitLength() <= 128) null else value,
+    ) {
+        require(value.signum() >= 0) { "Try constructing `${Counter::class.qualifiedName}` using negative numbers." }
+    }
 
-    constructor(value: Long) : this(value.toULong().also { require(value >= 0) { "Counter can't be negative" } }, 0uL, null)
+    override fun toDouble(): Double = toBigInteger().toDouble()
+    override fun toFloat(): Float = toBigInteger().toFloat()
+    override fun toLong(): Long = bi?.toLong() ?: lo.toLong()
+    override fun toInt(): Int = bi?.toInt() ?: lo.toInt()
+    override fun toShort(): Short = lo.toShort()
+    override fun toByte(): Byte = lo.toByte()
 
-    // ── 形态判定 ────────────────────────────────────────────────
+    @Deprecated("See [Number#toChar]", ReplaceWith("this.toInt().toChar()"))
+    override fun toChar(): Char = lo.toInt().toChar()
+
     val isBig: Boolean get() = bi != null
     val isU128: Boolean get() = bi == null && hi != 0uL
     val isU64: Boolean get() = bi == null && hi == 0uL
@@ -87,17 +99,6 @@ class Counter private constructor(
 
     val stringValue: String get() = bi?.toString() ?: toBigInteger().toString()
 
-    // Number overrides — low 64/32 截断语义
-    override fun toByte(): Byte = lo.toByte()
-    override fun toShort(): Short = lo.toShort()
-    override fun toInt(): Int = bi?.toInt() ?: lo.toInt()
-    override fun toLong(): Long = bi?.toLong() ?: lo.toLong()
-    override fun toFloat(): Float = toBigInteger().toFloat()
-    override fun toDouble(): Double = toBigInteger().toDouble()
-
-    @Deprecated("See [Number#toChar]", ReplaceWith("this.toInt().toChar()"))
-    override fun toChar(): Char = lo.toInt().toChar()
-
     // ── 比较 ───────────────────────────────────────────────────
     override fun compareTo(other: Counter): Int {
         if (this === other) return 0
@@ -144,7 +145,7 @@ class Counter private constructor(
 
     // ── 加法 ───────────────────────────────────────────────────
     @Contract(pure = true)
-    operator fun plus(other: Counter): Counter {
+    open operator fun plus(other: Counter): Counter {
         if (this.isZero) return other
         if (other.isZero) return this
         if (this.bi != null || other.bi != null) {
@@ -164,26 +165,28 @@ class Counter private constructor(
         // general U128 add with overflow detection
         val newLo = lo + other.lo
         val carry = if (newLo < lo) 1uL else 0uL
-        val newHi = hi + other.hi + carry
-        val overflow = newHi < hi || newHi < other.hi
+        val sumHi = hi + other.hi
+        val hiOverflow = sumHi < hi
+        val newHi = sumHi + carry
+        val overflow = hiOverflow || newHi < sumHi
         if (overflow) {
             return of(toBigInteger().add(other.toBigInteger()))
         }
         return Counter(newLo, newHi, null)
     }
 
-    operator fun plus(amount: Long): Counter {
+    open operator fun plus(amount: Long): Counter {
         require(amount >= 0) { "Cannot add negative amount" }
         if (amount == 0L) return this
         return plus(of(amount))
     }
 
-    operator fun plus(amount: ULong): Counter {
+    open operator fun plus(amount: ULong): Counter {
         if (amount == 0uL) return this
         return plus(of(amount))
     }
 
-    operator fun plus(amount: BigInteger): Counter {
+    open operator fun plus(amount: BigInteger): Counter {
         require(amount.signum() >= 0)
         if (amount.signum() == 0) return this
         return of(toBigInteger().add(amount))
@@ -191,7 +194,7 @@ class Counter private constructor(
 
     // ── 减法 (结果必须 ≥0) ───────────────────────────────────
     @Contract(pure = true)
-    operator fun minus(other: Counter): Counter {
+    open operator fun minus(other: Counter): Counter {
         if (other.isZero) return this
         require(compareTo(other) >= 0) { "Result would be negative: $this - $other" }
         if (this.bi != null || other.bi != null) {
@@ -203,18 +206,18 @@ class Counter private constructor(
         return Counter(newLo, newHi, null).normalized()
     }
 
-    operator fun minus(amount: Long): Counter {
+    open operator fun minus(amount: Long): Counter {
         require(amount >= 0)
         if (amount == 0L) return this
         return minus(of(amount))
     }
 
-    operator fun minus(amount: ULong): Counter {
+    open operator fun minus(amount: ULong): Counter {
         if (amount == 0uL) return this
         return minus(of(amount))
     }
 
-    operator fun minus(amount: BigInteger): Counter {
+    open operator fun minus(amount: BigInteger): Counter {
         require(amount.signum() >= 0)
         if (amount.signum() == 0) return this
         val res = toBigInteger().subtract(amount)
@@ -224,7 +227,7 @@ class Counter private constructor(
 
     // ── 乘法 ───────────────────────────────────────────────────
     @Contract(pure = true)
-    operator fun times(other: Counter): Counter {
+    open operator fun times(other: Counter): Counter {
         if (this.isZero || other.isZero) return ZERO
         if (this.isOne) return other
         if (other.isOne) return this
@@ -234,7 +237,7 @@ class Counter private constructor(
         return of(toBigInteger().multiply(other.toBigInteger()))
     }
 
-    operator fun times(scale: Long): Counter {
+    open operator fun times(scale: Long): Counter {
         require(scale >= 0)
         if (scale == 0L) return ZERO
         if (scale == 1L) return this
@@ -246,13 +249,13 @@ class Counter private constructor(
         return of(toBigInteger().multiply(BigInteger.valueOf(scale)))
     }
 
-    operator fun times(scale: ULong): Counter {
+    open operator fun times(scale: ULong): Counter {
         if (scale == 0uL) return ZERO
         if (scale == 1uL) return this
         return of(toBigInteger().multiply(scale.toBigInteger()))
     }
 
-    operator fun times(scale: BigInteger): Counter {
+    open operator fun times(scale: BigInteger): Counter {
         require(scale.signum() >= 0)
         if (scale.signum() == 0) return ZERO
         if (scale == BigInteger.ONE) return this
@@ -261,34 +264,34 @@ class Counter private constructor(
 
     // ── 除法 / 取模 ───────────────────────────────────────────
     @Contract(pure = true)
-    operator fun div(other: Counter): Counter {
+    open operator fun div(other: Counter): Counter {
         require(!other.isZero) { "Division by zero" }
         if (this.compareTo(other) < 0) return ZERO
         if (other.isOne) return this
         return of(toBigInteger().divide(other.toBigInteger()))
     }
 
-    operator fun div(other: Long): Counter {
+    open operator fun div(other: Long): Counter {
         require(other > 0) { "Division by zero or negative" }
         if (isZero) return ZERO
         if (other == 1L) return this
         return of(toBigInteger().divide(BigInteger.valueOf(other)))
     }
 
-    operator fun rem(other: Counter): Counter {
+    open operator fun rem(other: Counter): Counter {
         require(!other.isZero) { "Division by zero" }
         if (this.compareTo(other) < 0) return this
         return of(toBigInteger().remainder(other.toBigInteger()))
     }
 
-    operator fun rem(other: Long): Counter {
+    open operator fun rem(other: Long): Counter {
         require(other > 0)
         if (isZero) return ZERO
         return of(toBigInteger().remainder(BigInteger.valueOf(other)))
     }
 
-    infix fun divide(other: Counter): Counter = div(other)
-    infix fun mod(other: Counter): Counter = rem(other)
+    open infix fun divide(other: Counter): Counter = div(other)
+    open infix fun mod(other: Counter): Counter = rem(other)
 
     // ── 位移 (逻辑) ──────────────────────────────────────────
     infix fun shl(bits: Int): Counter {
@@ -378,6 +381,9 @@ class Counter private constructor(
     }
 
     companion object {
+        operator fun invoke(value: UInt) = Counter(value.toULong(), 0UL, null)
+        operator fun invoke(value: ULong) = Counter(value, 0UL, null)
+
         @JvmField
         val ZERO: Counter = Counter(0uL, 0uL, null)
 
@@ -462,13 +468,6 @@ class Counter private constructor(
 
         @JvmStatic
         fun fromU64(lo: ULong, hi: ULong = 0uL): Counter {
-            if (hi == 0uL && lo == 0uL) return ZERO
-            return Counter(lo, hi, null)
-        }
-
-        @JvmStatic
-        internal fun fromRawWithBi(lo: ULong, hi: ULong, bi: BigInteger?): Counter {
-            if (bi != null) return Counter(lo, hi, bi)
             if (hi == 0uL && lo == 0uL) return ZERO
             return Counter(lo, hi, null)
         }
