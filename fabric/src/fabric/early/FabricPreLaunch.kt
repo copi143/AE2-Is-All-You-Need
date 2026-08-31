@@ -1,5 +1,6 @@
 package allyouneed.fabric.early
 
+import allyouneed.Main
 import allyouneed.transformer.KeyClassScanner
 import allyouneed.transformer.NewCallTransformer
 import allyouneed.transformer.RuntimeClasses
@@ -14,6 +15,7 @@ import java.nio.file.Path
 
 class FabricPreLaunch : PreLaunchEntrypoint {
     override fun onPreLaunch() {
+        Main.beforeAllMods()
         try {
             install()
         } catch (t: Throwable) {

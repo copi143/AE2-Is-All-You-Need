@@ -11,6 +11,7 @@ import net.minecraftforge.event.BuildCreativeModeTabContentsEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent
+import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent
 
 @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 object ForgeCommonEvents {
@@ -23,6 +24,13 @@ object ForgeCommonEvents {
                 BotaniaManaCompat.register()
             }
             P2PTunnelAttunement.registerAttunementTag(ForgeItems.ENTITY_P2P_TUNNEL.get())
+        }
+    }
+
+    @SubscribeEvent
+    fun onLoadComplete(event: FMLLoadCompleteEvent) {
+        event.enqueueWork {
+            Main.afterAllMods()
         }
     }
 

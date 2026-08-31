@@ -70,6 +70,10 @@ fun init() {
         MacAddressRegistry.detach()
         DimensionalCellStore.detach()
     }
+
+    // Fabric 没有类似 Forge FMLLoadCompleteEvent 的“所有模组加载完成”事件，各 mod 的
+    // entrypoint 顺序未定义。因此 afterAllMods 只在晚于本模组自身初始化处调用。
+    Main.afterAllMods()
 }
 
 private fun registerServerDataReloadListener(path: String, delegate: PreparableReloadListener) {

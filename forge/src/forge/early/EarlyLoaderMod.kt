@@ -1,5 +1,6 @@
 package allyouneed.forge.early
 
+import allyouneed.Main
 import net.minecraftforge.fml.common.Mod
 
 const val CORE_MODID = "ae2isallyouneed_core"
@@ -7,6 +8,7 @@ const val CORE_MODID = "ae2isallyouneed_core"
 @Mod(CORE_MODID)
 class EarlyLoaderMod {
     init {
+        Main.beforeAllMods()
         if (System.getProperty("allyouneed.core.transformer") == "true") {
             println("[AE2IsAllYouNeed/Core] ITransformationService installed")
         } else {

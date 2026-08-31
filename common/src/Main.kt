@@ -26,6 +26,20 @@ import appeng.items.parts.PartModelsHelper
 import appeng.items.tools.powered.WirelessTerminalItem
 
 object Main {
+    /**
+     * 尽可能在所有模组加载之前执行，不强制满足但必须早于本模组的初始化
+     */
+    fun beforeAllMods() {
+
+    }
+
+    /**
+     * 尽可能在所有模组加载之后执行，不强制满足但必须晚于本模组的初始化
+     */
+    fun afterAllMods() {
+
+    }
+
     fun init() {
         debugLogger.info(
             "Hello from Common init on {}! we are currently in a {} environment!",
