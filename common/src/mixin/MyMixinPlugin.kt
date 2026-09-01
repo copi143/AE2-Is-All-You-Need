@@ -45,7 +45,7 @@ class MyMixinPlugin : IMixinConfigPlugin {
         val relPath = mixinClassName.removePrefix("allyouneed.mixin.")
         val resource = targetClassName.replace('.', '/') + ".class"
         return when {
-            relPath.startsWith("gtceu.") -> {
+            relPath.startsWith("gtceu.") || relPath.startsWith("ldlib.") || relPath.startsWith("emi.") -> {
                 javaClass.getClassLoader().getResource(resource) != null
             }
 
