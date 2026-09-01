@@ -35,7 +35,7 @@ class ForgeMain {
         // Forge freezes that registry. FMLCommonSetupEvent (Main.commonSetup) is already too late:
         // ForgeRegistry.register throws "The object ... is being added too late".
         MOD_BUS.addListener { event: RegisterEvent ->
-            if (event.registryKey == ResourceLocation("ae2", "keytypes")) {
+            if (event.registryKey.location() == ResourceLocation("ae2", "keytypes")) {
                 Main.registerAEKeyTypes()
             }
         }
