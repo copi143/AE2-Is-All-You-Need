@@ -14,11 +14,19 @@ fabric jar
    └─ @Mod 业务
 ```
 
+modlauncher 的 `ILaunchPluginService` 只从 BOOT 层（classpath/libraries）通过 ServiceLoader
+发现，mods/ 属于 SERVICE 层发现不到，所以不能直接注册。用 mods/ 可发现的
+`ITransformationService`（`AEKeyTransformationService`）作壳，在 `initialize` 阶段把真正的
+`AEKeyLaunchPluginService` 反射注入 `LaunchPluginHandler.plugins`（字段名 `launchPlugins`/`plugins`）。
+
 生产里 `AEKeyAsm` / `KeyInterner` 在首次 transform 时 `defineClass` 进 AE2 的
 `appeng.api.stacks` 包（与 `AEItemKey` 同模块），避免跨模组父类找不到。
 
-**时序**：插件层 `onLoad` → 扫描 mods 注册 `ITransformer` → 首次变换注入运行时类 →
+**时序**：`ITransformationService.initialize` 反射注入 `ILaunchPluginService` →
+它对每个被加载的类返回 `BEFORE` 阶段 → 首次 `processClass` 注入运行时类 →
 AE2 加载 `AEItemKey` → `NEW+<init>` 后插入 `KeyInterner.intern`。
+AEKey 派生类按需判定（自底向上缓存 + `getResourceAsStream` 读单个类头），
+无需启动期扫描枚举 target，也无需整目录扫描。
 
 Fabric：PreLaunch 包装 Knot `GameTransformer`，对目标类实时调用同一套 ASM。
 

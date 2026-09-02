@@ -10,7 +10,7 @@ class EarlyLoaderMod {
     init {
         Main.beforeAllMods()
         if (System.getProperty("allyouneed.core.transformer") == "true") {
-            println("[AE2IsAllYouNeed/Core] ITransformationService installed")
+            println("[AE2IsAllYouNeed/Core] launch plugin installed")
         } else {
             println("[AE2IsAllYouNeed/Core] WARN: transformer jar missing from mods/; ASM will not rewrite AEKey")
         }

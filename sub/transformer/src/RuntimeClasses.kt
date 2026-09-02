@@ -33,7 +33,7 @@ object RuntimeClasses {
         return text.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     }
 
-    private fun findLoader(): ClassLoader {
+    internal fun findLoader(): ClassLoader {
         var cl: ClassLoader? = Thread.currentThread().contextClassLoader
         while (cl != null) {
             if (cl.javaClass.name.contains("TransformingClassLoader")) return cl

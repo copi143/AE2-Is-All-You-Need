@@ -24,39 +24,44 @@ object NewCallTransformer {
     const val ASM_DROP = $$"asm$dropSecondary"
     const val DROP_SECONDARY = "dropSecondary"
 
-    fun apply(cn: ClassNode, keyClasses: Set<String>): Int {
+    fun apply(cn: ClassNode, keyClasses: Set<String>): Int = apply(cn) { it in keyClasses }
+
+    fun apply(bytes: ByteArray, keyClasses: Set<String>): ByteArray = apply(bytes) { it in keyClasses }
+
+    fun apply(cn: ClassNode, isKey: (String) -> Boolean): Int {
+        val isKeyClass = isKey(cn.name)
         var rewritten = 0
         rewritten += retargetSuper(cn)
         for (mn in cn.methods) {
-            rewritten += rewriteNews(mn, cn.name, keyClasses)
+            rewritten += rewriteNews(mn, cn.name, isKey)
         }
-        if (cn.name in keyClasses) {
+        if (isKeyClass) {
             rewritten += renameEqualsHash(cn)
             rewritten += renameDropSecondary(cn)
         }
         if (rewritten > 0) {
             logger.info("rewrote {} sites in {}", rewritten, cn.name.replace('/', '.'))
-        } else if (cn.name in keyClasses) {
+        } else if (isKeyClass) {
             logger.warn("visited key class {} but matched 0 sites", cn.name.replace('/', '.'))
         }
         return rewritten
     }
 
-    fun apply(bytes: ByteArray, keyClasses: Set<String>): ByteArray {
+    fun apply(bytes: ByteArray, isKey: (String) -> Boolean): ByteArray {
         val cr = ClassReader(bytes)
         val cn = ClassNode()
         cr.accept(cn, 0)
-        val n = apply(cn, keyClasses)
+        val n = apply(cn, isKey)
         if (n == 0) return bytes
         val cw = ClassWriter(cr, ClassWriter.COMPUTE_FRAMES)
         cn.accept(cw)
         return cw.toByteArray()
     }
 
-    private fun rewriteNews(mn: MethodNode, owner: String, keyClasses: Set<String>): Int {
+    private fun rewriteNews(mn: MethodNode, owner: String, isKey: (String) -> Boolean): Int {
         val list = mn.instructions ?: return 0
         val news = list.filterIsInstance<TypeInsnNode>()
-            .filter { it.opcode == Opcodes.NEW && it.desc in keyClasses }
+            .filter { it.opcode == Opcodes.NEW && isKey(it.desc) }
         if (news.isEmpty()) return 0
         val frames = try {
             Analyzer(CopyPreservingInterpreter()).analyze(owner, mn)
@@ -70,7 +75,7 @@ object NewCallTransformer {
         for (i in insns.indices) {
             val insn = insns[i]
             if (insn.opcode != Opcodes.INVOKESPECIAL || insn !is MethodInsnNode) continue
-            if (insn.name != "<init>" || insn.owner !in keyClasses) continue
+            if (insn.name != "<init>" || !isKey(insn.owner)) continue
             val frame = frames[i] ?: continue
             val consume = argValues(insn.desc)
             if (frame.stackSize < consume) continue
