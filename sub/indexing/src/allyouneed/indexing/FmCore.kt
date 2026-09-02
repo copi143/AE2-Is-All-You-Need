@@ -3,11 +3,13 @@ package allyouneed.indexing
 /**
  * FM-index 通用核心：在已拼接、已重映射的整数文本上完成 BWT、`C[]`、rank 结构与定位。
  *
+ * 不保存显式的 BWT 数组——WaveletMatrix 已完整编码 BWT，定位时用 [WaveletMatrix.access]
+ * 按需取符号，省掉每符号 4 字节的内存。
+ *
  * 符号约定：文本中 `0` 为唯一最小终结符（最末位），正数为普通符号。
  * 模式必须使用与构建时一致的（重映射后）符号。
  */
 class FmCore private constructor(
-    private val bwt: IntArray,
     private val c: IntArray,
     private val wm: WaveletMatrix,
     private val sampledSa: IntArray,
@@ -46,7 +48,7 @@ class FmCore private constructor(
         var row = start
         var steps = 0
         while (!sampled.get(row)) {
-            val sym = bwt[row]
+            val sym = wm.access(row)
             row = c[sym] + wm.rank(sym, row)
             steps++
         }
@@ -59,14 +61,9 @@ class FmCore private constructor(
             val n = text.size
             val sa = SuffixArray.build(text)
 
-            val bwt = IntArray(n)
-            for (i in 0 until n) {
-                val p = sa[i]
-                bwt[i] = if (p == 0) text[n - 1] else text[p - 1]
-            }
-
+            // BWT 是 text 的排列，符号计数可直接由 text 得到，无需先构造 BWT
             val cnt = IntArray(alphabetSize)
-            for (v in bwt) cnt[v]++
+            for (v in text) cnt[v]++
             val c = IntArray(alphabetSize)
             var sum = 0
             for (i in 0 until alphabetSize) {
@@ -75,6 +72,11 @@ class FmCore private constructor(
             }
 
             val bits = 32 - Integer.numberOfLeadingZeros(maxOf(alphabetSize - 1, 1))
+            val bwt = IntArray(n)
+            for (i in 0 until n) {
+                val p = sa[i]
+                bwt[i] = if (p == 0) text[n - 1] else text[p - 1]
+            }
             val wm = WaveletMatrix.build(bwt, bits)
 
             val builder = BitVector.Builder(n)
@@ -89,7 +91,7 @@ class FmCore private constructor(
                 }
             }
 
-            return FmCore(bwt, c, wm, sampledSa, builder.build(), n)
+            return FmCore(c, wm, sampledSa, builder.build(), n)
         }
     }
 }

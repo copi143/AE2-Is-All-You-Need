@@ -25,6 +25,19 @@ class WaveletMatrix internal constructor(
         return r - l
     }
 
+    /** 返回序列第 [i] 个元素的值。 */
+    fun access(i: Int): Int {
+        var pos = i
+        var value = 0
+        for (level in levels.indices.reversed()) {
+            val bv = levels[level]
+            val bit = if (bv.get(pos)) 1 else 0
+            value = (value shl 1) or bit
+            pos = if (bit == 0) bv.rank0(pos) else zeros[level] + bv.rank1(pos)
+        }
+        return value
+    }
+
     companion object {
         fun build(values: IntArray, bits: Int): WaveletMatrix {
             require(bits >= 1) { "bits 必须 >= 1" }

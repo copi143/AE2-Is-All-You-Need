@@ -73,6 +73,21 @@ class WaveletMatrixTest {
             }
         }
     }
+
+    @Test
+    fun accessReturnsOriginal() {
+        val rng = Random(31337)
+        repeat(200) {
+            val n = rng.nextInt(1, 300)
+            val sigma = rng.nextInt(1, 100)
+            val values = IntArray(n) { rng.nextInt(sigma) }
+            val bits = 32 - Integer.numberOfLeadingZeros(maxOf(sigma - 1, 1))
+            val wm = WaveletMatrix.build(values, bits)
+            for (i in 0 until n) {
+                assertEquals(values[i], wm.access(i), "i=$i values=${values.toList()}")
+            }
+        }
+    }
 }
 
 class FMIndexTest {
