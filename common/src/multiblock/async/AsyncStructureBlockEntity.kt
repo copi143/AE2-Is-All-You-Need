@@ -31,11 +31,11 @@ open class AsyncStructureBlockEntity(
     type: BlockEntityType<*>,
     pos: BlockPos,
     state: BlockState,
-) : AEBaseBlockEntity(type, pos, state) {
+) : AEBaseBlockEntity(type, pos, state), IAsyncStructureHost {
 
     private val calc = AsyncStructureCalculator(this)
 
-    val kind: AsyncBlockKind
+    override val kind: AsyncBlockKind
         get() = (level?.getBlockState(worldPosition)?.block as? AsyncStructureEntityBlock<*>)?.kind
             ?: AsyncBlockKind.MACHINE
 
@@ -67,7 +67,7 @@ open class AsyncStructureBlockEntity(
     }
 
     /** 强制对本结构做一次完整重扫，用于上游通知。 / Forces a full rescan of this structure. Used for upstream notifications. */
-    fun requestRescan() {
+    override fun requestRescan() {
         val lvl = level as? ServerLevel ?: return
         calc.requestRescan(lvl)
     }
@@ -210,7 +210,8 @@ class AsyncStructureConnectorBlockEntity(
 
     fun updateMultiBlock(changedPos: BlockPos) {
         val lvl = level as? ServerLevel ?: return
-        val controller = hostController ?: AsyncStructureDetector.findHostController(lvl, worldPosition)
+        val controller: IAsyncStructureHost? =
+            hostController ?: AsyncStructureDetector.findHostController(lvl, worldPosition)
         controller?.requestRescan()
     }
 

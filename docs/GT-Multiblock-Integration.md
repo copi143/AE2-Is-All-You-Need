@@ -52,10 +52,10 @@
 | 文件 | 改动 |
 | --- | --- |
 | `common/src/main/java/allyouneed/mixin/gtceu/BlockPatternGroupedMixin.java` | 新增。`@Unique int[] groupSizes`；`@Overwrite` `checkPatternAt(6参)` / `getPreview` / `autoBuild` |
-| `common/src/main/kotlin/allyouneed/gt/IGroupedBlockPattern.kt` | 新增接口：`setGroup(aisleIndex, groupSize)` / `getGroupSize(aisleIndex)`（mixin `@Unique` 字段实现） |
+| `common/src/gtceu/multiblock/IGroupedBlockPattern.kt` | 接口：`setGroup(aisleIndex, groupSize, minRepeats, maxRepeats)` / `getGroupSize`（mixin 同时写 `groupSizes` 与 `aisleRepetitions`） |
 | `common/src/main/java/allyouneed/mixin/gtceu/MultiblockMachineDefinitionGroupMixin.java` | 新增。`@Overwrite getMatchingShapes()`：组首且 min==0 的维度页面序 = 1..max 再补 0 |
 | `common/src/main/resources/ae2isallyouneed.mixins.json` | 注册上述两个 mixin（`allyouneed.mixin.gtceu` 包，Java 文件）；`plugin` 为 `allyouneed.mixin.MyMixinPlugin`（通用可选依赖守卫） |
-| `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtPattern.kt` | 重写 `build()`：发全深度布局（base + 组 + 收尾 + 后墙），构造后 `setGroup(baseCount, 6)` |
+| `common/src/gtceu/multiblock/AsyncStructureGtPattern.kt` | `build()`：全深度布局（base + 组 + 收尾 + 后墙），构造后 `setGroup(baseCount, 6, 0, 16)` |
 | `common/src/main/kotlin/allyouneed/multiblock/AsyncStructures.kt` | `isFloorCell` / `inCore` / `isOuterShellCell` 改为 public（pattern 生成器需要） |
 | `common/src/main/kotlin/allyouneed/gt/AsyncStructureGtControllerMachine.kt` | 删检测器覆写；`rebuildCluster` 改从 pattern 的 pos cache 汇总 cluster 摘要 |
 | `common/src/main/kotlin/allyouneed/multiblock/async/AsyncStructureNotifier.kt` | 删 GT 分支（`requestStructureCheck()`），保留 vanilla 分支 |
@@ -191,7 +191,7 @@ don't-care）：
 - 三种格子语义：
   - **必需方块**：`blockAt(...)` 返回 kind，需经 `isValidCell(...)` 匹配；
   - **必需空气**：`blockAt(...)` 返回 null，格子必须为空（如处理器 7×7 空气层）；
-  - **任意格**：`isDonCare(...)` 为 true，接受任何方块。
+   - **任意格**：`isDontCare(...)` 为 true，接受任何方块（y≥2 且不在核心；扩展舱同样适用）。
 - `isValidCell` 替换规则：墙上的机器方块可用玻璃替换（地板层除外）；核心外壳的机器方块可按
   结构类型被对应连接器替换（SWITCH：WAN/LAN；PROCESSOR：ME/LAN）。
 - 扩展层（switch/processor）：从 `baseDepth` 起每 +6 深追加一个 bay，bay 中心行放两个模块
@@ -200,15 +200,14 @@ don't-care）：
 
 ### 2.2 检测器：`async/AsyncStructureDetector.kt`
 
-- `facingOf`：优先读 `BlockStateProperties.HORIZONTAL_FACING`；GT 机器扩展旋转态回退读
-  `GTBlockStateProperties.UPWARDS_FACING`。
+- `facingOf`：只读 `BlockStateProperties.HORIZONTAL_FACING`（GT 控制器 `allowExtendedFacing(false)`，无 `UPWARDS_FACING`）。
 - `detectModule(level, interfacePos)`：从地板接口 Z 向上探测其上的模块（3×7×5 全必需），
-  工厂块 = 接口 + `(2*facing, -4, 2*facing)`，且朝向一致。
+  工厂块 = 接口 − `interfaceWorldOffset(facing)`，且朝向一致。
 - `detectSwitch(level, controllerPos)`：对扩展数 0..16 逐一 `scanStructure`，首次成功即返回；
   WAN 上限 1、LAN 上限 2；再对每个接口 `detectModule`。
 - `detectProcessor(...)`：同理；ME 上限 1、LAN 上限 2；随后 `linkSwitches` 从处理器 LAN 经
-  专用线缆（CABLE）级联到交换机 WAN，再递归每台交换机的 LAN。
-- `findHostController`：以方块为中心的有界搜索，用于把上游 rescan 通知路由到成形控制器。
+  专用线缆（CABLE）级联到交换机 WAN，再递归每台交换机的 LAN。分叉线缆拒绝。
+- `findHostController`：以方块为中心的有界搜索（vanilla BE + `extraFinder` GT 钩子），用于把上游 rescan 通知路由到成形控制器。
 
 ---
 

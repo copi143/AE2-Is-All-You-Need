@@ -20,8 +20,14 @@ package allyouneed.gtceu.multiblock
  */
 interface IGroupedBlockPattern {
 
-    /** 声明从 [aisleIndex] 开始的步骤重复 [groupSize] 个连续 aisle。 / Declares that the step starting at [aisleIndex] repeats [groupSize] consecutive aisles. */
-    fun setGroup(aisleIndex: Int, groupSize: Int)
+    /**
+     * 声明从 [aisleIndex] 开始的步骤覆盖 [groupSize] 个连续 aisle，并作为一组重复
+     * [minRepeats]..[maxRepeats] 次。
+     *
+     * Declares that the step starting at [aisleIndex] covers [groupSize] consecutive aisles,
+     * repeated as a unit between [minRepeats] and [maxRepeats] times.
+     */
+    fun setGroup(aisleIndex: Int, groupSize: Int, minRepeats: Int, maxRepeats: Int)
 
     /** 从 [aisleIndex] 开始的步骤匹配的连续 aisle 数量（单个为 1）。 / Number of consecutive aisles matched by the step starting at [aisleIndex] (1 for singles). */
     fun getGroupSize(aisleIndex: Int): Int

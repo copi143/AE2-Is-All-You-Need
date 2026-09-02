@@ -122,12 +122,14 @@ public abstract class BlockPatternGroupedMixin implements IGroupedBlockPattern {
     }
 
     @Override
-    public void setGroup(int aisleIndex, int groupSize) {
+    public void setGroup(int aisleIndex, int groupSize, int minRepeats, int maxRepeats) {
         if (groupSizes == null) {
             groupSizes = new int[aisleRepetitions.length];
             java.util.Arrays.fill(groupSizes, 1);
         }
         groupSizes[aisleIndex] = groupSize;
+        aisleRepetitions[aisleIndex][0] = minRepeats;
+        aisleRepetitions[aisleIndex][1] = maxRepeats;
     }
 
     @Override

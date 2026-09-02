@@ -7,7 +7,10 @@ import allyouneed.multiblock.async.AsyncStructureDetector
 import allyouneed.multiblock.async.AsyncStructureEntityBlock
 import allyouneed.multiblock.async.AsyncSwitchCluster
 import allyouneed.multiblock.async.IAsyncChannelView
+import allyouneed.multiblock.async.IAsyncKindBlock
+import allyouneed.multiblock.async.IAsyncStructureHost
 import allyouneed.multiblock.async.setStructuralFormed
+import allyouneed.multiblock.AsyncStructures
 import appeng.menu.MenuOpener
 import appeng.menu.locator.MenuLocators
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity
@@ -54,7 +57,11 @@ import net.minecraft.world.phys.BlockHitResult
  */
 abstract class AsyncStructureGtControllerMachine(
     holder: IMachineBlockEntity,
-) : MultiblockControllerMachine(holder), IInteractedMachine, IMachineLife {
+) : MultiblockControllerMachine(holder), IInteractedMachine, IMachineLife, IAsyncStructureHost {
+
+    override val kind: AsyncBlockKind
+        get() = (level?.getBlockState(pos)?.block as? IAsyncKindBlock)?.kind
+            ?: AsyncBlockKind.CONTROLLER
 
     /** 工厂为 true，它通过模块接口探测成形，而不是 GT 模式。 / True for the factory, which forms by module interface probing instead of a GT pattern. */
     protected open val usesDetector: Boolean = false
@@ -152,10 +159,46 @@ abstract class AsyncStructureGtControllerMachine(
         updateFormedBlockState(true)
         val level = level as? ServerLevel ?: return
         // GTCEu re-runs onStructureFormed on every block change at a cached position, and the
-        // connector FORMED flip below setBlocks such a position. Once the cluster is built, the
-        // structure content is unchanged, so skip the rebuild to break that re-entrancy.
-        if (cluster != null) return
+        // connector FORMED flip below setBlocks such a position. Skip rebuildCluster to break that
+        // re-entrancy, but still refresh modules / linked switches.
+        if (cluster != null) {
+            refreshAttachments(level)
+            return
+        }
         rebuildCluster(level)
+    }
+
+    override fun requestRescan() {
+        val level = level as? ServerLevel ?: return
+        if (isFormed) {
+            refreshAttachments(level)
+        }
+    }
+
+    /**
+     * 刷新已成形簇上的模块与级联交换机，不翻转 FORMED、不重链连接器。
+     *
+     * Refreshes modules and cascaded switches on an already-formed cluster without flipping FORMED
+     * or relinking connectors.
+     */
+    fun refreshAttachments(level: ServerLevel) {
+        when (val c = cluster) {
+            is AsyncSwitchCluster -> {
+                c.clearModules()
+                for (interfacePos in c.interfacePositions) {
+                    AsyncStructureDetector.detectModule(level, interfacePos)?.let(c::addModule)
+                }
+            }
+            is AsyncProcessorCluster -> {
+                c.clearModules()
+                c.clearSwitches()
+                for (interfacePos in c.interfacePositions) {
+                    AsyncStructureDetector.detectModule(level, interfacePos)?.let(c::addModule)
+                }
+                AsyncStructureDetector.linkSwitches(level, c)
+            }
+            else -> {}
+        }
     }
 
     override fun onStructureInvalid() {
@@ -383,6 +426,7 @@ class AsyncStructureGtProcessorMachine(holder: IMachineBlockEntity) : AsyncStruc
         for (interfacePos in scan.interfaces) {
             AsyncStructureDetector.detectModule(level, interfacePos)?.let(cluster::addModule)
         }
+        AsyncStructureDetector.linkSwitches(level, cluster)
         return cluster
     }
 }
@@ -418,8 +462,8 @@ class AsyncStructureGtFactoryMachine(holder: IMachineBlockEntity) : AsyncStructu
     override val usesDetector: Boolean get() = true
 
     override fun detect(level: ServerLevel): Any? {
-        val facing = frontFacing
-        val interfacePos = pos.offset(2 * facing.stepX, -4, 2 * facing.stepZ)
+        val (dx, dy, dz) = AsyncStructures.interfaceWorldOffset(frontFacing)
+        val interfacePos = pos.offset(dx, dy, dz)
         return AsyncStructureDetector.detectModule(level, interfacePos)
     }
 }

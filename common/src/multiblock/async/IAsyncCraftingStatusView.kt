@@ -8,21 +8,21 @@ package allyouneed.multiblock.async
  * flavour (own block and GTCEu machine) so a single screen can render all of them.
  */
 interface IAsyncCraftingStatusView {
-    /** 已成形处理器结构数量。 / Number of formed processor structures. */
+    /** 当前宿主是否已成形（0/1）。 / Whether the current host is formed (0/1). */
     val formed: Int
 
-    /** 已接入网格的处理器数量。 / Number of processors connected to the grid. */
+    /** 当前宿主是否已接入网格（0/1）。 / Whether the current host is connected to the grid (0/1). */
     val gridConnected: Int
 
-    /** 所有处理器吞掉的总通道数。 / Total channels swallowed by all processors. */
+    /** 当前宿主吞掉的总通道数。 / Total channels swallowed by the current host. */
     val swallowedChannels: Int
 
-    /** 所有处理器的总存储容量（字节）。 / Total storage capacity in bytes across all processors. */
+    /** 当前宿主的存储容量（字节）。 / Storage capacity in bytes of the current host. */
     val storageBytes: Long
 
-    /** 所有处理器的总方块数。 / Total number of blocks across all processors. */
+    /** 当前宿主的总方块数。 / Total number of blocks of the current host. */
     val blockCount: Int
 
-    /** 处于无限通道模式的处理器的数量。 / Number of processors running in infinite channel mode. */
+    /** 当前宿主是否处于无限通道模式（0/1）。 / Whether the current host is in infinite channel mode (0/1). */
     val infiniteChannelMode: Int
 }

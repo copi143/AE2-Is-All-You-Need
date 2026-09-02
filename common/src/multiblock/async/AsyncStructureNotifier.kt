@@ -1,9 +1,10 @@
 package allyouneed.multiblock.async
 
-import allyouneed.multiblock.async.AsyncStructureNotifier.SCAN_INTERVAL
 import net.minecraft.core.BlockPos
 import net.minecraft.server.TickTask
 import net.minecraft.server.level.ServerLevel
+import java.util.Collections
+import java.util.WeakHashMap
 
 /**
  * 响应结构方块（框架、机器方块、玻璃、塔、核心、线缆）的放置与移除。
@@ -11,8 +12,9 @@ import net.minecraft.server.level.ServerLevel
  * 这会让手动搭建的结构一直不成形、已被破坏的结构一直卡在成形状态。结构变化时，
  * 我们扫描该位置周围的盒子，并让受影响的自有控制器立即重新校验，而不是等待轮询。
  *
- * GT 控制器在这里刻意不通知：成形后它们会被 GTCEu 的 LevelMixin（pattern 的
- * 位置缓存）逐格失效；未成形的则由 GT async 轮询器每 4 tick 成形。
+ * GT 控制器成形后由 GTCEu 的 LevelMixin（pattern 的位置缓存）逐格失效；未成形的
+ * 由 GT async 轮询器每 4 tick 成形。专用线缆不在 pattern cache 里，因此线缆变化
+ * 额外沿线通知已成形的交换机/处理器（含 GT 宿主钩子）。
  *
  * 扫描被推迟到下一个服务端 tick，并进行合并（每 [SCAN_INTERVAL] 每世界至多一次），
  * 因此像 GT 一键建造那样的大量放置只会产生围绕最近变化位置的一次扫描。
@@ -23,9 +25,10 @@ import net.minecraft.server.level.ServerLevel
  * formed. On a structural change we scan a box around the position and ask the affected plain
  * controllers to revalidate immediately instead of waiting for a poll.
  *
- * GT controllers are deliberately not notified here: once formed they are invalidated cell by cell
- * by GTCEu's LevelMixin (the pattern's position cache), and unformed ones are formed by the GT
- * async poller every 4 ticks.
+ * Formed GT controllers are invalidated cell by cell by GTCEu's LevelMixin (the pattern's position
+ * cache), and unformed ones are formed by the GT async poller every 4 ticks. Dedicated cable is not
+ * in the pattern cache, so cable changes additionally walk the cable and notify formed
+ * switch/processor hosts (including the GT host hook).
  *
  * The scan is deferred to the next server tick and coalesced (at most one scan per
  * [SCAN_INTERVAL] per level), so rapid placements such as a GT one-click build cost a single scan
@@ -40,9 +43,9 @@ object AsyncStructureNotifier {
     /** 同一世界两次扫描之间的最小服务端 tick 数（合并建造爆发）。 / Minimum server ticks between two scans of the same level (coalesces build bursts). */
     private const val SCAN_INTERVAL = 4
 
-    private val pending = HashMap<ServerLevel, BlockPos>()
-    private val lastScanTick = HashMap<ServerLevel, Int>()
-    private val scheduled = HashSet<ServerLevel>()
+    private val pending = WeakHashMap<ServerLevel, BlockPos>()
+    private val lastScanTick = WeakHashMap<ServerLevel, Int>()
+    private val scheduled = Collections.newSetFromMap(WeakHashMap<ServerLevel, Boolean>())
 
     fun onStructuralBlockChanged(level: ServerLevel, pos: BlockPos) {
         pending[level] = pos
@@ -53,6 +56,11 @@ object AsyncStructureNotifier {
 
     private fun flush(level: ServerLevel) {
         scheduled.remove(level)
+        if (!level.server.isRunning) {
+            pending.remove(level)
+            lastScanTick.remove(level)
+            return
+        }
         val pos = pending.remove(level) ?: return
         val last = lastScanTick[level]
         val now = level.server.tickCount
@@ -65,6 +73,7 @@ object AsyncStructureNotifier {
         }
         lastScanTick[level] = now
         scan(level, pos)
+        AsyncStructureDetector.notifyHostsAlongCable(level, pos)
     }
 
     private fun scan(level: ServerLevel, pos: BlockPos) {
@@ -77,6 +86,7 @@ object AsyncStructureNotifier {
                     if (be is AsyncStructureBlockEntity) {
                         when (be.kind) {
                             AsyncBlockKind.MODULE_INTERFACE,
+                            AsyncBlockKind.FACTORY,
                             AsyncBlockKind.SWITCH,
                             AsyncBlockKind.CONTROLLER -> be.requestRescan()
 

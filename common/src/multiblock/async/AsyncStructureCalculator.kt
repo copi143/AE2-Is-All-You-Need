@@ -1,5 +1,6 @@
 package allyouneed.multiblock.async
 
+import allyouneed.multiblock.AsyncStructures
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 
@@ -51,9 +52,9 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         val sw = switchCluster
         val proc = processorCluster
         return when (host.kind) {
-            AsyncBlockKind.MODULE_INTERFACE -> moduleCluster != null
-            AsyncBlockKind.SWITCH -> sw != null && !sw.isDestroyed
-            AsyncBlockKind.CONTROLLER -> proc != null && !proc.isDestroyed
+            AsyncBlockKind.MODULE_INTERFACE, AsyncBlockKind.FACTORY -> moduleCluster != null
+            AsyncBlockKind.SWITCH -> sw != null
+            AsyncBlockKind.CONTROLLER -> proc != null
             else -> false
         }
     }
@@ -62,6 +63,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         if (host.isRemoved || host.notLoaded()) return
         when (host.kind) {
             AsyncBlockKind.MODULE_INTERFACE -> updateModule(level)
+            AsyncBlockKind.FACTORY -> updateFactory(level)
             AsyncBlockKind.SWITCH -> updateSwitch(level)
             AsyncBlockKind.CONTROLLER -> updateProcessor(level)
             else -> {}
@@ -70,15 +72,16 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
 
     /** 方块被移除时销毁缓存的簇，并通知上游。 / Destroys the cached cluster(s) when the block is removed; notifies upstream. */
     fun destroy(level: ServerLevel) {
-        val hadModule = moduleCluster != null
-        val hadSwitch = switchCluster != null
+        val moduleInterface = moduleCluster?.interfacePos
+        val switch = switchCluster
         val hadProcessor = processorCluster != null
         destroyCurrent(level)
         host.updateSubType()
         when {
             hadProcessor -> {}
-            hadSwitch -> notifyProcessor(level)
-            hadModule -> notifyHostController(level)
+            switch != null -> notifyProcessor(level, switch)
+            moduleInterface != null ->
+                AsyncStructureDetector.findHostController(level, moduleInterface)?.requestRescan()
         }
     }
 
@@ -99,6 +102,23 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         notifyHostController(level)
     }
 
+    private fun updateFactory(level: ServerLevel) {
+        val facing = AsyncStructureDetector.facingOf(level, host.blockPos) ?: return
+        val (dx, dy, dz) = AsyncStructures.interfaceWorldOffset(facing)
+        val interfacePos = host.blockPos.offset(dx, dy, dz)
+        val detected = AsyncStructureDetector.detectModule(level, interfacePos)
+        val formed = detected?.takeIf { it.factoryPos == host.blockPos }
+        val old = moduleCluster
+        val unchanged = formed != null && old != null && formed.factoryPos == old.factoryPos
+        if (unchanged) return
+
+        old?.let { setModuleFormed(level, it, false) }
+        moduleCluster = formed
+        formed?.let { setModuleFormed(level, it, true) }
+        host.updateSubType()
+        AsyncStructureDetector.findHostController(level, interfacePos)?.requestRescan()
+    }
+
     private fun setModuleFormed(level: ServerLevel, module: AsyncModuleCluster, formed: Boolean) {
         val factory = level.getBlockEntity(module.factoryPos)
         if (factory is AsyncStructureBlockEntity && factory.kind == AsyncBlockKind.FACTORY) {
@@ -114,7 +134,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     private fun updateSwitch(level: ServerLevel) {
         val formed = AsyncStructureDetector.detectSwitch(level, host.blockPos)
         val old = switchCluster
-        val oldLive = old != null && !old.isDestroyed
+        val oldLive = old != null
         val structureChanged = !oldLive || formed == null ||
                 formed.anchorPos != old.anchorPos || formed.boundsMin != old.boundsMin || formed.boundsMax != old.boundsMax
         val moduleChanged = oldLive && formed != null &&
@@ -126,7 +146,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
             resyncConnectors(level, formed)
             host.updateSubType()
             if (moduleChanged) {
-                notifyProcessor(level)
+                notifyProcessor(level, old)
             }
             return
         }
@@ -139,7 +159,7 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
         }
         host.updateSubType()
         if (structureChanged) {
-            notifyProcessor(level)
+            notifyProcessor(level, formed ?: old)
         }
     }
 
@@ -150,11 +170,17 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
     private fun updateProcessor(level: ServerLevel) {
         val formed = AsyncStructureDetector.detectProcessor(level, host.blockPos)
         val old = processorCluster
-        val oldLive = old != null && !old.isDestroyed
+        val oldLive = old != null
         val changed = !oldLive || formed == null ||
                 formed.anchorPos != old.anchorPos || formed.boundsMin != old.boundsMin || formed.boundsMax != old.boundsMax
 
         if (oldLive && formed != null && !changed) {
+            old.clearModules()
+            old.clearSwitches()
+            formed.getModules().forEach(old::addModule)
+            formed.getSwitches().forEach(old::addSwitch)
+            resyncConnectors(level, formed)
+            host.updateSubType()
             return
         }
 
@@ -224,9 +250,9 @@ class AsyncStructureCalculator(private val host: AsyncStructureBlockEntity) {
      * A switch notifies the processor it is wired to. The processor is found by walking cables
      * upstream from the switch's WAN connector until a processor-owned LAN connector is reached.
      */
-    private fun notifyProcessor(level: ServerLevel) {
-        val cluster = switchCluster ?: return
-        for (wan in cluster.wanConnectorPositions) {
+    private fun notifyProcessor(level: ServerLevel, cluster: AsyncSwitchCluster?) {
+        val sw = cluster ?: return
+        for (wan in sw.wanConnectorPositions) {
             val farEnd = AsyncStructureDetector.followCableFromWan(level, wan) ?: continue
             val processor = AsyncStructureDetector.findHostController(level, farEnd) ?: continue
             if (processor.kind == AsyncBlockKind.CONTROLLER) {

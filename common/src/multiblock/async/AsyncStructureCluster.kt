@@ -36,9 +36,6 @@ class AsyncSwitchCluster(
     val interfacePositions: List<BlockPos> = emptyList(),
 ) {
     private val modules = ArrayList<AsyncModuleCluster>()
-    private var destroyed = false
-
-    val isDestroyed: Boolean get() = destroyed
 
     val connectorPositions: List<BlockPos>
         get() = meConnectorPositions + wanConnectorPositions + lanConnectorPositions
@@ -59,11 +56,6 @@ class AsyncSwitchCluster(
 
     fun boundsContain(pos: BlockPos): Boolean =
         pos.x in boundsMin.x..boundsMax.x && pos.y in boundsMin.y..boundsMax.y && pos.z in boundsMin.z..boundsMax.z
-
-    fun destroy() {
-        destroyed = true
-        modules.clear()
-    }
 }
 
 /**
@@ -87,9 +79,6 @@ class AsyncProcessorCluster(
 ) {
     private val modules = ArrayList<AsyncModuleCluster>()
     private val switches = ArrayList<AsyncSwitchCluster>()
-    private var destroyed = false
-
-    val isDestroyed: Boolean get() = destroyed
 
     val connectorPositions: List<BlockPos>
         get() = meConnectorPositions + wanConnectorPositions + lanConnectorPositions
@@ -121,14 +110,10 @@ class AsyncProcessorCluster(
     fun getSwitches(): List<AsyncSwitchCluster> = switches
 
     fun getTotalBlockCount(): Int =
-        blockCount + switches.sumOf { it.blockCount } + modules.size + switches.sumOf { it.getModules().size }
+        blockCount + switches.sumOf { it.blockCount } +
+                modules.sumOf { it.blockCount } +
+                switches.sumOf { sw -> sw.getModules().sumOf { it.blockCount } }
 
     fun boundsContain(pos: BlockPos): Boolean =
         pos.x in boundsMin.x..boundsMax.x && pos.y in boundsMin.y..boundsMax.y && pos.z in boundsMin.z..boundsMax.z
-
-    fun destroy() {
-        destroyed = true
-        switches.clear()
-        modules.clear()
-    }
 }

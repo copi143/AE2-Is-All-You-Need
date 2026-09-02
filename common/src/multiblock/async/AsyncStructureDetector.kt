@@ -2,7 +2,6 @@ package allyouneed.multiblock.async
 
 import allyouneed.multiblock.AsyncStructureType
 import allyouneed.multiblock.AsyncStructures
-import com.gregtechceu.gtceu.api.block.property.GTBlockStateProperties
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.server.level.ServerLevel
@@ -17,7 +16,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties
  *
  *  - 必需方块（[AsyncStructures.blockAt] 返回某个种类，用 [AsyncStructures.isValidCell] 校验）
  *  - 必需空气（[AsyncStructures.blockAt] 返回 null，该格必须为空）
- *  - 无关格子（[AsyncStructures.isDonCare]），接受任意方块
+ *  - 无关格子（[AsyncStructures.isDontCare]），接受任意方块
  *
  * 模块从地板接口（Z）向上检测（3x7x5）；交换机扫描其扩展舱接口上的所有模块；
  * 处理器扫描自身的模块以及经 LAN/WAN 连接器和专用线缆可达的交换机（直接或级联）。
@@ -30,13 +29,23 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties
  *
  *  - required blocks ([AsyncStructures.blockAt] returns a kind, validated via [AsyncStructures.isValidCell])
  *  - required air ([AsyncStructures.blockAt] returns null, the cell must be empty)
- *  - don't-care cells ([AsyncStructures.isDonCare]) which accept anything
+ *  - don't-care cells ([AsyncStructures.isDontCare]) which accept anything
  *
  * A module is detected from its floor interface (Z) upward (3x7x5); a switch scans the modules on
  * its extension-bay interfaces; the processor scans its own modules plus the switches reachable
  * through LAN/WAN connectors and dedicated cable (directly or cascaded).
  */
 object AsyncStructureDetector {
+
+    /**
+     * GTCEu 控制器查找钩子。Forge 在 GTCEu 加载时设置；Fabric / 无 GT 时保持 null。
+     * 不得在本文件引用 GTCEu 类型。
+     *
+     * Hook for locating GTCEu controllers. Set on Forge when GTCEu is loaded; stays null on
+     * Fabric / without GT. This file must not reference GTCEu types.
+     */
+    @JvmField
+    var extraFinder: ((ServerLevel, BlockPos) -> IAsyncStructureHost?)? = null
 
     fun kindOf(level: ServerLevel, pos: BlockPos): AsyncBlockKind? {
         val block = level.getBlockState(pos).block
@@ -47,11 +56,6 @@ object AsyncStructureDetector {
         val state = level.getBlockState(pos)
         if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
             return state.getValue(BlockStateProperties.HORIZONTAL_FACING)
-        }
-        // GT machine blocks use the same horizontal-facing property by default, but a machine with
-        // an extended rotation state exposes its facing through GT's upwards-facing property.
-        if (state.hasProperty(GTBlockStateProperties.UPWARDS_FACING)) {
-            return state.getValue(GTBlockStateProperties.UPWARDS_FACING)
         }
         return null
     }
@@ -73,7 +77,8 @@ object AsyncStructureDetector {
         if (level.getBlockEntity(interfacePos) !is AsyncStructureBlockEntity) return null
         val facing = facingOf(level, interfacePos) ?: return null
 
-        val factoryPos = interfacePos.offset(-2 * facing.stepX, 4, -2 * facing.stepZ)
+        val (dx, dy, dz) = AsyncStructures.interfaceWorldOffset(facing)
+        val factoryPos = interfacePos.offset(-dx, -dy, -dz)
         if (kindOf(level, factoryPos) != AsyncBlockKind.FACTORY) return null
         if (facingOf(level, factoryPos) != facing) return null
 
@@ -89,8 +94,8 @@ object AsyncStructureDetector {
                 for (z in 0 until AsyncStructures.depth(AsyncStructureType.MODULE, 0)) {
                     val expected = AsyncStructures.blockAt(AsyncStructureType.MODULE, 0, x, y, z)
                         ?: continue
-                    val (dx, dy, dz) = AsyncStructures.worldOffset(AsyncStructureType.MODULE, facing, x, y, z)
-                    val pos = factoryPos.offset(dx, dy, dz)
+                    val (ox, oy, oz) = AsyncStructures.worldOffset(AsyncStructureType.MODULE, facing, x, y, z)
+                    val pos = factoryPos.offset(ox, oy, oz)
                     val actual = kindOf(level, pos)
                     if (actual == null || !AsyncStructures.isValidCell(AsyncStructureType.MODULE, 0, x, y, z, actual)) {
                         return null
@@ -137,8 +142,8 @@ object AsyncStructureDetector {
                 scan.lanConnectors,
                 scan.interfaces,
             )
-            for (interfacePos in scan.interfaces) {
-                detectModule(level, interfacePos)?.let(cluster::addModule)
+            for (iface in scan.interfaces) {
+                detectModule(level, iface)?.let(cluster::addModule)
             }
             return cluster
         }
@@ -170,8 +175,8 @@ object AsyncStructureDetector {
                 scan.lanConnectors,
                 scan.interfaces,
             )
-            for (interfacePos in scan.interfaces) {
-                detectModule(level, interfacePos)?.let(cluster::addModule)
+            for (iface in scan.interfaces) {
+                detectModule(level, iface)?.let(cluster::addModule)
             }
             linkSwitches(level, cluster)
             return cluster
@@ -181,12 +186,12 @@ object AsyncStructureDetector {
 
     /**
      * 从处理器的 LAN 连接器出发，沿专用线缆级联到交换机上的 WAN 连接器，再经由
-     * 每台交换机自身的 LAN 连接器递归展开。
+     * 每台交换机自身的 LAN 连接器递归展开。分叉线缆被拒绝。
      *
      * Cascades from the processor's LAN connectors through dedicated cable to WAN connectors on
-     * switches, then recursively through each switch's own LAN connectors.
+     * switches, then recursively through each switch's own LAN connectors. Forked cables are rejected.
      */
-    private fun linkSwitches(level: ServerLevel, cluster: AsyncProcessorCluster) {
+    fun linkSwitches(level: ServerLevel, cluster: AsyncProcessorCluster) {
         val seen = HashSet<BlockPos>()
         val queue = ArrayDeque<BlockPos>()
         queue.addAll(cluster.lanConnectorPositions)
@@ -196,7 +201,6 @@ object AsyncStructureDetector {
             val wan = followCableToWan(level, lan) ?: continue
             if (kindOf(level, wan) != AsyncBlockKind.WAN_CONNECTOR) continue
             val switch = detectSwitchContaining(level, wan) ?: continue
-            if (switch.isDestroyed) continue
             cluster.addSwitch(switch)
             for (switchLan in switch.lanConnectorPositions) {
                 queue.add(switchLan)
@@ -212,26 +216,87 @@ object AsyncStructureDetector {
     fun followCableFromWan(level: ServerLevel, from: BlockPos): BlockPos? =
         followCable(level, from, AsyncBlockKind.LAN_CONNECTOR)
 
+    private fun isCableOrConnector(kind: AsyncBlockKind?): Boolean = when (kind) {
+        AsyncBlockKind.CABLE,
+        AsyncBlockKind.ME_CONNECTOR,
+        AsyncBlockKind.WAN_CONNECTOR,
+        AsyncBlockKind.LAN_CONNECTOR -> true
+        else -> false
+    }
+
     private fun followCable(level: ServerLevel, from: BlockPos, target: AsyncBlockKind): BlockPos? {
         val seen = HashSet<BlockPos>()
-        val stack = ArrayDeque<BlockPos>()
-        stack.add(from)
-        while (stack.isNotEmpty()) {
-            val pos = stack.removeFirst()
+        val queue = ArrayDeque<BlockPos>()
+        queue.add(from)
+        var found: BlockPos? = null
+        while (queue.isNotEmpty()) {
+            val pos = queue.removeFirst()
             if (!seen.add(pos)) continue
+            val kindHere = kindOf(level, pos)
+            var links = 0
             for (dir in Direction.entries) {
                 val neighbor = pos.offset(dir.normal)
-                if (seen.contains(neighbor)) continue
                 when (val kind = kindOf(level, neighbor)) {
-                    AsyncBlockKind.CABLE -> stack.add(neighbor)
-                    AsyncBlockKind.ME_CONNECTOR, AsyncBlockKind.WAN_CONNECTOR, AsyncBlockKind.LAN_CONNECTOR ->
-                        if (kind == target) return neighbor
-
+                    AsyncBlockKind.CABLE -> {
+                        links++
+                        if (neighbor !in seen) queue.add(neighbor)
+                    }
+                    AsyncBlockKind.ME_CONNECTOR, AsyncBlockKind.WAN_CONNECTOR, AsyncBlockKind.LAN_CONNECTOR -> {
+                        links++
+                        if (kind == target && neighbor != from) {
+                            if (found != null && found != neighbor) return null
+                            found = neighbor
+                        }
+                    }
                     else -> {}
                 }
             }
+            if (kindHere == AsyncBlockKind.CABLE && links > 2) return null
         }
-        return null
+        return found
+    }
+
+    /**
+     * 从 [pos] 及其邻居沿专用线缆收集所有连接器（不分叉检查），用于通知上游重扫。
+     * 线缆被拆除后 [pos] 已是空气，所以必须看邻居。
+     *
+     * Collects every connector reachable by dedicated cable from [pos] and its neighbours (no fork
+     * check), for upstream rescan notification. After a cable is removed [pos] is air, so neighbours
+     * must be inspected.
+     */
+    fun notifyHostsAlongCable(level: ServerLevel, pos: BlockPos) {
+        val starts = ArrayList<BlockPos>(7)
+        starts.add(pos)
+        for (dir in Direction.entries) {
+            starts.add(pos.offset(dir.normal))
+        }
+        val connectors = LinkedHashSet<BlockPos>()
+        val visited = HashSet<BlockPos>()
+        val queue = ArrayDeque<BlockPos>()
+        for (start in starts) {
+            if (!isCableOrConnector(kindOf(level, start))) continue
+            queue.add(start)
+        }
+        while (queue.isNotEmpty()) {
+            val cur = queue.removeFirst()
+            if (!visited.add(cur)) continue
+            val kind = kindOf(level, cur)
+            if (kind == AsyncBlockKind.ME_CONNECTOR || kind == AsyncBlockKind.WAN_CONNECTOR || kind == AsyncBlockKind.LAN_CONNECTOR) {
+                connectors.add(cur)
+            }
+            for (dir in Direction.entries) {
+                val neighbor = cur.offset(dir.normal)
+                if (neighbor in visited) continue
+                if (isCableOrConnector(kindOf(level, neighbor))) queue.add(neighbor)
+            }
+        }
+        val hosts = LinkedHashSet<IAsyncStructureHost>()
+        for (connector in connectors) {
+            findHostController(level, connector)?.let(hosts::add)
+        }
+        for (host in hosts) {
+            host.requestRescan()
+        }
     }
 
     /**
@@ -241,7 +306,7 @@ object AsyncStructureDetector {
      * Locates the formed switch or processor controller whose cached structure bounds contain
      * [pos] (a module interface or a connector). Used to route rescan notifications upstream.
      */
-    fun findHostController(level: ServerLevel, pos: BlockPos): AsyncStructureBlockEntity? {
+    fun findHostController(level: ServerLevel, pos: BlockPos): IAsyncStructureHost? {
         for (dy in -10..10) {
             for (dx in -12..12) {
                 for (dz in -12..12) {
@@ -258,7 +323,7 @@ object AsyncStructureDetector {
                 }
             }
         }
-        return null
+        return extraFinder?.invoke(level, pos)
     }
 
     /**
@@ -338,9 +403,9 @@ object AsyncStructureDetector {
         for (y in 0 until h) {
             for (z in 0 until d) {
                 for (x in 0 until w) {
-                    if (AsyncStructures.isDonCare(type, x, y, z)) continue
-                    val (dx, dy, dz) = AsyncStructures.worldOffset(type, facing, x, y, z)
-                    val pos = anchorPos.offset(dx, dy, dz)
+                    if (AsyncStructures.isDontCare(type, x, y, z)) continue
+                    val (ox, oy, oz) = AsyncStructures.worldOffset(type, facing, x, y, z)
+                    val pos = anchorPos.offset(ox, oy, oz)
                     val expected = AsyncStructures.blockAt(type, extensions, x, y, z)
                     if (expected == null) {
                         if (!level.getBlockState(pos).isAir) return StructureScan(false)

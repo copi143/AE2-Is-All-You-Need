@@ -119,28 +119,30 @@ object AsyncStructureGtPattern {
         val pattern = builder.build()
 
         if (type != AsyncStructureType.MODULE) {
-            (pattern as IGroupedBlockPattern).setGroup(type.baseDepth - 2, AsyncStructures.EXTENSION_DEPTH)
+            (pattern as IGroupedBlockPattern).setGroup(
+                type.baseDepth - 2,
+                AsyncStructures.EXTENSION_DEPTH,
+                0,
+                AsyncStructures.MAX_EXTENSIONS,
+            )
         }
         return pattern
     }
 
     private fun registerVariantPredicates(builder: FactoryBlockPattern, type: AsyncStructureType) {
-        val machine = requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.MACHINE)) { "missing MACHINE block" }
-        val glass = requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.GLASS)) { "missing GLASS block" }
+        val machine = AsyncBlockRegistry.require(AsyncBlockKind.MACHINE)
+        val glass = AsyncBlockRegistry.require(AsyncBlockKind.GLASS)
         builder.where(GLASS_REPLACE_CHAR, Predicates.blocks(machine).or(Predicates.blocks(glass)))
         when (type) {
             AsyncStructureType.SWITCH -> {
-                val wan =
-                    requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.WAN_CONNECTOR)) { "missing WAN_CONNECTOR" }
-                val lan =
-                    requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.LAN_CONNECTOR)) { "missing LAN_CONNECTOR" }
+                val wan = AsyncBlockRegistry.require(AsyncBlockKind.WAN_CONNECTOR)
+                val lan = AsyncBlockRegistry.require(AsyncBlockKind.LAN_CONNECTOR)
                 builder.where(SWITCH_CORE_CHAR, corePredicate(machine, glass, wan, 1, lan, 2))
             }
 
             AsyncStructureType.PROCESSOR -> {
-                val me = requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.ME_CONNECTOR)) { "missing ME_CONNECTOR" }
-                val lan =
-                    requireNotNull(AsyncBlockRegistry.get(AsyncBlockKind.LAN_CONNECTOR)) { "missing LAN_CONNECTOR" }
+                val me = AsyncBlockRegistry.require(AsyncBlockKind.ME_CONNECTOR)
+                val lan = AsyncBlockRegistry.require(AsyncBlockKind.LAN_CONNECTOR)
                 builder.where(PROCESSOR_SHELL_CHAR, corePredicate(machine, glass, me, 1, lan, 2))
             }
 
@@ -160,7 +162,7 @@ object AsyncStructureGtPattern {
         .or(Predicates.blocks(connectorB).setMaxGlobalLimited(maxB))
 
     private fun cellChar(type: AsyncStructureType, x: Int, y: Int, z: Int): Char {
-        if (AsyncStructures.isDonCare(type, x, y, z)) return DONTCARE_CHAR
+        if (AsyncStructures.isDontCare(type, x, y, z)) return DONTCARE_CHAR
         val kind = AsyncStructures.blockAt(type, 1, x, y, z) ?: return AIR_CHAR
         if (kind == AsyncBlockKind.MACHINE) return machineChar(type, x, y, z)
         return KIND_TO_CHAR.getValue(kind)

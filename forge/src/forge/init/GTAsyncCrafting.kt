@@ -14,7 +14,9 @@ import allyouneed.gtceu.multiblock.AsyncStructureGtPattern
 import allyouneed.gtceu.multiblock.AsyncStructureGtProcessorMachine
 import allyouneed.gtceu.multiblock.AsyncStructureGtSwitchMachine
 import allyouneed.gtceu.multiblock.AsyncStructureGtWanConnectorMachine
+import allyouneed.gtceu.multiblock.AsyncStructureGtHosts
 import allyouneed.multiblock.AsyncStructureType
+import allyouneed.multiblock.async.AsyncStructureDetector
 import allyouneed.util.MODID
 import allyouneed.util.rl
 import appeng.core.MainCreativeTab
@@ -112,6 +114,8 @@ object GTAsyncCrafting {
     fun isGtOwned(kind: AsyncBlockKind): Boolean = kind in definitions
 
     fun init(bus: IEventBus) {
+        AsyncStructureDetector.extraFinder = { level, pos -> AsyncStructureGtHosts.findNear(level, pos) }
+
         val registrate = object : GTRegistrate(MODID) {
             override fun getModEventBus(): IEventBus = bus
 

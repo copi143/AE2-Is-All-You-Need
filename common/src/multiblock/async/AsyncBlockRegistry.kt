@@ -19,4 +19,7 @@ object AsyncBlockRegistry {
     }
 
     fun get(kind: AsyncBlockKind): Block? = blocks[kind]
+
+    fun require(kind: AsyncBlockKind): Block =
+        blocks[kind] ?: error("missing async block ${kind.id}")
 }

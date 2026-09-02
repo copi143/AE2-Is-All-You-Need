@@ -16,7 +16,7 @@ import net.minecraft.core.Direction
  *
  * 每个格子要么是必需的，要么是“无关”。必需格子必须包含 [blockAt] 返回的方块；
  * 当 [blockAt] 返回 null 时该格必须是空气（例如处理器 7x7 的空气层）。
- * 无关格子（[isDonCare]）接受任意方块。坐标方向：x = 西->东、y = 下->上、
+ * 无关格子（[isDontCare]）接受任意方块。坐标方向：x = 西->东、y = 下->上、
  * z = 前->后。控制器面朝前方（局部 z 增加方向）；结构主体在控制器“背后”延伸。
  *
  * Hand-written, data-driven-free definitions of the three async synthesis structures.
@@ -31,7 +31,7 @@ import net.minecraft.core.Direction
  *
  * A cell is either required or "don't care". A required cell must contain the block returned by
  * [blockAt]; when [blockAt] returns null the cell must be air (e.g. the processor's 7x7 air
- * layer). Don't-care cells ([isDonCare]) accept anything. Coordinates grow x = west->east,
+ * layer). Don't-care cells ([isDontCare]) accept anything. Coordinates grow x = west->east,
  * y = bottom->top, z = front->back. The controller faces the front (increasing local z); the
  * structure body extends "behind" the controller.
  */
@@ -92,9 +92,9 @@ object AsyncStructures {
      * Whether a local cell may contain anything. All other in-bounds cells are required; see the
      * class comment for the distinction between required blocks and required air.
      */
-    fun isDonCare(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean {
+    fun isDontCare(type: AsyncStructureType, x: Int, y: Int, z: Int): Boolean {
         if (x < 0 || y < 0 || z < 0) return false
-        if (x >= width(type) || y >= height(type) || z >= depth(type, 0)) return false
+        if (x >= width(type) || y >= height(type)) return false
         return when (type) {
             AsyncStructureType.MODULE -> false
             AsyncStructureType.SWITCH -> y in 2..<height(type) && !inCore(type, x, y, z)
@@ -144,17 +144,12 @@ object AsyncStructures {
 
         return when (type) {
             AsyncStructureType.MODULE -> false
-            AsyncStructureType.SWITCH -> expected == AsyncBlockKind.MACHINE && inCore(type, x, y, z) && actual in setOf(
-                AsyncBlockKind.WAN_CONNECTOR,
-                AsyncBlockKind.LAN_CONNECTOR
-            )
+            AsyncStructureType.SWITCH -> expected == AsyncBlockKind.MACHINE && inCore(type, x, y, z) &&
+                    (actual == AsyncBlockKind.WAN_CONNECTOR || actual == AsyncBlockKind.LAN_CONNECTOR)
 
-            AsyncStructureType.PROCESSOR -> expected == AsyncBlockKind.MACHINE && inCore(
-                type,
-                x,
-                y,
-                z
-            ) && isOuterShellCell(x, y, z) && actual in setOf(AsyncBlockKind.ME_CONNECTOR, AsyncBlockKind.LAN_CONNECTOR)
+            AsyncStructureType.PROCESSOR -> expected == AsyncBlockKind.MACHINE && inCore(type, x, y, z) &&
+                    isOuterShellCell(x, y, z) &&
+                    (actual == AsyncBlockKind.ME_CONNECTOR || actual == AsyncBlockKind.LAN_CONNECTOR)
         }
     }
 
@@ -220,6 +215,12 @@ object AsyncStructures {
 
     /** 模块底部中心正下方的模块接口（Z）格子。 / The module interface (Z) cell directly below the module's bottom centre. */
     val moduleInterfaceCell: Triple<Int, Int, Int> = Triple(1, -1, 2)
+
+    /** 工厂锚点到模块接口的世界偏移。 / World offset from the factory anchor to the module interface. */
+    fun interfaceWorldOffset(facing: Direction): Triple<Int, Int, Int> {
+        val (x, y, z) = moduleInterfaceCell
+        return worldOffset(AsyncStructureType.MODULE, facing, x, y, z)
+    }
 
     // ---------------------------------------------------------------------------------------------
     // SWITCH (19 x 7 x (11 + 6N))
