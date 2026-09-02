@@ -19,17 +19,18 @@ import kotlin.math.roundToInt
 enum class ManaType(
     override val id: String,
     val unit: String,
-    val manaPerAM: Double = Platform.manaUnitRatio(id),
 ) : MetricLevelKey.Metric<ManaKey> {
-    AM("ae2", "AM", 1.0), //
+    AM("ae2", "AM"), //
     BotaniaMana("botania", "Mana"), //
     BloodMagicLP("bloodmagic", "LP"), //
     ArsNouveauMana("ars_nouveau", "Mana"), //
     ;
 
+    val manaPerAM: Double by lazy { if (this == AM) 1.0 else Platform.manaUnitRatio(id) }
+
     override val typeKey: ManaKey = ManaKey(this)
 
-    override val granularity: Int = (ManaKey.MANA_GRANULARITY / manaPerAM).roundToInt()
+    override val granularity: Int by lazy { (ManaKey.MANA_GRANULARITY / manaPerAM).roundToInt() }
 
     override fun toString(): String = id
 

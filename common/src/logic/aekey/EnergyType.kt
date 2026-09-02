@@ -19,17 +19,18 @@ import kotlin.math.roundToInt
 enum class EnergyType(
     override val id: String,
     val unit: String,
-    val energyPerAE: Double = Platform.energyUnitRatio(id),
 ) : MetricLevelKey.Metric<EnergyKey> {
-    AE("ae2", "AE", 1.0), //
+    AE("ae2", "AE"), //
     ForgeEnergy("forge", "FE"), //
     TechReborn("team_reborn_energy", "E"), //
     GtceuEu("gtceu", "EU"), //
     ;
 
+    val energyPerAE: Double by lazy { if (this == AE) 1.0 else Platform.energyUnitRatio(id) }
+
     override val typeKey: EnergyKey = EnergyKey(this)
 
-    override val granularity: Int = (EnergyKey.ENERGY_GRANULARITY / energyPerAE).roundToInt()
+    override val granularity: Int by lazy { (EnergyKey.ENERGY_GRANULARITY / energyPerAE).roundToInt() }
 
     override fun toString(): String = id
 
