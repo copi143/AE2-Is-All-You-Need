@@ -27,6 +27,20 @@ tasks.jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+val copyTransformerToRunMods = tasks.register("copyTransformerToRunMods") {
+    group = "build"
+    dependsOn(":transformer:pluginJar")
+    val src = project(":transformer").layout.buildDirectory.file("libs/ae2isallyouneed-transformer.jar")
+    val dest = layout.projectDirectory.file("run/mods/ae2isallyouneed-transformer.jar")
+    inputs.file(src)
+    outputs.file(dest)
+    doLast {
+        val destFile = dest.asFile
+        destFile.parentFile.mkdirs()
+        src.get().asFile.copyTo(destFile, overwrite = true)
+    }
+}
+
 legacyForge {
     version = libs.versions.forge.get()
     // Automatically enable neoforge AccessTransformers if the file exists
@@ -42,6 +56,7 @@ legacyForge {
         configureEach {
             systemProperty("forge.enabledGameTestNamespaces", modId)
             ideName = "Forge ${name.capitalized()} (${project.path})" // Unify the run config names with fabric
+            taskBefore(copyTransformerToRunMods)
         }
         register("client") {
             client()
@@ -123,20 +138,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.asm.tree)
     testRuntimeOnly(libs.junit.launcher)
-}
-
-val copyTransformerToRunMods = tasks.register("copyTransformerToRunMods") {
-    group = "build"
-    dependsOn(":transformer:pluginJar")
-    val src = project(":transformer").layout.buildDirectory.file("libs/ae2isallyouneed-transformer.jar")
-    val dest = layout.projectDirectory.file("run/mods/ae2isallyouneed-transformer.jar")
-    inputs.file(src)
-    outputs.file(dest)
-    doLast {
-        val destFile = dest.asFile
-        destFile.parentFile.mkdirs()
-        src.get().asFile.copyTo(destFile, overwrite = true)
-    }
 }
 
 fun org.gradle.api.Task.usesTransformerJar() {
