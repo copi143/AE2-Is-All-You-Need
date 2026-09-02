@@ -41,7 +41,9 @@ class AEKeyLaunchPluginService : ILaunchPluginService {
         ensureRuntime()
         if (runtimeFailed) return false
         KeyResolver.cacheKeyFromSuper(classNode.name, classNode.superName)
-        return NewCallTransformer.apply(classNode) { name -> KeyResolver.isKey(name) } > 0
+        val ae = NewCallTransformer.apply(classNode) { name -> KeyResolver.isKey(name) } > 0
+        val rl = NewCallTransformer.applyResourceLocation(classNode) > 0
+        return ae || rl
     }
 
     private fun isMixin(cn: ClassNode): Boolean {

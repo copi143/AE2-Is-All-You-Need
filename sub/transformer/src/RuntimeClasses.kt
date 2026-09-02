@@ -15,15 +15,29 @@ object RuntimeClasses {
             if (installed) return
             val loader = findLoader()
             val aeKey = Class.forName("appeng.api.stacks.AEKey", false, loader)
+            val resourceLocation = Class.forName("net.minecraft.resources.ResourceLocation", false, loader)
             val self = RuntimeClasses::class.java.module
             val ae2 = aeKey.module
             if (!self.canRead(ae2)) self.addReads(ae2)
-            val lookup = MethodHandles.privateLookupIn(aeKey, MethodHandles.lookup())
-            for (name in classNames()) {
-                define(lookup, aeKey.classLoader, name)
-            }
+            val mc = resourceLocation.module
+            if (!self.canRead(mc)) self.addReads(mc)
+            val aeLookup = MethodHandles.privateLookupIn(aeKey, MethodHandles.lookup())
+            val mcLookup = MethodHandles.privateLookupIn(resourceLocation, MethodHandles.lookup())
+            val names = classNames()
+            val mcNames = names.filter { it.startsWith("net.minecraft.resources.") }
+            val aeNames = names.filter { !it.startsWith("net.minecraft.resources.") }
+            for (name in aeNames) define(aeLookup, aeKey.classLoader, name)
+            for (name in mcNames) define(mcLookup, resourceLocation.classLoader, name)
             installed = true
-            logger.info("defined intern runtime classes via {}", aeKey.classLoader.javaClass.name)
+            logger.info(
+                "defined intern runtime classes: {} into module {} (loader {}), {} into module {} (loader {})",
+                aeNames.size,
+                ae2.name,
+                aeKey.classLoader.javaClass.name,
+                mcNames.size,
+                mc.name,
+                resourceLocation.classLoader.javaClass.name,
+            )
         }
     }
 

@@ -64,7 +64,9 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         if (cn.name.startsWith("allyouneed/transformer/")) return bytes
         if (isMixin(cn)) return bytes
         KeyResolver.cacheKeyFromSuper(cn.name, cn.superName)
-        val rewritten = NewCallTransformer.apply(cn) { name -> KeyResolver.isKey(name) }
+        val ae = NewCallTransformer.apply(cn) { name -> KeyResolver.isKey(name) }
+        val rl = NewCallTransformer.applyResourceLocation(cn)
+        val rewritten = ae + rl
         if (rewritten == 0) return bytes
         val cw = ClassWriter(cr, ClassWriter.COMPUTE_FRAMES)
         cn.accept(cw)

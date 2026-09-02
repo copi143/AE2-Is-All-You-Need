@@ -19,6 +19,8 @@ object NewCallTransformer {
     const val INTERNER_OWNER = "appeng/api/stacks/KeyInterner"
     const val AE_KEY = "appeng/api/stacks/AEKey"
     const val AE_KEY_ASM = "appeng/api/stacks/AEKeyAsm"
+    const val RESOURCE_LOCATION = "net/minecraft/resources/ResourceLocation"
+    const val RESOURCE_LOCATION_INTERNER = "net/minecraft/resources/ResourceLocationInterner"
     const val ASM_EQUALS = $$"asm$equals"
     const val ASM_HASH = $$"asm$hashCode"
     const val ASM_DROP = $$"asm$dropSecondary"
@@ -33,7 +35,7 @@ object NewCallTransformer {
         var rewritten = 0
         rewritten += retargetSuper(cn)
         for (mn in cn.methods) {
-            rewritten += rewriteNews(mn, cn.name, isKey)
+            rewritten += rewriteNews(mn, cn.name, isKey, INTERNER_OWNER)
         }
         if (isKeyClass) {
             rewritten += renameEqualsHash(cn)
@@ -58,7 +60,19 @@ object NewCallTransformer {
         return cw.toByteArray()
     }
 
-    private fun rewriteNews(mn: MethodNode, owner: String, isKey: (String) -> Boolean): Int {
+    fun applyResourceLocation(cn: ClassNode): Int {
+        val isRl: (String) -> Boolean = { it == RESOURCE_LOCATION }
+        var rewritten = 0
+        for (mn in cn.methods) {
+            rewritten += rewriteNews(mn, cn.name, isRl, RESOURCE_LOCATION_INTERNER)
+        }
+        if (rewritten > 0) {
+            logger.info("rewrote {} ResourceLocation sites in {}", rewritten, cn.name.replace('/', '.'))
+        }
+        return rewritten
+    }
+
+    private fun rewriteNews(mn: MethodNode, owner: String, isKey: (String) -> Boolean, internerOwner: String): Int {
         val list = mn.instructions ?: return 0
         val news = list.filterIsInstance<TypeInsnNode>()
             .filter { it.opcode == Opcodes.NEW && isKey(it.desc) }
@@ -84,7 +98,7 @@ object NewCallTransformer {
                 .firstOrNull { it.opcode == Opcodes.NEW && it.desc == insn.owner }
                 ?: continue
             if (!matched.add(newInsn)) continue
-            insertIntern(mn, insn, insn.owner, newInsn, frame)
+            insertIntern(mn, insn, insn.owner, newInsn, frame, internerOwner)
             count++
         }
         for (insn in news) {
@@ -101,11 +115,12 @@ object NewCallTransformer {
         keyClass: String,
         newInsn: TypeInsnNode,
         frame: Frame<SourceValue>,
+        internerOwner: String,
     ) {
         val leftover = frame.stackSize - argValues(init.desc)
         val onStack = leftover > 0 && frame.getStack(leftover - 1).insns.contains(newInsn)
         if (onStack) {
-            insertCall(mn, init, keyClass)
+            insertCall(mn, init, keyClass, internerOwner)
             return
         }
         var last: AbstractInsnNode = init
@@ -113,7 +128,7 @@ object NewCallTransformer {
             if (newInsn !in frame.getLocal(i).insns) continue
             val load = VarInsnNode(Opcodes.ALOAD, i)
             mn.instructions.insert(last, load)
-            last = insertCall(mn, load, keyClass)
+            last = insertCall(mn, load, keyClass, internerOwner)
             val store = VarInsnNode(Opcodes.ASTORE, i)
             mn.instructions.insert(last, store)
             last = store
@@ -126,10 +141,11 @@ object NewCallTransformer {
         mn: MethodNode,
         after: AbstractInsnNode,
         keyClass: String,
+        internerOwner: String,
     ): AbstractInsnNode {
         val invoke = MethodInsnNode(
             Opcodes.INVOKESTATIC,
-            INTERNER_OWNER,
+            internerOwner,
             "intern",
             "(Ljava/lang/Object;)Ljava/lang/Object;",
             false,

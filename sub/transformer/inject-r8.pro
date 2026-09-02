@@ -7,4 +7,7 @@
 -keep,allowoptimization class appeng.api.stacks.Slot { *; }
 -keep,allowoptimization class appeng.api.stacks.Ref { *; }
 -keep,allowoptimization class appeng.api.stacks.AEKeyAsm { *; }
+-keep,allowoptimization class net.minecraft.resources.ResourceLocationInterner { *; }
+-keep,allowoptimization class net.minecraft.resources.Slot { *; }
+-keep,allowoptimization class net.minecraft.resources.Ref { *; }
 -repackageclasses appeng.api.stacks
