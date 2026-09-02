@@ -4,7 +4,6 @@ import allyouneed.client.compose.platform.LocalMousePosition
 import allyouneed.client.compose.platform.LocalTooltipHost
 import allyouneed.client.compose.platform.LocalUiScale
 import allyouneed.client.compose.platform.McGraphics
-import allyouneed.client.compose.platform.renderMcTooltip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -32,7 +31,6 @@ import minecraftx.compose.theme.McColorScheme
 import minecraftx.compose.theme.McTheme
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.world.inventory.ClickType
 import net.minecraft.world.item.ItemStack
 
@@ -66,7 +64,7 @@ fun ItemSlot(
     val density = LocalDensity.current
     var nodePos by remember { mutableStateOf(Offset.Zero) }
 
-    DisposableEffect(tooltipHost, renderer, uiScale, showTooltip) {
+    DisposableEffect(tooltipHost, uiScale, showTooltip) {
         if (!showTooltip) return@DisposableEffect onDispose { }
         val unregister = tooltipHost.register {
             val graphics = McGraphics.current ?: return@register
@@ -78,14 +76,12 @@ fun ItemSlot(
             ) {
                 return@register
             }
-            val tooltip = renderer.getTooltip(held)
-            if (tooltip.isEmpty()) return@register
             val anchor = Offset(p.x.toFloat(), p.y.toFloat()) * uiScale
-            graphics.renderMcTooltip(
+            graphics.renderTooltip(
                 Minecraft.getInstance().font,
-                tooltip,
-                (anchor.x + 10).toInt(),
-                (anchor.y - 8).toInt(),
+                held,
+                anchor.x.toInt(),
+                anchor.y.toInt(),
             )
         }
         onDispose { unregister() }
@@ -210,7 +206,6 @@ private fun clickTypeOf(event: PointerEvent): ClickType = when {
 
 interface ItemSlotRenderer {
     fun drawStack(graphics: GuiGraphics, stack: ItemStack, x: Int, y: Int)
-    fun getTooltip(stack: ItemStack): List<ClientTooltipComponent>
     fun onClick(stack: ItemStack, button: Int)
 }
 
