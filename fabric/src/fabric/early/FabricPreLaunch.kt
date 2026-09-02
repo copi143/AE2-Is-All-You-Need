@@ -1,18 +1,27 @@
 package allyouneed.fabric.early
 
 import allyouneed.Main
-import allyouneed.transformer.KeyClassScanner
+import allyouneed.transformer.KeyResolver
 import allyouneed.transformer.NewCallTransformer
 import allyouneed.transformer.RuntimeClasses
 import allyouneed.transformer.logger
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint
-import net.fabricmc.loader.impl.game.GameProvider
-import net.fabricmc.loader.impl.game.patch.GameTransformer
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.tree.ClassNode
 import sun.misc.Unsafe
 import java.lang.reflect.Proxy
-import java.nio.file.Files
-import java.nio.file.Path
 
+/**
+ * Fabric 侧的 AEKey intern 入口。
+ *
+ * 与 Forge 侧不同，Fabric 没有 `ILaunchPluginService`。这里直接反射拿到 Knot 的
+ * `KnotClassDelegate.mixinTransformer`，用 Proxy 把 Mixin 的 `transformClassBytes` 包一层：
+ * 先让 Mixin 完成 mixin 注入，再对我们的目标类（AEKey 派生类 + 含 `new <keyClass>` 的类）
+ * 做 intern 重写——即"加载一个类、处理一个类"，且变换发生在 Mixin 之后。
+ *
+ * 派生类判定复用 [KeyResolver]（完全惰性，与 Forge 侧共用）。
+ */
 class FabricPreLaunch : PreLaunchEntrypoint {
     override fun onPreLaunch() {
         Main.beforeAllMods()
@@ -25,42 +34,47 @@ class FabricPreLaunch : PreLaunchEntrypoint {
 
     private fun install() {
         RuntimeClasses.install()
-        val paths = scanPaths()
-        logger.info("Fabric preLaunch starting, {} scan paths", paths.size)
-        val scan = KeyClassScanner.scan(paths)
         val knot = Thread.currentThread().contextClassLoader
         val delegate = field(knot, "delegate") ?: throw IllegalStateException("Knot delegate missing")
-        val provider = field(delegate, "provider") as GameProvider
-        val wrappedTx = InterningTransformer(provider.entrypointTransformer, scan.keys, scan.targets, knot)
-        val proxy = Proxy.newProxyInstance(
-            provider.javaClass.classLoader,
-            arrayOf(GameProvider::class.java),
-        ) { _, method, args ->
-            if (method.name == "getEntrypointTransformer") wrappedTx
-            else if (args == null) method.invoke(provider)
-            else method.invoke(provider, *args)
-        }
-        putField(delegate, "provider", proxy)
-        logger.info("Wrapped Knot GameProvider for {} AEKey intern targets", scan.targets.size)
+        val mixinTransformer = field(delegate, "mixinTransformer")
+            ?: throw IllegalStateException("mixinTransformer missing")
+        val wrapped = wrapMixinTransformer(mixinTransformer)
+        putField(delegate, "mixinTransformer", wrapped)
+        logger.info("Wrapped Knot mixin transformer for lazy AEKey intern (post-mixin)")
     }
 
-    private fun scanPaths(): List<Path> {
-        val out = LinkedHashSet<Path>()
-        try {
-            val mods = net.fabricmc.loader.api.FabricLoader.getInstance().gameDir.resolve("mods")
-            if (Files.isDirectory(mods)) {
-                Files.list(mods).use { stream ->
-                    stream.filter { it.fileName.toString().endsWith(".jar") }.forEach { out.add(it) }
-                }
+    private fun wrapMixinTransformer(original: Any): Any {
+        val iface = original.javaClass.interfaces.firstOrNull {
+            it.name == "org.spongepowered.asm.mixin.transformer.IMixinTransformer"
+        } ?: throw IllegalStateException("IMixinTransformer not found on ${original.javaClass.name}")
+        return Proxy.newProxyInstance(original.javaClass.classLoader, arrayOf(iface)) { _, method, args ->
+            val result = if (args == null) method.invoke(original) else method.invoke(original, *args)
+            if (method.name == "transformClassBytes" && result is ByteArray) {
+                intern(result)
+            } else {
+                result
             }
-        } catch (_: Throwable) {
         }
-        try {
-            val self = javaClass.protectionDomain.codeSource?.location
-            if (self != null) out.add(Path.of(self.toURI()))
-        } catch (_: Throwable) {
-        }
-        return out.toList()
+    }
+
+    private fun intern(bytes: ByteArray): ByteArray {
+        val cr = ClassReader(bytes)
+        val cn = ClassNode()
+        cr.accept(cn, 0)
+        if (cn.name.startsWith("allyouneed/transformer/")) return bytes
+        if (isMixin(cn)) return bytes
+        KeyResolver.cacheKeyFromSuper(cn.name, cn.superName)
+        val rewritten = NewCallTransformer.apply(cn) { name -> KeyResolver.isKey(name) }
+        if (rewritten == 0) return bytes
+        val cw = ClassWriter(cr, ClassWriter.COMPUTE_FRAMES)
+        cn.accept(cw)
+        return cw.toByteArray()
+    }
+
+    private fun isMixin(cn: ClassNode): Boolean {
+        val desc = "Lorg/spongepowered/asm/mixin/Mixin;"
+        return cn.visibleAnnotations?.any { it.desc == desc } == true ||
+            cn.invisibleAnnotations?.any { it.desc == desc } == true
     }
 
     private fun field(owner: Any, name: String): Any? {
@@ -96,26 +110,5 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         val f = Unsafe::class.java.getDeclaredField("theUnsafe")
         f.isAccessible = true
         return f.get(null) as Unsafe
-    }
-}
-
-private class InterningTransformer(
-    private val original: GameTransformer,
-    private val keys: Set<String>,
-    private val targets: Set<String>,
-    private val loader: ClassLoader,
-) : GameTransformer() {
-    private val cache = HashMap<String, ByteArray>()
-
-    override fun transform(className: String): ByteArray? {
-        cache[className]?.let { return it }
-        val orig = original.transform(className)
-        if (className.replace('.', '/') !in targets) return orig
-        val bytes = orig ?: loader.getResourceAsStream(className.replace('.', '/') + ".class")?.use { it.readBytes() }
-            ?: return orig
-        val out = NewCallTransformer.apply(bytes, keys)
-        cache[className] = out
-        logger.debug("fabric transform {}", className)
-        return out
     }
 }
