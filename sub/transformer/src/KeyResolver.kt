@@ -1,5 +1,6 @@
 package allyouneed.transformer
 
+import allyouneed.transformer.KeyResolver.keyCache
 import org.objectweb.asm.ClassReader
 import java.util.concurrent.ConcurrentHashMap
 
@@ -16,10 +17,11 @@ object KeyResolver {
     fun cacheKeyFromSuper(name: String, superName: String?) {
         if (keyCache.containsKey(name)) return
         val result = when (superName) {
-            KeyClassScanner.AE_KEY, KeyClassScanner.AE_KEY_ASM -> {
+            Constants.AE_KEY, Constants.AE_KEY_ASM -> {
                 logKey(name, "direct AEKey subclass")
                 true
             }
+
             null -> false
             else -> if (isKey(superName)) {
                 logKey(name, "subclass of ${superName.replace('/', '.')}")
@@ -39,15 +41,11 @@ object KeyResolver {
     }
 
     private fun computeIsKey(name: String): Boolean {
-        if (name == KeyClassScanner.AE_KEY || name == KeyClassScanner.AE_KEY_ASM) return false
-        if (name in KeyClassScanner.SEED_KEYS) {
-            logKey(name, "seed")
-            return true
-        }
+        if (name == Constants.AE_KEY || name == Constants.AE_KEY_ASM) return false
         val seen = HashSet<String>()
         var cur: String? = name
         while (cur != null && seen.add(cur)) {
-            if (cur == KeyClassScanner.AE_KEY || cur == KeyClassScanner.AE_KEY_ASM) {
+            if (cur == Constants.AE_KEY || cur == Constants.AE_KEY_ASM) {
                 logKey(name, "resolved super chain")
                 return true
             }

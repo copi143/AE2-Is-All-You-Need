@@ -2,12 +2,5 @@
 -dontwarn **
 -dontnote **
 -keepattributes Signature,InnerClasses,EnclosingMethod
--keep,allowoptimization interface appeng.api.stacks.KeyContent { *; }
--keep,allowoptimization class appeng.api.stacks.KeyInterner { *; }
--keep,allowoptimization class appeng.api.stacks.Slot { *; }
--keep,allowoptimization class appeng.api.stacks.Ref { *; }
--keep,allowoptimization class appeng.api.stacks.AEKeyAsm { *; }
--keep,allowoptimization class net.minecraft.resources.ResourceLocationInterner { *; }
--keep,allowoptimization class net.minecraft.resources.Slot { *; }
--keep,allowoptimization class net.minecraft.resources.Ref { *; }
--repackageclasses appeng.api.stacks
+-keep,allowoptimization class appeng.api.stacks.** { *; }
+-keep,allowoptimization class net.minecraft.resources.** { *; }

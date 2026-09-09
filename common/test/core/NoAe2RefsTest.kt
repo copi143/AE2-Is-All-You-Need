@@ -1,24 +1,19 @@
 package allyouneed.core
 
-import allyouneed.transformer.KeyClassScanner
+import allyouneed.transformer.Constants
 import allyouneed.transformer.NewCallTransformer
-
 import org.junit.jupiter.api.Test
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
+import org.objectweb.asm.*
 import kotlin.test.assertTrue
 
 class NoAe2RefsTest {
     @Test
-    fun `transformer and scanner have no AE2 or KeyInterner class refs`() {
-        for (cls in listOf(NewCallTransformer::class.java, KeyClassScanner::class.java)) {
+    fun `transformer have no AE2 or KeyInterner class refs`() {
+        for (cls in listOf(NewCallTransformer::class.java)) {
             val refs = classOwners(readClass(cls))
             assertTrue(refs.none { it.startsWith("appeng/") }, "$cls refs appeng: $refs")
-            assertTrue(NewCallTransformer.INTERNER_OWNER !in refs, "$cls refs KeyInterner")
-            assertTrue(NewCallTransformer.AE_KEY_ASM !in refs, "$cls refs AEKeyAsm")
+            assertTrue(Constants.AE_KEY_INTERNER !in refs, "$cls refs KeyInterner")
+            assertTrue(Constants.AE_KEY_ASM !in refs, "$cls refs AEKeyAsm")
         }
     }
 

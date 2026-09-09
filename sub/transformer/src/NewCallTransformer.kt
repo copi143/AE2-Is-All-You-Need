@@ -4,28 +4,13 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.tree.AbstractInsnNode
-import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.MethodInsnNode
-import org.objectweb.asm.tree.MethodNode
-import org.objectweb.asm.tree.TypeInsnNode
-import org.objectweb.asm.tree.VarInsnNode
+import org.objectweb.asm.tree.*
 import org.objectweb.asm.tree.analysis.Analyzer
 import org.objectweb.asm.tree.analysis.Frame
 import org.objectweb.asm.tree.analysis.SourceInterpreter
 import org.objectweb.asm.tree.analysis.SourceValue
 
 object NewCallTransformer {
-    const val INTERNER_OWNER = "appeng/api/stacks/KeyInterner"
-    const val AE_KEY = "appeng/api/stacks/AEKey"
-    const val AE_KEY_ASM = "appeng/api/stacks/AEKeyAsm"
-    const val RESOURCE_LOCATION = "net/minecraft/resources/ResourceLocation"
-    const val RESOURCE_LOCATION_INTERNER = "net/minecraft/resources/ResourceLocationInterner"
-    const val ASM_EQUALS = $$"asm$equals"
-    const val ASM_HASH = $$"asm$hashCode"
-    const val ASM_DROP = $$"asm$dropSecondary"
-    const val DROP_SECONDARY = "dropSecondary"
-
     fun apply(cn: ClassNode, keyClasses: Set<String>): Int = apply(cn) { it in keyClasses }
 
     fun apply(bytes: ByteArray, keyClasses: Set<String>): ByteArray = apply(bytes) { it in keyClasses }
@@ -35,7 +20,7 @@ object NewCallTransformer {
         var rewritten = 0
         rewritten += retargetSuper(cn)
         for (mn in cn.methods) {
-            rewritten += rewriteNews(mn, cn.name, isKey, INTERNER_OWNER)
+            rewritten += rewriteNews(mn, cn.name, isKey, Constants.AE_KEY_INTERNER)
         }
         if (isKeyClass) {
             rewritten += renameEqualsHash(cn)
@@ -61,10 +46,10 @@ object NewCallTransformer {
     }
 
     fun applyResourceLocation(cn: ClassNode): Int {
-        val isRl: (String) -> Boolean = { it == RESOURCE_LOCATION }
+        val isRl: (String) -> Boolean = { it == Constants.RESOURCE_LOCATION }
         var rewritten = 0
         for (mn in cn.methods) {
-            rewritten += rewriteNews(mn, cn.name, isRl, RESOURCE_LOCATION_INTERNER)
+            rewritten += rewriteNews(mn, cn.name, isRl, Constants.RESOURCE_LOCATION_INTERNER)
         }
         if (rewritten > 0) {
             logger.info("rewrote {} ResourceLocation sites in {}", rewritten, cn.name.replace('/', '.'))
@@ -74,8 +59,7 @@ object NewCallTransformer {
 
     private fun rewriteNews(mn: MethodNode, owner: String, isKey: (String) -> Boolean, internerOwner: String): Int {
         val list = mn.instructions ?: return 0
-        val news = list.filterIsInstance<TypeInsnNode>()
-            .filter { it.opcode == Opcodes.NEW && isKey(it.desc) }
+        val news = list.filterIsInstance<TypeInsnNode>().filter { it.opcode == Opcodes.NEW && isKey(it.desc) }
         if (news.isEmpty()) return 0
         val frames = try {
             Analyzer(CopyPreservingInterpreter()).analyze(owner, mn)
@@ -95,8 +79,7 @@ object NewCallTransformer {
             if (frame.stackSize < consume) continue
             val receiver = frame.getStack(frame.stackSize - consume)
             val newInsn = receiver.insns.filterIsInstance<TypeInsnNode>()
-                .firstOrNull { it.opcode == Opcodes.NEW && it.desc == insn.owner }
-                ?: continue
+                .firstOrNull { it.opcode == Opcodes.NEW && it.desc == insn.owner } ?: continue
             if (!matched.add(newInsn)) continue
             insertIntern(mn, insn, insn.owner, newInsn, frame, internerOwner)
             count++
@@ -157,17 +140,15 @@ object NewCallTransformer {
     }
 
     private fun retargetSuper(cn: ClassNode): Int {
-        if (cn.superName != AE_KEY) return 0
-        cn.superName = AE_KEY_ASM
+        if (cn.superName != Constants.AE_KEY) return 0
+        cn.superName = Constants.AE_KEY_ASM
         var n = 1
         for (mn in cn.methods) {
             if (mn.name != "<init>") continue
             var insn = mn.instructions?.first
             while (insn != null) {
-                if (insn is MethodInsnNode && insn.opcode == Opcodes.INVOKESPECIAL &&
-                    insn.owner == AE_KEY && insn.name == "<init>"
-                ) {
-                    insn.owner = AE_KEY_ASM
+                if (insn is MethodInsnNode && insn.opcode == Opcodes.INVOKESPECIAL && insn.owner == Constants.AE_KEY && insn.name == "<init>") {
+                    insn.owner = Constants.AE_KEY_ASM
                     n++
                 }
                 insn = insn.next
@@ -177,17 +158,17 @@ object NewCallTransformer {
     }
 
     private fun renameEqualsHash(cn: ClassNode): Int {
-        if (cn.methods.any { it.name == ASM_EQUALS && it.desc == "(Ljava/lang/Object;)Z" }) return 0
+        if (cn.methods.any { it.name == Constants.ASM_EQUALS && it.desc == "(Ljava/lang/Object;)Z" }) return 0
         val eq = cn.methods.firstOrNull { it.name == "equals" && it.desc == "(Ljava/lang/Object;)Z" } ?: return 0
         val hash = cn.methods.firstOrNull { it.name == "hashCode" && it.desc == "()I" } ?: return 0
-        eq.name = ASM_EQUALS
-        hash.name = ASM_HASH
+        eq.name = Constants.ASM_EQUALS
+        hash.name = Constants.ASM_HASH
         for (mn in cn.methods) {
             var insn = mn.instructions?.first
             while (insn != null) {
                 if (insn is MethodInsnNode && insn.owner == cn.name) {
-                    if (insn.name == "equals" && insn.desc == "(Ljava/lang/Object;)Z") insn.name = ASM_EQUALS
-                    if (insn.name == "hashCode" && insn.desc == "()I") insn.name = ASM_HASH
+                    if (insn.name == "equals" && insn.desc == "(Ljava/lang/Object;)Z") insn.name = Constants.ASM_EQUALS
+                    if (insn.name == "hashCode" && insn.desc == "()I") insn.name = Constants.ASM_HASH
                 }
                 insn = insn.next
             }
@@ -196,14 +177,14 @@ object NewCallTransformer {
     }
 
     private fun renameDropSecondary(cn: ClassNode): Int {
-        val drops = cn.methods.filter { it.name == DROP_SECONDARY }
-        if (drops.isEmpty() || cn.methods.any { it.name == ASM_DROP }) return 0
-        for (mn in drops) mn.name = ASM_DROP
+        val drops = cn.methods.filter { it.name == Constants.DROP_SECONDARY }
+        if (drops.isEmpty() || cn.methods.any { it.name == Constants.ASM_DROP_SECONDARY }) return 0
+        for (mn in drops) mn.name = Constants.ASM_DROP_SECONDARY
         for (mn in cn.methods) {
             var insn = mn.instructions?.first
             while (insn != null) {
-                if (insn is MethodInsnNode && insn.owner == cn.name && insn.name == DROP_SECONDARY) {
-                    insn.name = ASM_DROP
+                if (insn is MethodInsnNode && insn.owner == cn.name && insn.name == Constants.DROP_SECONDARY) {
+                    insn.name = Constants.ASM_DROP_SECONDARY
                 }
                 insn = insn.next
             }
@@ -211,7 +192,7 @@ object NewCallTransformer {
         return drops.size
     }
 
-    private class CopyPreservingInterpreter : SourceInterpreter(Opcodes.ASM9) {
+    private class CopyPreservingInterpreter : SourceInterpreter(ASM9) {
         override fun copyOperation(insn: AbstractInsnNode, value: SourceValue): SourceValue = value
     }
 }

@@ -6,7 +6,7 @@ import java.lang.ref.WeakReference
 object KeyInterner {
     private val lock = Any()
     private val queue = ReferenceQueue<Any>()
-    private var buckets = arrayOfNulls<Slot>(INITIAL_CAP)
+    private var buckets = arrayOfNulls<KeyInternerSlot>(INITIAL_CAP)
     private var live = 0
 
     @JvmStatic
@@ -53,20 +53,20 @@ object KeyInterner {
 
     private fun insert(key: Any, h: Int) {
         val i = index(h)
-        buckets[i] = Slot(h, Ref(key, h, queue), buckets[i])
+        buckets[i] = KeyInternerSlot(h, KeyInternerRef(key, h, queue), buckets[i])
     }
 
     private fun expunge() {
         while (true) {
-            val ref = queue.poll() as? Ref ?: break
+            val ref = queue.poll() as? KeyInternerRef ?: break
             unlink(ref)
             live--
         }
     }
 
-    private fun unlink(ref: Ref) {
+    private fun unlink(ref: KeyInternerRef) {
         val i = index(ref.hash)
-        var prev: Slot? = null
+        var prev: KeyInternerSlot? = null
         var cur = buckets[i]
         while (cur != null) {
             if (cur.ref === ref) {
@@ -105,6 +105,6 @@ object KeyInterner {
     private const val INITIAL_CAP = 16
 }
 
-internal class Slot(val hash: Int, val ref: Ref, var next: Slot?)
+internal class KeyInternerSlot(val hash: Int, val ref: KeyInternerRef, var next: KeyInternerSlot?)
 
-internal class Ref(referent: Any, val hash: Int, queue: ReferenceQueue<Any>) : WeakReference<Any>(referent, queue)
+internal class KeyInternerRef(referent: Any, val hash: Int, queue: ReferenceQueue<Any>) : WeakReference<Any>(referent, queue)

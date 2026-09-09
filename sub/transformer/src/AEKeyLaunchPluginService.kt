@@ -3,7 +3,7 @@ package allyouneed.transformer
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
-import java.util.EnumSet
+import java.util.*
 
 /**
  * Forge 侧的 AEKey intern 入口：以 [ILaunchPluginService] 的形式拦截每一个被加载的类，
@@ -25,7 +25,7 @@ class AEKeyLaunchPluginService : ILaunchPluginService {
 
     private val installing = ThreadLocal.withInitial { false }
 
-    override fun name(): String = "ae2isallyouneed_core"
+    override fun name(): String = NAME
 
     override fun handlesClass(classType: Type, isEmpty: Boolean): EnumSet<ILaunchPluginService.Phase> =
         if (isEmpty) EnumSet.noneOf(ILaunchPluginService.Phase::class.java)
@@ -49,7 +49,7 @@ class AEKeyLaunchPluginService : ILaunchPluginService {
     private fun isMixin(cn: ClassNode): Boolean {
         val desc = "Lorg/spongepowered/asm/mixin/Mixin;"
         return cn.visibleAnnotations?.any { it.desc == desc } == true ||
-            cn.invisibleAnnotations?.any { it.desc == desc } == true
+                cn.invisibleAnnotations?.any { it.desc == desc } == true
     }
 
     private fun ensureRuntime() {
@@ -67,6 +67,7 @@ class AEKeyLaunchPluginService : ILaunchPluginService {
     }
 
     companion object {
+        const val NAME = "ae2isallyouneed_core"
         const val INSTALLED_PROP = "allyouneed.core.transformer"
     }
 }

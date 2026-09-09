@@ -1,5 +1,6 @@
 package allyouneed.core
 
+import allyouneed.transformer.Constants
 import allyouneed.transformer.NewCallTransformer
 import appeng.api.stacks.KeyInterner
 
@@ -35,7 +36,7 @@ class NewCallTransformerTest {
         assertTrue(insns.any { it.opcode == Opcodes.NEW })
         assertTrue(
             insns.any {
-                it is MethodInsnNode && it.owner == NewCallTransformer.INTERNER_OWNER && it.name == "intern"
+                it is MethodInsnNode && it.owner == Constants.AE_KEY_INTERNER && it.name == "intern"
             },
         )
 
@@ -102,30 +103,30 @@ class NewCallTransformerTest {
         val transformed = NewCallTransformer.apply(generateKey(name), setOf(name))
         val cn = ClassNode()
         ClassReader(transformed).accept(cn, 0)
-        assertEquals(NewCallTransformer.AE_KEY_ASM, cn.superName)
-        assertTrue(cn.methods.any { it.name == NewCallTransformer.ASM_EQUALS && it.desc == "(Ljava/lang/Object;)Z" })
-        assertTrue(cn.methods.any { it.name == NewCallTransformer.ASM_HASH && it.desc == "()I" })
+        assertEquals(Constants.AE_KEY_ASM, cn.superName)
+        assertTrue(cn.methods.any { it.name == Constants.ASM_EQUALS && it.desc == "(Ljava/lang/Object;)Z" })
+        assertTrue(cn.methods.any { it.name == Constants.ASM_HASH && it.desc == "()I" })
         assertTrue(cn.methods.none { it.name == "equals" && it.desc == "(Ljava/lang/Object;)Z" })
         assertTrue(cn.methods.none { it.name == "hashCode" && it.desc == "()I" })
-        assertTrue(cn.methods.any { it.name == NewCallTransformer.ASM_DROP })
-        assertTrue(cn.methods.none { it.name == NewCallTransformer.DROP_SECONDARY })
+        assertTrue(cn.methods.any { it.name == Constants.ASM_DROP_SECONDARY })
+        assertTrue(cn.methods.none { it.name == Constants.DROP_SECONDARY })
         val init = cn.methods.first { it.name == "<init>" }
         assertTrue(
             init.instructions.toArray().any {
                 it is MethodInsnNode && it.opcode == Opcodes.INVOKESPECIAL &&
-                    it.owner == NewCallTransformer.AE_KEY_ASM && it.name == "<init>"
+                    it.owner == Constants.AE_KEY_ASM && it.name == "<init>"
             },
         )
     }
 
     private fun generateKey(internalName: String): ByteArray {
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
-        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, internalName, null, NewCallTransformer.AE_KEY, null)
+        cw.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, internalName, null, Constants.AE_KEY, null)
         cw.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, "name", "Ljava/lang/String;", null, null).visitEnd()
         val init = cw.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "(Ljava/lang/String;)V", null, null)
         init.visitCode()
         init.visitVarInsn(Opcodes.ALOAD, 0)
-        init.visitMethodInsn(Opcodes.INVOKESPECIAL, NewCallTransformer.AE_KEY, "<init>", "()V", false)
+        init.visitMethodInsn(Opcodes.INVOKESPECIAL, Constants.AE_KEY, "<init>", "()V", false)
         init.visitVarInsn(Opcodes.ALOAD, 0)
         init.visitVarInsn(Opcodes.ALOAD, 1)
         init.visitFieldInsn(Opcodes.PUTFIELD, internalName, "name", "Ljava/lang/String;")
@@ -160,8 +161,8 @@ class NewCallTransformerTest {
         hash.visitEnd()
         val drop = cw.visitMethod(
             Opcodes.ACC_PUBLIC,
-            NewCallTransformer.DROP_SECONDARY,
-            "()L${NewCallTransformer.AE_KEY};",
+            Constants.DROP_SECONDARY,
+            "()L${Constants.AE_KEY};",
             null,
             null,
         )

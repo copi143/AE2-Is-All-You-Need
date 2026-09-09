@@ -1,10 +1,13 @@
 package allyouneed.transformer
 
+import cpw.mods.modlauncher.LaunchPluginHandler
+import cpw.mods.modlauncher.Launcher
 import cpw.mods.modlauncher.api.IEnvironment
 import cpw.mods.modlauncher.api.ITransformationService
 import cpw.mods.modlauncher.api.ITransformer
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService
 import java.lang.reflect.Field
+import kotlin.reflect.KClass
 
 /**
  * 单 jar `mods/` 部署下，[ILaunchPluginService] 无法被 modlauncher 发现——它只在 BOOT 层
@@ -32,24 +35,22 @@ class AEKeyTransformationService : ITransformationService {
 
     private fun injectLaunchPlugin() {
         try {
-            val launcherClass = Class.forName("cpw.mods.modlauncher.Launcher")
-            val launcher = field(launcherClass, "INSTANCE")?.get(null)
-                ?: throw IllegalStateException("Launcher.INSTANCE missing")
-            val launchPlugins = field(launcherClass, "launchPlugins")?.get(launcher)
-                ?: throw IllegalStateException("Launcher.launchPlugins missing")
-            val pluginsField = field(launchPlugins.javaClass, "plugins")
-                ?: throw IllegalStateException("LaunchPluginHandler.plugins missing")
-            @Suppress("UNCHECKED_CAST")
-            val plugins = pluginsField.get(launchPlugins) as? Map<String, ILaunchPluginService>
-                ?: throw IllegalStateException("LaunchPluginHandler.plugins not a Map")
+            val launcher = Launcher.INSTANCE
+            val launchPlugins = Launcher::class.field("launchPlugins").get(launcher)
+            val pluginsField = LaunchPluginHandler::class.field("plugins")
+
+            val plugins = pluginsField.get(launchPlugins) as Map<String, ILaunchPluginService>
             val plugin = AEKeyLaunchPluginService()
-            val reordered = LinkedHashMap<String, ILaunchPluginService>()
-            reordered.putAll(plugins)
-            reordered[plugin.name()] = plugin
+            val reordered = LinkedHashMap<String, ILaunchPluginService>().apply {
+                putAll(plugins)
+                set(plugin.name(), plugin)
+            }
             putObject(launchPlugins, pluginsField, reordered)
-            logger.info("injected ILaunchPluginService '{}' as last of {} launch plugins", plugin.name(), reordered.size)
+            logger.info(
+                "injected ILaunchPluginService '{}' as last of {} launch plugins", plugin.name(), reordered.size
+            )
         } catch (t: Throwable) {
-            logger.error("failed to inject ILaunchPluginService; AEKey interning disabled", t)
+            logger.error("failed to inject ILaunchPluginService '{}'", AEKeyLaunchPluginService.NAME, t)
         }
     }
 
@@ -68,17 +69,20 @@ class AEKeyTransformationService : ITransformationService {
         return f.get(null) as sun.misc.Unsafe
     }
 
-    private fun field(owner: Class<*>, name: String): Field? {
-        var c: Class<*>? = owner
-        while (c != null) {
-            try {
-                val f = c.getDeclaredField(name)
-                f.isAccessible = true
-                return f
-            } catch (_: NoSuchFieldException) {
-                c = c.superclass
+    private fun <T> Class<T>.field(name: String): Field {
+        try {
+            return getDeclaredField(name).apply {
+                isAccessible = true
             }
+        } catch (e: NoSuchFieldException) {
+            if (superclass != null) {
+                return superclass.field(name)
+            }
+            throw e
         }
-        return null
+    }
+
+    private fun <T : Any> KClass<T>.field(name: String): Field {
+        return java.field(name)
     }
 }

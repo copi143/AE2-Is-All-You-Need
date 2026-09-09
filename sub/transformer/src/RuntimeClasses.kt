@@ -9,41 +9,38 @@ object RuntimeClasses {
     @Volatile
     private var installed = false
 
+    @Synchronized
     fun install() {
         if (installed) return
-        synchronized(this) {
-            if (installed) return
-            val loader = findLoader()
-            val aeKey = Class.forName("appeng.api.stacks.AEKey", false, loader)
-            val resourceLocation = Class.forName("net.minecraft.resources.ResourceLocation", false, loader)
-            val self = RuntimeClasses::class.java.module
-            val ae2 = aeKey.module
-            if (!self.canRead(ae2)) self.addReads(ae2)
-            val mc = resourceLocation.module
-            if (!self.canRead(mc)) self.addReads(mc)
-            val aeLookup = MethodHandles.privateLookupIn(aeKey, MethodHandles.lookup())
-            val mcLookup = MethodHandles.privateLookupIn(resourceLocation, MethodHandles.lookup())
-            val names = classNames()
-            val mcNames = names.filter { it.startsWith("net.minecraft.resources.") }
-            val aeNames = names.filter { !it.startsWith("net.minecraft.resources.") }
-            for (name in aeNames) define(aeLookup, aeKey.classLoader, name)
-            for (name in mcNames) define(mcLookup, resourceLocation.classLoader, name)
-            installed = true
+        val loader = findLoader()
+        val names = classNames()
+        Class.forName("appeng.api.stacks.AEKey", false, loader)
+            .install(names.filter { it.startsWith("appeng.api.stacks.") })
+        Class.forName("net.minecraft.resources.ResourceLocation", false, loader)
+            .install(names.filter { it.startsWith("net.minecraft.resources.") })
+        installed = true
+    }
+
+    private fun Class<*>.install(inject: List<String>) {
+        val self = RuntimeClasses::class.java.module
+        val other = this.module
+        if (!self.canRead(other)) self.addReads(other)
+        val lookup = MethodHandles.privateLookupIn(this, MethodHandles.lookup())
+        for (name in inject) {
+            define(lookup, this.classLoader, name)
             logger.info(
-                "defined intern runtime classes: {} into module {} (loader {}), {} into module {} (loader {})",
-                aeNames.size,
-                ae2.name,
-                aeKey.classLoader.javaClass.name,
-                mcNames.size,
-                mc.name,
-                resourceLocation.classLoader.javaClass.name,
+                "defined intern runtime classes: {} into module {} (loader {})",
+                name,
+                other.name,
+                other.classLoader.javaClass.name,
             )
         }
     }
 
     private fun classNames(): List<String> {
-        val text = RuntimeClasses::class.java.classLoader.getResourceAsStream(INDEX)?.use { it.readBytes().decodeToString() }
-            ?: throw IllegalStateException("missing $INDEX")
+        val text =
+            RuntimeClasses::class.java.classLoader.getResourceAsStream(INDEX)?.use { it.readBytes().decodeToString() }
+                ?: throw IllegalStateException("missing $INDEX")
         return text.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     }
 
@@ -53,8 +50,7 @@ object RuntimeClasses {
             if (cl.javaClass.name.contains("TransformingClassLoader")) return cl
             cl = cl.parent
         }
-        return Thread.currentThread().contextClassLoader
-            ?: RuntimeClasses::class.java.classLoader
+        return Thread.currentThread().contextClassLoader ?: RuntimeClasses::class.java.classLoader
     }
 
     private fun define(lookup: MethodHandles.Lookup, loader: ClassLoader, name: String) {
