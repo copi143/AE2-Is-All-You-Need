@@ -60,7 +60,7 @@ object Main {
 
     /**
      * Registers the custom AEKeyTypes. Must run before AE2's keytype registry freezes: on Forge
-     * during the ae2:keytypes RegisterEvent, on Fabric via Mixin into [appeng.init.client.InitKeyTypes.init].
+     * during the ae2:keytypes RegisterEvent, on Fabric via Mixin into `appeng.init.client.InitKeyTypes.init`.
      * 调用时机由平台保证只执行一次。
      */
     @JvmStatic

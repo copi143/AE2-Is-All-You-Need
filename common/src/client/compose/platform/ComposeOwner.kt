@@ -254,7 +254,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     override val autofill: Autofill? = null
     override val autofillManager: AutofillManager? = null
 
-    /** Bridges Minecraft's raw key events into [EditCommand]s for the active [McTextField]. */
+    /** Bridges Minecraft's raw key events into [androidx.compose.ui.text.input.EditCommand]s for the active [minecraftx.compose.material.McTextField]. */
     val mcTextInputService = McTextInputService().also { service ->
         service.clipboard = object : TextClipboard {
             override fun getText(): String? = mcClipboardText

@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
  * Custom CraftingCalculation that:
  * 1. Eagerly snapshots ME inventory and crafting patterns into [CraftingInventorySnapshot]
  *    in the constructor on the calling thread.
- * 2. Solves the crafting plan with ojalgo MIP ([MipCraftingPlanner]) on [AE2TaskScheduler]
+ * 2. Solves the crafting plan with ojalgo MIP ([MipCraftingPlanner]) on [allyouneed.logic.TaskScheduler]
  *    using only snapshotted data — no live grid storage/pattern access after construction.
  * 3. Does **not** register with TickHandler (full snapshot removes the need for the
  *    original pause/simulateFor handshake).

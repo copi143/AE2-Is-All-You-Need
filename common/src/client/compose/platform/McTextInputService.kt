@@ -17,12 +17,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import java.text.BreakIterator
 
 /**
- * The framework's text-input bridge between Minecraft's key events and the active [McTextField].
+ * The framework's text-input bridge between Minecraft's key events and the active [minecraftx.compose.material.McTextField].
  *
  * Minecraft has no IME preedit API (the GLFW char callback only reports **committed** text), so the
  * service implements the same "committed-text" level of IME support as the vanilla [net.minecraft.client.gui.components.EditBox]:
  *
- *  - **IME on** ([imeEnabled]): text arrives through `onCharTyped` — direct keys and committed IME
+ *  - **IME on** ([McTextInputService.imeEnabled]): text arrives through `onCharTyped` — direct keys and committed IME
  *    text alike — while `onKeyPressed` only handles editing keys (backspace, arrows, ...) and
  *    consumes printable keys so the host screen never sees them.
  *  - **IME off** (ASCII): `onCharTyped` is ignored and printable keys are translated through a
@@ -31,7 +31,7 @@ import java.text.BreakIterator
  * Raw key events are forwarded by the host screen (`ComposeScreen` / `ComposeContainerScreen`) via
  * [ComposeLayer.onKeyPressed] / [ComposeLayer.onCharTyped]. The service turns them into compose
  * [EditCommand]s and routes them to the single active field's callback — exactly the same commands
- * the OS IME would produce through [PlatformTextInputService.startInput], so [McTextField] can reuse
+ * the OS IME would produce through [PlatformTextInputService.startInput], so [minecraftx.compose.material.McTextField] can reuse
  * the official [androidx.compose.ui.text.input.EditProcessor] for its buffer state.
  *
  * **Skiko 边界**：官方桌面 jar 的 `findPrecedingBreak`/`findFollowingBreak`（[androidx.compose.ui.text.input.BackspaceCommand]
@@ -54,7 +54,7 @@ interface TextClipboard {
 }
 
 /**
- * Optional per-session hook for multi-line fields ([McTextArea]): vertical caret movement and
+ * Optional per-session hook for multi-line fields ([minecraftx.compose.material.McTextArea]): vertical caret movement and
  * line-boundary jumps are *visual* concepts — with soft wrapping only the field itself knows which
  * row an offset belongs to — so the service delegates those keys to the active field instead of
  * computing them from the raw text.

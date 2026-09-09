@@ -296,11 +296,11 @@ class AsyncStructureInterfaceBlock(
 }
 
 /**
- * 已接入网格的连接器（ME / WAN / LAN）。额外带有一个 [POWERED] 状态，反映其
- * 网格节点的在线状态。
+ * 已接入网格的连接器（ME / WAN / LAN）。额外带有一个
+ * [AsyncStructureEntityBlock.POWERED] 状态，反映其网格节点的在线状态。
  *
- * Grid-connected connector (ME / WAN / LAN). Additionally carries a [POWERED] state reflecting its
- * grid node online state.
+ * Grid-connected connector (ME / WAN / LAN). Additionally carries a
+ * [AsyncStructureEntityBlock.POWERED] state reflecting its grid node online state.
  */
 class AsyncStructureConnectorBlock(
     kind: AsyncBlockKind,

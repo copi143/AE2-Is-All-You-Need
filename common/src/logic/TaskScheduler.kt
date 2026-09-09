@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Callers **must** fully value-copy any live ME/grid state on the calling thread
  * before [submit]. Background tasks must not touch live grid storage or crafting services.
  *
- * @see docs/Crafting-Calculation.md
+ * See `docs/Crafting-Calculation.md` for the background and invariants this scheduler relies on.
  */
 object TaskScheduler {
     private val log = logger.marked("Task")

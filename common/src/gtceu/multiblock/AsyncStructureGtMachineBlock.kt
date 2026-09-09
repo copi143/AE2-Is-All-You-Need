@@ -62,7 +62,7 @@ open class AsyncStructureGtMachineBlock(
         definition.blockEntityType.create(pos, state)
 }
 
-/** async 连接器的 GT 机器方块：额外携带 [POWERED] 状态。 / GT machine block of the async connectors: additionally carries the [POWERED] state. */
+/** async 连接器的 GT 机器方块：额外携带 [AsyncStructureEntityBlock.POWERED] 状态。 / GT machine block of the async connectors: additionally carries the [AsyncStructureEntityBlock.POWERED] state. */
 class AsyncStructureGtConnectorBlock(
     props: Properties,
     definition: MachineDefinition,

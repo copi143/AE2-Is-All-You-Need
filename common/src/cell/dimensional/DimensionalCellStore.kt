@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * World-backed storage for dimensional cells.
- * Item NBT only holds a 24-bit [cellId]; contents live under the world save directory.
+ * Item NBT only holds a 24-bit [DimensionalCellData.cellId]; contents live under the world save directory.
  */
 object DimensionalCellStore {
     const val MAX_CELL_ID = 0xFFFFFF

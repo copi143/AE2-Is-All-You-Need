@@ -49,8 +49,8 @@ import kotlin.math.min
  *    (window resize) and pins the content top once the whole area fits.
  *  - **ignore**: with [clip] disabled the content overflows unconditionally — use sparingly.
  *
- * Content children are clipped pixel-perfectly by the same hardware-scissor technique as [McText]'s
- * `clipFrame`; content children should therefore not need their own [McText] `clipFrame` (nested
+ * Content children are clipped pixel-perfectly by the same hardware-scissor technique as [minecraftx.compose.material.McText]'s
+ * `clipFrame`; content children should therefore not need their own [minecraftx.compose.material.McText] `clipFrame` (nested
  * scissor regions are not supported).
  */
 @Composable
@@ -127,7 +127,7 @@ private fun Modifier.layoutUnboundedHeight(onHeight: (Int) -> Unit): Modifier =
 
 /**
  * Clips the node's content to the node's own bounds using the same hardware-scissor technique as
- * [McText]'s `clipFrame`: the rectangle is derived from the live modelview pose so it stays
+ * [minecraftx.compose.material.McText]'s `clipFrame`: the rectangle is derived from the live modelview pose so it stays
  * pixel-aligned with the content regardless of zoom, and the scissor is torn down as soon as the
  * content pass finishes.
  */

@@ -12,7 +12,7 @@ import net.minecraft.world.item.Item
  * (component + housing -> cell) and returned on cell disassembly when empty.
  *
  * Texture: composed from cell_component_bg.png + cell_component_fg.png per tier,
- * tinted via [allyouneed.resgen.AE2_COLORS] like storage cells.
+ * tinted via `AE2_COLORS` like storage cells.
  */
 object StorageComponents {
     val entries: List<ItemDefinition<StorageComponentItem>> = ICell.sizeList.map { size ->

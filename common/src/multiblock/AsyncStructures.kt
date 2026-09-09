@@ -14,9 +14,9 @@ import net.minecraft.core.Direction
  *  - PROCESSOR：19 宽 x 15 高 x (19 + 6N) 深。控制器在核心正面 (9, 8, 3)。
  *            底座核心 13x13x13。
  *
- * 每个格子要么是必需的，要么是“无关”。必需格子必须包含 [blockAt] 返回的方块；
- * 当 [blockAt] 返回 null 时该格必须是空气（例如处理器 7x7 的空气层）。
- * 无关格子（[isDontCare]）接受任意方块。坐标方向：x = 西->东、y = 下->上、
+ * 每个格子要么是必需的，要么是“无关”。必需格子必须包含 [AsyncStructures.blockAt] 返回的方块；
+ * 当 [AsyncStructures.blockAt] 返回 null 时该格必须是空气（例如处理器 7x7 的空气层）。
+ * 无关格子（[AsyncStructures.isDontCare]）接受任意方块。坐标方向：x = 西->东、y = 下->上、
  * z = 前->后。控制器面朝前方（局部 z 增加方向）；结构主体在控制器“背后”延伸。
  *
  * Hand-written, data-driven-free definitions of the three async synthesis structures.
@@ -30,8 +30,8 @@ import net.minecraft.core.Direction
  *             face. Base core is 13x13x13.
  *
  * A cell is either required or "don't care". A required cell must contain the block returned by
- * [blockAt]; when [blockAt] returns null the cell must be air (e.g. the processor's 7x7 air
- * layer). Don't-care cells ([isDontCare]) accept anything. Coordinates grow x = west->east,
+ * [AsyncStructures.blockAt]; when [AsyncStructures.blockAt] returns null the cell must be air (e.g. the processor's 7x7 air
+ * layer). Don't-care cells ([AsyncStructures.isDontCare]) accept anything. Coordinates grow x = west->east,
  * y = bottom->top, z = front->back. The controller faces the front (increasing local z); the
  * structure body extends "behind" the controller.
  */

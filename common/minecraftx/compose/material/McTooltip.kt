@@ -12,13 +12,15 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.theme.McTheme
 import net.minecraft.network.chat.Component
+import net.minecraft.client.gui.GuiGraphics
+import allyouneed.client.compose.platform.renderMcTooltip
 
 /**
  * A tooltip rendered entirely with the Compose framework: a [Column] of [McText] lines (each drawn
  * with the Minecraft font) wrapped in a padded background + border, measured to the content.
  *
  * It is the compose-rendered counterpart of the vanilla
- * [allyouneed.client.compose.platform.GuiGraphics.renderMcTooltip]: build the same tooltip once as
+ * `GuiGraphics.renderMcTooltip`; build the same tooltip once as
  * components and either draw it with vanilla ([renderMcTooltip] on a raw [GuiGraphics]) or lay it
  * out and render it here. This one participates in the Compose layout (so it can be placed in a
  * fixed spot, anchored to another node, etc.) instead of painting over everything after the tree.

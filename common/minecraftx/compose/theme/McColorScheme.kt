@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
  * Semantic color contract for the Minecraft-flavored Compose component set. Every framework
  * component (`McPanel`, `McText`, `ItemSlot`, scrollbars, tooltips...) reads its paint colors from
  * the active scheme instead of hard-coding them, so a whole UI can be re-skinned by swapping the
- * scheme (via [McTheme]) or a single node by passing an explicit [minecraftx.compose.material.McPanel.colors].
+ * scheme (via [McTheme]) or a single node by passing an explicit `McPanel.colors`.
  *
  * The interface carries the **dark theme** values as defaults, so a custom theme object only needs
  * to override the slots it differs in. Built-in schemes: [DarkColorScheme], [LightColorScheme].
@@ -68,7 +68,7 @@ interface McColorScheme {
 
     val error: Color get() = Color(0xFFE05555)
 
-    /** Markdown rendering tokens ([McMarkdown] code blocks, quotes, rules, headings, links). */
+    /** Markdown rendering tokens ([minecraftx.compose.markdown.McMarkdown] code blocks, quotes, rules, headings, links). */
     val mdCodeBackground: Color get() = Color(0xFF1E1E28)
     val mdCodeText: Color get() = Color(0xFFD8B36A)
     val mdQuoteBar: Color get() = Color(0xFF6BA3D4)

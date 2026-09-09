@@ -85,13 +85,13 @@ object AsyncStructureGtPattern {
 
     /**
      * 把 [type] 的全深度结构构建为 GT 模式（底座 + 一个舱位组 + 收尾行 + 后墙）。
-     * 生成器惰性运行（模式工厂被 memoized），所以 [definition.block] 和
+     * 生成器惰性运行（模式工厂被 memoized），所以 [MultiblockMachineDefinition.block] 和
      * [AsyncBlockRegistry] 查找是安全的：到第一次预览/JEI 访问时，GT 方块/物品
      * 注册已完成，`FMLCommonSetupEvent` 也已填充注册表。
      *
      * Builds the full-depth structure of [type] as a GT pattern (base + one bay group + closing
      * row + back wall). The generator runs lazily (the pattern factory is memoized), so
-     * [definition.block] and the [AsyncBlockRegistry] lookups are safe: by the first preview/JEI
+     * [MultiblockMachineDefinition.block] and the [AsyncBlockRegistry] lookups are safe: by the first preview/JEI
      * access the GT block/item registrations have completed and `FMLCommonSetupEvent` has populated
      * the registry.
      */

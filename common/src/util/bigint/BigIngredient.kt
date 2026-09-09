@@ -8,7 +8,7 @@ import java.math.BigInteger
 
 /**
  * 用 [Long] / [BigInteger] 表示数量的配方输入规格，数量语义与 [BigStack] 一致：
- * - 数量不为负；在 [Long] 范围内用 [valLong]，超出时 [valLong]=-1 且 [valBig] 存真值。
+ * - 数量不为负；在 [Long] 范围内（[isLong]）以无符号形式存储，超出时仅能用 [valBig] 取真值。
  * - 匹配键可为精确 [AEKey]、原版 [Ingredient] 通配（item/tag），或空槽。
  *
  * Recipe input with BigStack-like amount storage.

@@ -7,7 +7,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
 
 /**
- * Generic decoder that delegates to any [ModEncodedPatternItem]'s [decode][EncodedPatternItem.decode]
+ * Generic decoder that delegates to any [ModEncodedPatternItem]'s [ModEncodedPatternItem.decode]
  * method. Replaces the three per-type decoder objects (AdaptivePatternDecoder,
  * MachinePatternDecoder, PseudoPatternDecoder). Only matches [ModEncodedPatternItem]
  * subclasses, so AE2's own patterns and other mods' patterns are unaffected.

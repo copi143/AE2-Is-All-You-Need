@@ -37,7 +37,7 @@ object StorageCellTypeLimits {
 
 /**
  * Single cell handler for all [StorageCellItem]s: the inventory is built from the item data's
- * [ICellItem.keyType], so one handler serves every key space (item / mana / energy / ...).
+ * [allyouneed.cell.ICellItem.keyType], so one handler serves every key space (item / mana / energy / ...).
  */
 object StorageCellHandler : ICellHandler {
     override fun isCell(stack: ItemStack): Boolean = stack.item is StorageCellItem

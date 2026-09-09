@@ -41,20 +41,20 @@ import kotlin.math.roundToInt
  * A browser-style single-line text field for the framework.
  *
  * Input goes through [LocalMcTextInputService], which translates Minecraft's raw key events into
- * compose [EditCommand]s — the same commands the OS IME would emit. Two input modes are supported,
+ * compose [androidx.compose.ui.text.input.EditCommand]s — the same commands the OS IME would emit. Two input modes are supported,
  * exactly like toggling the OS input method in a browser:
  *
  *  - **`imeEnabled = true`** (default): committed text — direct key presses and IME commits alike —
  *    arrives via the screen's `charTyped` and is inserted through [androidx.compose.ui.text.input.CommitTextCommand].
  *  - **`imeEnabled = false`**: `charTyped` is ignored and printable keys are mapped from GLFW key
- *    codes with a US-layout shift table (see [McTextInputService]).
+ *    codes with a US-layout shift table (see [allyouneed.client.compose.platform.McTextInputService]).
  *
  * Editing keys (backspace, delete, arrows with shift-selection, home/end, Enter, Ctrl+A) work in
  * both modes. The field draws with the active [McTextEngine], shows a blinking caret, a selection
  * highlight and a composing-text underline, and scrolls horizontally to keep the caret visible.
  *
  * Clicking the field moves the caret to the click position and takes input focus (only one field is
- * active at a time, tracked by the service's [McTextInputService.activeSession]).
+ * active at a time, tracked by the service's [allyouneed.client.compose.platform.McTextInputService.activeSession]).
  *
  * @param value the controlled editing state (text + selection + composition).
  * @param onValueChange called with every edit; update [value] back from here.
