@@ -1,12 +1,8 @@
-import org.jetbrains.dokka.gradle.DokkaExtension
-
 val libs = the<org.gradle.accessors.dm.LibrariesForLibs>()
 
 plugins {
-    `java-library`
     `maven-publish`
-    id("org.jetbrains.kotlin.jvm")
-    id("org.jetbrains.dokka-javadoc")
+    id("multiloader-base")
 }
 
 val modId = project.property("modId") as String
@@ -19,14 +15,8 @@ base {
     archivesName.set("${modId}-${project.name}-${libs.versions.minecraft.get()}")
 }
 
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
-    withSourcesJar()
-    withJavadocJar()
-}
-
-kotlin {
-    jvmToolchain(libs.versions.java.get().toInt())
+sourceSets.main {
+    java.srcDir("src")
 }
 
 // GTCEu bundles its real dependencies (LDLib, Registrate, configuration) as nested jars under
@@ -104,32 +94,12 @@ tasks.named<Jar>("jar") {
     }
 }
 
-configure<DokkaExtension> {
-    dokkaSourceSets.configureEach {
-        skipDeprecated.set(false)
-        reportUndocumented.set(false)
-        sourceRoots.from(project.the<JavaPluginExtension>().sourceSets["main"].allSource)
-    }
-}
-
 tasks.named("dokkaGeneratePublicationJavadoc") {
     if (project.path == ":common") {
         dependsOn("generateAssets")
     } else {
         dependsOn(":common:generateAssets")
     }
-}
-
-// Prevent the default javadoc task from running, as Dokka is
-// responsible for generating the docs now
-tasks.named<Javadoc>("javadoc") {
-    isEnabled = false
-}
-
-// Make the javadoc jar take in the Dokka output
-tasks.named<Jar>("javadocJar") {
-    dependsOn(tasks.named("dokkaGeneratePublicationJavadoc"))
-    from(tasks.named("dokkaGeneratePublicationJavadoc"))
 }
 
 tasks.named<ProcessResources>("processResources") {

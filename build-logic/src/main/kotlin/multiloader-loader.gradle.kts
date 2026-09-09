@@ -2,7 +2,6 @@ import org.jetbrains.dokka.gradle.DokkaExtension
 
 plugins {
     id("multiloader-common")
-    id("org.jetbrains.kotlin.jvm")
 }
 
 val modId = project.property("modId") as String
@@ -116,8 +115,7 @@ tasks.named("dokkaGeneratePublicationJavadoc") {
 configure<DokkaExtension> {
     dokkaSourceSets.named("main") {
         sourceRoots.from(
-            configurations["commonJava"],
-            configurations["commonKotlin"]
+            configurations["commonJava"], configurations["commonKotlin"]
         )
         classpath.from(configurations["compileClasspath"])
     }

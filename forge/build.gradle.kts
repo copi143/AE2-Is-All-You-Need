@@ -82,16 +82,6 @@ kapt {
     keepJavacAnnotationProcessors = true
 }
 
-sourceSets.main {
-    java.srcDir("src")
-    kotlin.srcDir("src")
-    resources.srcDir("resources")
-}
-
-sourceSets.test {
-    kotlin.srcDir("test")
-}
-
 dependencies {
     implementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
@@ -134,13 +124,10 @@ dependencies {
     // Botania: compile against the api classifier; no runtime dependency here (players provide
     // the full jar, which additionally requires Patchouli/Curios).
     modCompileOnly(variantOf(libs.botania) { classifier("api") })
-    testImplementation(kotlin("test"))
-    testImplementation(libs.junit)
     testImplementation(libs.asm.tree)
-    testRuntimeOnly(libs.junit.launcher)
 }
 
-fun org.gradle.api.Task.usesTransformerJar() {
+fun Task.usesTransformerJar() {
     dependsOn(copyTransformerToRunMods)
 }
 
@@ -157,10 +144,6 @@ afterEvaluate {
     ).forEach { name ->
         tasks.findByName(name)?.usesTransformerJar()
     }
-}
-
-tasks.withType<Test> {
-    useJUnitPlatform()
 }
 
 // Drop module-info so atomicfu does not require a separate kotlin.stdlib module (KFF provides Kotlin).
@@ -248,7 +231,4 @@ afterEvaluate {
 
 tasks.named("assemble") {
     dependsOn(wrapForgeJar)
-}
-repositories {
-    mavenCentral()
 }

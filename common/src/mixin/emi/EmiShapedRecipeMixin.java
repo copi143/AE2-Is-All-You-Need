@@ -2,6 +2,7 @@ package allyouneed.mixin.emi;
 
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
+import dev.emi.emi.recipe.EmiShapedRecipe;
 import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -23,7 +24,7 @@ import java.util.List;
  * 未改动 {@code padIngredients}、未共享 {@code NBT}、未批量合并 {@code getRemainingItems}，
  * 确保与原版 {@code ShapedRecipe.getRemainingItems} 的容器依赖语义完全一致。
  */
-@Mixin(targets = "dev.emi.emi.recipe.EmiShapedRecipe", remap = false)
+@Mixin(value = EmiShapedRecipe.class, remap = false)
 public abstract class EmiShapedRecipeMixin {
 
     /**
@@ -33,21 +34,7 @@ public abstract class EmiShapedRecipeMixin {
     @Overwrite
     public static void setRemainders(List<EmiIngredient> input, CraftingRecipe recipe) {
         try {
-            // 通过反射获取 EmiUtil.getCraftingInventory() 避免编译期依赖 EMI 实现
-            TransientCraftingContainer inv;
-            try {
-                Class<?> util = Class.forName("dev.emi.emi.EmiUtil");
-                @SuppressWarnings("unchecked")
-                TransientCraftingContainer tmp = (TransientCraftingContainer) util.getMethod("getCraftingInventory").invoke(null);
-                inv = tmp;
-            } catch (Throwable t) {
-                // 回退：直接 new（与 EmiUtil 实现一致）
-                inv = new TransientCraftingContainer(new net.minecraft.world.inventory.AbstractContainerMenu(null, -1) {
-                    public boolean stillValid(net.minecraft.world.entity.player.Player p) { return false; }
-                    public ItemStack quickMoveStack(net.minecraft.world.entity.player.Player p, int idx) { return ItemStack.EMPTY; }
-                    public void slotsChanged(net.minecraft.world.Container inv) {}
-                }, 3, 3);
-            }
+            TransientCraftingContainer inv = dev.emi.emi.EmiUtil.getCraftingInventory();
             for (int i = 0; i < input.size(); i++) {
                 if (input.get(i).isEmpty()) {
                     continue;
@@ -86,20 +73,7 @@ public abstract class EmiShapedRecipeMixin {
                 inv.clearContent();
             }
         } catch (Exception e) {
-            try {
-                Class<?> port = Class.forName("dev.emi.emi.EmiPort");
-                java.lang.reflect.Method m = port.getMethod("getId", net.minecraft.world.item.crafting.Recipe.class);
-                Object id = m.invoke(null, recipe);
-                Class<?> log = Class.forName("dev.emi.emi.runtime.EmiLog");
-                log.getMethod("error", String.class, Throwable.class).invoke(null, "Exception thrown setting remainders for " + id, e);
-            } catch (Throwable ignored) {
-                try {
-                    Class<?> log = Class.forName("dev.emi.emi.runtime.EmiLog");
-                    log.getMethod("error", String.class, Throwable.class).invoke(null, "Exception thrown setting remainders for " + recipe, e);
-                } catch (Throwable ignored2) {
-                    e.printStackTrace();
-                }
-            }
+            dev.emi.emi.runtime.EmiLog.error("Exception thrown setting remainders for " + dev.emi.emi.EmiPort.getId(recipe), e);
         }
     }
 }

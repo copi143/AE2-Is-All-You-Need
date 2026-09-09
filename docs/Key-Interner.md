@@ -63,10 +63,4 @@ object KeyInterner {
 
 不反射构造。ASM 只在 `new` 之后调用 `intern`。
 
-## KeyClassScanner
-
-- `scanKeyClasses`：读 `(name, superName)`，判定继承 `appeng/api/stacks/AEKey`
-- `findNewCallSites`：含 `NEW <keyClass>` 的类
-- 纯 ASM 字符串常量，零 AE2 依赖
-
 intern 后同一内容只有一个实例，`AEKeyAsm` 上的 `dropSecondary` 缓存天然共享。

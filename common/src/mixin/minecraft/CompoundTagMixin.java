@@ -44,7 +44,7 @@ public abstract class CompoundTagMixin implements ICompoundTagMixin {
     @Mutable
     private Map<String, Tag> tags;
 
-    @Redirect(method = "<init>()V", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/Maps;newHashMap()Ljava/util/HashMap;"))
+    @Redirect(method = "<init>()V", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/Maps;newHashMap()Ljava/util/HashMap;", remap = false))
     private static HashMap<String, Tag> initWithNull() {
         return null;
     }

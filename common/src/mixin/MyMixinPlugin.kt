@@ -41,8 +41,8 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo
  */
 class MyMixinPlugin : IMixinConfigPlugin {
     override fun shouldApplyMixin(targetClassName: String, mixinClassName: String): Boolean {
-        mixinClassName.startsWith("allyouneed.mixin.") || return true
-        val relPath = mixinClassName.removePrefix("allyouneed.mixin.")
+        mixinClassName.startsWith(prefix) || return true
+        val relPath = mixinClassName.removePrefix(prefix)
         val resource = targetClassName.replace('.', '/') + ".class"
         return when {
             relPath.startsWith("gtceu.") || relPath.startsWith("ldlib.") || relPath.startsWith("emi.") -> {
@@ -69,5 +69,9 @@ class MyMixinPlugin : IMixinConfigPlugin {
     override fun postApply(
         targetClassName: String?, targetClass: ClassNode?, mixinClassName: String?, mixinInfo: IMixinInfo?
     ) {
+    }
+
+    companion object {
+        private const val prefix = "allyouneed.mixin."
     }
 }

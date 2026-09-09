@@ -6,12 +6,6 @@ plugins {
 
 val modId = project.property("modId") as String
 
-sourceSets.main {
-    java.srcDir("src")
-    kotlin.srcDir("src")
-    resources.srcDir("resources")
-}
-
 dependencies {
     minecraft(libs.minecraft)
     mappings(loom.layered {

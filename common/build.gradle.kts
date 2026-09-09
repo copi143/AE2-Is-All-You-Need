@@ -41,7 +41,8 @@ dependencies {
 //    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
 
     modCompileOnly(libs.jei.forge)
-    modCompileOnly("dev.emi:emi-xplat-mojmap:${libs.versions.emi.get()}:api")
+    modCompileOnly(variantOf(libs.emi.xplat) { classifier("api") })
+    modCompileOnly(libs.emi.forge)
 
     modCompileOnly(libs.guideme)
     modCompileOnly(libs.ae2.forge)
@@ -64,9 +65,6 @@ dependencies {
     testImplementation(project(path = ":transformer", configuration = "injectClasses"))
     testImplementation(libs.slf4j)
 
-    testImplementation(libs.junit)
-    testImplementation(kotlin("test"))
-    testRuntimeOnly(libs.junit.launcher)
     testImplementation("org.lwjgl:lwjgl:3.3.1")
     testRuntimeOnly("org.lwjgl:lwjgl:3.3.1:natives-linux")
     // fastutil 由 Minecraft 内嵌提供（不在测试 classpath），这里仅为测试暴露其类。
@@ -83,7 +81,6 @@ dependencies {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
     dependsOn(":graphicsrepl:patchUiGraphics")
 }
 
@@ -111,7 +108,10 @@ dependencies {
         add(it, "org.jetbrains.compose.foundation:foundation-layout-desktop:${libs.versions.compose.get()}")
         add(it, "org.jetbrains.compose.animation:animation-desktop:${libs.versions.compose.get()}")
         add(it, "org.jetbrains.compose.material:material-desktop:${libs.versions.compose.get()}")
-        add(it, files(rootProject.project(":graphicsrepl").layout.buildDirectory.file("libs/ui-graphics-desktop-noskiko.jar")))
+        add(
+            it,
+            files(rootProject.project(":graphicsrepl").layout.buildDirectory.file("libs/ui-graphics-desktop-noskiko.jar"))
+        )
     }
 }
 
@@ -177,14 +177,8 @@ configurations {
 }
 
 sourceSets.main {
-    java.srcDir("src")
-    kotlin.srcDirs("src", "minecraftx", "ae2x")
-    resources.srcDirs("res", "resources")
-}
-
-sourceSets.test {
-    kotlin.srcDir("test")
-    resources.srcDirs("test/resources")
+    kotlin.srcDirs("minecraftx", "ae2x")
+    resources.srcDirs("res")
 }
 
 sourceSets.create("resgen") {

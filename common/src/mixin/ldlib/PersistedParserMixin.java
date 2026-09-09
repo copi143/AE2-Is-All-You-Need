@@ -1,5 +1,6 @@
 package allyouneed.mixin.ldlib;
 
+import com.lowdragmc.lowdraglib.gui.editor.runtime.PersistedParser;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -26,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 行为与原逻辑等价（仅返回已标注的方法，原循环的 {@code !containsKey} 语义在外层保留），无额外副作用。
  * 使用字符串比对注解名避免编译期依赖 LDLib。
  */
-@Mixin(targets = "com.lowdragmc.lowdraglib.gui.editor.runtime.PersistedParser", remap = false)
+@Mixin(value = PersistedParser.class, remap = false)
 public abstract class PersistedParserMixin {
 
     @Unique
@@ -35,11 +36,7 @@ public abstract class PersistedParserMixin {
     @Unique
     private static final String CONFIG_SETTER_NAME = "com.lowdragmc.lowdraglib.gui.editor.annotation.ConfigSetter";
 
-    @Redirect(
-            method = "deserializeNBT",
-            at = @At(value = "INVOKE", target = "Ljava/lang/Class;getMethods()[Ljava/lang/reflect/Method;"),
-            remap = false
-    )
+    @Redirect(method = "deserializeNBT", at = @At(value = "INVOKE", target = "Ljava/lang/Class;getMethods()[Ljava/lang/reflect/Method;"), remap = false)
     private static Method[] ae2IsAllYouNeed$cachedGetMethods(Class<?> clazz) {
         Method[] cached = ae2IsAllYouNeed$setterCache.get(clazz);
         if (cached != null) {
