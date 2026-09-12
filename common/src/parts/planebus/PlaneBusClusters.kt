@@ -38,6 +38,7 @@ enum class PlaneKind { ANNIHILATION, FORMATION }
 object PlaneBusClusters {
 
     /** 面板挂在各面上，线缆占用中心槽位，用 (pos, side?) 区分。Planes sit on faces, the bus occupies the centre slot; key by (pos, side?). */
+    @JvmRecord
     data class Key(val pos: BlockPos, val side: Direction?)
 
     private class LevelState {
@@ -46,6 +47,7 @@ object PlaneBusClusters {
     }
 
     /** 单个集群的展示统计（tooltip 用）。Per-cluster display stats (for tooltips). */
+    @JvmRecord
     data class Info(
         val formed: Boolean,
         val annihilations: Int,

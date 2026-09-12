@@ -1,5 +1,6 @@
 package minecraftx.compose.dock
 
+@JvmRecord
 data class DockLeafLayout(
     val id: String,
     val x: Float,
@@ -71,4 +72,5 @@ fun dropHighlight(layout: DockLeafLayout, drop: DockDrop): DockRect? {
     return null
 }
 
+@JvmRecord
 data class DockRect(val x: Float, val y: Float, val width: Float, val height: Float)

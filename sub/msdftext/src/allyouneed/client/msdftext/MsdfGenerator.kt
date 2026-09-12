@@ -12,15 +12,18 @@ import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+@JvmRecord
 data class MsdfPoint(val x: Float, val y: Float)
 
-class MsdfEdge(
+@JvmRecord
+data class MsdfEdge(
     val ax: Float, val ay: Float,
     val bx: Float, val by: Float,
     val channels: Int,
 )
 
-class MsdfBitmap(
+@JvmRecord
+data class MsdfBitmap(
     val width: Int,
     val height: Int,
     val originX: Float,

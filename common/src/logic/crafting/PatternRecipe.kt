@@ -8,6 +8,7 @@ import appeng.api.stacks.AEKey
 import appeng.api.stacks.GenericStack
 import net.minecraft.world.level.Level
 
+@JvmRecord
 data class PatternRecipe(
     val sources: ArrayList<GenericStack>,
     val targets: ArrayList<GenericStack>,
@@ -15,6 +16,7 @@ data class PatternRecipe(
 ) {
     private constructor() : this(ArrayList(), ArrayList(), ArrayList())
 
+    @JvmRecord
     data class Catalyst(val stack: GenericStack, val lossy: Boolean)
 
     /**

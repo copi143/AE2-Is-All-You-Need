@@ -20,6 +20,7 @@ import net.minecraft.network.chat.Component
  * applying the scroll offset), [x] the left indent and [color] the paint fallback. When [color] is
  * null the active theme's [McTheme.colors] primary text color is used.
  */
+@JvmRecord
 data class McLine(
     val text: Component,
     val x: Int,

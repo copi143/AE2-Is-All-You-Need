@@ -39,6 +39,7 @@ class ItemDetails(val stack: ItemStack) {
         add(nbtSection())
     }
 
+    @JvmRecord
     data class Section(val title: Component, val lines: List<Component>)
 
     private fun basicSection(): Section {

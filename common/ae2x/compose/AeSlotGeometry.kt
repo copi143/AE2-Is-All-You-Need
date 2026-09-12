@@ -33,6 +33,7 @@ object AeSlotGeometry {
     }
 }
 
+@JvmRecord
 data class IntPair(val x: Int, val y: Int)
 
 class ExclusionAccumulator {
@@ -50,4 +51,5 @@ class ExclusionAccumulator {
     fun snapshot(): List<IntRect> = zones.toList()
 }
 
+@JvmRecord
 data class IntRect(val x: Int, val y: Int, val width: Int, val height: Int)

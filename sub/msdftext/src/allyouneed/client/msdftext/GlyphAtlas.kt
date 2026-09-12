@@ -5,9 +5,11 @@ import org.lwjgl.opengl.GL12
 import org.lwjgl.system.MemoryUtil
 import java.nio.ByteBuffer
 
+@JvmRecord
 data class GlyphKey(val family: String, val codePoint: Int)
 
-class AtlasSlot(
+@JvmRecord
+data class AtlasSlot(
     val key: GlyphKey,
     val x: Int,
     val y: Int,

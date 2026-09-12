@@ -9,6 +9,7 @@ import kotlin.io.path.exists
 
 class TextureGen(private val output: Path) {
 
+    @JvmRecord
     private data class RecolorEntry(
         val sourceTemplate: String,
         val outputPrefix: String,
@@ -20,6 +21,7 @@ class TextureGen(private val output: Path) {
      * bg (no recolor) + mid (recolor) + optional top (no recolor, per level or single)
      * + optional [overlays] (no recolor, always on top, single file each).
      */
+    @JvmRecord
     private data class LayeredEntry(
         val bgTemplate: String,
         val midTemplate: String,
@@ -36,6 +38,7 @@ class TextureGen(private val output: Path) {
      * Same layering as [LayeredEntry], but [mid] is recolored once per color in [midColors]
      * and frames are stacked vertically (vanilla/AE2 animation strip). Writes `.png.mcmeta`.
      */
+    @JvmRecord
     private data class AnimatedLayeredEntry(
         val bgTemplate: String,
         val midTemplate: String,
@@ -54,6 +57,7 @@ class TextureGen(private val output: Path) {
      * cycled through the gradient. Composites bg + tinted mid per frame, stacked as an animation
      * strip with `.png.mcmeta`.
      */
+    @JvmRecord
     private data class AnimatedTintEntry(
         val bgTemplate: String,
         val midTemplate: String,

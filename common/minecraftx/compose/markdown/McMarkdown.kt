@@ -70,6 +70,7 @@ fun McMarkdown(
 }
 
 /** Theme-resolved colors used while building the draw command list. */
+@JvmRecord
 private data class Palette(
     val codeBackground: Color,
     val codeForeground: Color,

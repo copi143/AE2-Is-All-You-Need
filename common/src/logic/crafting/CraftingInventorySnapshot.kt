@@ -100,14 +100,17 @@ class CraftingInventorySnapshot(level: Level, grid: IGrid, val goal: BigStack) {
     /**
      * 配方中一个物品的引用，携带数量。
      */
+    @JvmRecord
     data class ItemRef(val id: Int, val amount: Long)
 
     /**
      * 催化剂引用。 [lossy] 为 true 表示 [PatternRecipe.WTF.SlowlyConsumed]（慢耗工具），
      * false 表示 [PatternRecipe.WTF.Constant]（完全不消耗）。
      */
+    @JvmRecord
     data class CatalystRef(val id: Int, val amount: Long, val lossy: Boolean)
 
+    @JvmRecord
     data class RecipeKey(
         val sources: ArrayList<ItemRef>,
         val targets: ArrayList<ItemRef>,

@@ -12,7 +12,7 @@ import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.ExperienceOrb
 import net.minecraft.world.item.enchantment.Enchantment
 import net.minecraft.world.level.block.entity.BlockEntity
-import java.util.UUID
+import java.util.*
 
 /**
  * 破坏面板经验球吸收策略。
@@ -23,13 +23,14 @@ import java.util.UUID
  * - 仅处理实体碰撞路径；方块破坏产生的经验由 [allyouneed.mixin.ae2.ItemPickupStrategyMixin] 在
  *   [appeng.parts.automation.ItemPickupStrategy.completePickup] 尾部追加处理
  */
+@Suppress("UnstableApiUsage")
 class XpPickupStrategy(
     private val level: ServerLevel,
     private val pos: BlockPos,
     private val side: Direction,
-    @Suppress("unused") private val host: BlockEntity?,
-    @Suppress("unused") private val enchantments: Map<Enchantment, Int>?,
-    @Suppress("unused") private val owningPlayerId: UUID?,
+    private val host: BlockEntity?,
+    private val enchantments: Map<Enchantment, Int>?,
+    private val owningPlayerId: UUID?,
 ) : PickupStrategy {
 
     companion object {

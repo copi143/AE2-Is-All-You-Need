@@ -4,6 +4,7 @@ enum class EdgeType {
     STRONG, WEAK
 }
 
+@JvmRecord
 data class Constraint<T>(val sources: List<T>, val targets: List<T>) {
     constructor(pair: Pair<List<T>, List<T>>) : this(pair.first, pair.second)
 
@@ -12,8 +13,10 @@ data class Constraint<T>(val sources: List<T>, val targets: List<T>) {
     }
 }
 
+@JvmRecord
 data class Edge<T>(val from: T, val to: T, val type: EdgeType)
 
+@JvmRecord
 data class RankResult<T>(
     val rank: Map<T, Int>,
     val order: List<T>,

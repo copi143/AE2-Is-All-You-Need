@@ -61,8 +61,10 @@ data class McSpanStyle(
  * conversion, markdown rendering). Spans are expected to be non-overlapping and sorted by start;
  * overlapping input spans are resolved left-to-right (a later span only covers unconsumed text).
  */
-class McStyledString(val text: String, val spans: List<Span> = emptyList()) {
+@JvmRecord
+data class McStyledString(val text: String, val spans: List<Span> = emptyList()) {
 
+    @JvmRecord
     data class Span(val start: Int, val end: Int, val style: McSpanStyle)
 
     operator fun plus(other: McStyledString): McStyledString {

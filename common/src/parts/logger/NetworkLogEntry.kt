@@ -12,6 +12,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+@JvmRecord
 data class NetworkLogEntry(val utcMillis: Long, val kind: NetworkLogKind, val args: List<String>) {
     fun write(buf: FriendlyByteBuf) {
         buf.writeLong(utcMillis)

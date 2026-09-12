@@ -36,6 +36,7 @@ import minecraftx.compose.theme.McTheme
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 
+@JvmRecord
 data class AeCraftRow(
     val stack: ItemStack,
     val lines: List<Component>,
