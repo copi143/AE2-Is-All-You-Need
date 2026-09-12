@@ -24,7 +24,7 @@ class NetworkLogService(private val grid: IGrid) : INetworkLogService, IGridServ
             dirty = true
         }
         if (MacPolicy.shouldHaveMac(gridNode) && !NetworkLogSettle.noteJoin(identity(gridNode))) {
-            pending += NetworkLogHooks.entry(grid, NetworkLogKind.NODE_ADDED, *NetworkLogHooks.describe(gridNode))
+            pending += NetworkLogHooks.entry(grid, NetworkLogKind.NodeAdded, *NetworkLogHooks.describe(gridNode))
         }
     }
 
@@ -39,7 +39,7 @@ class NetworkLogService(private val grid: IGrid) : INetworkLogService, IGridServ
             NetworkLogSettle.noteLeave(
                 identity(gridNode),
                 loggerId,
-                NetworkLogHooks.entry(grid, NetworkLogKind.NODE_REMOVED, *NetworkLogHooks.describe(gridNode)),
+                NetworkLogHooks.entry(grid, NetworkLogKind.NodeRemoved, *NetworkLogHooks.describe(gridNode)),
             )
         }
     }
@@ -83,7 +83,7 @@ class NetworkLogService(private val grid: IGrid) : INetworkLogService, IGridServ
         append(
             NetworkLogHooks.entry(
                 grid,
-                NetworkLogKind.CHANNEL_REQUIREMENT,
+                NetworkLogKind.ChannelRequirement,
                 *NetworkLogHooks.describe(event.node),
             ),
         )
@@ -94,7 +94,7 @@ class NetworkLogService(private val grid: IGrid) : INetworkLogService, IGridServ
         append(
             NetworkLogHooks.entry(
                 grid,
-                NetworkLogKind.CPU_CHANGE,
+                NetworkLogKind.CpuChange,
                 *NetworkLogHooks.describe(event.node),
             ),
         )
@@ -114,16 +114,16 @@ class NetworkLogService(private val grid: IGrid) : INetworkLogService, IGridServ
         append(
             NetworkLogHooks.entry(
                 grid,
-                if (powered) NetworkLogKind.POWER_ON else NetworkLogKind.POWER_OFF,
+                if (powered) NetworkLogKind.PowerOn else NetworkLogKind.PowerOff,
             ),
         )
     }
 
     fun onController(event: GridControllerChange) {
         val kind = when (grid.pathingService.controllerState) {
-            ControllerState.CONTROLLER_ONLINE -> NetworkLogKind.CONTROLLER_ONLINE
-            ControllerState.NO_CONTROLLER -> NetworkLogKind.CONTROLLER_NONE
-            ControllerState.CONTROLLER_CONFLICT -> NetworkLogKind.CONTROLLER_CONFLICT
+            ControllerState.CONTROLLER_ONLINE -> NetworkLogKind.ControllerOnline
+            ControllerState.NO_CONTROLLER -> NetworkLogKind.ControllerNone
+            ControllerState.CONTROLLER_CONFLICT -> NetworkLogKind.ControllerConflict
         }
         append(NetworkLogHooks.entry(grid, kind))
     }
@@ -135,14 +135,14 @@ class NetworkLogService(private val grid: IGrid) : INetworkLogService, IGridServ
             for (logger in loggers) {
                 logger.setConflict(true)
                 logger.record(
-                    NetworkLogHooks.entry(grid, NetworkLogKind.LOGGER_CONFLICT, count.toString()),
+                    NetworkLogHooks.entry(grid, NetworkLogKind.LoggerConflict, count.toString()),
                 )
             }
         } else if (!nowConflicted && conflicted) {
             val logger = loggers.singleOrNull()
             if (logger != null) {
                 logger.setConflict(false)
-                logger.record(NetworkLogHooks.entry(grid, NetworkLogKind.LOGGER_OK))
+                logger.record(NetworkLogHooks.entry(grid, NetworkLogKind.LoggerOk))
             }
         } else if (nowConflicted) {
             for (logger in loggers) {

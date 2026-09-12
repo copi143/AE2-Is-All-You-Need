@@ -26,7 +26,7 @@ class NetworkLoggerMenu(
 
     @JvmField
     @GuiSync(4)
-    var filter: Int = NetworkLogCategory.ALL
+    var filter: Int = NetworkLogCategory.All
 
     @JvmField
     @GuiSync(5)
@@ -56,7 +56,7 @@ class NetworkLoggerMenu(
             sendClientAction(ACTION_SET_FILTER, mask)
             return
         }
-        filter = mask and NetworkLogCategory.ALL
+        filter = mask and NetworkLogCategory.All
         refreshPage(forceLatest = true)
     }
 
@@ -94,7 +94,7 @@ class NetworkLoggerMenu(
         } else {
             filter or category.mask
         }
-        setFilter(if (next == 0) NetworkLogCategory.ALL else next)
+        setFilter(if (next == 0) NetworkLogCategory.All else next)
     }
 
     fun newerPage() {

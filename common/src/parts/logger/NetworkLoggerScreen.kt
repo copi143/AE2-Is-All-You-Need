@@ -177,9 +177,9 @@ class NetworkLoggerScreen(
     }
 
     private fun colorOf(level: NetworkLogLevel, info: Int): Int = when (level) {
-        NetworkLogLevel.INFO -> info
-        NetworkLogLevel.WARN -> COLOR_WARN
-        NetworkLogLevel.ERROR -> COLOR_ERROR
+        NetworkLogLevel.Info -> info
+        NetworkLogLevel.Warn -> COLOR_WARN
+        NetworkLogLevel.Error -> COLOR_ERROR
     }
 
     companion object {

@@ -81,7 +81,7 @@ object LogStore {
 
     fun count(loggerId: Int, filter: Int): Int {
         val data = getOrLoad(loggerId) ?: return 0
-        if (filter == NetworkLogCategory.ALL) return data.entries.size
+        if (filter == NetworkLogCategory.All) return data.entries.size
         return data.entries.count { it.kind.category.mask and filter != 0 }
     }
 

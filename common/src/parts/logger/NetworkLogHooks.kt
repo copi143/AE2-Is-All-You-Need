@@ -3,17 +3,10 @@ package allyouneed.parts.logger
 import allyouneed.api.IMacAddressHolder
 import allyouneed.util.id.mac.MacAddress
 import allyouneed.util.id.mac.MacPolicy
-import appeng.api.networking.GridHelper
-import appeng.api.networking.GridServices
-import appeng.api.networking.IGrid
-import appeng.api.networking.IGridNode
-import appeng.api.networking.IGridNodeListener
+import appeng.api.networking.*
 import appeng.api.networking.crafting.ICraftingPlan
 import appeng.api.networking.crafting.ICraftingSubmitResult
-import appeng.api.networking.events.GridChannelRequirementChanged
-import appeng.api.networking.events.GridControllerChange
-import appeng.api.networking.events.GridCraftingCpuChange
-import appeng.api.networking.events.GridPowerStatusChange
+import appeng.api.networking.events.*
 import appeng.api.stacks.GenericStack
 import appeng.core.sync.packets.CraftingJobStatusPacket
 import net.minecraft.world.level.block.entity.BlockEntity
@@ -21,22 +14,14 @@ import net.minecraft.world.level.block.entity.BlockEntity
 object NetworkLogHooks {
     fun register() {
         GridServices.register(INetworkLogService::class.java, NetworkLogService::class.java)
-        GridHelper.addGridServiceEventHandler(
-            GridPowerStatusChange::class.java,
-            INetworkLogService::class.java,
-        ) { svc, ev -> (svc as NetworkLogService).onPower(ev) }
-        GridHelper.addGridServiceEventHandler(
-            GridControllerChange::class.java,
-            INetworkLogService::class.java,
-        ) { svc, ev -> (svc as NetworkLogService).onController(ev) }
-        GridHelper.addGridServiceEventHandler(
-            GridChannelRequirementChanged::class.java,
-            INetworkLogService::class.java,
-        ) { svc, ev -> (svc as NetworkLogService).onChannelRequirement(ev) }
-        GridHelper.addGridServiceEventHandler(
-            GridCraftingCpuChange::class.java,
-            INetworkLogService::class.java,
-        ) { svc, ev -> (svc as NetworkLogService).onCpuChange(ev) }
+        listOf<Pair<Class<out GridEvent>, (IGridService, GridEvent) -> Unit>>(
+            GridPowerStatusChange::class.java to { svc, e -> (svc as NetworkLogService).onPower(e as GridPowerStatusChange) },
+            GridControllerChange::class.java to { svc, e -> (svc as NetworkLogService).onController(e as GridControllerChange) },
+            GridChannelRequirementChanged::class.java to { svc, e -> (svc as NetworkLogService).onChannelRequirement(e as GridChannelRequirementChanged) },
+            GridCraftingCpuChange::class.java to { svc, e -> (svc as NetworkLogService).onCpuChange(e as GridCraftingCpuChange) },
+        ).forEach { (eventClass, handler) ->
+            GridHelper.addGridServiceEventHandler(eventClass, INetworkLogService::class.java, handler)
+        }
     }
 
     @JvmStatic
@@ -44,10 +29,10 @@ object NetworkLogHooks {
         if (!MacPolicy.shouldHaveMac(node)) return
         if (isTransient(node)) return
         val kind = when (reason) {
-            IGridNodeListener.State.POWER ->
-                if (node.isPowered) NetworkLogKind.NODE_POWER_ON else NetworkLogKind.NODE_POWER_OFF
-            IGridNodeListener.State.CHANNEL ->
-                if (node.meetsChannelRequirements()) NetworkLogKind.NODE_CHANNEL_ON else NetworkLogKind.NODE_CHANNEL_OFF
+            IGridNodeListener.State.POWER -> if (node.isPowered) NetworkLogKind.NodePowerOn else NetworkLogKind.NodePowerOff
+
+            IGridNodeListener.State.CHANNEL -> if (node.meetsChannelRequirements()) NetworkLogKind.NodeChannelOn else NetworkLogKind.NodeChannelOff
+
             else -> return
         }
         append(node, kind, *describe(node))
@@ -57,9 +42,9 @@ object NetworkLogHooks {
     fun onSubmitJob(grid: IGrid, plan: ICraftingPlan, result: ICraftingSubmitResult) {
         val label = stackLabel(plan.finalOutput())
         if (result.successful()) {
-            append(grid, NetworkLogKind.CRAFT_SUBMIT_OK, label)
+            append(grid, NetworkLogKind.CraftSubmitOk, label)
         } else {
-            append(grid, NetworkLogKind.CRAFT_SUBMIT_FAIL, label, result.errorCode()?.name ?: "?")
+            append(grid, NetworkLogKind.CraftSubmitFail, label, result.errorCode()?.name ?: "?")
         }
     }
 
@@ -67,9 +52,9 @@ object NetworkLogHooks {
     fun onCraftingJob(grid: IGrid?, output: GenericStack?, status: CraftingJobStatusPacket.Status) {
         if (grid == null) return
         val kind = when (status) {
-            CraftingJobStatusPacket.Status.STARTED -> NetworkLogKind.CRAFT_START
-            CraftingJobStatusPacket.Status.FINISHED -> NetworkLogKind.CRAFT_DONE
-            CraftingJobStatusPacket.Status.CANCELLED -> NetworkLogKind.CRAFT_CANCEL
+            CraftingJobStatusPacket.Status.STARTED -> NetworkLogKind.CraftStart
+            CraftingJobStatusPacket.Status.FINISHED -> NetworkLogKind.CraftDone
+            CraftingJobStatusPacket.Status.CANCELLED -> NetworkLogKind.CraftCancel
         }
         append(grid, kind, stackLabel(output))
     }
@@ -86,6 +71,7 @@ object NetworkLogHooks {
                 val p = owner.blockPos
                 "${p.x},${p.y},${p.z}"
             }
+
             else -> "-"
         }
         val macHolder = node as? IMacAddressHolder
@@ -109,8 +95,7 @@ object NetworkLogHooks {
 
     private fun isTransient(node: IGridNode): Boolean {
         val owner = node.owner ?: node
-        if (NetworkLogSettle.wasMoved(owner)) return true
-        return try {
+        return NetworkLogSettle.wasMoved(owner) || try {
             node.grid.pathingService.isNetworkBooting
         } catch (_: RuntimeException) {
             true

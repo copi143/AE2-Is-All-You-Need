@@ -1,6 +1,7 @@
 package allyouneed.parts.logger
 
 import allyouneed.util.MODID
+import allyouneed.util.addMapped
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.StringTag
@@ -11,11 +12,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-data class NetworkLogEntry(
-    val utcMillis: Long,
-    val kind: NetworkLogKind,
-    val args: List<String>,
-) {
+data class NetworkLogEntry(val utcMillis: Long, val kind: NetworkLogKind, val args: List<String>) {
     fun write(buf: FriendlyByteBuf) {
         buf.writeLong(utcMillis)
         buf.writeByte(kind.ordinal)
@@ -26,25 +23,18 @@ data class NetworkLogEntry(
     }
 
     fun toNbt(): CompoundTag {
-        val tag = CompoundTag()
-        tag.putLong("t", utcMillis)
-        tag.putByte("k", kind.ordinal.toByte())
-        val list = ListTag()
-        for (arg in args) {
-            list.add(StringTag.valueOf(arg))
+        return CompoundTag().apply {
+            putLong("t", utcMillis)
+            putByte("k", kind.ordinal.toByte())
+            put("a", ListTag().addMapped(args) { StringTag.valueOf(it) })
         }
-        tag.put("a", list)
-        return tag
     }
 
-    fun formatLocalTime(): String =
-        LOCAL_TIME.format(Instant.ofEpochMilli(utcMillis).atZone(ZoneId.systemDefault()))
+    fun formatLocalTime(): String = LOCAL_TIME.format(Instant.ofEpochMilli(utcMillis).atZone(ZoneId.systemDefault()))
 
-    fun message(): Component =
-        Component.translatable("gui.$MODID.log.${kind.langKey}", *args.toTypedArray())
+    fun message(): Component = Component.translatable("gui.$MODID.log.${kind.langKey}", *args.toTypedArray())
 
-    fun toComponent(): Component =
-        Component.literal("[${formatLocalTime()}] ").append(message())
+    fun toComponent(): Component = Component.literal("[${formatLocalTime()}] ").append(message())
 
     fun toPlainLine(): String = "[${formatLocalTime()}] ${message().string}"
 

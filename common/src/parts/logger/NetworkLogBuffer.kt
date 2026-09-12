@@ -25,7 +25,7 @@ class NetworkLogBuffer(val loggerId: Int) {
     }
 
     fun query(offset: Int, filter: Int, limit: Int): NetworkLogPage {
-        val filtered = if (filter == NetworkLogCategory.ALL) {
+        val filtered = if (filter == NetworkLogCategory.All) {
             entries.toList()
         } else {
             entries.filter { it.kind.category.mask and filter != 0 }
