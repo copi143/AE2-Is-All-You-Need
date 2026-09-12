@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "${mod_id}.refmap.json",
   "mixins": [
-    "forge.RegistryObjectMixin"
+    "forge.RegistryObjectMixin",
+    "gtceu.StaticFaceBakeryMixin"
   ],
   "client": [
     "client.BuiltInModelHooksAccessor",
