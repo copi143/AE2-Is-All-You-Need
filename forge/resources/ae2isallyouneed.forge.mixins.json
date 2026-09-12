@@ -4,7 +4,9 @@
   "package": "allyouneed.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "${mod_id}.refmap.json",
-  "mixins": [],
+  "mixins": [
+    "forge.RegistryObjectMixin"
+  ],
   "client": [
     "client.BuiltInModelHooksAccessor",
     "client.ModelBakeryMixin"
