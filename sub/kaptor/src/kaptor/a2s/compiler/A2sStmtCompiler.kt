@@ -121,20 +121,19 @@ class A2sStmtCompiler(
         // 朴素方案：逐分支 if (subject == c1 || subject == c2) { body; goto end }
         for (entry in branches) {
             val skipLabel = Label()
+            val bodyLabel = Label()
             var first = true
             for (cond in entry.conditions) {
                 if (!first) {
-                    // 逻辑或：前一个条件为真则直接执行 body
-                    ctx.mv.visitJumpInsn(IFNE, skipLabel)
+                    ctx.mv.visitJumpInsn(IFNE, bodyLabel)
                 }
                 first = false
                 exprCompiler.compile(ctx, stmt.subject)
                 exprCompiler.compile(ctx, cond)
                 ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "equals", "(Ljava/lang/Object;Ljava/lang/Object;)Z", false)
-                A2sTypeCodegen.unbox(ctx.mv, A2sBoolean)
             }
-            // 栈顶：最后一个条件的布尔值；若无命中则跳过 body
             ctx.mv.visitJumpInsn(IFEQ, skipLabel)
+            ctx.mv.visitLabel(bodyLabel)
             compileBlock(ctx, entry.body)
             ctx.mv.visitJumpInsn(GOTO, endLabel)
             ctx.mv.visitLabel(skipLabel)

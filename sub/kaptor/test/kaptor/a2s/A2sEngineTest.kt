@@ -7,6 +7,7 @@ import java.lang.invoke.MethodType
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class A2sEngineTest {
@@ -77,18 +78,26 @@ class A2sEngineTest {
     @Test
     fun `事件声明与 post`() {
         val engine = A2sEngine()
+        val box = mutableMapOf<String, Any?>("hit" to false)
         val ok = engine.loadScript(
             """
-            event MyEvent(val count: i32) {
-                fun doubled() = count * 2
+            event Trigger(val box: Any)
+            event MyEvent(val box: Any)
+
+            on Trigger { e ->
+                post MyEvent(e.box)
             }
 
-            on PlayerRightClick { e ->
-                post MyEvent(e.count)
+            on MyEvent { e ->
+                e.box.hit = true
             }
             """
         )
         assertTrue(ok)
+        engine.dispatchFromMap("Trigger", mapOf("box" to box))
+        assertEquals(false, box["hit"])
+        engine.flushQueue()
+        assertEquals(true, box["hit"])
     }
 
     // ── 桥接接口测试 ──
@@ -168,18 +177,20 @@ class A2sEngineTest {
             """
             event MeNetworkInsert(val player: Any, val slot: i32, val amount: i64)
 
-            before MeNetworkInsert { e ->
-                val _ = e.slot
+            on MeNetworkInsert { e ->
+                e.deny()
             }
             """
         )
         assertTrue(ok)
 
-        engine.dispatchFromMap("MeNetworkInsert", mapOf(
+        val event = engine.dispatchFromMap("MeNetworkInsert", mapOf(
             "player" to "testPlayer",
             "slot" to 5,
             "amount" to 100L,
         ))
+        assertNotNull(event)
+        assertTrue(event.isDenied)
     }
 
     @Test
@@ -404,5 +415,93 @@ class A2sEngineTest {
 
         engine.clearErrors()
         assertTrue(engine.errors.isEmpty())
+    }
+
+    @Test
+    fun `引擎路径 lambda 单参`() {
+        val engine = A2sEngine()
+        val ok = engine.loadScript(
+            """
+            event Flag(val n: i32)
+            on Flag { e ->
+                val f = { x: i32 ->
+                    if (x > 0_i32) {
+                        e.deny()
+                    }
+                }
+                f(e.n)
+            }
+            """
+        )
+        assertTrue(ok)
+        val event = engine.dispatchFromMap("Flag", mapOf("n" to 1))
+        assertNotNull(event)
+        assertTrue(event.isDenied)
+    }
+
+    @Test
+    fun `引擎路径 lambda 零参与双参`() {
+        val engine = A2sEngine()
+        val ok = engine.loadScript(
+            """
+            event Flag(val n: i32)
+            on Flag { e ->
+                val z = { -> e.deny() }
+                val f = { a: i32, b: i32 ->
+                    if (a == b) {
+                        z()
+                    }
+                }
+                f(e.n, e.n)
+            }
+            """
+        )
+        assertTrue(ok)
+        val event = engine.dispatchFromMap("Flag", mapOf("n" to 7))
+        assertNotNull(event)
+        assertTrue(event.isDenied)
+    }
+
+    @Test
+    fun `i64 事件字段 dispatchFromMap`() {
+        val engine = A2sEngine()
+        val ok = engine.loadScript(
+            """
+            event E(val n: i64)
+            on E { e ->
+                if (e.n > 50_i64) {
+                    e.deny()
+                }
+            }
+            """
+        )
+        assertTrue(ok)
+        val event = engine.dispatchFromMap("E", mapOf("n" to 100L))
+        assertNotNull(event)
+        assertTrue(event.isDenied)
+    }
+
+    @Test
+    fun `同名坏脚本加载失败后旧 handler 仍在`() {
+        val engine = A2sEngine()
+        assertTrue(
+            engine.loadScript(
+                """
+                event Flag(val n: i32)
+                on Flag { e -> e.deny() }
+                """,
+                "s",
+            )
+        )
+        val first = engine.dispatchFromMap("Flag", mapOf("n" to 1))
+        assertNotNull(first)
+        assertTrue(first.isDenied)
+
+        val ok = engine.loadScript("fun broken( = ==", "s")
+        assertFalse(ok)
+
+        val second = engine.dispatchFromMap("Flag", mapOf("n" to 1))
+        assertNotNull(second)
+        assertTrue(second.isDenied)
     }
 }

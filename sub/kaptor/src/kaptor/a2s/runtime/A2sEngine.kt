@@ -7,7 +7,6 @@ import kaptor.a2s.parser.A2sParser
 import kaptor.a2s.parser.A2sVisitor
 import org.antlr.v4.runtime.*
 import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -63,9 +62,17 @@ class A2sEngine {
     // ── 事件注册 ──
 
     /** 注册内置事件类型（由 common 桥接层提供的事件类）。 */
-    fun registerEventClass(eventType: String, clazz: Class<*>, constructor: MethodHandle) {
+    fun registerEventClass(
+        eventType: String,
+        clazz: Class<*>,
+        constructor: MethodHandle,
+        fieldOrder: List<String> = emptyList(),
+    ) {
         eventClasses[eventType] = clazz
         eventConstructors[eventType] = constructor
+        if (fieldOrder.isNotEmpty()) {
+            eventFieldOrders[eventType] = fieldOrder
+        }
     }
 
     // ── 错误管理 ──
@@ -98,56 +105,59 @@ class A2sEngine {
     fun loadScript(source: String, scriptName: String? = null): Boolean {
         val name = scriptName ?: "auto_${compiler.scriptCounter}"
         val snapshot = takeSnapshot()
-
-        // 同名碰撞：先卸载旧版本
-        if (scripts.containsKey(name)) {
+        val previous = scripts[name]
+        if (previous != null) {
             unloadScript(name)
         }
 
+        fun restorePrevious() {
+            rollbackSnapshot(snapshot)
+            if (previous != null) {
+                scripts[previous.name] = previous
+                scriptInstances[previous.scriptIndex] = previous.instance
+                for (h in previous.handlerEntries) {
+                    registerHandler(h)
+                }
+            }
+        }
+
         return try {
-            val ir = parse(source, name) ?: return false
+            val ir = parse(source, name)
+            if (ir == null) {
+                restorePrevious()
+                return false
+            }
             val compiled = compiler.compile(ir)
 
-            // 定义事件类（同名则跳过，保持已有类）
             for ((eventType, bytes) in compiled.eventClasses) {
-                if (eventClasses.containsKey(eventType)) continue
-                val defined = hiddenLoader.define(bytes)
-                eventClasses[eventType] = defined.clazz
                 val eventDecl = ir.events.first { it.name == eventType }
-                eventConstructors[eventType] = hiddenLoader.findConstructor(
-                    defined.clazz, defined.lookup,
-                    eventDecl.params.map { boxedClass(it.type) }
-                )
-                eventFieldOrders[eventType] = eventDecl.params.map { it.name }
+                if (!eventClasses.containsKey(eventType)) {
+                    val defined = hiddenLoader.define(bytes)
+                    eventClasses[eventType] = defined.clazz
+                    eventConstructors[eventType] = hiddenLoader.findConstructor(
+                        defined.clazz, defined.lookup,
+                        eventDecl.params.map { boxedClass(it.type) }
+                    )
+                }
+                if (!eventFieldOrders.containsKey(eventType)) {
+                    eventFieldOrders[eventType] = eventDecl.params.map { it.name }
+                }
             }
 
-            // 定义 lambda 隐藏类
-            val lambdaConstructors = mutableMapOf<String, MethodHandle>()
             for ((lambdaName, bytes) in compiled.lambdaClasses) {
                 val defined = hiddenLoader.define(bytes)
-                lambdaConstructors[lambdaName] = hiddenLoader.findConstructor(
-                    defined.clazz, defined.lookup, listOf(Object::class.java)
-                )
+                val ctorParams = defined.clazz.declaredConstructors.first().parameterTypes.toList()
+                val ctor = hiddenLoader.findConstructor(defined.clazz, defined.lookup, ctorParams)
+                A2sRuntime.registerLambdaCtor(lambdaName) { scriptObj, captures ->
+                    ctor.invokeWithArguments(scriptObj, *captures)
+                }
             }
 
-            // 定义脚本类并实例化
             val scriptDefined = hiddenLoader.define(compiled.scriptClass)
             val scriptClass = scriptDefined.clazz
             val ctor = hiddenLoader.findConstructor(scriptClass, scriptDefined.lookup, emptyList())
             val instance = ctor.invoke()
 
-            // 绑定 lambda 到脚本字段
-            for ((lambdaName, _) in compiled.lambdaClasses) {
-                val ctorMh = lambdaConstructors[lambdaName] ?: continue
-                val lambdaInstance = ctorMh.invoke(instance)
-                try {
-                    val field = scriptClass.getDeclaredField(lambdaName)
-                    field.isAccessible = true
-                    field.set(instance, lambdaInstance)
-                } catch (_: NoSuchFieldException) { }
-            }
-
-            // 注册 handler
             val handlerEntries = mutableListOf<HandlerEntry>()
             for (h in compiled.handlers) {
                 val mh = hiddenLoader.findVirtual(
@@ -163,7 +173,7 @@ class A2sEngine {
             scripts[name] = ScriptEntry(name, compiled.scriptIndex, instance, handlerEntries)
             true
         } catch (e: Exception) {
-            rollbackSnapshot(snapshot)
+            restorePrevious()
             recordError(name, A2sError.Phase.COMPILE, e.message ?: e.toString(), e)
             false
         }
@@ -183,9 +193,8 @@ class A2sEngine {
 
     // ── 脚本重载 ──
 
-    /** 重载脚本：卸载旧版本，加载新源码。 */
+    /** 重载脚本：卸载旧版本，加载新源码。失败时恢复旧脚本。 */
     fun reloadScript(name: String, source: String): Boolean {
-        unloadScript(name)
         return loadScript(source, name)
     }
 
@@ -221,19 +230,19 @@ class A2sEngine {
      * 便捷分发：从字段映射构造事件并分发。
      * 使用脚本定义的事件类构造器创建实例，保证 handler 内字段访问成功。
      */
-    fun dispatchFromMap(eventType: String, data: Map<String, Any?>) {
-        val ctor = eventConstructors[eventType] ?: return
-        val fieldOrder = eventFieldOrders[eventType] ?: return
+    fun dispatchFromMap(eventType: String, data: Map<String, Any?>): A2sEventObject? {
+        val ctor = eventConstructors[eventType] ?: return null
+        val fieldOrder = eventFieldOrders[eventType] ?: return null
         val args = fieldOrder.map { data[it] }
         val event = ctor.invokeWithArguments(args) as A2sEventObject
         dispatch(eventType, event)
+        return event
     }
 
     /** flush post 队列，延迟 1 tick 分发。由游戏 tick 调用。 */
     fun flushQueue() {
         for (event in eventQueue.drain()) {
-            val eventType = event.javaClass.simpleName.removePrefix("A2sEvent_")
-            dispatch(eventType, event)
+            dispatch(eventTypeName(event.javaClass), event)
         }
     }
 
@@ -320,19 +329,23 @@ class A2sEngine {
     /** 获取事件类型的字段顺序（供 dispatchFromMap 使用）。 */
     fun eventFieldOrder(eventType: String): List<String>? = eventFieldOrders[eventType]
 
-    fun eventTypeName(clazz: Class<*>): String =
-        clazz.simpleName.removePrefix("A2sEvent_")
+    fun eventTypeName(clazz: Class<*>): String {
+        eventClasses.entries.firstOrNull { it.value == clazz }?.key?.let { return it }
+        val binary = clazz.name.substringBefore('/')
+        val simple = binary.substringAfterLast('.')
+        return simple.removePrefix("A2sEvent_")
+    }
 
     private fun boxedClass(type: kaptor.a2s.ir.A2sType): Class<*> = when (type) {
-        kaptor.a2s.ir.A2sI32, kaptor.a2s.ir.A2sU32 -> Integer::class.java
-        kaptor.a2s.ir.A2sI64, kaptor.a2s.ir.A2sU64 -> Long::class.java
-        kaptor.a2s.ir.A2sF32 -> Float::class.java
-        kaptor.a2s.ir.A2sF64 -> Double::class.java
-        kaptor.a2s.ir.A2sBoolean -> Boolean::class.java
+        kaptor.a2s.ir.A2sI32, kaptor.a2s.ir.A2sU32 -> Int::class.javaObjectType
+        kaptor.a2s.ir.A2sI64, kaptor.a2s.ir.A2sU64 -> Long::class.javaObjectType
+        kaptor.a2s.ir.A2sF32 -> Float::class.javaObjectType
+        kaptor.a2s.ir.A2sF64 -> Double::class.javaObjectType
+        kaptor.a2s.ir.A2sBoolean -> Boolean::class.javaObjectType
         kaptor.a2s.ir.A2sString -> String::class.java
         kaptor.a2s.ir.A2sBigInt -> java.math.BigInteger::class.java
         kaptor.a2s.ir.A2sRational -> Rational::class.java
-        else -> Object::class.java
+        else -> Any::class.java
     }
 
     companion object {

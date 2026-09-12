@@ -98,6 +98,17 @@ object A2sTypeCodegen {
 
     private val PRIMITIVE_TYPES = setOf(A2sI32, A2sI64, A2sU32, A2sU64, A2sF32, A2sF64, A2sBoolean)
 
+    fun unwrapNullable(type: A2sType): A2sType {
+        var t = type
+        while (t is A2sNullableType) t = t.inner
+        return t
+    }
+
+    fun isNumeric(type: A2sType): Boolean = when (unwrapNullable(type)) {
+        A2sI32, A2sI64, A2sU32, A2sU64, A2sF32, A2sF64, A2sBigInt, A2sRational -> true
+        else -> false
+    }
+
     /** 数值二元运算的提升类型 */
     fun promoteNumeric(a: A2sType, b: A2sType): A2sType = when {
         a == A2sRational || b == A2sRational -> A2sRational

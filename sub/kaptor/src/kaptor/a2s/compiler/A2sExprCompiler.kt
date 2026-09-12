@@ -269,6 +269,17 @@ class A2sExprCompiler(private val symbols: A2sSymbolTable) {
     private fun compileComparison(ctx: A2sCompileContext, expr: A2sBinary, op: String) {
         val lt = symbols.inferType(expr.left, ctx.localTypes())
         val rt = symbols.inferType(expr.right, ctx.localTypes())
+        if ((op == "==" || op == "!=") && (!A2sTypeCodegen.isNumeric(lt) || !A2sTypeCodegen.isNumeric(rt))) {
+            compile(ctx, expr.left)
+            compile(ctx, expr.right)
+            ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "equals", "(Ljava/lang/Object;Ljava/lang/Object;)Z", false)
+            if (op == "!=") {
+                ctx.mv.visitInsn(ICONST_1)
+                ctx.mv.visitInsn(IXOR)
+            }
+            A2sTypeCodegen.box(ctx.mv, A2sBoolean)
+            return
+        }
         val promoted = A2sTypeCodegen.promoteNumeric(lt, rt)
 
         // 编译右操作数存临时槽，再编译左操作数

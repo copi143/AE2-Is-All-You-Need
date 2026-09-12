@@ -88,11 +88,13 @@ object A2sRuntime {
 
     @JvmStatic
     fun invokeMethod(receiver: Any?, methodName: String, args: Array<Any?>): Any? {
+        if (receiver is A2sLambdaFn && methodName == "invoke") {
+            return receiver.invoke(*args)
+        }
         val method = receiver?.javaClass?.methods?.find {
             it.name == methodName && it.parameterCount == args.size
         } ?: return null
-        // 当方法签名恰好是 invoke(Object[]) 时，直接传数组（不展开）
-        if (method.parameterCount == 1 && method.parameterTypes[0] == Array::class.java) {
+        if (method.parameterCount == 1 && method.parameterTypes[0].isArray) {
             return method.invoke(receiver, args)
         }
         return method.invoke(receiver, *args)

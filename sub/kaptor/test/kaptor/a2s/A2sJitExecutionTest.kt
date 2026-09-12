@@ -322,4 +322,80 @@ class A2sJitExecutionTest {
         )
         assertEquals(0L, r)
     }
+
+    @Test
+    fun `when 单条件`() {
+        val r = invokeFunction(
+            """
+            fun test(x: i64): String {
+                when (x) {
+                    1_i64 -> return "one"
+                    else -> return "other"
+                }
+            }
+            """, "test", 1L
+        )
+        assertEquals("one", r)
+    }
+
+    @Test
+    fun `when 多条件 OR`() {
+        val r = invokeFunction(
+            """
+            fun test(x: i64): String {
+                when (x) {
+                    1_i64, 2_i64 -> return "small"
+                    else -> return "other"
+                }
+            }
+            """, "test", 2L
+        )
+        assertEquals("small", r)
+    }
+
+    @Test
+    fun `字符串相等`() {
+        val r = invokeFunction(
+            """fun test(a: String): Boolean = a == "hello" """,
+            "test",
+            "hello",
+        )
+        assertEquals(true, r)
+    }
+
+    @Test
+    fun `字符串不等`() {
+        val r = invokeFunction(
+            """fun test(a: String): Boolean = a != "hello" """,
+            "test",
+            "world",
+        )
+        assertEquals(true, r)
+    }
+
+    @Test
+    fun `零参 lambda`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                val f = { -> 42_i64 }
+                return f()
+            }
+            """, "test"
+        )
+        assertEquals(42L, r)
+    }
+
+    @Test
+    fun `双参 lambda`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                val f = { a: i64, b: i64 -> a + b }
+                return f(40_i64, 2_i64)
+            }
+            """, "test"
+        )
+        assertEquals(42L, r)
+    }
 }
