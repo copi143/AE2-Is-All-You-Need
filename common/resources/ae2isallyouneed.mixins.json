@@ -44,6 +44,7 @@
     "gtceu.BlockPatternGroupedMixin",
     "gtceu.MultiblockMachineDefinitionGroupMixin",
     "ldlib.PersistedParserMixin",
+    "minecraft.BlockElementFaceMixin",
     "minecraft.ChunkMapAccessor",
     "minecraft.CompoundTagAccessor",
     "minecraft.CompoundTagMixin",
