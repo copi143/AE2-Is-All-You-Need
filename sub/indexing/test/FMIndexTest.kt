@@ -50,6 +50,36 @@ class SuffixArrayTest {
         assertEquals(intArrayOf(2, 0, 1).toList(), SuffixArray.build(intArrayOf(1, 2, 0)).toList())
         assertTrue(intArrayOf(2, 1, 0).contentEquals(SuffixArray.build(intArrayOf(1, 1, 0))))
     }
+
+    @Test
+    fun byteBuildMatchesIntBuild() {
+        val rng = Random(54321)
+        repeat(300) {
+            val len = 2 + rng.nextInt(40)
+            val ints = IntArray(len)
+            for (i in 0 until len - 1) ints[i] = 1 + rng.nextInt(254)
+            ints[len - 1] = 0
+            val bytes = ByteArray(len) { ints[it].toByte() }
+            assertTrue(
+                SuffixArray.build(ints).contentEquals(SuffixArray.build(bytes)),
+                "s=${ints.toList()}",
+            )
+        }
+    }
+
+    @Test
+    fun byteBuildMatchesBruteForce() {
+        val rng = Random(999)
+        repeat(100) {
+            val len = 2 + rng.nextInt(30)
+            val bytes = ByteArray(len)
+            for (i in 0 until len - 1) bytes[i] = (1 + rng.nextInt(254)).toByte()
+            bytes[len - 1] = 0
+            val ints = IntArray(len) { bytes[it].toInt() and 0xFF }
+            val expected = bruteForce(ints)
+            assertTrue(SuffixArray.build(bytes).contentEquals(expected))
+        }
+    }
 }
 
 class WaveletMatrixTest {
@@ -88,13 +118,44 @@ class WaveletMatrixTest {
             }
         }
     }
+
+    @Test
+    fun byteBuildMatchesIntBuild() {
+        val rng = Random(4242)
+        repeat(200) {
+            val n = rng.nextInt(1, 200)
+            val sigma = rng.nextInt(1, 255)
+            val ints = IntArray(n) { rng.nextInt(sigma) }
+            val bytes = ByteArray(n) { ints[it].toByte() }
+            val bits = 32 - Integer.numberOfLeadingZeros(maxOf(sigma - 1, 1))
+            val wmInt = WaveletMatrix.build(ints, bits)
+            val wmByte = WaveletMatrix.build(bytes, bits)
+            for (v in 0 until sigma) {
+                for (i in 0..n) {
+                    assertEquals(wmInt.rank(v, i), wmByte.rank(v, i), "v=$v i=$i")
+                }
+            }
+            for (i in 0 until n) {
+                assertEquals(wmInt.access(i), wmByte.access(i), "i=$i")
+            }
+        }
+    }
 }
 
 class FMIndexTest {
 
-    private val codecs = listOf(Utf8Codec, Utf16Codec, Utf32Codec)
+    private val codecs: List<Codec> = listOf(Utf8Codec, Utf16Codec, Utf32Codec)
 
     private val alphabet = "abc XYZ123中文𠀀😀🚀"
+
+    /** 测试用统一视图：utf8 字节按无符号转 Int，保证暴力对照与 Match 偏移（字节单位）一致。 */
+    private fun encodeForBrute(codec: Codec, s: String): IntArray = when (codec) {
+        is ByteCodec -> {
+            val b = codec.encodeBytes(s)
+            IntArray(b.size) { b[it].toInt() and 0xFF }
+        }
+        is TextCodec -> codec.encode(s)
+    }
 
     private fun randomString(rng: Random, maxLen: Int): String {
         val len = rng.nextInt(maxLen + 1)
@@ -143,10 +204,10 @@ class FMIndexTest {
             repeat(40) {
                 val texts = (0 until rng.nextInt(1, 12)).map { randomString(rng, 6) }
                 val index = FMIndex.build(texts, codec)
-                val encoded = texts.map { codec.encode(it) }
+                val encoded = texts.map { encodeForBrute(codec, it) }
                 repeat(20) {
                     val pattern = randomString(rng, 5)
-                    val pat = codec.encode(pattern)
+                    val pat = encodeForBrute(codec, pattern)
                     if (pat.isEmpty()) {
                         assertTrue(index.search(pattern).isEmpty())
                         assertEquals(0, index.count(pattern))
@@ -167,10 +228,10 @@ class FMIndexTest {
             repeat(40) {
                 val texts = (0 until rng.nextInt(1, 12)).map { randomString(rng, 6) }
                 val index = FMIndex.build(texts, codec)
-                val encoded = texts.map { codec.encode(it) }
+                val encoded = texts.map { encodeForBrute(codec, it) }
                 repeat(15) {
                     val p = randomString(rng, 5)
-                    val pp = codec.encode(p)
+                    val pp = encodeForBrute(codec, p)
                     if (pp.isNotEmpty()) {
                         assertSameMatches(brutePrefix(encoded, pp), index.searchPrefix(p))
                         assertSameMatches(bruteSuffix(encoded, pp), index.searchSuffix(p))
@@ -208,9 +269,9 @@ class FMIndexTest {
         for (codec in codecs) {
             val texts = (0 until 10).map { randomString(rng, 8) }
             val index = FMIndex.build(texts, codec)
-            val encoded = texts.map { codec.encode(it) }
+            val encoded = texts.map { encodeForBrute(codec, it) }
             for (pattern in listOf("a", "b", "中", "😀", "abc")) {
-                val pat = codec.encode(pattern)
+                val pat = encodeForBrute(codec, pattern)
                 if (pat.isEmpty()) continue
                 for (m in index.search(pattern)) {
                     assertTrue(pat.contentEquals(encoded[m.document].copyOfRange(m.start, m.end)), "codec=$codec pattern=$pattern m=$m")
@@ -246,5 +307,39 @@ class FMIndexTest {
         val idx32 = FMIndex.build(texts, Utf32Codec)
         assertSameMatches(listOf(Match(0, 2, 4), Match(1, 0, 2), Match(3, 6, 8)), idx32.search("世界"))
         assertSameMatches(listOf(Match(2, 0, 1)), idx32.search("😀"))
+    }
+
+    @Test
+    fun utf8ReservesSentinels() {
+        val bytes = Utf8Codec.encodeBytes("hello 世界😀")
+        for (b in bytes) {
+            val v = b.toInt() and 0xFF
+            assertFalse(v == 0 || v == 255, "v=$v")
+        }
+        assertEquals(255, Utf8Codec.separator)
+    }
+
+    @Test
+    fun utf8RejectsNul() {
+        try {
+            Utf8Codec.encodeBytes("a\u0000b")
+            assertFalse(true, "含 U+0000 应抛异常")
+        } catch (e: IllegalArgumentException) {
+            // 预期
+        }
+        try {
+            FMIndex.build(listOf("ok", "a\u0000b"))
+            assertFalse(true, "构建含 U+0000 应抛异常")
+        } catch (e: IllegalArgumentException) {
+            // 预期
+        }
+    }
+
+    @Test
+    fun utf8ByteOffsets() {
+        // "世界" utf8 各 3 字节；"hello " 6 字节
+        val texts = listOf("你好世界", "hello 世界")
+        val index = FMIndex.build(texts, Utf8Codec)
+        assertSameMatches(listOf(Match(0, 6, 12), Match(1, 6, 12)), index.search("世界"))
     }
 }

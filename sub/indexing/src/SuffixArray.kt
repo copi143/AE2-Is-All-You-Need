@@ -3,8 +3,11 @@ package allyouneed.indexing
 /**
  * 后缀数组构造（SA-IS，诱导排序）。
  *
- * 约定：输入 `s` 的最后一个元素必须是最小且唯一的终结符（在 [FMIndex] 中恒为 0），
- * 其余元素取值 `>= 0`。返回的后缀数组长度为 `s.size`，按字典序排列后缀起始位置。
+ * 约定：输入的最后一个元素必须是最小且唯一的终结符（在 [FMIndex] 中恒为 0），
+ * 其余元素取值 `>= 0`。返回的后缀数组长度为输入长度，按字典序排列后缀起始位置。
+ *
+ * [ByteArray] 重载把字节按无符号（`and 0xFF`）看待，与 8bit 直存的 utf8 管道配套，
+ * 避免构建期先拷贝一份 `IntArray(4n)`。核心诱导排序逻辑由两套入口共享。
  */
 object SuffixArray {
 
@@ -13,21 +16,30 @@ object SuffixArray {
         if (s.size == 1) return intArrayOf(0)
         var k = 0
         for (v in s) if (v > k) k = v
-        return saIs(s, k)
+        return saIs(s.size, s::get, k)
+    }
+
+    fun build(s: ByteArray): IntArray {
+        if (s.isEmpty()) return IntArray(0)
+        if (s.size == 1) return intArrayOf(0)
+        var k = 0
+        for (b in s) {
+            val v = b.toInt() and 0xFF
+            if (v > k) k = v
+        }
+        return saIs(s.size, { i -> s[i].toInt() and 0xFF }, k)
     }
 
     private fun isLms(t: BooleanArray, i: Int): Boolean = i > 0 && t[i] && !t[i - 1]
 
-    private fun saIs(s: IntArray, k: Int): IntArray {
-        val n = s.size
-
+    private fun saIs(n: Int, get: (Int) -> Int, k: Int): IntArray {
         // 类型：true = S 型，false = L 型
         val t = BooleanArray(n)
         t[n - 1] = true
         for (i in n - 2 downTo 0) {
             t[i] = when {
-                s[i] < s[i + 1] -> true
-                s[i] > s[i + 1] -> false
+                get(i) < get(i + 1) -> true
+                get(i) > get(i + 1) -> false
                 else -> t[i + 1]
             }
         }
@@ -40,7 +52,7 @@ object SuffixArray {
         for (i in 1 until n) if (isLms(t, i)) lms[p++] = i
 
         // 首次诱导排序，得到按 LMS 子串排序的（粗略）后缀数组
-        val sa = induce(s, t, lms, k)
+        val sa = induce(n, get, t, lms, k)
 
         // 计算每个 LMS 位置的子串终点
         val lmsEnd = IntArray(n)
@@ -59,7 +71,7 @@ object SuffixArray {
         for (i in 0 until n) {
             val cur = sa[i]
             if (!isLms(t, cur)) continue
-            if (prev == -1 || !lmsEqual(s, lmsEnd, prev, cur)) nameCnt++
+            if (prev == -1 || !lmsEqual(get, lmsEnd, prev, cur)) nameCnt++
             name[cur] = nameCnt
             prev = cur
         }
@@ -74,28 +86,27 @@ object SuffixArray {
             val reduced = IntArray(m + 1)
             for (j in 0 until m) reduced[j] = name[lms[j]]
             reduced[m] = 0
-            val saR = saIs(reduced, nameCnt)
+            val saR = saIs(reduced.size, reduced::get, nameCnt)
             lmsSorted = IntArray(m)
             for (i in 1..m) lmsSorted[i - 1] = lms[saR[i]]
         }
 
         // 最终诱导排序
-        return induce(s, t, lmsSorted, k)
+        return induce(n, get, t, lmsSorted, k)
     }
 
-    private fun lmsEqual(s: IntArray, lmsEnd: IntArray, a: Int, b: Int): Boolean {
+    private fun lmsEqual(get: (Int) -> Int, lmsEnd: IntArray, a: Int, b: Int): Boolean {
         if (a == b) return true
         val la = lmsEnd[a] - a + 1
         val lb = lmsEnd[b] - b + 1
         if (la != lb) return false
-        for (k in 0 until la) if (s[a + k] != s[b + k]) return false
+        for (k in 0 until la) if (get(a + k) != get(b + k)) return false
         return true
     }
 
-    private fun induce(s: IntArray, t: BooleanArray, lms: IntArray, k: Int): IntArray {
-        val n = s.size
+    private fun induce(n: Int, get: (Int) -> Int, t: BooleanArray, lms: IntArray, k: Int): IntArray {
         val cnt = IntArray(k + 1)
-        for (c in s) cnt[c]++
+        for (i in 0 until n) cnt[get(i)]++
         val start = IntArray(k + 1)
         val end = IntArray(k + 1)
         var sum = 0
@@ -110,7 +121,7 @@ object SuffixArray {
         // 把 LMS 后缀放入各桶的右端（逆序放置）
         val endCur = end.clone()
         for (i in lms.size - 1 downTo 0) {
-            val c = s[lms[i]]
+            val c = get(lms[i])
             sa[--endCur[c]] = lms[i]
         }
 
@@ -121,7 +132,7 @@ object SuffixArray {
             if (j < 0 || j == 0) continue
             val jj = j - 1
             if (!t[jj]) {
-                val c = s[jj]
+                val c = get(jj)
                 sa[startCur[c]++] = jj
             }
         }
@@ -133,7 +144,7 @@ object SuffixArray {
             if (j < 0 || j == 0) continue
             val jj = j - 1
             if (t[jj]) {
-                val c = s[jj]
+                val c = get(jj)
                 sa[--endCur2[c]] = jj
             }
         }

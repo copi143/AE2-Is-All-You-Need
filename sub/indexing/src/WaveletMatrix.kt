@@ -65,5 +65,36 @@ class WaveletMatrix internal constructor(
             @Suppress("UNCHECKED_CAST")
             return WaveletMatrix(levels as Array<BitVector>, zeros)
         }
+
+        /**
+         * 字节版构建：取值按无符号（`and 0xFF`）看待，中间缓冲为 `ByteArray(1n)`，
+         * 与 8bit 直存的 utf8 管道配套。查询语义与 [IntArray] 版完全一致。
+         */
+        fun build(values: ByteArray, bits: Int): WaveletMatrix {
+            require(bits >= 1) { "bits 必须 >= 1" }
+            val n = values.size
+            val levels = arrayOfNulls<BitVector>(bits)
+            val zeros = IntArray(bits)
+            var cur = values
+            for (level in bits - 1 downTo 0) {
+                val builder = BitVector.Builder(n)
+                var zc = 0
+                for (idx in 0 until n) {
+                    if ((((cur[idx].toInt() and 0xFF) ushr level) and 1) != 0) builder.set(idx) else zc++
+                }
+                zeros[level] = zc
+                val next = ByteArray(n)
+                var zi = 0
+                var oi = zc
+                for (idx in 0 until n) {
+                    val v = cur[idx]
+                    if ((((v.toInt() and 0xFF) ushr level) and 1) == 0) next[zi++] = v else next[oi++] = v
+                }
+                levels[level] = builder.build()
+                cur = next
+            }
+            @Suppress("UNCHECKED_CAST")
+            return WaveletMatrix(levels as Array<BitVector>, zeros)
+        }
     }
 }
