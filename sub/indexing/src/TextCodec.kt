@@ -3,71 +3,53 @@ package allyouneed.indexing
 /**
  * 编码器顶层类型：查询与构建的统一入口。
  *
- * 维护说明：`Int` 路径与字节路径故意拆成两个子接口，而不是共用
- * `encode(): IntArray` 再内部转字节——后者会有两套真相源（改一处忘另一处）
- * 且构建期仍要先分配 `IntArray(4n)`，省不掉峰值。索引纯内存、不落盘，
- * 所以允许 breaking：`utf8` 只保留字节版，不再提供 `IntArray` 版。
- */
-sealed interface Codec {
-    val name: String
-}
-
-/** 以符号（[Int]）为单元的编码器：utf16 / utf32。 */
-interface TextCodec : Codec {
-    /** 分隔符符号，恒等于最大有效符号 + 1。 */
-    val separator: Int
-
-    /** 编码后符号取值范围为 `[0, separator)`。 */
-    fun encode(text: String): IntArray
-}
-
-/**
- * 以字节为单元的编码器：目前仅 utf8。
+ * 约定（所有路径统一，载荷均为原始值存储，不做 `+2` 重映射）：
+ * - `0` 为唯一最小终结符，只出现在拼接文本末尾；编码器保证输出不含 `0`；
+ * - 分隔符为二进制全 `1`（`Byte` 为 `0xFF`/`-1`，`Short` 为 `0xFFFF`/`-1`，
+ *   `Int` 为 `0xFFFFFFFF`/`-1`），只出现在文档边界；
+ * - 查询模式只含载荷，绝不会命中分隔符/终结符，故不会跨文档匹配。
  *
- * 约定（8bit 直存，无 `+2` 重映射）：
- * - `0x00` 为唯一最小终结符，只出现在拼接文本末尾；
- * - `0xFF` 为文档分隔符；
- * - 有效载荷为 `0x01~0xFE`。合法 UTF-8 永不产生 `0xFF`（最大到 `0xF4`），
- *   `0x00` 只来自 `U+0000`，因此含 `'\u0000'` 的文本直接抛异常。
- * 全字母表恰好 256 个符号，[WaveletMatrix] 只需 8 层。
+ * 冲突说明：
+ * - utf8：合法 UTF-8 永不产生 `0xFF`（最大到 `0xF4`），`0x00` 只来自 `U+0000`，
+ *   因此含 `U+0000` 的文本直接抛异常；
+ * - utf16：`U+FFFF`（`0xFFFF`）与分隔符重合，与 `U+0000` 同样直接抛异常；
+ * - utf32：码点范围 `1~0x10FFFF` 永不等于 `-1`，只需拒绝 `U+0000`。
+ * 全字母表分别为 256 / 65536 个符号，[WaveletMatrix] 只需 8 / 16 层。
  */
-interface ByteCodec : Codec {
-    /** 分隔符字节（无符号值），utf8 恒为 255。 */
-    val separator: Int
+sealed interface Codec<T, U> {
+    val name: String
+    val alphabetSize: kotlin.Int
+    val separator: T
+    fun encode(text: String): U
 
-    /** 编码为原始 UTF-8 字节，含 `U+0000` 时抛 [IllegalArgumentException]。 */
-    fun encodeBytes(text: String): ByteArray
-}
+    interface Byte : Codec<kotlin.Byte, ByteArray>
+    interface Short : Codec<kotlin.Short, ShortArray>
+    interface Int : Codec<kotlin.Int, IntArray>
 
-object Utf8Codec : ByteCodec {
-    override val name = "utf8"
-    override val separator = 255
-
-    const val TERMINATOR = 0
-
-    override fun encodeBytes(text: String): ByteArray {
-        val bytes = text.toByteArray(Charsets.UTF_8)
-        for (b in bytes) {
-            if (b == 0.toByte()) {
-                throw IllegalArgumentException("utf8 文本含 U+0000，字节 0x00 被保留为终结符")
-            }
+    object UTF8 : Byte {
+        override val name = "utf8"
+        override val alphabetSize: kotlin.Int = 256
+        override val separator: kotlin.Byte = -1
+        override fun encode(text: String): ByteArray = text.toByteArray(Charsets.UTF_8).also {
+            it.any { b -> b == 0.toByte() } && throw IllegalArgumentException("文本包含 NUL，字节 0x00 被保留为终结符")
         }
-        return bytes
     }
-}
 
-object Utf16Codec : TextCodec {
-    override val name = "utf16"
-    override val separator = 0x10000
-
-    override fun encode(text: String): IntArray {
-        return IntArray(text.length) { text[it].code }
+    object UTF16 : Short {
+        override val name = "utf16"
+        override val alphabetSize: kotlin.Int = 65536
+        override val separator: kotlin.Short = -1
+        override fun encode(text: String): ShortArray = ShortArray(text.length) { i -> text[i].code.toShort() }.also {
+            it.any { s -> s == 0.toShort() } && throw IllegalArgumentException("文本包含 NUL，字节 0x00 被保留为终结符")
+        }
     }
-}
 
-object Utf32Codec : TextCodec {
-    override val name = "utf32"
-    override val separator = 0x110000
-
-    override fun encode(text: String): IntArray = text.codePoints().toArray()
+    object UTF32 : Int {
+        override val name = "utf32"
+        override val alphabetSize: kotlin.Int = 0x110001
+        override val separator: kotlin.Int = -1
+        override fun encode(text: String): IntArray = text.codePoints().toArray().also {
+            it.any { i -> i == 0 } && throw IllegalArgumentException("文本包含 NUL，字节 0x00 被保留为终结符")
+        }
+    }
 }

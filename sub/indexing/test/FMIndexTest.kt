@@ -39,7 +39,10 @@ class SuffixArrayTest {
             val s = randomText(len, rng.nextInt(1, 8), rng)
             val expected = bruteForce(s)
             val actual = SuffixArray.build(s)
-            assertTrue(expected.contentEquals(actual), "len=$len s=${s.toList()} exp=${expected.toList()} act=${actual.toList()}")
+            assertTrue(
+                expected.contentEquals(actual),
+                "len=$len s=${s.toList()} exp=${expected.toList()} act=${actual.toList()}"
+            )
         }
     }
 
@@ -144,17 +147,23 @@ class WaveletMatrixTest {
 
 class FMIndexTest {
 
-    private val codecs: List<Codec> = listOf(Utf8Codec, Utf16Codec, Utf32Codec)
+    private val codecs: List<Codec<*, *>> = listOf(Codec.UTF8, Codec.UTF16, Codec.UTF32)
 
     private val alphabet = "abc XYZ123中文𠀀😀🚀"
 
-    /** 测试用统一视图：utf8 字节按无符号转 Int，保证暴力对照与 Match 偏移（字节单位）一致。 */
-    private fun encodeForBrute(codec: Codec, s: String): IntArray = when (codec) {
-        is ByteCodec -> {
-            val b = codec.encodeBytes(s)
+    /** 测试用统一视图：字节/短整按无符号转 Int，保证暴力对照与 Match 偏移一致。 */
+    private fun encodeForBrute(codec: Codec<*, *>, s: String): IntArray = when (codec) {
+        is Codec.Byte -> {
+            val b = codec.encode(s)
             IntArray(b.size) { b[it].toInt() and 0xFF }
         }
-        is TextCodec -> codec.encode(s)
+
+        is Codec.Short -> {
+            val v = codec.encode(s)
+            IntArray(v.size) { v[it].toInt() and 0xFFFF }
+        }
+
+        is Codec.Int -> codec.encode(s)
     }
 
     private fun randomString(rng: Random, maxLen: Int): String {
@@ -168,30 +177,51 @@ class FMIndexTest {
         return sb.toString()
     }
 
-    private fun bruteSearch(encoded: List<IntArray>, pattern: IntArray): List<Match> {
-        val out = mutableListOf<Match>()
+    private fun bruteSearch(encoded: List<IntArray>, pattern: IntArray): List<BaseMatch> {
+        val out = mutableListOf<BaseMatch>()
         for ((doc, text) in encoded.withIndex()) {
             for (i in 0..text.size - pattern.size) {
                 var ok = true
-                for (j in pattern.indices) if (text[i + j] != pattern[j]) { ok = false; break }
-                if (ok) out.add(Match(doc, i, i + pattern.size))
+                for (j in pattern.indices) if (text[i + j] != pattern[j]) {
+                    ok = false; break
+                }
+                if (ok) out.add(BaseMatch(doc, i, i + pattern.size))
             }
         }
         return out
     }
 
-    private fun brutePrefix(encoded: List<IntArray>, prefix: IntArray): List<Match> =
+    private fun brutePrefix(encoded: List<IntArray>, prefix: IntArray): List<BaseMatch> =
         encoded.mapIndexedNotNull { doc, t ->
-            if (t.size >= prefix.size && prefix.indices.all { t[it] == prefix[it] }) Match(doc, 0, prefix.size) else null
+            if (t.size >= prefix.size && prefix.indices.all { t[it] == prefix[it] }) BaseMatch(
+                doc, 0, prefix.size
+            ) else null
         }
 
-    private fun bruteSuffix(encoded: List<IntArray>, suffix: IntArray): List<Match> =
+    private fun bruteSuffix(encoded: List<IntArray>, suffix: IntArray): List<BaseMatch> =
         encoded.mapIndexedNotNull { doc, t ->
-            if (t.size >= suffix.size && suffix.indices.all { t[t.size - suffix.size + it] == suffix[it] })
-                Match(doc, t.size - suffix.size, t.size) else null
+            if (t.size >= suffix.size && suffix.indices.all { t[t.size - suffix.size + it] == suffix[it] }) BaseMatch(
+                doc, t.size - suffix.size, t.size
+            ) else null
         }
 
+    @JvmName("assertSameMatches$1")
     private fun assertSameMatches(expected: List<Match>, actual: List<Match>) {
+        assertSameMatches(expected.map { it.toBaseMatch() }, actual.map { it.toBaseMatch() })
+    }
+
+    @JvmName("assertSameMatches$2")
+    private fun assertSameMatches(expected: List<BaseMatch>, actual: List<Match>) {
+        assertSameMatches(expected, actual.map { it.toBaseMatch() })
+    }
+
+    @JvmName("assertSameMatches$3")
+    private fun assertSameMatches(expected: List<Match>, actual: List<BaseMatch>) {
+        assertSameMatches(expected.map { it.toBaseMatch() }, actual)
+    }
+
+    @JvmName("assertSameMatches$4")
+    private fun assertSameMatches(expected: List<BaseMatch>, actual: List<BaseMatch>) {
         val e = expected.sortedWith(compareBy({ it.document }, { it.start }))
         val a = actual.sortedWith(compareBy({ it.document }, { it.start }))
         assertEquals(e, a)
@@ -246,7 +276,7 @@ class FMIndexTest {
         val texts = listOf("ab", "bc", "abc", "b")
         for (codec in codecs) {
             val index = FMIndex.build(texts, codec)
-            assertSameMatches(listOf(Match(2, 0, 3)), index.search("abc"))
+            assertSameMatches(listOf(BaseMatch(2, 0, 3)), index.search("abc"))
             assertEquals(1, index.count("abc"))
         }
     }
@@ -255,12 +285,12 @@ class FMIndexTest {
     fun prefixSuffixBasics() {
         val texts = listOf("apple", "banana", "apricot", "grape", "application")
         val index = FMIndex.build(texts)
-        assertSameMatches(listOf(Match(0, 0, 2), Match(2, 0, 2), Match(4, 0, 2)), index.searchPrefix("ap"))
-        assertSameMatches(listOf(Match(0, 3, 5)), index.searchSuffix("le"))
-        assertSameMatches(listOf(Match(0, 4, 5), Match(3, 4, 5)), index.searchSuffix("e"))
-        assertSameMatches(listOf(Match(4, 7, 11)), index.searchSuffix("tion"))
-        assertSameMatches(emptyList<Match>(), index.searchPrefix("zz"))
-        assertSameMatches(emptyList<Match>(), index.searchSuffix("zz"))
+        assertSameMatches(listOf(BaseMatch(0, 0, 2), BaseMatch(2, 0, 2), BaseMatch(4, 0, 2)), index.searchPrefix("ap"))
+        assertSameMatches(listOf(BaseMatch(0, 3, 5)), index.searchSuffix("le"))
+        assertSameMatches(listOf(BaseMatch(0, 4, 5), BaseMatch(3, 4, 5)), index.searchSuffix("e"))
+        assertSameMatches(listOf(BaseMatch(4, 7, 11)), index.searchSuffix("tion"))
+        assertSameMatches(emptyList<BaseMatch>(), index.searchPrefix("zz"))
+        assertSameMatches(emptyList<BaseMatch>(), index.searchSuffix("zz"))
     }
 
     @Test
@@ -274,7 +304,10 @@ class FMIndexTest {
                 val pat = encodeForBrute(codec, pattern)
                 if (pat.isEmpty()) continue
                 for (m in index.search(pattern)) {
-                    assertTrue(pat.contentEquals(encoded[m.document].copyOfRange(m.start, m.end)), "codec=$codec pattern=$pattern m=$m")
+                    assertTrue(
+                        pat.contentEquals(encoded[m.document].copyOfRange(m.start, m.end)),
+                        "codec=$codec pattern=$pattern m=$m"
+                    )
                 }
             }
         }
@@ -287,9 +320,9 @@ class FMIndexTest {
             assertTrue(index.search("").isEmpty())
             assertEquals(0, index.count(""))
             assertFalse(index.contains(""))
-            assertSameMatches(listOf(Match(2, 0, 1)), index.search("a"))
-            assertSameMatches(listOf(Match(2, 0, 1)), index.searchPrefix("a"))
-            assertSameMatches(listOf(Match(2, 0, 1)), index.searchSuffix("a"))
+            assertSameMatches(listOf(BaseMatch(2, 0, 1)), index.search("a"))
+            assertSameMatches(listOf(BaseMatch(2, 0, 1)), index.searchPrefix("a"))
+            assertSameMatches(listOf(BaseMatch(2, 0, 1)), index.searchSuffix("a"))
         }
         val empty = FMIndex.build(emptyList())
         assertEquals(0, empty.documentCount)
@@ -304,25 +337,25 @@ class FMIndexTest {
     @Test
     fun chineseAndEmojiSearch() {
         val texts = listOf("你好世界", "世界你好", "😀😃😄", "hello 世界")
-        val idx32 = FMIndex.build(texts, Utf32Codec)
-        assertSameMatches(listOf(Match(0, 2, 4), Match(1, 0, 2), Match(3, 6, 8)), idx32.search("世界"))
-        assertSameMatches(listOf(Match(2, 0, 1)), idx32.search("😀"))
+        val idx32 = FMIndex.build(texts, Codec.UTF32)
+        assertSameMatches(listOf(BaseMatch(0, 2, 4), BaseMatch(1, 0, 2), BaseMatch(3, 6, 8)), idx32.search("世界"))
+        assertSameMatches(listOf(BaseMatch(2, 0, 1)), idx32.search("😀"))
     }
 
     @Test
     fun utf8ReservesSentinels() {
-        val bytes = Utf8Codec.encodeBytes("hello 世界😀")
+        val bytes = Codec.UTF8.encode("hello 世界😀")
         for (b in bytes) {
             val v = b.toInt() and 0xFF
             assertFalse(v == 0 || v == 255, "v=$v")
         }
-        assertEquals(255, Utf8Codec.separator)
+        assertEquals(255, Codec.UTF8.separator.toInt() and 0xFF)
     }
 
     @Test
     fun utf8RejectsNul() {
         try {
-            Utf8Codec.encodeBytes("a\u0000b")
+            Codec.UTF8.encode("a\u0000b")
             assertFalse(true, "含 U+0000 应抛异常")
         } catch (e: IllegalArgumentException) {
             // 预期
@@ -339,7 +372,7 @@ class FMIndexTest {
     fun utf8ByteOffsets() {
         // "世界" utf8 各 3 字节；"hello " 6 字节
         val texts = listOf("你好世界", "hello 世界")
-        val index = FMIndex.build(texts, Utf8Codec)
-        assertSameMatches(listOf(Match(0, 6, 12), Match(1, 6, 12)), index.search("世界"))
+        val index = FMIndex.build(texts, Codec.UTF8)
+        assertSameMatches(listOf(BaseMatch(0, 6, 12), BaseMatch(1, 6, 12)), index.search("世界"))
     }
 }

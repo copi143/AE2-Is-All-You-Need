@@ -5,10 +5,7 @@ package allyouneed.indexing
  *
  * 以每一 bit 为一层做稳定划分，零分支在前、一分支在后；每层用 [BitVector] 记录 bit 与 rank。
  */
-class WaveletMatrix internal constructor(
-    private val levels: Array<BitVector>,
-    private val zeros: IntArray,
-) {
+class WaveletMatrix internal constructor(private val levels: Array<BitVector>, private val zeros: IntArray) {
     fun rank(value: Int, end: Int): Int {
         var l = 0
         var r = end
@@ -62,8 +59,7 @@ class WaveletMatrix internal constructor(
                 levels[level] = builder.build()
                 cur = next
             }
-            @Suppress("UNCHECKED_CAST")
-            return WaveletMatrix(levels as Array<BitVector>, zeros)
+            return WaveletMatrix(levels.requireNoNulls(), zeros)
         }
 
         /**
@@ -93,8 +89,37 @@ class WaveletMatrix internal constructor(
                 levels[level] = builder.build()
                 cur = next
             }
-            @Suppress("UNCHECKED_CAST")
-            return WaveletMatrix(levels as Array<BitVector>, zeros)
+            return WaveletMatrix(levels.requireNoNulls(), zeros)
+        }
+
+        /**
+         * 短整版构建：取值按无符号（`and 0xFFFF`）看待，中间缓冲为 `ShortArray(2n)`，
+         * 与 16bit 直存的 utf16 管道配套。查询语义与 [IntArray] 版完全一致。
+         */
+        fun build(values: ShortArray, bits: Int): WaveletMatrix {
+            require(bits >= 1) { "bits 必须 >= 1" }
+            val n = values.size
+            val levels = arrayOfNulls<BitVector>(bits)
+            val zeros = IntArray(bits)
+            var cur = values
+            for (level in bits - 1 downTo 0) {
+                val builder = BitVector.Builder(n)
+                var zc = 0
+                for (idx in 0 until n) {
+                    if ((((cur[idx].toInt() and 0xFFFF) ushr level) and 1) != 0) builder.set(idx) else zc++
+                }
+                zeros[level] = zc
+                val next = ShortArray(n)
+                var zi = 0
+                var oi = zc
+                for (idx in 0 until n) {
+                    val v = cur[idx]
+                    if ((((v.toInt() and 0xFFFF) ushr level) and 1) == 0) next[zi++] = v else next[oi++] = v
+                }
+                levels[level] = builder.build()
+                cur = next
+            }
+            return WaveletMatrix(levels.requireNoNulls(), zeros)
         }
     }
 }

@@ -7,7 +7,8 @@ package allyouneed.indexing
  * 其余元素取值 `>= 0`。返回的后缀数组长度为输入长度，按字典序排列后缀起始位置。
  *
  * [ByteArray] 重载把字节按无符号（`and 0xFF`）看待，与 8bit 直存的 utf8 管道配套，
- * 避免构建期先拷贝一份 `IntArray(4n)`。核心诱导排序逻辑由两套入口共享。
+ * [ShortArray] 重载把单元按无符号（`and 0xFFFF`）看待，与 16bit 直存的 utf16 管道配套，
+ * 避免构建期先拷贝一份 `IntArray(2n/4n)`。核心诱导排序逻辑由三套入口共享。
  */
 object SuffixArray {
 
@@ -28,6 +29,17 @@ object SuffixArray {
             if (v > k) k = v
         }
         return saIs(s.size, { i -> s[i].toInt() and 0xFF }, k)
+    }
+
+    fun build(s: ShortArray): IntArray {
+        if (s.isEmpty()) return IntArray(0)
+        if (s.size == 1) return intArrayOf(0)
+        var k = 0
+        for (v0 in s) {
+            val v = v0.toInt() and 0xFFFF
+            if (v > k) k = v
+        }
+        return saIs(s.size, { i -> s[i].toInt() and 0xFFFF }, k)
     }
 
     private fun isLms(t: BooleanArray, i: Int): Boolean = i > 0 && t[i] && !t[i - 1]
