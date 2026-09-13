@@ -84,6 +84,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 mixin = { group = "org.spongepowered", name = "mixin", version.ref = "mixin" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui-desktop", version.ref = "compose" }
+compose-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics-desktop", version.ref = "compose" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation-desktop", version.ref = "compose" }
 compose-foundation-layout = { module = "org.jetbrains.compose.foundation:foundation-layout-desktop", version.ref = "compose" }
 compose-animation = { module = "org.jetbrains.compose.animation:animation-desktop", version.ref = "compose" }

@@ -12,14 +12,3 @@ dependencies {
 
     compileOnly(libs.slf4j)
 }
-
-configurations.create("msdftextClasses") {
-    isCanBeResolved = false
-    isCanBeConsumed = true
-}
-
-artifacts {
-    add("msdftextClasses", layout.buildDirectory.dir("classes/kotlin/main").map { it.asFile }) {
-        builtBy(tasks.named("compileKotlin"))
-    }
-}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The AE2-Is-All-You-Need Authors
+ * Copyright 2026 copi143
  *
  * Replacement for androidx.compose.ui.graphics.SkiaBackedPaint that does not
  * depend on org.jetbrains.skia native bindings. Painting state is stored in

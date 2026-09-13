@@ -89,6 +89,8 @@ dependencies {
     jarJar(project(":kaptor"))
     jarJar(project(":averith"))
     jarJar(project(":indexing"))
+    jarJar(project(":composeruntime"))
+    jarJar(project(":msdftext"))
 
     jarJar(libs.ojalgo)
     jarJar(libs.jetbrains.markdown) {

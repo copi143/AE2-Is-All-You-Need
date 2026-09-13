@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The AE2-Is-All-You-Need Authors
+ * Copyright 2026 copi143
  *
  * Replacement for the skiko-dependent factory functions in SkiaBackedPaint_skikoKt.
  * The official Paint() factory constructs SkiaBackedPaint through a synthetic

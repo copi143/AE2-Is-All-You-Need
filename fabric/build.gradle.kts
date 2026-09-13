@@ -51,6 +51,8 @@ dependencies {
     include(project(":kaptor"))
     include(project(":averith"))
     include(project(":indexing"))
+    include(project(":composeruntime"))
+    include(project(":msdftext"))
     include("org.antlr:antlr4-runtime:4.9.1")
 }
 

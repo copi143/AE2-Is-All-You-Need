@@ -70,6 +70,10 @@ dependencies {
     testRuntimeOnly("org.lwjgl:lwjgl:3.3.1:natives-linux")
     // fastutil 由 Minecraft 内嵌提供（不在测试 classpath），这里仅为测试暴露其类。
     testImplementation("it.unimi.dsi:fastutil:8.5.9")
+
+    testRuntimeOnly(project(":composeruntime"))
+    testRuntimeOnly(project(":msdftext"))
+    testRuntimeOnly(project(":graphicsrepl"))
 }
 
 configurations["testRuntimeClasspath"].exclude(
@@ -77,89 +81,8 @@ configurations["testRuntimeClasspath"].exclude(
     module = "ui-graphics-desktop",
 )
 
-dependencies {
-    testRuntimeOnly(files(rootProject.project(":graphicsrepl").layout.buildDirectory.file("libs/ui-graphics-desktop-noskiko.jar")))
-}
-
 tasks.withType<Test> {
     dependsOn(":graphicsrepl:patchUiGraphics")
-}
-
-// Compose runtime bundle. Resolves the official desktop jars (minus skiko and the official
-// ui-graphics-desktop) plus the skiko-free replacement jar, and merges their classes into a single
-// directory that fabric/forge then merge straight into their mod jars (no jar-in-jar). The official
-// ui-desktop uber jar still bundles androidx.compose.ui.graphics; its classes are dropped here and
-// provided exclusively by the noskiko replacement jar to avoid a JPMS split-package at runtime.
-val composeRuntime = configurations.create("composeRuntime") {
-    isCanBeResolved = true
-    isCanBeConsumed = true
-    exclude(group = "org.jetbrains.skiko")
-    exclude(group = "org.jetbrains.compose.ui", module = "ui-graphics-desktop")
-    // KFF 4.12.0 (forge) / FLK (fabric) provide kotlin-stdlib, coroutines and atomicfu on the mod
-    // classloader; bundling them again causes JPMS split-package errors (e.g. kotlin.jdk7,
-    // kotlin.jvm.functions). KFF 4.12.0's bundled stdlib is new enough for compose 1.12.
-    exclude(group = "org.jetbrains.kotlin")
-    exclude(group = "org.jetbrains.kotlinx")
-}
-
-dependencies {
-    composeRuntime.name.let {
-        add(it, "org.jetbrains.compose.ui:ui-desktop:${libs.versions.compose.get()}")
-        add(it, "org.jetbrains.compose.foundation:foundation-desktop:${libs.versions.compose.get()}")
-        add(it, "org.jetbrains.compose.foundation:foundation-layout-desktop:${libs.versions.compose.get()}")
-        add(it, "org.jetbrains.compose.animation:animation-desktop:${libs.versions.compose.get()}")
-        add(it, "org.jetbrains.compose.material:material-desktop:${libs.versions.compose.get()}")
-        add(
-            it,
-            files(rootProject.project(":graphicsrepl").layout.buildDirectory.file("libs/ui-graphics-desktop-noskiko.jar"))
-        )
-    }
-}
-
-val unpackComposeClasses = tasks.register<Sync>("unpackComposeClasses") {
-    dependsOn(":graphicsrepl:patchUiGraphics", composeRuntime)
-    from(composeRuntime.map { file ->
-        if (file.isDirectory) {
-            file
-        } else if (file.name.startsWith("ui-desktop-")) {
-            zipTree(file).matching { exclude("androidx/compose/ui/graphics/**") }
-        } else {
-            zipTree(file)
-        }
-    })
-    into(layout.buildDirectory.dir("composeClasses"))
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-configurations.create("composeClasses") {
-    isCanBeResolved = false
-    isCanBeConsumed = true
-}
-
-artifacts {
-    add("composeClasses", layout.buildDirectory.dir("composeClasses").map { it.asFile }) {
-        builtBy(unpackComposeClasses)
-    }
-}
-
-configurations.create("msdftextClasses") {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-}
-
-dependencies {
-    "msdftextClasses"(project(path = ":msdftext", configuration = "msdftextClasses"))
-}
-
-tasks.named<Jar>("jar") {
-    dependsOn(configurations["msdftextClasses"])
-    from(configurations["msdftextClasses"])
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-tasks.named<ProcessResources>("processResources") {
-    dependsOn(configurations["msdftextClasses"])
-    from(configurations["msdftextClasses"])
 }
 
 configurations {
