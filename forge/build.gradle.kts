@@ -88,6 +88,7 @@ dependencies {
 
     jarJar(project(":kaptor"))
     jarJar(project(":averith"))
+    jarJar(project(":indexing"))
 
     jarJar(libs.ojalgo)
     jarJar(libs.jetbrains.markdown) {

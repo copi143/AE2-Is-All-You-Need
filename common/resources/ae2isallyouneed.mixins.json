@@ -57,6 +57,7 @@
     "client.CreativeScreenSidebarMixin",
     "client.FacadeCreativeTabMixin",
     "client.ItemStackTooltipMixin",
+    "client.SuffixArrayMixin",
     "client.ae2.CPUSelectionListMixin",
     "client.ae2.MEStorageScreenMixin",
     "client.ae2.RepoMixin"

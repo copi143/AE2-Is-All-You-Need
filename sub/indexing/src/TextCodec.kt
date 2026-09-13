@@ -21,6 +21,7 @@ sealed interface Codec<T, U> {
     val alphabetSize: kotlin.Int
     val separator: T
     fun encode(text: String): U
+    fun decode(data: U, start: kotlin.Int, end: kotlin.Int): String
 
     interface Byte : Codec<kotlin.Byte, ByteArray>
     interface Short : Codec<kotlin.Short, ShortArray>
@@ -33,6 +34,9 @@ sealed interface Codec<T, U> {
         override fun encode(text: String): ByteArray = text.toByteArray(Charsets.UTF_8).also {
             it.any { b -> b == 0.toByte() } && throw IllegalArgumentException("文本包含 NUL，字节 0x00 被保留为终结符")
         }
+
+        override fun decode(data: ByteArray, start: kotlin.Int, end: kotlin.Int): String =
+            String(data, start, end - start, Charsets.UTF_8)
     }
 
     object UTF16 : Short {
@@ -42,14 +46,20 @@ sealed interface Codec<T, U> {
         override fun encode(text: String): ShortArray = ShortArray(text.length) { i -> text[i].code.toShort() }.also {
             it.any { s -> s == 0.toShort() } && throw IllegalArgumentException("文本包含 NUL，字节 0x00 被保留为终结符")
         }
+
+        override fun decode(data: ShortArray, start: kotlin.Int, end: kotlin.Int): String =
+            String(CharArray(end - start) { i -> data[start + i].toInt().toChar() })
     }
 
     object UTF32 : Int {
         override val name = "utf32"
         override val alphabetSize: kotlin.Int = 0x110001
-        override val separator: kotlin.Int = -1
+        override val separator: kotlin.Int = 0x110000
         override fun encode(text: String): IntArray = text.codePoints().toArray().also {
             it.any { i -> i == 0 } && throw IllegalArgumentException("文本包含 NUL，字节 0x00 被保留为终结符")
         }
+
+        override fun decode(data: IntArray, start: kotlin.Int, end: kotlin.Int): String =
+            String(data, start, end - start)
     }
 }

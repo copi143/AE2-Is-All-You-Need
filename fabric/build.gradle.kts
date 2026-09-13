@@ -50,6 +50,7 @@ dependencies {
     include(libs.asm.analysis)
     include(project(":kaptor"))
     include(project(":averith"))
+    include(project(":indexing"))
     include("org.antlr:antlr4-runtime:4.9.1")
 }
 

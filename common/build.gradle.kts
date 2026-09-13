@@ -24,6 +24,7 @@ dependencies {
     api(project(":kaptor"))
     api(project(":averith"))
     api(project(":msdftext"))
+    api(project(":indexing"))
     listOf(
         libs.compose.runtime,
         libs.compose.ui,
