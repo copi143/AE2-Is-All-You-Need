@@ -26,6 +26,9 @@ import java.util.List;
 public abstract class SuffixArrayMixin<T> {
 
     @Unique
+    private static final IntArrayList allyouneed$emptyArray = new IntArrayList();
+
+    @Unique
     private final FmSuffixArray<T> allyouneed$delegate = new FmSuffixArray<>();
 
     @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/Lists;newArrayList()Ljava/util/ArrayList;", remap = false))
@@ -33,9 +36,9 @@ public abstract class SuffixArrayMixin<T> {
         return null;
     }
 
-    @Redirect(method = "<init>", at = @At(value = "NEW", target = "it/unimi/dsi/fastutil/ints/IntArrayList",remap = false))
+    @Redirect(method = "<init>", at = @At(value = "NEW", target = "it/unimi/dsi/fastutil/ints/IntArrayList", remap = false))
     private IntArrayList allyouneed$init$2() {
-        return null;
+        return allyouneed$emptyArray;
     }
 
     /**
