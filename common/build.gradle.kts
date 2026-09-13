@@ -25,19 +25,15 @@ dependencies {
     api(project(":averith"))
     api(project(":msdftext"))
     api(project(":indexing"))
-    listOf(
-        libs.compose.runtime,
-        libs.compose.ui,
-        libs.compose.foundation,
-        libs.compose.foundation.layout,
-        libs.compose.animation,
-        libs.compose.material,
-        libs.ojalgo,
-        libs.jetbrains.markdown,
-        libs.netty.codec.http,
-    ).forEach {
-        api(it)
-    }
+    api(libs.compose.runtime)
+    api(libs.compose.ui)
+    api(libs.compose.foundation)
+    api(libs.compose.foundation.layout)
+    api(libs.compose.animation)
+    api(libs.compose.material)
+    api(libs.ojalgo)
+    api(libs.jetbrains.markdown)
+    api(libs.netty.codec.http)
 
 //    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
 
@@ -82,7 +78,7 @@ configurations["testRuntimeClasspath"].exclude(
 )
 
 tasks.withType<Test> {
-    dependsOn(":graphicsrepl:patchUiGraphics")
+    dependsOn(":graphicsrepl:jar")
 }
 
 configurations {
