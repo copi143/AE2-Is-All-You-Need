@@ -48,6 +48,7 @@ dependencies {
     implementation(project(path = ":transformer", configuration = "withInject"))
     include(project(path = ":transformer", configuration = "withInject"))
     include(libs.asm.analysis)
+    implementation(libs.compose.runtime)
     include(project(":kaptor"))
     include(project(":averith"))
     include(project(":indexing"))

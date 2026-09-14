@@ -86,6 +86,7 @@ dependencies {
     implementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
+    implementation(libs.compose.runtime)
     jarJar(project(":kaptor"))
     jarJar(project(":averith"))
     jarJar(project(":indexing"))
