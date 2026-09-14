@@ -17,7 +17,7 @@ import net.minecraft.core.Direction
  * 每个格子要么是必需的，要么是“无关”。必需格子必须包含 [AsyncStructures.blockAt] 返回的方块；
  * 当 [AsyncStructures.blockAt] 返回 null 时该格必须是空气（例如处理器 7x7 的空气层）。
  * 无关格子（[AsyncStructures.isDontCare]）接受任意方块。坐标方向：x = 西->东、y = 下->上、
- * z = 前->后。控制器面朝前方（局部 z 增加方向）；结构主体在控制器“背后”延伸。
+ * z = 前->后。控制器面朝前方（局部 -z 方向，朝外）；结构主体在控制器“背后”（局部 +z 方向）延伸。
  *
  * Hand-written, data-driven-free definitions of the three async synthesis structures.
  *
@@ -32,8 +32,8 @@ import net.minecraft.core.Direction
  * A cell is either required or "don't care". A required cell must contain the block returned by
  * [AsyncStructures.blockAt]; when [AsyncStructures.blockAt] returns null the cell must be air (e.g. the processor's 7x7 air
  * layer). Don't-care cells ([AsyncStructures.isDontCare]) accept anything. Coordinates grow x = west->east,
- * y = bottom->top, z = front->back. The controller faces the front (increasing local z); the
- * structure body extends "behind" the controller.
+ * y = bottom->top, z = front->back. The controller faces the front (local -z, outward); the
+ * structure body extends "behind" the controller (local +z).
  */
 enum class AsyncStructureType(val baseDepth: Int) {
     MODULE(5), SWITCH(11), PROCESSOR(19),
@@ -70,18 +70,20 @@ object AsyncStructures {
 
     /**
      * 局部格子相对锚点、对水平朝向而言的世界偏移。局部 +y 朝上，局部 +z 沿
-     * [facing] 方向，局部 +x 沿 facing 的顺时针一侧。
+     * [facing] 的反方向（结构主体在控制器背后延伸），局部 +x 沿 facing 的顺时针一侧。
      *
      * World offset of a local cell relative to the anchor for a horizontal facing. Local +y is up,
-     * local +z points along [facing] and local +x along the facing's clockwise side.
+     * local +z points opposite [facing] (the structure body extends behind the controller)
+     * and local +x along the facing's clockwise side.
      */
     fun worldOffset(type: AsyncStructureType, facing: Direction, x: Int, y: Int, z: Int): Triple<Int, Int, Int> {
         val (ax, ay, az) = anchorCell(type)
         val right = facing.clockWise
+        val back = facing.opposite
         return Triple(
-            (x - ax) * right.stepX + (z - az) * facing.stepX,
+            (x - ax) * right.stepX + (z - az) * back.stepX,
             y - ay,
-            (x - ax) * right.stepZ + (z - az) * facing.stepZ,
+            (x - ax) * right.stepZ + (z - az) * back.stepZ,
         )
     }
 

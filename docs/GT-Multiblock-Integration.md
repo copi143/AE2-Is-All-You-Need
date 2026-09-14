@@ -187,7 +187,7 @@ don't-care）：
   - `MODULE(5)`：3 宽 × 7 高 × 5 深，工厂块 (1,3,0) 在前脸；模块安装于地板接口 Z 之上。
   - `SWITCH(11)`：19 宽 × 7 高 × (11+6N) 深，交换机 (9,4,3) 在核心前脸。
   - `PROCESSOR(19)`：19 宽 × 15 高 × (19+6N) 深，控制器 (9,8,3) 在核心前脸。
-- 局部坐标：`x` 西→东、`y` 底→顶、`z` 前→后；控制器面朝 +z（前），结构体在控制器**后方**延伸。
+- 局部坐标：`x` 西→东、`y` 底→顶、`z` 前→后；控制器面朝前方（局部 -z，朝外），结构体在控制器**后方**（局部 +z）延伸。
 - 三种格子语义：
   - **必需方块**：`blockAt(...)` 返回 kind，需经 `isValidCell(...)` 匹配；
   - **必需空气**：`blockAt(...)` 返回 null，格子必须为空（如处理器 7×7 空气层）；
@@ -196,7 +196,7 @@ don't-care）：
   结构类型被对应连接器替换（SWITCH：WAN/LAN；PROCESSOR：ME/LAN）。
 - 扩展层（switch/processor）：从 `baseDepth` 起每 +6 深追加一个 bay，bay 中心行放两个模块
   接口（Z）。`MAX_EXTENSIONS = 16`，超 16 自动拒绝。
-- 世界偏移（`worldOffset`）：相对锚点，`right = facing.getClockWise()`，`+z` 沿 facing。
+- 世界偏移（`worldOffset`）：相对锚点，`right = facing.getClockWise()`，`+z` 沿 `facing.opposite`（背后）。
 
 ### 2.2 检测器：`async/AsyncStructureDetector.kt`
 
@@ -250,11 +250,10 @@ don't-care）：
 - `onUse()`：镜像 `IMultiController.onUse` —— 未成形 + 潜行 + 空手 → 客户端调
   `MultiblockInWorldPreviewRenderer.showPreview`（其余情形照旧开 GT 菜单）。
 - 真实 pattern（`gt/AsyncStructureGtPattern.kt`）：从 `AsyncStructures` 形状常量生成 base 形状
-  （`FactoryBlockPattern.start()` 坐标：char=局部 x、row=局部 y、aisle=局部 z），每种 kind 一个
+  （`FactoryBlockPattern.start(RIGHT, UP, BACK)` 坐标：char=局部 x、row=局部 y、aisle=局部 z），每种 kind 一个
   具体谓词，必需空气用 `Predicates.air()`、任意格默认 any。仅供潜行预览 / JEI 页渲染，
   成形判定仍完全由检测器决定；`allowFlip(false)`。
-- 预览朝向：GTCEu 1.20.1 的 `MultiblockInWorldPreviewRenderer` 对 EAST/WEST 的旋转与任何一致
-  facing 约定相反（上游缺陷，GT 自家多方块同样受影响）——N/S 精确，E/W 显示为旋转 180°。
+- 预览朝向：pattern 与检测器对所有水平朝向一致，结构主体在控制器背后延伸。
 
 ---
 
@@ -378,7 +377,7 @@ don't-care）：
 - **Forge 带 GT**：搭处理器（核心 + 扩展 bay + 模块）→ 成形；拆装扩展层（0..16）→ 重成形；
    右键 GT 控制器开 GT 菜单；接 ME 吞 32 频道；拆连接器 → 失形。
 - **潜行+空手预览**：三个控制器（处理器/交换机/工厂）未成形时潜行右键 → 显示 base 结构叠影；
-   朝向 N/S 精确，E/W 因上游渲染器缺陷旋转 180°（已知取舍）。
+   朝向与检测器一致，结构主体在控制器背后。
 - **Forge 无 GT**：common 匹配器跑同一结构；`./gradlew :forge:compileKotlin` + 运行验证。
 - **Fabric**：恒无 GT，common 匹配器回归。
 - 三模块 `compileKotlin` / `build` 全绿。

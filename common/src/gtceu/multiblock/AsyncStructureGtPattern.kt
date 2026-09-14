@@ -9,6 +9,7 @@ import com.gregtechceu.gtceu.api.pattern.BlockPattern
 import com.gregtechceu.gtceu.api.pattern.FactoryBlockPattern
 import com.gregtechceu.gtceu.api.pattern.Predicates
 import com.gregtechceu.gtceu.api.pattern.TraceabilityPredicate
+import com.gregtechceu.gtceu.api.pattern.util.RelativeDirection
 import net.minecraft.world.level.block.Block
 import kotlin.collections.iterator
 
@@ -20,11 +21,9 @@ import kotlin.collections.iterator
  * 因此原生 [BlockPattern] 检查接受 0..16 个舱位，与检测器完全一致（见 [AsyncStructures.depth]）。
  * 模块（工厂）保留单一静态 5-aisle 模式；工厂通过接口探测成形，不走模式检查。
  *
- * 网格用 `FactoryBlockPattern.start()` 坐标编写：字符（行字符串）= 局部 x（西->东），
- * 行 = 局部 y（下->上），aisle = 局部 z（前->后），因此 [BlockPattern] 规范（NORTH）输出
- * 与检测器的 NORTH 朝向世界布局一致。这让预览对 NORTH/SOUTH 朝向控制器精确无误；
- * GTCEu 的渲染器对 EAST/WEST 的旋转与任何一致的朝向约定相反，所以那些朝向上会 180° 旋转
- * （上游怪癖，影响所有 GT 多方块）。
+ * 网格用 `FactoryBlockPattern.start(RIGHT, UP, BACK)` 坐标编写：字符（行字符串）= 局部 x（西->东），
+ * 行 = 局部 y（下->上），aisle = 局部 z（前->后），因此 [BlockPattern] 输出
+ * 与检测器的世界布局对所有水平朝向一致：结构主体在控制器背后（朝向反方向）延伸。
  *
  * GTCEu pattern of an async synthesis structure, generated from the hand-written shape constants in
  * [AsyncStructures].
@@ -35,12 +34,10 @@ import kotlin.collections.iterator
  * exactly like the detector does (see [AsyncStructures.depth]). The module (factory) keeps a single
  * static 5-aisle pattern; the factory is formed by interface probing, not a pattern check.
  *
- * The grid is authored in `FactoryBlockPattern.start()` coordinates: char (row string) = local x
- * (west->east), row = local y (bottom->top), aisle = local z (front->back), so `BlockPattern`
- * canonical (NORTH) output matches the detector's NORTH-facing world layout. This makes the preview
- * exact for NORTH/SOUTH-facing controllers; GTCEu's in-world renderer rotates EAST/WEST opposite to
- * any consistent facing convention, so those facings appear 180° rotated (upstream quirk that
- * affects every GT multiblock).
+ * The grid is authored in `FactoryBlockPattern.start(RIGHT, UP, BACK)` coordinates: char (row string)
+ * = local x (west->east), row = local y (bottom->top), aisle = local z (front->back), so the
+ * [BlockPattern] output matches the detector's world layout for every horizontal facing: the body
+ * extends behind the controller (opposite its facing).
  */
 object AsyncStructureGtPattern {
 
@@ -96,7 +93,11 @@ object AsyncStructureGtPattern {
      * the registry.
      */
     fun build(type: AsyncStructureType, definition: MultiblockMachineDefinition): BlockPattern {
-        val builder = FactoryBlockPattern.start()
+        val builder = FactoryBlockPattern.start(
+            RelativeDirection.RIGHT,
+            RelativeDirection.UP,
+            RelativeDirection.BACK,
+        )
         for (z in 0 until AsyncStructures.depth(type, 1)) {
             val rows = Array(AsyncStructures.height(type)) { y ->
                 CharArray(AsyncStructures.width(type)) { x -> cellChar(type, x, y, z) }.concatToString()
