@@ -128,6 +128,11 @@ class DimensionalCellInventory(
         }
     }
 
+    override fun getBigAmount(what: AEKey): BigInteger {
+        val store = peekData() ?: return BigInteger.ZERO
+        return store.get(what)
+    }
+
     override fun isPreferredStorageFor(input: AEKey, source: IActionSource): Boolean {
         val store = peekData() ?: return false
         return store.get(input).signum() > 0

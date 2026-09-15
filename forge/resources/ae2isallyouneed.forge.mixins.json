@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "${mod_id}.refmap.json",
   "mixins": [
+    "ItemStackCapAccessor",
     "forge.FaceBuilderMixin",
     "forge.RegistryObjectMixin",
     "gtceu.StaticFaceBakeryMixin"

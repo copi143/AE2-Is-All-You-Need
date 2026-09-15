@@ -6,7 +6,7 @@ abstract class AEKeyAsm : AEKey(), KeyContent {
 
     final override fun equals(other: Any?): Boolean = this === other
 
-    final override fun hashCode(): Int = `asm$hashCode`()
+    final override fun hashCode(): Int = System.identityHashCode(this)
 
     final override fun dropSecondary(): AEKey {
         cachedSecondaryDropped?.let { return it }

@@ -1,8 +1,10 @@
 package allyouneed.cell.storage
 
+import allyouneed.api.BigStackSource
 import allyouneed.cell.ICellItem
 import allyouneed.cell.buildPartitionList
 import allyouneed.item.packet.AllPackets
+import allyouneed.util.bigint.BigKeyCounter
 import appeng.api.config.Actionable
 import appeng.api.config.IncludeExclude
 import appeng.api.networking.security.IActionSource
@@ -28,6 +30,7 @@ import net.minecraft.nbt.ListTag
 import net.minecraft.nbt.Tag
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
+import java.math.BigInteger
 
 /**
  * Storage inventory for [StorageCellItem]. A faithful port of vanilla
@@ -41,7 +44,7 @@ class StorageCellInventory(
     private val stack: ItemStack,
     private val container: ISaveProvider?,
     keyType: AEKeyType,
-) : StorageCell, StorageCellView {
+) : StorageCell, StorageCellView, BigStackSource {
 
     protected val cellItem: StorageCellItem = stack.item as StorageCellItem
 
@@ -143,13 +146,23 @@ class StorageCellInventory(
 
     override fun getAvailableStacks(out: KeyCounter) {
         val map = storedAmounts ?: run {
-            // fast path: if not loaded, peek NBT without full parse for empty check?
-            // still need to load to enumerate
             getCellItemsInternal()
         }
         for (entry in Object2LongMaps.fastIterable(map)) {
             out.add(entry.key, entry.longValue)
         }
+    }
+
+    override fun getBigAvailableStacks(out: BigKeyCounter) {
+        val map = storedAmounts ?: getCellItemsInternal()
+        for (entry in Object2LongMaps.fastIterable(map)) {
+            out.add(entry.key, entry.longValue)
+        }
+    }
+
+    override fun getBigAmount(what: AEKey): BigInteger {
+        val amount = getCellItemsInternal().getLong(what)
+        return if (amount <= 0L) BigInteger.ZERO else BigInteger.valueOf(amount)
     }
 
     override fun getIdleDrain(): Double = cell.idleDrain

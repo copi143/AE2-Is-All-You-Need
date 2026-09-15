@@ -1,5 +1,7 @@
 package allyouneed.cell.creative
 
+import allyouneed.api.BigStackSource
+import allyouneed.util.bigint.BigKeyCounter
 import appeng.api.config.Actionable
 import appeng.api.networking.security.IActionSource
 import appeng.api.stacks.AEKey
@@ -9,12 +11,13 @@ import appeng.api.storage.cells.StorageCell
 import appeng.items.contents.CellConfig
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
+import java.math.BigInteger
 
 /**
  * Infinite creative inventory: configured keys report [Long.MAX_VALUE],
  * and insert/extract of those keys always succeeds without changing the cell.
  */
-class CreativeMeCellInventory(private val stack: ItemStack) : StorageCell {
+class CreativeMeCellInventory(private val stack: ItemStack) : StorageCell, BigStackSource {
     private val configured: Set<AEKey> = CellConfig.create(stack).keySet().toSet()
 
     override fun insert(what: AEKey, amount: Long, mode: Actionable, source: IActionSource): Long =
@@ -28,6 +31,15 @@ class CreativeMeCellInventory(private val stack: ItemStack) : StorageCell {
             out.add(key, Long.MAX_VALUE)
         }
     }
+
+    override fun getBigAvailableStacks(out: BigKeyCounter) {
+        for (key in configured) {
+            out.add(key, BigInteger.valueOf(Long.MAX_VALUE))
+        }
+    }
+
+    override fun getBigAmount(what: AEKey): BigInteger =
+        if (configured.contains(what)) BigInteger.valueOf(Long.MAX_VALUE) else BigInteger.ZERO
 
     override fun isPreferredStorageFor(input: AEKey, source: IActionSource): Boolean =
         configured.contains(input)

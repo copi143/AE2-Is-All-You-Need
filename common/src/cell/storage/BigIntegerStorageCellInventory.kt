@@ -163,6 +163,9 @@ class BigIntegerStorageCellInventory(
         }
     }
 
+    override fun getBigAmount(what: AEKey): BigInteger =
+        getCellItemsInternal()[what] ?: BigInteger.ZERO
+
     override fun getIdleDrain(): Double = cell.idleDrain
 
     override fun getStatus(): CellState {

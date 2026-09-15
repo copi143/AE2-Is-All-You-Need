@@ -5,6 +5,8 @@ import allyouneed.cell.EnergyCell
 import allyouneed.client.ForgeCreativeTab
 import allyouneed.forge.init.*
 import allyouneed.logic.script.ScriptDsl
+import allyouneed.mixin.ItemStackCapAccessor
+import allyouneed.util.ItemStackCaps
 import allyouneed.util.MODID
 import allyouneed.util.logger
 import net.minecraft.resources.ResourceLocation
@@ -16,6 +18,10 @@ import thedarkcolour.kotlinforforge.forge.MOD_BUS
 class ForgeMain {
     init {
         logger.info("Initializing...")
+        ItemStackCaps.hasCaps = { stack ->
+            val caps = (stack as Any as ItemStackCapAccessor).`allyouneed$getCapNbt`()
+            caps != null && !caps.isEmpty
+        }
 
         AllRegistries.blocks.forEach { entry ->
             ForgeBlocks.BLOCKS.register(entry.id().path) { entry.block() }
