@@ -10,7 +10,7 @@ import org.objectweb.asm.Opcodes.*
 class A2sClassCompiler(private val symbols: A2sSymbolTable) {
 
     private val exprCompiler = A2sExprCompiler(symbols).also { it.classCompiler = this }
-    private val stmtCompiler = A2sStmtCompiler(symbols, exprCompiler)
+    private val stmtCompiler = A2sStmtCompiler(symbols, exprCompiler).also { exprCompiler.stmtCompiler = it }
 
     /** compileLambda() 写入，A2sCompiler.compile() 返回。key = lambdaClassName。 */
     val collectedLambdas = mutableMapOf<String, ByteArray>()
@@ -113,6 +113,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
     fun generateScriptClass(
         index: Int,
         script: A2sScriptFile,
+        handlerNames: List<String> = A2sNames.uniqueHandlerNames(script.handlers),
     ): ByteArray {
         val internalName = A2sNames.scriptClass(index)
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
@@ -133,9 +134,8 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
             generateScriptFunction(cw, internalName, f)
         }
 
-        // handler → 方法
-        for (h in script.handlers) {
-            generateScriptHandler(cw, internalName, h)
+        for ((i, h) in script.handlers.withIndex()) {
+            generateScriptHandler(cw, internalName, h, handlerNames[i])
         }
 
         cw.visitEnd()
@@ -192,20 +192,14 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
         mv.visitEnd()
     }
 
-    private fun generateScriptHandler(cw: ClassWriter, internalName: String, h: A2sHandler) {
-        val prefix = when (h.hookType) {
-            A2sHookType.ON -> "handle"
-            A2sHookType.BEFORE -> "before"
-            A2sHookType.AFTER -> "after"
-        }
-        val methodName = "${prefix}_${A2sNames.sanitize(h.eventType)}"
+    private fun generateScriptHandler(cw: ClassWriter, internalName: String, h: A2sHandler, methodName: String) {
         val desc = "(L$TYPE_EVENT_OBJECT;)V"
         val mv = cw.visitMethod(ACC_PUBLIC, methodName, desc, null, null)
         mv.visitCode()
 
         val ctx = A2sCompileContext(mv, symbols, internalName, isStatic = false)
-        // 参数 1 是事件对象，类型为 A2sEventType
         h.paramName?.let { ctx.declareLocal(it, A2sEventType(h.eventType)) }
+        mv.visitMethodInsn(INVOKESTATIC, TYPE_SANDBOX, "tick", "()V", false)
 
         for (stmt in h.body) stmtCompiler.compile(ctx, stmt)
 
@@ -222,7 +216,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
         className: String,
         expr: A2sLambda,
         scriptClassName: String,
-        capturedVars: List<Pair<String, A2sType>> = emptyList(),
+        capturedVars: List<A2sCapturedVar> = emptyList(),
     ): ByteArray {
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
         cw.visit(V17, ACC_PUBLIC or ACC_SUPER, className, null, "java/lang/Object",
@@ -248,7 +242,7 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
         for ((i, _) in capturedVars.withIndex()) {
             ctorMv.visitVarInsn(ALOAD, 0)
             ctorMv.visitVarInsn(ALOAD, i + 2)
-            ctorMv.visitFieldInsn(PUTFIELD, className, "cap_${capturedVars[i].first}", "Ljava/lang/Object;")
+            ctorMv.visitFieldInsn(PUTFIELD, className, "cap_${capturedVars[i].name}", "Ljava/lang/Object;")
         }
         ctorMv.visitInsn(RETURN)
         ctorMv.visitMaxs(2, 2 + capturedVars.size)
@@ -270,12 +264,13 @@ class A2sClassCompiler(private val symbols: A2sSymbolTable) {
         invokeMv.visitVarInsn(ASTORE, scriptObjSlot)
         bodyCtx.scriptObjSlot = scriptObjSlot
 
-        // 2. 加载捕获变量到局部槽（用原始名称和类型，供类型推断和嵌套 lambda 捕获分析使用）
-        for ((capName, capType) in capturedVars) {
-            val slot = bodyCtx.declareLocal(capName, capType)
-            invokeMv.visitVarInsn(ALOAD, 0) // this
-            invokeMv.visitFieldInsn(GETFIELD, className, "cap_$capName", "Ljava/lang/Object;")
+        for (cap in capturedVars) {
+            val slot = bodyCtx.declareLocal(cap.name, cap.type, mutable = cap.boxed)
+            invokeMv.visitVarInsn(ALOAD, 0)
+            invokeMv.visitFieldInsn(GETFIELD, className, "cap_${cap.name}", "Ljava/lang/Object;")
+            if (cap.boxed) invokeMv.visitTypeInsn(CHECKCAST, TYPE_REF)
             invokeMv.visitVarInsn(ASTORE, slot)
+            if (cap.boxed) bodyCtx.markBoxed(cap.name)
         }
 
         // 3. 从 Object[] 拆包 lambda 参数（slot 1 始终是 Object[] args 参数）

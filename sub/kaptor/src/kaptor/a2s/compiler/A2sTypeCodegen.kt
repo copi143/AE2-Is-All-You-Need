@@ -7,6 +7,8 @@ import org.objectweb.asm.Opcodes.*
 internal const val TYPE_RATIONAL = "kaptor/a2s/runtime/Rational"
 internal const val TYPE_RUNTIME = "kaptor/a2s/runtime/A2sRuntime"
 internal const val TYPE_EVENT_OBJECT = "kaptor/a2s/runtime/A2sEventObject"
+internal const val TYPE_REF = "kaptor/a2s/runtime/A2sRef"
+internal const val TYPE_SANDBOX = "kaptor/a2s/runtime/A2sSandbox"
 
 /**
  * 类型工具：JVM 描述符映射、装箱拆箱、数值运算编译。
@@ -117,6 +119,7 @@ object A2sTypeCodegen {
         a == A2sF32 || b == A2sF32 -> A2sF32
         a == A2sI64 || b == A2sI64 -> A2sI64
         a == A2sU64 || b == A2sU64 -> A2sU64
+        a == A2sU32 || b == A2sU32 -> A2sU32
         else -> A2sI32
     }
 }

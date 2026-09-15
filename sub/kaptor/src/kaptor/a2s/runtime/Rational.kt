@@ -104,13 +104,18 @@ class Rational private constructor(
          */
         @JvmStatic
         fun fromDecimalString(s: String): Rational {
-            val idx = s.indexOf('.')
-            if (idx < 0) return of(BigInteger(s), BigInteger.ONE)
-            val intPart = s.substring(0, idx)
-            val fracPart = s.substring(idx + 1)
+            val neg = s.startsWith('-')
+            val raw = if (neg) s.substring(1) else s
+            val idx = raw.indexOf('.')
+            if (idx < 0) {
+                val n = BigInteger(raw)
+                return of(if (neg) n.negate() else n, BigInteger.ONE)
+            }
+            val intPart = raw.substring(0, idx).ifEmpty { "0" }
+            val fracPart = raw.substring(idx + 1).ifEmpty { "0" }
             val den = BigInteger.TEN.pow(fracPart.length)
             val num = BigInteger(intPart) * den + BigInteger(fracPart)
-            return of(num, den)
+            return of(if (neg) num.negate() else num, den)
         }
 
         private fun floorDiv(a: BigInteger, b: BigInteger): BigInteger {

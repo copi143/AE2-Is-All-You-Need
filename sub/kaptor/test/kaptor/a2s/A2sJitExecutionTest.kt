@@ -121,19 +121,20 @@ class A2sJitExecutionTest {
 
     @Test
     fun `finally 在正常路径后执行`() {
+        val box = mutableMapOf<String, Any?>("hit" to 0L)
         val r = invokeFunction(
             """
-            var counter = 0_i64
-            fun test(): i64 {
+            fun test(box: Any): i64 {
                 try {
                     return 42_i64
                 } finally {
-                    counter = counter + 1_i64
+                    box.hit = 1_i64
                 }
             }
-            """, "test"
+            """, "test", box
         )
         assertEquals(42L, r)
+        assertEquals(1L, box["hit"])
     }
 
     // ── 任务2：elvis ──
@@ -387,12 +388,137 @@ class A2sJitExecutionTest {
     }
 
     @Test
+    fun `可变闭包写回`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                var counter = 0_i64
+                val inc = { x: i64 ->
+                    counter = counter + x
+                    counter
+                }
+                inc(5_i64)
+                return inc(2_i64)
+            }
+            """, "test"
+        )
+        assertEquals(7L, r)
+    }
+
+    @Test
+    fun `if 表达式求值`() {
+        val r = invokeFunction(
+            """fun test(a: i64): i64 = if (a > 0_i64) 1_i64 else 2_i64""",
+            "test", 5L
+        )
+        assertEquals(1L, r)
+    }
+
+    @Test
+    fun `when 表达式求值`() {
+        val r = invokeFunction(
+            """
+            fun test(x: i64): i64 = when (x) {
+                1_i64, 2_i64 -> 10_i64
+                else -> 20_i64
+            }
+            """, "test", 2L
+        )
+        assertEquals(10L, r)
+    }
+
+    @Test
+    fun `后缀自增`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                var x = 1_i64
+                val y = x++
+                return x + y
+            }
+            """, "test"
+        )
+        assertEquals(3L, r)
+    }
+
+    @Test
+    fun `前缀自增`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                var x = 1_i64
+                val y = ++x
+                return x + y
+            }
+            """, "test"
+        )
+        assertEquals(4L, r)
+    }
+
+    @Test
+    fun `无符号除法`() {
+        val r = invokeFunction(
+            """fun test(): u32 = 5_u32 / 2_u32""",
+            "test"
+        )
+        assertEquals(2, r)
+    }
+
+    @Test
+    fun `默认字面量 range`() {
+        val r = invokeFunction(
+            """
+            fun test(): i64 {
+                var sum = 0_i64
+                for (i in 1..5) {
+                    sum = sum + i
+                }
+                return sum
+            }
+            """, "test"
+        )
+        assertEquals(15L, r)
+    }
+
+    @Test
+    fun `toI64 方法转换`() {
+        val r = invokeFunction(
+            """fun test(a: i32): i64 = a.toI64()""",
+            "test", 42
+        )
+        assertEquals(42L, r)
+    }
+
+    @Test
+    fun `unicode 转义`() {
+        val r = invokeFunction(
+            """fun test(): String = "A\u0042C" """,
+            "test"
+        )
+        assertEquals("ABC", r)
+    }
+
+    @Test
     fun `双参 lambda`() {
         val r = invokeFunction(
             """
             fun test(): i64 {
                 val f = { a: i64, b: i64 -> a + b }
                 return f(40_i64, 2_i64)
+            }
+            """, "test"
+        )
+        assertEquals(42L, r)
+    }
+
+    @Test
+    fun `lambda 内调用顶层函数`() {
+        val r = invokeFunction(
+            """
+            fun add(a: i64, b: i64): i64 = a + b
+            fun test(): i64 {
+                val f = { x: i64 -> add(x, 2_i64) }
+                return f(40_i64)
             }
             """, "test"
         )

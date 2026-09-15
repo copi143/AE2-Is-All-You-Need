@@ -89,7 +89,7 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
         return A2sEventDecl(
             name = ctx.Identifier().text,
             params = ctx.eventParams()?.eventParam()?.map { visit(it) as A2sParam } ?: emptyList(),
-            methods = ctx.funDecl().map { visit(it) as A2sFunctionDecl },
+            methods = ctx.funDecl()?.map { visit(it) as A2sFunctionDecl } ?: emptyList(),
         )
     }
 
@@ -362,8 +362,13 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
 
     override fun visitUnary(ctx: A2sParser.UnaryContext): A2sExpr {
         return if (ctx.unary() != null) {
-            val op = if (ctx.MINUS() != null) A2sUnaryOp.MINUS else A2sUnaryOp.NOT
-            A2sUnary(op, visit(ctx.unary()) as A2sExpr)
+            val inner = visit(ctx.unary()) as A2sExpr
+            when {
+                ctx.INCR() != null -> A2sIncDec(inner, increment = true, prefix = true)
+                ctx.DECR() != null -> A2sIncDec(inner, increment = false, prefix = true)
+                ctx.MINUS() != null -> A2sUnary(A2sUnaryOp.MINUS, inner)
+                else -> A2sUnary(A2sUnaryOp.NOT, inner)
+            }
         } else {
             visit(ctx.postfix()) as A2sExpr
         }
@@ -386,7 +391,7 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
                 val args = suffix.callSuffix().expressionList()?.expression()?.map { visit(it) as A2sExpr } ?: emptyList()
                 when (receiver) {
                     is A2sIdentifier -> A2sCall(receiver.name, args)
-                    is A2sFieldAccess -> A2sMethodCall(receiver.receiver, receiver.fieldName, args)
+                    is A2sFieldAccess -> A2sMethodCall(receiver.receiver, receiver.fieldName, args, safe = receiver.safe)
                     else -> A2sMethodCall(receiver, receiverNameFor(receiver), args)
                 }
             }
@@ -394,6 +399,9 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
             suffix.indexingSuffix() != null -> A2sIndexAccess(
                 receiver, visit(suffix.indexingSuffix().expression()) as A2sExpr
             )
+
+            suffix.INCR() != null -> A2sIncDec(receiver, increment = true, prefix = false)
+            suffix.DECR() != null -> A2sIncDec(receiver, increment = false, prefix = false)
 
             else -> receiver
         }
@@ -441,8 +449,8 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
         return when (suffix) {
             "_i32" -> A2sI32Literal(digits.toInt())
             "_i64" -> A2sI64Literal(digits.toLong())
-            "_u32" -> A2sI32Literal(digits.toInt())
-            "_u64" -> A2sI64Literal(digits.toLong())
+            "_u32" -> A2sI32Literal(digits.toLong().toInt()).also { it.type = A2sU32 }
+            "_u64" -> A2sI64Literal(java.lang.Long.parseUnsignedLong(digits)).also { it.type = A2sU64 }
             else -> A2sBigIntLiteral(digits)
         }
     }
@@ -484,6 +492,13 @@ class A2sVisitor(private val resolver: ResourceResolver? = null) :
             '\\' -> "\\"
             '"' -> "\""
             '$' -> "$"
+            'u' -> {
+                if (text.length >= 6) {
+                    text.substring(2, 6).toInt(16).toChar().toString()
+                } else {
+                    "u"
+                }
+            }
             else -> ch.toString()
         }
     }

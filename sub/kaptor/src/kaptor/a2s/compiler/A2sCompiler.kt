@@ -37,15 +37,11 @@ class A2sCompiler {
             eventClasses[event.name] = classCompiler.generateEventClass(event)
         }
 
-        val scriptBytes = classCompiler.generateScriptClass(index, script)
+        val handlerNames = A2sNames.uniqueHandlerNames(script.handlers)
+        val scriptBytes = classCompiler.generateScriptClass(index, script, handlerNames)
 
-        val handlers = script.handlers.map { h ->
-            val prefix = when (h.hookType) {
-                kaptor.a2s.ir.A2sHookType.ON -> "handle"
-                kaptor.a2s.ir.A2sHookType.BEFORE -> "before"
-                kaptor.a2s.ir.A2sHookType.AFTER -> "after"
-            }
-            A2sHandlerInfo(h.eventType, h.hookType, "${prefix}_${A2sNames.sanitize(h.eventType)}")
+        val handlers = script.handlers.mapIndexed { i, h ->
+            A2sHandlerInfo(h.eventType, h.hookType, handlerNames[i])
         }
 
         return A2sCompiledScript(

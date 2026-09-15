@@ -155,7 +155,7 @@ class A2sEngineTest {
             }
             """
         )
-        assertTrue(ok, "脚本加载成功")
+        assertTrue(ok, engine.errors.joinToString { "${it.phase}:${it.message}" })
     }
 
     @Test
@@ -475,7 +475,7 @@ class A2sEngineTest {
             }
             """
         )
-        assertTrue(ok)
+        assertTrue(ok, engine.errors.joinToString { "${it.phase}:${it.message}" })
         val event = engine.dispatchFromMap("E", mapOf("n" to 100L))
         assertNotNull(event)
         assertTrue(event.isDenied)
@@ -503,5 +503,69 @@ class A2sEngineTest {
         val second = engine.dispatchFromMap("Flag", mapOf("n" to 1))
         assertNotNull(second)
         assertTrue(second.isDenied)
+    }
+
+    @Test
+    fun `语法错误加载失败`() {
+        val engine = A2sEngine()
+        val ok = engine.loadScript("on Foo { e -> val }")
+        assertFalse(ok)
+        assertTrue(engine.errors.any { it.phase == A2sError.Phase.PARSE })
+    }
+
+    @Test
+    fun `同一脚本两个 on 都执行`() {
+        val engine = A2sEngine()
+        val box = mutableMapOf<String, Any?>("a" to 0, "b" to 0)
+        assertTrue(
+            engine.loadScript(
+                """
+                event Flag(val box: Any)
+                on Flag { e -> e.box.a = 1 }
+                on Flag { e -> e.box.b = 1 }
+                """
+            )
+        )
+        engine.dispatchFromMap("Flag", mapOf("box" to box))
+        assertEquals("1", box["a"].toString())
+        assertEquals("1", box["b"].toString())
+    }
+
+    @Test
+    fun `post 绑定到脚本所属引擎`() {
+        val box = mutableMapOf<String, Any?>("a" to 0, "b" to 0)
+        val e1 = A2sEngine()
+        val e2 = A2sEngine()
+        val src = """
+            event Trigger(val box: Any)
+            event Posted(val box: Any)
+            on Trigger { e -> post Posted(e.box) }
+            on Posted { e -> e.box.hit = 1 }
+        """
+        assertTrue(e1.loadScript(src.replace("hit", "a")))
+        assertTrue(e2.loadScript(src.replace("hit", "b")))
+        e1.dispatchFromMap("Trigger", mapOf("box" to box))
+        e1.flushQueue()
+        e2.flushQueue()
+        assertEquals("1", box["a"].toString())
+        assertEquals("0", box["b"].toString())
+    }
+
+    @Test
+    fun `死循环触发沙盒限额`() {
+        val engine = A2sEngine()
+        engine.sandbox.loopIterationLimit = 32
+        assertTrue(
+            engine.loadScript(
+                """
+                event Flag(val n: i32)
+                on Flag { e ->
+                    while (true) { }
+                }
+                """
+            )
+        )
+        engine.dispatchFromMap("Flag", mapOf("n" to 0))
+        assertTrue(engine.errors.any { it.cause is A2sLimitException || it.message.contains("sandbox") })
     }
 }

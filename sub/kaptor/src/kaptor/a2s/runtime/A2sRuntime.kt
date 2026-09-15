@@ -40,6 +40,50 @@ object A2sRuntime {
     }
 
     @JvmStatic
+    fun toLong(value: Any?): Long = when (value) {
+        is Long -> value
+        is Int -> value.toLong()
+        is java.math.BigInteger -> value.toLong()
+        is Rational -> value.numerator.divide(value.denominator).toLong()
+        is Number -> value.toLong()
+        else -> 0L
+    }
+
+    @JvmStatic
+    fun toBigInt(value: Any?): Any? = when (value) {
+        is java.math.BigInteger -> value
+        is Number -> java.math.BigInteger.valueOf(value.toLong())
+        is Rational -> value.numerator.divide(value.denominator)
+        is String -> java.math.BigInteger(value)
+        else -> java.math.BigInteger.ZERO
+    }
+
+    @JvmStatic
+    fun toRational(value: Any?): Any? = when (value) {
+        is Rational -> value
+        is java.math.BigInteger -> Rational.of(value)
+        is Number -> Rational.of(value.toLong())
+        is String -> Rational.fromDecimalString(value)
+        else -> Rational.ZERO
+    }
+
+    @JvmStatic
+    fun toF32(value: Any?): Any? = when (value) {
+        is Number -> value.toFloat()
+        is Rational -> value.numerator.toFloat() / value.denominator.toFloat()
+        is String -> value.toFloatOrNull() ?: 0f
+        else -> 0f
+    }
+
+    @JvmStatic
+    fun toF64(value: Any?): Any? = when (value) {
+        is Number -> value.toDouble()
+        is Rational -> value.numerator.toDouble() / value.denominator.toDouble()
+        is String -> value.toDoubleOrNull() ?: 0.0
+        else -> 0.0
+    }
+
+    @JvmStatic
     fun len(value: Any?): Int = when (value) {
         is String -> value.length
         is Collection<*> -> value.size
@@ -88,8 +132,12 @@ object A2sRuntime {
 
     @JvmStatic
     fun invokeMethod(receiver: Any?, methodName: String, args: Array<Any?>): Any? {
+        A2sSandbox.tick()
         if (receiver is A2sLambdaFn && methodName == "invoke") {
             return receiver.invoke(*args)
+        }
+        if (isBlockedApi(receiver, methodName)) {
+            throw A2sLimitException("blocked API: ${receiver?.javaClass?.name}.$methodName")
         }
         val method = receiver?.javaClass?.methods?.find {
             it.name == methodName && it.parameterCount == args.size
@@ -98,6 +146,25 @@ object A2sRuntime {
             return method.invoke(receiver, args)
         }
         return method.invoke(receiver, *args)
+    }
+
+    private val blockedMethods = setOf("wait", "notify", "notifyAll", "finalize")
+    private val blockedClassPrefixes: Array<String> = arrayOf(
+        "java.lang.Runtime",
+        "java.lang.ProcessBuilder",
+        "java.lang.Process",
+        "java.lang.System",
+        "java.lang.ClassLoader",
+        "java.lang.reflect.",
+    )
+
+    private fun isBlockedApi(receiver: Any?, methodName: String): Boolean {
+        if (methodName in blockedMethods) return true
+        val cn = receiver?.javaClass?.name ?: return false
+        for (prefix in blockedClassPrefixes) {
+            if (cn.startsWith(prefix)) return true
+        }
+        return false
     }
 
     /** Lambda 构造器注册表：className → (scriptObj, captures[]) → instance。 */
@@ -126,35 +193,49 @@ object A2sRuntime {
         lambdaCtors.clear()
     }
 
-    /** post 事件：加入当前引擎的事件队列（延迟 1 tick 分发）。 */
-    @JvmStatic
-    fun postEvent(event: A2sEventObject) {
-        currentEngine.get()?.eventQueue?.post(event)
+    private val scriptsToEngine = java.util.concurrent.ConcurrentHashMap<Any, A2sEngine>()
+
+    fun bindScript(scriptObj: Any, engine: A2sEngine) {
+        scriptsToEngine[scriptObj] = engine
     }
 
-    /** post EventType(args)：查找构造器 MH 创建事件并入队。 */
+    fun unbindScript(scriptObj: Any) {
+        scriptsToEngine.remove(scriptObj)
+    }
+
+    fun unbindEngine(engine: A2sEngine) {
+        scriptsToEngine.entries.removeIf { it.value === engine }
+        if (currentEngine.get() === engine) currentEngine.remove()
+    }
+
+    @JvmStatic
+    fun postEvent(event: A2sEventObject) {
+        engine()?.eventQueue?.post(event)
+    }
+
     @JvmStatic
     fun postEvent(eventType: String, args: Array<Any?>) {
-        val engine = currentEngine.get() ?: return
+        postEvent(null, eventType, args)
+    }
+
+    @JvmStatic
+    fun postEvent(scriptObj: Any?, eventType: String, args: Array<Any?>) {
+        val engine = (scriptObj?.let { scriptsToEngine[it] }) ?: currentEngine.get() ?: return
         val ctor = engine.eventConstructor(eventType) ?: return
         val event = ctor.invokeWithArguments(*args) as A2sEventObject
         engine.eventQueue.post(event)
     }
 
-    /** 当前线程关联的引擎实例。由 [A2sEngine.init] 设置，[A2sEngine.unregisterAll] 清除。 */
     private val currentEngine = ThreadLocal<A2sEngine?>()
 
-    /** 引擎构造时调用，绑定当前线程。 */
     fun registerEngine(engine: A2sEngine) {
         currentEngine.set(engine)
     }
 
-    /** 引擎销毁/重置时调用，解除绑定。 */
     fun unregisterEngine(engine: A2sEngine) {
-        if (currentEngine.get() === engine) currentEngine.remove()
+        unbindEngine(engine)
     }
 
-    /** 获取当前线程关联的引擎（用于测试/外部调用）。 */
     fun engine(): A2sEngine? = currentEngine.get()
 
     /** 拆分资源引用 `raw`，如 `item|minecraft:diamond`、`minecraft:diamond`、`diamond`。 */

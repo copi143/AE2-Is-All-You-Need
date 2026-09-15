@@ -27,7 +27,7 @@ funParam: Identifier COLON type;
 funBody: ASSIGN expression | block;
 
 eventDecl
-    : EVENT Identifier LPAREN eventParams? RPAREN LBRACE funDecl* RBRACE
+    : EVENT Identifier LPAREN eventParams? RPAREN (LBRACE funDecl* RBRACE)?
     ;
 eventParams: eventParam (COMMA eventParam)*;
 eventParam: VAL Identifier COLON type;
@@ -99,7 +99,7 @@ comparison: comparison (LT | GT | LE | GE) range | range;
 range: range RANGE additive | additive;
 additive: additive (PLUS | MINUS) multiplicative | multiplicative;
 multiplicative: multiplicative (STAR | SLASH | PERCENT) unary | unary;
-unary: (MINUS | NOT) unary | postfix;
+unary: (MINUS | NOT | INCR | DECR) unary | postfix;
 
 postfix: primary postfixSuffix*;
 postfixSuffix

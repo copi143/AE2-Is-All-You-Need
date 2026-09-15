@@ -25,8 +25,8 @@ class A2sSymbolTable(
     private fun inferLiteralType(expr: A2sExpr?): A2sType = when (expr) {
         is A2sBigIntLiteral -> A2sBigInt
         is A2sRationalLiteral -> A2sRational
-        is A2sI32Literal -> A2sI32
-        is A2sI64Literal -> A2sI64
+        is A2sI32Literal -> expr.type
+        is A2sI64Literal -> expr.type
         is A2sF32Literal -> A2sF32
         is A2sF64Literal -> A2sF64
         is A2sBoolLiteral -> A2sBoolean
@@ -58,8 +58,8 @@ class A2sSymbolTable(
     fun inferType(expr: A2sExpr, locals: Map<String, A2sType>): A2sType = when (expr) {
         is A2sBigIntLiteral -> A2sBigInt
         is A2sRationalLiteral -> A2sRational
-        is A2sI32Literal -> A2sI32
-        is A2sI64Literal -> A2sI64
+        is A2sI32Literal -> expr.type
+        is A2sI64Literal -> expr.type
         is A2sF32Literal -> A2sF32
         is A2sF64Literal -> A2sF64
         is A2sBoolLiteral -> A2sBoolean
@@ -69,8 +69,11 @@ class A2sSymbolTable(
         is A2sIdentifier -> locals[expr.name] ?: topLevelVarType(expr.name)
         is A2sResourceRef -> A2sAny
         is A2sLambda -> A2sLambdaType
-        is A2sIfExpr -> A2sUnit
-        is A2sWhenExpr -> A2sUnit
+        is A2sIfExpr -> inferBlockType(expr.thenBody, locals).ifUnknown {
+            expr.elseBody?.let { inferBlockType(it, locals) } ?: A2sUnit
+        }
+        is A2sWhenExpr -> expr.entries.firstOrNull()?.let { inferBlockType(it.body, locals) } ?: A2sUnit
+        is A2sIncDec -> inferType(expr.target, locals)
         is A2sElvis -> inferType(expr.left, locals).ifUnknown { inferType(expr.right, locals) }
         is A2sNotNull -> inferType(expr.expr, locals)
         is A2sFieldAccess -> inferFieldAccessType(expr, locals)
@@ -87,6 +90,11 @@ class A2sSymbolTable(
             return eventFieldType(receiverType.eventName, expr.fieldName)
         }
         return A2sUnknown
+    }
+
+    private fun inferBlockType(stmts: List<A2sStmt>, locals: Map<String, A2sType>): A2sType {
+        val last = stmts.lastOrNull() as? A2sExprStmt ?: return A2sUnit
+        return inferType(last.expr, locals)
     }
 
     private fun inferCallType(expr: A2sCall): A2sType {

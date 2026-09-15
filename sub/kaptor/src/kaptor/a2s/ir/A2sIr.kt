@@ -181,11 +181,12 @@ data class A2sFieldAccess(
     override var type: A2sType = A2sUnknown
 }
 
-/** 方法调用：`obj.method(args)` */
+/** 方法调用：`obj.method(args)` / `obj?.method(args)` */
 data class A2sMethodCall(
     val receiver: A2sExpr,
     val methodName: String,
     val arguments: List<A2sExpr>,
+    val safe: Boolean = false,
 ) : A2sExpr {
     override var type: A2sType = A2sUnknown
 }
@@ -275,5 +276,14 @@ data class A2sElvis(
 
 /** 非空断言 `a!!`：a 为 null 则抛 NullPointerException，否则返回 a。 */
 data class A2sNotNull(val expr: A2sExpr) : A2sExpr {
+    override var type: A2sType = A2sUnknown
+}
+
+/** `++x` / `x++` / `--x` / `x--`，对齐 Kotlin 前缀/后缀自增自减。 */
+data class A2sIncDec(
+    val target: A2sExpr,
+    val increment: Boolean,
+    val prefix: Boolean,
+) : A2sExpr {
     override var type: A2sType = A2sUnknown
 }

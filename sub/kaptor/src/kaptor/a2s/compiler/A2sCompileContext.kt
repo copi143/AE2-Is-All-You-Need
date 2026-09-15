@@ -9,7 +9,11 @@ class A2sCompileError(message: String) : RuntimeException(message)
 /**
  * 局部变量（槽号 + 类型 + 可变性）。
  */
-class A2sLocal(val slot: Int, val type: A2sType, val mutable: Boolean)
+class A2sLocal(val slot: Int, val type: A2sType, val mutable: Boolean, var boxed: Boolean = false)
+
+data class A2sCapturedVar(val name: String, val type: A2sType, val boxed: Boolean)
+
+data class A2sFinallyFrame(val body: List<kaptor.a2s.ir.A2sStmt>, val loopDepth: Int)
 
 /**
  * 统一编译上下文：管理局部变量槽分配、类型环境、循环标签与栈深度。
@@ -29,6 +33,7 @@ class A2sCompileContext(
 
     private val loopStartLabels = mutableListOf<Label>()
     private val loopEndLabels = mutableListOf<Label>()
+    private val finallyStack = mutableListOf<A2sFinallyFrame>()
 
     /**
      * scriptObj 所在的局部变量槽号。
@@ -44,7 +49,7 @@ class A2sCompileContext(
 
     fun eventFieldType(name: String): kaptor.a2s.ir.A2sType = eventFields[name] ?: kaptor.a2s.ir.A2sUnknown
 
-    fun declareLocal(name: String, type: A2sType, mutable: Boolean = true): Int {
+    fun declareLocal(name: String, type: A2sType, mutable: Boolean = false): Int {
         locals[name]?.let { return it.slot }
         val slot = nextLocal++
         locals[name] = A2sLocal(slot, type, mutable)
@@ -64,12 +69,59 @@ class A2sCompileContext(
     fun isMutableLocal(name: String): Boolean = locals[name]?.mutable ?: false
 
     fun loadVariable(name: String) {
+        val local = getLocal(name)
+        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, local.slot)
+        if (local.boxed) {
+            mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, TYPE_REF)
+            mv.visitFieldInsn(org.objectweb.asm.Opcodes.GETFIELD, TYPE_REF, "element", "Ljava/lang/Object;")
+        }
+    }
+
+    fun loadVariableRaw(name: String) {
         mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, getLocal(name).slot)
     }
 
     fun storeVariable(name: String) {
-        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, getLocal(name).slot)
+        val local = getLocal(name)
+        if (local.boxed) {
+            mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, local.slot)
+            mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, TYPE_REF)
+            mv.visitInsn(org.objectweb.asm.Opcodes.SWAP)
+            mv.visitFieldInsn(org.objectweb.asm.Opcodes.PUTFIELD, TYPE_REF, "element", "Ljava/lang/Object;")
+        } else {
+            mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, local.slot)
+        }
     }
+
+    fun markBoxed(name: String) {
+        getLocal(name).boxed = true
+    }
+
+    fun isBoxed(name: String): Boolean = locals[name]?.boxed == true
+
+    fun ensureBoxed(name: String) {
+        val local = getLocal(name)
+        if (local.boxed) return
+        mv.visitTypeInsn(org.objectweb.asm.Opcodes.NEW, TYPE_REF)
+        mv.visitInsn(org.objectweb.asm.Opcodes.DUP)
+        mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, local.slot)
+        mv.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKESPECIAL, TYPE_REF, "<init>", "(Ljava/lang/Object;)V", false)
+        mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, local.slot)
+        local.boxed = true
+    }
+
+    fun pushFinally(body: List<kaptor.a2s.ir.A2sStmt>) {
+        finallyStack.add(A2sFinallyFrame(body, loopStartLabels.size))
+    }
+
+    fun popFinally() {
+        finallyStack.removeLast()
+    }
+
+    fun finallyFrames(): List<A2sFinallyFrame> = finallyStack.toList()
+
+    fun finallyFramesLeavingLoop(): List<A2sFinallyFrame> =
+        finallyStack.filter { it.loopDepth >= loopStartLabels.size }
 
     fun pushLoop(start: Label, end: Label) {
         loopStartLabels.add(start)

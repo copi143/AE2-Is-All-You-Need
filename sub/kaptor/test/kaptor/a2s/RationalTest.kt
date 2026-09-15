@@ -40,6 +40,10 @@ class RationalTest {
             Rational.of(BigInteger("333333333333"), BigInteger("1000000000000")),
             Rational.fromDecimalString("0.333333333333"),
         )
+        assertEquals(
+            Rational.of(BigInteger("-157"), BigInteger("50")),
+            Rational.fromDecimalString("-3.14"),
+        )
     }
 
     @Test

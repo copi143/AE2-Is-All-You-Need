@@ -34,6 +34,7 @@ class A2sEngine {
     var bridge: A2sEventBridge? = null
 
     val eventQueue = A2sEventQueue()
+    val sandbox = A2sSandbox()
 
     private val errorRing = ArrayDeque<A2sError>(MAX_ERRORS + 1)
 
@@ -115,6 +116,7 @@ class A2sEngine {
             if (previous != null) {
                 scripts[previous.name] = previous
                 scriptInstances[previous.scriptIndex] = previous.instance
+                A2sRuntime.bindScript(previous.instance, this)
                 for (h in previous.handlerEntries) {
                     registerHandler(h)
                 }
@@ -171,6 +173,7 @@ class A2sEngine {
 
             scriptInstances[compiled.scriptIndex] = instance
             scripts[name] = ScriptEntry(name, compiled.scriptIndex, instance, handlerEntries)
+            A2sRuntime.bindScript(instance, this)
             true
         } catch (e: Exception) {
             restorePrevious()
@@ -185,6 +188,7 @@ class A2sEngine {
     fun unloadScript(name: String): Boolean {
         val entry = scripts.remove(name) ?: return false
         scriptInstances.remove(entry.scriptIndex)
+        A2sRuntime.unbindScript(entry.instance)
         for (h in entry.handlerEntries) {
             removeHandler(h)
         }
@@ -212,18 +216,24 @@ class A2sEngine {
         eventFieldOrders.clear()
         eventQueue.clear()
         clearErrors()
+        A2sRuntime.unregisterEngine(this)
     }
 
     // ── 事件分发 ──
 
     /** 分发事件（由桥接层传入已构造的事件对象）。 */
     fun dispatch(eventType: String, event: A2sEventObject) {
-        beforeHandlers[eventType]?.forEach { invoke(it, event) }
-        onHandlers[eventType]?.forEach { entry ->
-            if (event.isHandled) return@forEach
-            invoke(entry, event)
+        A2sSandbox.enter(sandbox)
+        try {
+            beforeHandlers[eventType]?.forEach { invoke(it, event) }
+            onHandlers[eventType]?.forEach { entry ->
+                if (event.isHandled) return@forEach
+                invoke(entry, event)
+            }
+            afterHandlers[eventType]?.forEach { invoke(it, event) }
+        } finally {
+            A2sSandbox.leave()
         }
-        afterHandlers[eventType]?.forEach { invoke(it, event) }
     }
 
     /**
@@ -271,7 +281,28 @@ class A2sEngine {
             val lexer = A2sLexer(CharStreams.fromString(source))
             val tokens = CommonTokenStream(lexer)
             val parser = A2sParser(tokens)
+            val errors = mutableListOf<String>()
+            val listener = object : BaseErrorListener() {
+                override fun syntaxError(
+                    recognizer: Recognizer<*, *>?,
+                    offendingSymbol: Any?,
+                    line: Int,
+                    charPositionInLine: Int,
+                    msg: String?,
+                    e: RecognitionException?,
+                ) {
+                    errors.add("$line:$charPositionInLine $msg")
+                }
+            }
+            lexer.removeErrorListeners()
+            parser.removeErrorListeners()
+            lexer.addErrorListener(listener)
+            parser.addErrorListener(listener)
             val tree = parser.script()
+            if (errors.isNotEmpty() || parser.numberOfSyntaxErrors > 0) {
+                recordError(scriptName, A2sError.Phase.PARSE, errors.joinToString("; ").ifEmpty { "syntax error" }, null)
+                return null
+            }
             A2sVisitor().visit(tree) as kaptor.a2s.ir.A2sScriptFile
         } catch (e: Exception) {
             recordError(scriptName, A2sError.Phase.PARSE, e.message ?: e.toString(), e)

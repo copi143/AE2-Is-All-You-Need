@@ -26,13 +26,15 @@ class A2sStmtCompiler(
             is A2sFor -> compileFor(ctx, stmt)
             is A2sWhile -> compileWhile(ctx, stmt)
             is A2sReturn -> compileReturn(ctx, stmt)
-            is A2sBreak -> ctx.mv.visitJumpInsn(GOTO, ctx.breakLabel())
-            is A2sContinue -> ctx.mv.visitJumpInsn(GOTO, ctx.continueLabel())
-            is A2sThrow -> {
-                exprCompiler.compile(ctx, stmt.expr)
-                ctx.mv.visitTypeInsn(CHECKCAST, "java/lang/Throwable")
-                ctx.mv.visitInsn(ATHROW)
+            is A2sBreak -> {
+                emitFinally(ctx, ctx.finallyFramesLeavingLoop())
+                ctx.mv.visitJumpInsn(GOTO, ctx.breakLabel())
             }
+            is A2sContinue -> {
+                emitFinally(ctx, ctx.finallyFramesLeavingLoop())
+                ctx.mv.visitJumpInsn(GOTO, ctx.continueLabel())
+            }
+            is A2sThrow -> compileThrow(ctx, stmt)
 
             is A2sTry -> compileTry(ctx, stmt)
             is A2sPost -> compilePost(ctx, stmt)
@@ -158,13 +160,14 @@ class A2sStmtCompiler(
         ctx.pushLoop(startLabel, endLabel)
 
         ctx.mv.visitLabel(startLabel)
+        ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_SANDBOX, "tickLoop", "()V", false)
         ctx.mv.visitVarInsn(ALOAD, iterLocal)
         ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Iterator", "hasNext", "()Z", true)
         ctx.mv.visitJumpInsn(IFEQ, endLabel)
 
         ctx.mv.visitVarInsn(ALOAD, iterLocal)
         ctx.mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Iterator", "next", "()Ljava/lang/Object;", true)
-        ctx.declareLocal(stmt.variable, A2sAny)
+        ctx.declareLocal(stmt.variable, A2sAny, mutable = true)
         ctx.storeVariable(stmt.variable)
 
         compileBlock(ctx, stmt.body)
@@ -180,6 +183,7 @@ class A2sStmtCompiler(
         ctx.pushLoop(startLabel, endLabel)
 
         ctx.mv.visitLabel(startLabel)
+        ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_SANDBOX, "tickLoop", "()V", false)
         exprCompiler.compile(ctx, stmt.condition)
         A2sTypeCodegen.unbox(ctx.mv, A2sBoolean)
         ctx.mv.visitJumpInsn(IFEQ, endLabel)
@@ -193,9 +197,44 @@ class A2sStmtCompiler(
     private fun compileReturn(ctx: A2sCompileContext, stmt: A2sReturn) {
         if (stmt.value != null) {
             exprCompiler.compile(ctx, stmt.value)
+            val frames = ctx.finallyFrames()
+            if (frames.isNotEmpty()) {
+                val tmp = ctx.allocateTemp()
+                ctx.mv.visitVarInsn(ASTORE, tmp)
+                emitFinally(ctx, frames.asReversed())
+                ctx.mv.visitVarInsn(ALOAD, tmp)
+            }
             ctx.mv.visitInsn(ARETURN)
         } else {
+            emitFinally(ctx, ctx.finallyFrames().asReversed())
             ctx.mv.visitInsn(RETURN)
+        }
+    }
+
+    private fun compileThrow(ctx: A2sCompileContext, stmt: A2sThrow) {
+        exprCompiler.compile(ctx, stmt.expr)
+        ctx.mv.visitTypeInsn(CHECKCAST, "java/lang/Throwable")
+        ctx.mv.visitInsn(ATHROW)
+    }
+
+    private fun emitFinally(ctx: A2sCompileContext, frames: List<A2sFinallyFrame>) {
+        for (frame in frames) {
+            compileBlock(ctx, frame.body)
+        }
+    }
+
+    fun compileAsValue(ctx: A2sCompileContext, stmts: List<A2sStmt>) {
+        if (stmts.isEmpty()) {
+            ctx.mv.visitInsn(ACONST_NULL)
+            return
+        }
+        for (i in 0 until stmts.lastIndex) compile(ctx, stmts[i])
+        when (val last = stmts.last()) {
+            is A2sExprStmt -> exprCompiler.compile(ctx, last.expr)
+            else -> {
+                compile(ctx, last)
+                ctx.mv.visitInsn(ACONST_NULL)
+            }
         }
     }
 
@@ -204,6 +243,7 @@ class A2sStmtCompiler(
         val tryEnd = Label()
         val finallyLabel = if (stmt.finallyBody != null) Label() else null
         val doneLabel = Label()
+        if (stmt.finallyBody != null) ctx.pushFinally(stmt.finallyBody)
 
         // catch handlers
         val handlerLabels = stmt.catches.map { Label() }
@@ -269,11 +309,11 @@ class A2sStmtCompiler(
         }
 
         ctx.mv.visitLabel(doneLabel)
+        if (stmt.finallyBody != null) ctx.popFinally()
     }
 
     private fun compilePost(ctx: A2sCompileContext, stmt: A2sPost) {
-        // post EventType(args)：通过运行时查找构造器 MH 创建事件并入队。
-        // 事件类是 hidden class，脚本类无法直接 NEW，故走运行时辅助。
+        ctx.mv.visitVarInsn(ALOAD, ctx.scriptObjSlot)
         ctx.mv.visitLdcInsn(stmt.eventType)
         ctx.mv.visitLdcInsn(stmt.arguments.size)
         ctx.mv.visitTypeInsn(ANEWARRAY, "java/lang/Object")
@@ -283,7 +323,10 @@ class A2sStmtCompiler(
             exprCompiler.compile(ctx, arg)
             ctx.mv.visitInsn(AASTORE)
         }
-        ctx.mv.visitMethodInsn(INVOKESTATIC, TYPE_RUNTIME, "postEvent", "(Ljava/lang/String;[Ljava/lang/Object;)V", false)
+        ctx.mv.visitMethodInsn(
+            INVOKESTATIC, TYPE_RUNTIME, "postEvent",
+            "(Ljava/lang/Object;Ljava/lang/String;[Ljava/lang/Object;)V", false
+        )
     }
 
     private fun compileBlock(ctx: A2sCompileContext, stmts: List<A2sStmt>) {
