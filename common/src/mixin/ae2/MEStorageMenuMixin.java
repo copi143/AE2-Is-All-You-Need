@@ -4,8 +4,11 @@ import allyouneed.api.BigStackSource;
 import allyouneed.item.packet.AllPackets;
 import allyouneed.util.bigint.BigAmounts;
 import allyouneed.util.bigint.ObjectCounter;
-import appeng.api.stacks.AEKey;
+import appeng.api.networking.IGrid;
+import appeng.api.networking.IGridNode;
 import appeng.api.networking.energy.IEnergySource;
+import appeng.api.networking.security.IActionHost;
+import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
 import appeng.api.storage.MEStorage;
 import appeng.api.storage.StorageHelper;
@@ -45,12 +48,16 @@ public abstract class MEStorageMenuMixin {
     @Shadow(remap = false)
     private IncrementalUpdateHelper updateHelper;
 
+    @Shadow(remap = false)
+    @Nullable
+    private IGridNode networkNode;
+
     @Unique
     private ObjectCounter<AEKey> allyouneed$previousBigStacks = new ObjectCounter<>();
 
     @Redirect(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/api/storage/MEStorage;getAvailableStacks()Lappeng/api/stacks/KeyCounter;", remap = false))
     private KeyCounter allyouneed$captureBigStacks(MEStorage storage) {
-        KeyCounter stacks = storage.getAvailableStacks();
+        KeyCounter stacks = allyouneed$copyAvailableStacks(storage);
         ObjectCounter<AEKey> big;
         if (storage instanceof BigStackSource source && source.getLastBigStacks() != null) {
             big = source.getLastBigStacks().copy();
@@ -62,6 +69,32 @@ public abstract class MEStorageMenuMixin {
         }
         BigAmounts.setCurrent(big);
         return stacks;
+    }
+
+    @Unique
+    private KeyCounter allyouneed$copyAvailableStacks(MEStorage storage) {
+        IGrid grid = allyouneed$resolveGrid();
+        if (grid != null && storage == grid.getStorageService().getInventory()) {
+            KeyCounter copy = new KeyCounter();
+            copy.addAll(grid.getStorageService().getCachedInventory());
+            return copy;
+        }
+        return storage.getAvailableStacks();
+    }
+
+    @Unique
+    private @Nullable IGrid allyouneed$resolveGrid() {
+        IGridNode hostNode = this.networkNode;
+        if (hostNode == null) {
+            var host = ((MEStorageMenu) (Object) this).getHost();
+            if (host instanceof IActionHost actionHost) {
+                hostNode = actionHost.getActionableNode();
+            }
+        }
+        if (hostNode != null && hostNode.isActive()) {
+            return hostNode.getGrid();
+        }
+        return null;
     }
 
     @Inject(method = "broadcastChanges", at = @At(value = "INVOKE", target = "Lappeng/menu/me/common/IncrementalUpdateHelper;hasChanges()Z", remap = false))

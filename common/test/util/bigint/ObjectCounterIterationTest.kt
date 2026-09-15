@@ -94,4 +94,30 @@ class ObjectCounterIterationTest {
         while (it.hasNext()) it.next()
         assertFailsWith<NoSuchElementException> { it.next() }
     }
+
+    @Test
+    fun `forEachEntry visits every key once`() {
+        val oc = ObjectCounter<String>()
+        for (c in 'a'..'j') oc.add(c.toString(), 1L)
+        oc.add("dup", 2L)
+        val seen = mutableListOf<String>()
+        oc.forEachEntry { k, _ -> seen += k }
+        assertEquals(11, seen.size)
+        assertEquals(seen.toSet().size, seen.size)
+        assertEquals(oc.size, seen.size)
+    }
+
+    @Test
+    fun `copy is independent of the original`() {
+        val oc = ObjectCounter<String>()
+        oc.add("a", 1L)
+        oc.add("b", 2L)
+        val copy = oc.copy()
+        oc.add("a", 4L)
+        oc.add("c", 3L)
+        assertEquals(1L, copy.get("a")?.longSaturated)
+        assertEquals(2L, copy.get("b")?.longSaturated)
+        assertFalse(copy.containsKey("c"))
+        assertEquals(5L, oc.get("a")?.longSaturated)
+    }
 }

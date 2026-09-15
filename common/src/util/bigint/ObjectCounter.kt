@@ -13,6 +13,7 @@ import java.io.Serializable
 import java.math.BigInteger
 import java.util.Arrays
 import java.util.NoSuchElementException
+import java.util.function.BiConsumer
 import java.util.function.Consumer
 
 class ObjectCounter<K>(expected: Int = 16, val f: Float = Hash.DEFAULT_LOAD_FACTOR) :
@@ -421,14 +422,31 @@ return object : ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
     fun getBigInteger(k: K): BigInteger = getCounter(k).toBigInteger()
     fun getSaturatedLong(k: K): Long = getCounter(k).longSaturated
 
+    fun forEachEntry(action: BiConsumer<K, Counter>) {
+        if (isEmpty()) return
+        if (containsNullKey) action.accept(null as K, getCounterAtNull())
+        var remaining = realSize()
+        var i = 0
+        val keys = key
+        val limit = n
+        while (remaining != 0 && i < limit) {
+            val k = keys[i]
+            if (k != null) {
+                action.accept(k as K, getCounterAt(i))
+                remaining--
+            }
+            i++
+        }
+    }
+
     fun removeZeros() {
         val toRemove = mutableListOf<K>()
-        for (e in object2ObjectEntrySet()) if (e.value.isZero) toRemove.add(e.key)
+        forEachEntry { k, v -> if (v.isZero) toRemove.add(k) }
         for (k in toRemove) remove(k)
     }
 
     fun addAll(other: ObjectCounter<K>) {
-        for (e in other.object2ObjectEntrySet()) add(e.key, e.value)
+        other.forEachEntry { k, v -> add(k, v) }
     }
 
     fun addAll(other: KeyCounter) {
@@ -438,19 +456,20 @@ return object : ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
     }
 
     fun collectChangedKeys(other: ObjectCounter<K>, out: Consumer<K>) {
-        for (e in object2ObjectEntrySet()) if (e.value != other.getCounter(e.key)) out.accept(e.key)
-        for (e in other.object2ObjectEntrySet()) if (!containsKey(e.key)) out.accept(e.key)
+        forEachEntry { k, v -> if (v != other.getCounter(k)) out.accept(k) }
+        other.forEachEntry { k, _ -> if (!containsKey(k)) out.accept(k) }
     }
 
     fun copy(): ObjectCounter<K> {
         val c = ObjectCounter<K>(size, f)
-        for ((key, value) in object2ObjectEntrySet()) c[key] = value
+        forEachEntry { k, v -> c.set(k, v) }
         return c
     }
 
     fun copySaturatedTo(out: KeyCounter) {
-        for (e in object2ObjectEntrySet()) {
-            @Suppress("UNCHECKED_CAST") out.add(e.key as AEKey, e.value.longSaturated)
+        forEachEntry { k, v ->
+            @Suppress("UNCHECKED_CAST")
+            out.add(k as AEKey, v.longSaturated)
         }
     }
 

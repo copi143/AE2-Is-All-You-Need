@@ -34,7 +34,10 @@ public abstract class NetworkStorageMixin implements BigStackSource {
     private boolean mountsInUse;
 
     @Unique
-    private ObjectCounter<AEKey> allyouneed$lastBigStacks = new ObjectCounter<>();
+    private final ObjectCounter<AEKey> allyouneed$lastBigStacks = new ObjectCounter<>();
+
+    @Unique
+    private final KeyCounter allyouneed$scratch = new KeyCounter();
 
     @Override
     public @Nullable ObjectCounter<AEKey> getLastBigStacks() {
@@ -55,17 +58,23 @@ public abstract class NetworkStorageMixin implements BigStackSource {
 
         this.mountsInUse = true;
         try {
-            ObjectCounter<AEKey> big = new ObjectCounter<>();
+            ObjectCounter<AEKey> big = this.allyouneed$lastBigStacks;
+            big.clear();
+            KeyCounter scratch = this.allyouneed$scratch;
+            scratch.clear();
+            boolean usedScratch = false;
             for (var invList : this.priorityInventory.values()) {
                 for (var inv : invList) {
                     if (!BigStackSource.collectBigStacks(inv, big)) {
-                        KeyCounter tmp = new KeyCounter();
-                        inv.getAvailableStacks(tmp);
-                        big.addAll(tmp);
+                        inv.getAvailableStacks(scratch);
+                        usedScratch = true;
                     }
                 }
             }
-            this.allyouneed$lastBigStacks = big;
+            if (usedScratch) {
+                big.addAll(scratch);
+                scratch.clear();
+            }
             big.copySaturatedTo(out);
         } finally {
             this.mountsInUse = false;
