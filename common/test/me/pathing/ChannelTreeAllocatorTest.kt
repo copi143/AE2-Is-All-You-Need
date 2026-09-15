@@ -170,6 +170,179 @@ class ChannelTreeAllocatorTest {
         assertEquals(1, r.channelsInUse)
     }
 
+    @Test
+    fun `dense-to-dense swallow blocks downstream`() {
+        val n = 5
+        val maxCh = intArrayOf(0, 32, 32, 8, 8)
+        val flags = intArrayOf(
+            0,
+            ChannelGraph.DENSE,
+            ChannelGraph.DENSE or ChannelGraph.REQUIRE,
+            ChannelGraph.REQUIRE,
+            ChannelGraph.REQUIRE,
+        )
+        val demand = booleanArrayOf(false, false, true, true, true)
+        val swallow = booleanArrayOf(false, false, true, false, false)
+        val g = graph(
+            n,
+            controllers = booleanArrayOf(true, false, false, false, false),
+            maxCh, flags, demand,
+            edges = listOf(0 to 1, 1 to 2, 2 to 3, 2 to 4),
+            swallow = swallow,
+        )
+        val r = ChannelTreeAllocator.allocate(g)
+        assertTrue(r.assigned[2])
+        assertFalse(r.assigned[3])
+        assertFalse(r.assigned[4])
+        assertEquals(1, r.channelsInUse)
+        assertFalse(r.usedPhase2)
+    }
+
+    @Test
+    fun `phase 2 keeps tree winners when augmenting`() {
+        val n = 14
+        val maxCh = IntArray(n) { 8 }
+        maxCh[0] = 0
+        maxCh[1] = 32
+        val flags = IntArray(n)
+        flags[1] = ChannelGraph.DENSE
+        flags[2] = ChannelGraph.PREFERRED
+        flags[3] = ChannelGraph.PREFERRED
+        val demand = BooleanArray(n)
+        for (i in 4 until n) {
+            demand[i] = true
+            flags[i] = ChannelGraph.REQUIRE
+        }
+        val edges = ArrayList<Pair<Int, Int>>()
+        edges += 0 to 1
+        edges += 1 to 2
+        edges += 1 to 3
+        for (i in 4 until n) {
+            edges += 2 to i
+            edges += 3 to i
+        }
+        val g = graph(
+            n,
+            controllers = BooleanArray(n) { it == 0 },
+            maxCh, flags, demand, edges,
+        )
+        val r = ChannelTreeAllocator.allocate(g)
+        assertEquals(10, r.channelsInUse)
+        assertTrue(r.usedPhase2)
+        for (i in 4 until 12) assertTrue(r.assigned[i])
+        assertEquals(10, r.assigned.count { it })
+        assertTrue(r.nodeUsed[2] >= 8)
+        assertTrue(r.nodeUsed[3] >= 2)
+        for (i in 4 until n) {
+            if (r.assigned[i]) assertTrue(r.nodeUsed[i] > 0)
+        }
+    }
+
+    @Test
+    fun `two controllers on same dense do not invent capacity`() {
+        val n = 13
+        val maxCh = IntArray(n) { 8 }
+        maxCh[0] = 0
+        maxCh[1] = 0
+        maxCh[2] = 32
+        val flags = IntArray(n)
+        flags[2] = ChannelGraph.DENSE
+        flags[3] = ChannelGraph.PREFERRED
+        val demand = BooleanArray(n)
+        for (i in 4 until n) {
+            demand[i] = true
+            flags[i] = ChannelGraph.REQUIRE
+        }
+        val edges = ArrayList<Pair<Int, Int>>()
+        edges += 0 to 2
+        edges += 1 to 2
+        edges += 2 to 3
+        for (i in 4 until n) edges += 3 to i
+        val g = graph(
+            n,
+            controllers = BooleanArray(n) { it == 0 || it == 1 },
+            maxCh, flags, demand, edges,
+        )
+        val r = ChannelTreeAllocator.allocate(g)
+        assertEquals(8, r.channelsInUse)
+        assertFalse(r.usedPhase2)
+        assertEquals(8, r.assigned.count { it })
+    }
+
+    @Test
+    fun `phase 2 does not leak through swallow`() {
+        val n = 5
+        val maxCh = intArrayOf(0, 32, 8, 8, 8)
+        val flags = intArrayOf(
+            0,
+            ChannelGraph.DENSE,
+            ChannelGraph.PREFERRED or ChannelGraph.REQUIRE,
+            ChannelGraph.REQUIRE,
+            ChannelGraph.REQUIRE,
+        )
+        val demand = booleanArrayOf(false, false, true, true, true)
+        val swallow = booleanArrayOf(false, false, true, false, false)
+        val g = graph(
+            n,
+            controllers = booleanArrayOf(true, false, false, false, false),
+            maxCh, flags, demand,
+            edges = listOf(0 to 1, 1 to 2, 2 to 3, 2 to 4, 3 to 4),
+            swallow = swallow,
+        )
+        val r = ChannelTreeAllocator.allocate(g)
+        assertTrue(r.assigned[2])
+        assertFalse(r.assigned[3])
+        assertFalse(r.assigned[4])
+        assertEquals(1, r.channelsInUse)
+    }
+
+    @Test
+    fun `compressed uses detour while normal winner stays`() {
+        val n = 5
+        val maxCh = intArrayOf(0, 32, 32, 8, 8)
+        val flags = intArrayOf(
+            0,
+            ChannelGraph.DENSE,
+            ChannelGraph.DENSE or ChannelGraph.NO_COMPRESSED,
+            ChannelGraph.REQUIRE or ChannelGraph.COMPRESSED,
+            ChannelGraph.REQUIRE,
+        )
+        val demand = booleanArrayOf(false, false, false, true, true)
+        val g = graph(
+            n,
+            controllers = booleanArrayOf(true, false, false, false, false),
+            maxCh, flags, demand,
+            edges = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 1 to 4),
+        )
+        val r = ChannelTreeAllocator.allocate(g)
+        assertTrue(r.assigned[4])
+        assertTrue(r.assigned[3])
+        assertEquals(2, r.channelsInUse)
+        assertTrue(r.nodeUsed[4] > 0)
+        assertTrue(r.nodeUsed[3] > 0)
+    }
+
+    @Test
+    fun `channelsByBlocks counts nodes and tree edges`() {
+        val n = 4
+        val maxCh = intArrayOf(0, 32, 8, 8)
+        val flags = intArrayOf(0, ChannelGraph.DENSE, ChannelGraph.PREFERRED, ChannelGraph.REQUIRE)
+        val demand = booleanArrayOf(false, false, false, true)
+        val g = graph(
+            n,
+            controllers = booleanArrayOf(true, false, false, false),
+            maxCh, flags, demand,
+            edges = listOf(0 to 1, 1 to 2, 2 to 3),
+        )
+        val r = ChannelTreeAllocator.allocate(g)
+        assertEquals(1, r.channelsInUse)
+        assertEquals(6, r.channelsByBlocks)
+        assertEquals(1, r.nodeUsed[1])
+        assertEquals(1, r.nodeUsed[2])
+        assertEquals(1, r.nodeUsed[3])
+        assertEquals(0, r.nodeUsed[0])
+    }
+
     private fun graph(
         n: Int,
         controllers: BooleanArray,

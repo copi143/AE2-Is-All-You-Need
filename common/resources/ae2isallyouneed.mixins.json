@@ -39,6 +39,7 @@
     "ae2.NetworkStorageMixin",
     "ae2.PartPlacementMixin",
     "ae2.PathingCalculationMixin",
+    "ae2.PathingServiceMixin",
     "ae2.PatternProviderLogicMixin",
     "ae2.ReadableNumberConverterMixin",
     "ae2.TooltipsMixin",
