@@ -90,6 +90,7 @@ dependencies {
     jarJar(project(":kaptor"))
     jarJar(project(":averith"))
     jarJar(project(":indexing"))
+    compileOnly(project(":serialization"))
     jarJar(project(":composeruntime"))
     jarJar(project(":msdftext"))
 

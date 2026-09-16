@@ -1,6 +1,7 @@
 plugins {
     kotlin("kapt")
     id("multiloader-common")
+    alias(libs.plugins.ksp)
     alias(libs.plugins.moddev)
     alias(libs.plugins.kotlin.compose)
 }
@@ -25,6 +26,8 @@ dependencies {
     api(project(":averith"))
     api(project(":msdftext"))
     api(project(":indexing"))
+    compileOnly(project(":serialization"))
+    ksp(project(":serialization"))
     api(libs.compose.runtime)
     api(libs.compose.ui)
     api(libs.compose.foundation)
@@ -134,6 +137,9 @@ artifacts {
     }
     sourceSets.main.get().kotlin.sourceDirectories.forEach { resourceDir ->
         add("commonKotlin", resourceDir)
+    }
+    add("commonKotlin", layout.buildDirectory.dir("generated/ksp/main/kotlin")) {
+        builtBy("kspKotlin")
     }
     sourceSets.main.get().resources.sourceDirectories.forEach { resourceDir ->
         add("commonResources", resourceDir)

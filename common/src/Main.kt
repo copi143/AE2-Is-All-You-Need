@@ -46,7 +46,6 @@ object Main {
             Platform.name,
             Platform.envName,
         )
-        // Register our pattern decoders and part models
         ModPatternDecoders.register()
         BuiltinMachineTypes.registerAll()
         try {

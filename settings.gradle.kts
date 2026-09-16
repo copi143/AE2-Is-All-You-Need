@@ -6,6 +6,7 @@ pluginManagement {
     includeBuild("build-logic")
     repositories {
         gradlePluginPortal()
+        google()
         mavenCentral()
         maven {
             name = "Fabric"
@@ -24,7 +25,7 @@ plugins {
 
 listOf("common", "fabric", "forge").forEach { name -> include(name) }
 
-listOf("averith", "composeruntime", "graphicsrepl", "indexing", "kaptor", "msdftext", "transformer").forEach { name ->
+listOf("averith", "composeruntime", "graphicsrepl", "indexing", "kaptor", "msdftext", "serialization", "transformer").forEach { name ->
     include(name)
     project(":$name").projectDir = file("sub/$name")
 }
