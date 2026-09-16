@@ -33,6 +33,7 @@
     "ae2.GridNodeMixin",
     "ae2.IPartMixin",
     "ae2.ItemPickupStrategyMixin",
+    "ae2.KeyCounterMixin",
     "ae2.ManagedGridNodeMixin",
     "ae2.MEInventoryUpdatePacketBuilderMixin",
     "ae2.MEInventoryUpdatePacketMixin",

@@ -1,6 +1,7 @@
 package allyouneed.mixin.ae2;
 
 import allyouneed.api.BigStackSource;
+import allyouneed.api.KeyLocation;
 import allyouneed.util.bigint.IncrementalCellIndex;
 import allyouneed.util.bigint.ObjectCounter;
 import appeng.api.config.Actionable;
@@ -20,6 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 
@@ -39,6 +41,9 @@ public abstract class NetworkStorageMixin implements BigStackSource {
 
     @Unique
     private final KeyCounter allyouneed$scratch = new KeyCounter();
+
+    @Unique
+    private final ObjectCounter<AEKey> allyouneed$mountTmp = new ObjectCounter<>();
 
     @Override
     public @Nullable ObjectCounter<AEKey> getLastBigStacks() {
@@ -112,23 +117,13 @@ public abstract class NetworkStorageMixin implements BigStackSource {
         ObjectCounter<AEKey> big = this.allyouneed$index.getLast();
         big.clear();
         big.addAll(this.allyouneed$index.getCells());
-        KeyCounter scratch = this.allyouneed$scratch;
-        scratch.clear();
-        boolean usedScratch = false;
         for (var invList : this.priorityInventory.values()) {
             for (var inv : invList) {
                 if (BigStackSource.isCellMount(inv)) {
                     continue;
                 }
-                if (!BigStackSource.collectBigStacks(inv, big)) {
-                    inv.getAvailableStacks(scratch);
-                    usedScratch = true;
-                }
+                this.allyouneed$collectMount(inv, big);
             }
-        }
-        if (usedScratch) {
-            big.addAll(scratch);
-            scratch.clear();
         }
     }
 
@@ -136,25 +131,32 @@ public abstract class NetworkStorageMixin implements BigStackSource {
     private void allyouneed$rebuildCells() {
         ObjectCounter<AEKey> cells = this.allyouneed$index.getCells();
         cells.clear();
-        KeyCounter scratch = this.allyouneed$scratch;
-        scratch.clear();
-        boolean usedScratch = false;
         for (var invList : this.priorityInventory.values()) {
             for (var inv : invList) {
                 if (!BigStackSource.isCellMount(inv)) {
                     continue;
                 }
-                if (!BigStackSource.collectBigStacks(inv, cells)) {
-                    inv.getAvailableStacks(scratch);
-                    usedScratch = true;
-                }
+                this.allyouneed$collectMount(inv, cells);
             }
         }
-        if (usedScratch) {
-            cells.addAll(scratch);
+        this.allyouneed$index.markValid();
+    }
+
+    @Unique
+    private void allyouneed$collectMount(MEStorage inv, ObjectCounter<AEKey> dest) {
+        ObjectCounter<AEKey> tmp = this.allyouneed$mountTmp;
+        tmp.clear();
+        KeyCounter scratch = this.allyouneed$scratch;
+        if (!BigStackSource.collectBigStacks(inv, tmp)) {
+            scratch.clear();
+            inv.getAvailableStacks(scratch);
+            tmp.addAll(scratch);
             scratch.clear();
         }
-        this.allyouneed$index.markValid();
+        tmp.forEachEntry((key, value) -> {
+            dest.add(key, value);
+            dest.addLocation(key, inv, value.toBigInteger());
+        });
     }
 
     @Unique
@@ -171,6 +173,7 @@ public abstract class NetworkStorageMixin implements BigStackSource {
     private @Nullable BigInteger allyouneed$sumCellKey(AEKey what) {
         BigInteger sum = BigInteger.ZERO;
         boolean anyCell = false;
+        ArrayList<KeyLocation> locs = new ArrayList<>();
         for (var invList : this.priorityInventory.values()) {
             for (var inv : invList) {
                 if (!BigStackSource.isCellMount(inv)) {
@@ -181,9 +184,13 @@ public abstract class NetworkStorageMixin implements BigStackSource {
                 if (amount == null) {
                     return null;
                 }
+                if (amount.signum() > 0) {
+                    locs.add(new KeyLocation(inv, amount));
+                }
                 sum = sum.add(amount);
             }
         }
+        this.allyouneed$index.getCells().setLocations(what, locs);
         return anyCell ? sum : BigInteger.ZERO;
     }
 }

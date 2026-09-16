@@ -1,5 +1,7 @@
 package allyouneed.util.bigint
 
+import allyouneed.api.KeyLocation
+import allyouneed.api.KeyLocations
 import appeng.api.stacks.AEKey
 import appeng.api.stacks.KeyCounter
 import it.unimi.dsi.fastutil.Hash
@@ -49,6 +51,9 @@ class ObjectCounter<K>(expected: Int = 16, val f: Float = Hash.DEFAULT_LOAD_FACT
     @Transient
     override var size: Int = 0
         private set
+
+    @Transient
+    private var locations: HashMap<K, ArrayList<KeyLocation>>? = null
 
     init {
         if (f <= 0 || 1 <= f) throw IllegalArgumentException("Load factor must be greater than 0 and smaller than 1")
@@ -185,6 +190,7 @@ class ObjectCounter<K>(expected: Int = 16, val f: Float = Hash.DEFAULT_LOAD_FACT
     }
 
     override fun remove(key: K): Counter? {
+        dropLocations(key)
         if (key == null) return if (containsNullKey) removeNullEntry() else defRetValue
         var pos = HashCommon.mix((key as Any).hashCode()) and mask
         var curr = this.key[pos]
@@ -217,6 +223,7 @@ class ObjectCounter<K>(expected: Int = 16, val f: Float = Hash.DEFAULT_LOAD_FACT
     }
 
     override fun clear() {
+        locations = null
         if (isEmpty()) return
         size = 0
         containsNullKey = false
@@ -279,6 +286,7 @@ class ObjectCounter<K>(expected: Int = 16, val f: Float = Hash.DEFAULT_LOAD_FACT
         c.hi = hi.clone()
         c.bi = bi.clone()
         c.containsNullKey = containsNullKey
+        c.locations = copyLocationMap()
         return c
     }
 
@@ -447,12 +455,15 @@ return object : ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
 
     fun addAll(other: ObjectCounter<K>) {
         other.forEachEntry { k, v -> add(k, v) }
+        addLocations(other.copyLocations())
     }
 
     fun addAll(other: KeyCounter) {
         for (entry in other) {
             @Suppress("UNCHECKED_CAST") add(entry.key as K, entry.longValue)
         }
+        @Suppress("UNCHECKED_CAST")
+        (other as Any as? KeyLocations)?.let { addLocations(it.copyLocations() as Map<K, List<KeyLocation>>) }
     }
 
     fun collectChangedKeys(other: ObjectCounter<K>, out: Consumer<K>) {
@@ -463,6 +474,7 @@ return object : ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
     fun copy(): ObjectCounter<K> {
         val c = ObjectCounter<K>(size, f)
         forEachEntry { k, v -> c.set(k, v) }
+        c.locations = copyLocationMap()
         return c
     }
 
@@ -471,6 +483,77 @@ return object : ObjectIterator<Object2ObjectMap.Entry<K, Counter>> {
             @Suppress("UNCHECKED_CAST")
             out.add(k as AEKey, v.longSaturated)
         }
+        @Suppress("UNCHECKED_CAST")
+        (out as Any as? KeyLocations)?.addLocations(copyLocations() as Map<AEKey, List<KeyLocation>>)
+    }
+
+    fun getLocations(key: K): List<KeyLocation> {
+        val list = locations?.get(key) ?: return emptyList()
+        return ArrayList(list)
+    }
+
+    fun addLocation(key: K, storage: Any, amount: BigInteger) {
+        if (amount.signum() <= 0) return
+        locationMap().getOrPut(key) { ArrayList() }.add(KeyLocation(storage, amount))
+    }
+
+    fun setLocations(key: K, list: List<KeyLocation>) {
+        if (list.isEmpty()) {
+            dropLocations(key)
+            return
+        }
+        locationMap()[key] = ArrayList(list)
+    }
+
+    fun replaceLocations(locs: Map<K, List<KeyLocation>>) {
+        if (locs.isEmpty()) {
+            locations = null
+            return
+        }
+        val copy = HashMap<K, ArrayList<KeyLocation>>(locs.size)
+        for ((k, v) in locs) {
+            if (v.isEmpty()) continue
+            copy[k] = ArrayList(v)
+        }
+        locations = if (copy.isEmpty()) null else copy
+    }
+
+    fun addLocations(locs: Map<K, List<KeyLocation>>) {
+        if (locs.isEmpty()) return
+        val map = locationMap()
+        for ((k, v) in locs) {
+            if (v.isEmpty()) continue
+            map.getOrPut(k) { ArrayList() }.addAll(v)
+        }
+    }
+
+    fun copyLocations(): Map<K, List<KeyLocation>> {
+        val src = locations ?: return emptyMap()
+        val out = HashMap<K, List<KeyLocation>>(src.size)
+        for ((k, v) in src) out[k] = ArrayList(v)
+        return out
+    }
+
+    private fun locationMap(): HashMap<K, ArrayList<KeyLocation>> {
+        var map = locations
+        if (map == null) {
+            map = HashMap()
+            locations = map
+        }
+        return map
+    }
+
+    private fun dropLocations(key: K) {
+        val map = locations ?: return
+        map.remove(key)
+        if (map.isEmpty()) locations = null
+    }
+
+    private fun copyLocationMap(): HashMap<K, ArrayList<KeyLocation>>? {
+        val src = locations ?: return null
+        val copy = HashMap<K, ArrayList<KeyLocation>>(src.size)
+        for ((k, v) in src) copy[k] = ArrayList(v)
+        return copy
     }
 
     companion object {
