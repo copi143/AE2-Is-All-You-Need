@@ -6,7 +6,15 @@
   "refmap": "${mod_id}.refmap.json",
   "mixins": [
     "ItemStackCapAccessor",
+    "ae2.FluidHandlerFacadeMixin",
+    "ae2.ItemHandlerFacadeMixin",
+    "forge.CombinedInvWrapperMixin",
     "forge.FaceBuilderMixin",
+    "forge.FluidTankMixin",
+    "forge.InvWrapperMixin",
+    "forge.ItemStackHandlerMixin",
+    "forge.RangedWrapperMixin",
+    "forge.SidedInvWrapperMixin",
     "forge.RegistryObjectMixin",
     "gtceu.StaticFaceBakeryMixin"
   ],

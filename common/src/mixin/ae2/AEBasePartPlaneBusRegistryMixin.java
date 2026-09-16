@@ -1,5 +1,6 @@
 package allyouneed.mixin.ae2;
 
+import allyouneed.api.ExternalInventoryWatch;
 import appeng.parts.AEBasePart;
 import appeng.parts.automation.AnnihilationPlanePart;
 import appeng.parts.automation.FormationPlanePart;
@@ -41,6 +42,9 @@ public abstract class AEBasePartPlaneBusRegistryMixin {
         var part = (AEBasePart) (Object) this;
         if (part instanceof AnnihilationPlanePart || part instanceof FormationPlanePart) {
             PlaneBusClusters.planeRemoved(part.getBlockEntity(), part.getSide());
+        }
+        if (part instanceof ExternalInventoryWatch watch) {
+            watch.unwatchExternal();
         }
     }
 }

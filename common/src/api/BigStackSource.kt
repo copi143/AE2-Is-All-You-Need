@@ -4,9 +4,9 @@ import allyouneed.mixin.ae2.DelegatingMEInventoryAccessor
 import allyouneed.util.bigint.BigKeyCounter
 import appeng.api.stacks.AEKey
 import appeng.api.storage.MEStorage
+import appeng.api.storage.cells.StorageCell
 import appeng.me.storage.DelegatingMEInventory
 import appeng.me.storage.DriveWatcher
-import appeng.me.storage.NetworkStorage
 import java.math.BigInteger
 
 /**
@@ -26,7 +26,8 @@ interface BigStackSource {
 
     val lastBigStacks: BigKeyCounter?
         /**
-         * Last snapshot if any; optional cache for callers that already listed.
+         * Snapshot copy of the last listing, or null if this source does not cache.
+         * Never the live table.
          */
         get() = null
 
@@ -52,11 +53,11 @@ interface BigStackSource {
         }
 
         @JvmStatic
-        fun isCellMount(storage: MEStorage?): Boolean {
-            val current = unwrap(storage) ?: return false
-            if (current is NetworkStorage) return false
-            return current is BigStackSource
-        }
+        fun isIncrementalCell(unwrapped: MEStorage?): Boolean =
+            unwrapped is StorageCell && unwrapped is BigStackSource
+
+        @JvmStatic
+        fun isCellMount(storage: MEStorage?): Boolean = isIncrementalCell(unwrap(storage))
 
         @JvmStatic
         fun queryAmount(storage: MEStorage?, what: AEKey): BigInteger? {

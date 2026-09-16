@@ -1,6 +1,7 @@
 package allyouneed.mixin.ae2;
 
 import allyouneed.api.BigStackSource;
+import allyouneed.util.bigint.IncrementalCellIndex;
 import allyouneed.util.bigint.ObjectCounter;
 import appeng.api.config.Actionable;
 import appeng.api.networking.security.IActionSource;
@@ -34,39 +35,33 @@ public abstract class NetworkStorageMixin implements BigStackSource {
     private boolean mountsInUse;
 
     @Unique
-    private final ObjectCounter<AEKey> allyouneed$lastBigStacks = new ObjectCounter<>();
-
-    @Unique
-    private final ObjectCounter<AEKey> allyouneed$cellStacks = new ObjectCounter<>();
+    private final IncrementalCellIndex<AEKey> allyouneed$index = new IncrementalCellIndex<>();
 
     @Unique
     private final KeyCounter allyouneed$scratch = new KeyCounter();
 
-    @Unique
-    private boolean allyouneed$cellsValid;
-
     @Override
     public @Nullable ObjectCounter<AEKey> getLastBigStacks() {
-        return this.allyouneed$lastBigStacks;
+        return this.allyouneed$index.copyLast();
     }
 
     @Override
     public void getBigAvailableStacks(ObjectCounter<AEKey> out) {
         this.allyouneed$ensureListed();
-        out.addAll(this.allyouneed$lastBigStacks);
+        out.addAll(this.allyouneed$index.getLast());
     }
 
     @Inject(method = "mount", at = @At("TAIL"))
     private void allyouneed$invalidateMount(int priority, MEStorage inventory, CallbackInfo ci) {
         if (!this.mountsInUse) {
-            this.allyouneed$cellsValid = false;
+            this.allyouneed$index.invalidate();
         }
     }
 
     @Inject(method = "unmount", at = @At("TAIL"))
     private void allyouneed$invalidateUnmount(MEStorage inventory, CallbackInfo ci) {
         if (!this.mountsInUse) {
-            this.allyouneed$cellsValid = false;
+            this.allyouneed$index.invalidate();
         }
     }
 
@@ -89,7 +84,7 @@ public abstract class NetworkStorageMixin implements BigStackSource {
         this.mountsInUse = true;
         try {
             this.allyouneed$rebuildFull();
-            this.allyouneed$lastBigStacks.copySaturatedTo(out);
+            this.allyouneed$index.getLast().copySaturatedTo(out);
         } finally {
             this.mountsInUse = false;
         }
@@ -111,12 +106,12 @@ public abstract class NetworkStorageMixin implements BigStackSource {
 
     @Unique
     private void allyouneed$rebuildFull() {
-        if (!this.allyouneed$cellsValid) {
+        if (!this.allyouneed$index.getValid()) {
             this.allyouneed$rebuildCells();
         }
-        ObjectCounter<AEKey> big = this.allyouneed$lastBigStacks;
+        ObjectCounter<AEKey> big = this.allyouneed$index.getLast();
         big.clear();
-        big.addAll(this.allyouneed$cellStacks);
+        big.addAll(this.allyouneed$index.getCells());
         KeyCounter scratch = this.allyouneed$scratch;
         scratch.clear();
         boolean usedScratch = false;
@@ -139,7 +134,7 @@ public abstract class NetworkStorageMixin implements BigStackSource {
 
     @Unique
     private void allyouneed$rebuildCells() {
-        ObjectCounter<AEKey> cells = this.allyouneed$cellStacks;
+        ObjectCounter<AEKey> cells = this.allyouneed$index.getCells();
         cells.clear();
         KeyCounter scratch = this.allyouneed$scratch;
         scratch.clear();
@@ -159,21 +154,21 @@ public abstract class NetworkStorageMixin implements BigStackSource {
             cells.addAll(scratch);
             scratch.clear();
         }
-        this.allyouneed$cellsValid = true;
+        this.allyouneed$index.markValid();
     }
 
     @Unique
     private void allyouneed$afterChange(AEKey what, Actionable type, long changed) {
-        if (type != Actionable.MODULATE || changed <= 0L || !this.allyouneed$cellsValid) {
-            return;
-        }
-        if (!this.allyouneed$recountCellKey(what)) {
-            this.allyouneed$cellsValid = false;
-        }
+        this.allyouneed$index.onChange(
+            type == Actionable.MODULATE,
+            changed,
+            what,
+            () -> this.allyouneed$sumCellKey(what)
+        );
     }
 
     @Unique
-    private boolean allyouneed$recountCellKey(AEKey what) {
+    private @Nullable BigInteger allyouneed$sumCellKey(AEKey what) {
         BigInteger sum = BigInteger.ZERO;
         boolean anyCell = false;
         for (var invList : this.priorityInventory.values()) {
@@ -184,16 +179,11 @@ public abstract class NetworkStorageMixin implements BigStackSource {
                 anyCell = true;
                 BigInteger amount = BigStackSource.queryAmount(inv, what);
                 if (amount == null) {
-                    return false;
+                    return null;
                 }
                 sum = sum.add(amount);
             }
         }
-        if (!anyCell) {
-            this.allyouneed$cellStacks.remove(what);
-            return true;
-        }
-        this.allyouneed$cellStacks.set(what, sum);
-        return true;
+        return anyCell ? sum : BigInteger.ZERO;
     }
 }

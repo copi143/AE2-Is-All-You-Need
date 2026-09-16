@@ -60,7 +60,7 @@ public abstract class MEStorageMenuMixin {
         KeyCounter stacks = allyouneed$copyAvailableStacks(storage);
         ObjectCounter<AEKey> big;
         if (storage instanceof BigStackSource source && source.getLastBigStacks() != null) {
-            big = source.getLastBigStacks().copy();
+            big = source.getLastBigStacks();
         } else {
             big = ObjectCounter.fromKeyCounter(stacks);
             if (big == null) {
