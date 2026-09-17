@@ -48,8 +48,8 @@ sealed class SerialTy(
         } else {
             listOf(type)
         },
-        "get$type" to "put$type",
-        "read$type" to "write$type",
+        if ('.' !in type) "get$type" to "put$type" else dummy,
+        if ('.' !in type) "read$type" to "write$type" else dummy,
     )
 
     val nbtGet: String get() = nbt.first
@@ -60,7 +60,11 @@ sealed class SerialTy(
     sealed class Number(val bits: Int, val unsigned: Boolean, val varLen: Boolean = false) : SerialTy(
         types(bits, unsigned).map { if (varLen) "#$it" else it },
         "get${suffix(bits)}" to "put${suffix(bits)}",
-        "read${suffix(bits)}" to "write${suffix(bits)}",
+        if (varLen) {
+            "readVar${suffix(bits)}" to "writeVar${suffix(bits)}"
+        } else {
+            "read${suffix(bits)}" to "write${suffix(bits)}"
+        },
     ) {
         companion object {
             fun suffix(bits: Int) = when (bits) {
@@ -110,9 +114,20 @@ sealed class SerialTy(
     data object I32Array : SerialTy("IntArray", false)
     data object I64Array : SerialTy("LongArray", false)
 
-    data object UUID : SerialTy("java.util.UUID")
-    data object ResLoc : SerialTy("net.minecraft.resources.ResourceLocation")
-    data object BlockPos : SerialTy("net.minecraft.core.BlockPos")
+    data object UUID : SerialTy("java.util.UUID") {
+        override val nbt = "getUUID" to "putUUID"
+        override val buf = "readUUID" to "writeUUID"
+    }
+
+    data object ResLoc : SerialTy("net.minecraft.resources.ResourceLocation") {
+        override val nbt = Str.nbt
+        override val buf = Str.buf
+    }
+
+    data object BlockPos : SerialTy("net.minecraft.core.BlockPos") {
+        override val nbt = I64.nbt
+        override val buf = I64.buf
+    }
 
     data class Enum(val name: String, val ordinal: Boolean) : SerialTy(
         name,
@@ -120,28 +135,23 @@ sealed class SerialTy(
         if (ordinal) I8.buf else Str.buf,
     )
 
-    data class ListOf(val element: SerialTy) : SerialTy(
+    sealed class Container(type: String, shortType: String) : SerialTy(
+        type, shortType, setOf(type), dummy, dummy,
+    )
+
+    data class ListOf(val element: SerialTy) : Container(
         "kotlin.collections.List<${element.type}>",
         "List<${element.shortType}>",
-        setOf("kotlin.collections.List<${element.type}>"),
-        "get" to "put",
-        "" to "",
     )
 
-    data class MapOf(val key: SerialTy, val value: SerialTy) : SerialTy(
+    data class MapOf(val key: SerialTy, val value: SerialTy) : Container(
         "kotlin.collections.Map<${key.type}, ${value.type}>",
         "Map<${key.shortType}, ${value.shortType}>",
-        setOf("kotlin.collections.Map<${key.type}, ${value.type}>"),
-        "get" to "put",
-        "" to "",
     )
 
-    data class SetOf(val element: SerialTy) : SerialTy(
+    data class SetOf(val element: SerialTy) : Container(
         "kotlin.collections.Set<${element.type}>",
         "Set<${element.shortType}>",
-        setOf("kotlin.collections.Set<${element.type}>"),
-        "get" to "put",
-        "" to "",
     )
 
     data class Nested(val name: String) : SerialTy(name, name, setOf(name), "" to "", "" to "")
@@ -149,6 +159,7 @@ sealed class SerialTy(
     companion object {
         private val nbtByteArray = "getByteArray" to "putByteArray"
         private val bufByteArray = "readByteArray" to "writeByteArray"
+        private val dummy = "" to ""
 
         private val primitives: List<SerialTy> = listOf(
             Bool, F32, F64, Str,
