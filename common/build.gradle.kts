@@ -28,6 +28,8 @@ dependencies {
     api(project(":indexing"))
     compileOnly(project(":serialization"))
     ksp(project(":serialization"))
+    testImplementation(project(":serialization"))
+    kspTest(project(":serialization"))
     api(libs.compose.runtime)
     api(libs.compose.ui)
     api(libs.compose.foundation)
@@ -59,7 +61,11 @@ dependencies {
     // Mixin's IMixinConfigPlugin declares org.objectweb.asm.tree.ClassNode (and the shaded
     // mixin jar does not bundle ASM), so the plugin needs it on the compile classpath.
     compileOnly(libs.asm.tree)
+    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
+    testImplementation("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
+    testRuntimeOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
     testImplementation(libs.asm.tree)
+    testImplementation(libs.kotlinpoet)
     testImplementation(libs.asm.analysis)
     testImplementation(project(":transformer"))
     testImplementation(project(path = ":transformer", configuration = "injectClasses"))
@@ -69,6 +75,7 @@ dependencies {
     testRuntimeOnly("org.lwjgl:lwjgl:3.3.1:natives-linux")
     // fastutil 由 Minecraft 内嵌提供（不在测试 classpath），这里仅为测试暴露其类。
     testImplementation("it.unimi.dsi:fastutil:8.5.9")
+    testImplementation(libs.netty.codec.http)
 
     testRuntimeOnly(project(":composeruntime"))
     testRuntimeOnly(project(":msdftext"))
@@ -140,6 +147,9 @@ artifacts {
     }
     add("commonKotlin", layout.buildDirectory.dir("generated/ksp/main/kotlin")) {
         builtBy("kspKotlin")
+    }
+    add("commonKotlin", layout.buildDirectory.dir("generated/ksp/test/kotlin")) {
+        builtBy("kspTestKotlin")
     }
     sourceSets.main.get().resources.sourceDirectories.forEach { resourceDir ->
         add("commonResources", resourceDir)

@@ -74,7 +74,7 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
             )
         }.toList()
         if (fields.isEmpty()) return null
-        val construct = fields.isNotEmpty() && fields.all { it.name in ctorNames }
+        val construct = fields.all { it.name in ctorNames }
         return SerialClass(cls.packageName.asString(), cls.simpleName.asString(), fields, construct)
     }
 
@@ -97,8 +97,8 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
             "kotlin.Boolean", "java.lang.Boolean" -> SerialTy.Bool
             "kotlin.Byte", "java.lang.Byte" -> SerialTy.I8
             "kotlin.Short", "java.lang.Short" -> SerialTy.I16
-            "kotlin.Int", "java.lang.Integer" -> if (varLen) SerialTy.VarInt else SerialTy.I32
-            "kotlin.Long", "java.lang.Long" -> if (varLen) SerialTy.VarLong else SerialTy.I64
+            "kotlin.Int", "java.lang.Integer" -> if (varLen) SerialTy.VarI32 else SerialTy.I32
+            "kotlin.Long", "java.lang.Long" -> if (varLen) SerialTy.VarI64 else SerialTy.I64
             "kotlin.UByte" -> SerialTy.U8
             "kotlin.UShort" -> SerialTy.U16
             "kotlin.UInt" -> if (varLen) SerialTy.VarU32 else SerialTy.U32
@@ -106,9 +106,9 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
             "kotlin.Float", "java.lang.Float" -> SerialTy.F32
             "kotlin.Double", "java.lang.Double" -> SerialTy.F64
             "kotlin.String", "java.lang.String" -> SerialTy.Str
-            "kotlin.ByteArray" -> SerialTy.Bytes
-            "kotlin.IntArray" -> SerialTy.Ints
-            "kotlin.LongArray" -> SerialTy.Longs
+            "kotlin.ByteArray" -> SerialTy.I8Array
+            "kotlin.IntArray" -> SerialTy.I32Array
+            "kotlin.LongArray" -> SerialTy.I64Array
             "java.math.BigInteger" -> if (varLen) SerialTy.VarBigInt else SerialTy.BigInt
             "java.util.UUID" -> SerialTy.Uuid
             "net.minecraft.resources.ResourceLocation" -> SerialTy.ResLoc
