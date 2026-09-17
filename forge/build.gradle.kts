@@ -1,5 +1,3 @@
-import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
 import org.gradle.internal.extensions.stdlib.capitalized
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
@@ -101,13 +99,6 @@ dependencies {
         isTransitive = false
     }
 
-    // ModernUI-Core is jarJar'd so the dev (exploded) run can load it via Forge's META-INF/jarjar
-    // mechanism - it has no mods.toml and no Automatic-Module-Name, so ModLauncher silently skips it
-    // on the plain classpath. stripModernUiCore removes it again before packaging so the release jar
-    // does NOT embed it (players provide ModernUI themselves).
-    jarJar(libs.mui.core)
-    modRuntimeOnly(libs.mui)
-
 //    modRuntimeOnly(libs.ftbq)
 
     modImplementation(libs.jei.forge)
@@ -172,40 +163,15 @@ tasks.named("jarJar") {
     }
 }
 
-// runClient uses exploded sourceSet resources, not the built jar, so processResources keeps the full
-// jarJar payload (incl. ModernUI-Core) for dev. The release jar must NOT embed ModernUI-Core
-// (players provide ModernUI themselves), so it drops the core jar and replaces the metadata with a
-// clean copy (Forge resolves jarjar strictly through metadata.json -> jars[].path).
+// runClient uses exploded sourceSet resources, not the built jar, so include the jarJar
+// output in processResources for dev runs.
 tasks.named<ProcessResources>("processResources") {
     from(tasks.named("jarJar"))
-}
-
-val cleanJarJarMetadata = tasks.register("cleanJarJarMetadata") {
-    dependsOn("jarJar")
-    val out = layout.buildDirectory.file("generated/jarJarClean/META-INF/jarjar/metadata.clean.json")
-    outputs.file(out)
-    doLast {
-        val src = layout.buildDirectory.file("generated/jarJar/META-INF/jarjar/metadata.json").get().asFile
-        if (!src.isFile) throw GradleException("jarJar metadata not found: $src")
-        val data = JsonSlurper().parse(src) as Map<*, *>
-        val jars = (data["jars"] as? List<*>)?.filter { entry ->
-            val path = (entry as? Map<*, *>)?.get("path") as? String ?: ""
-            !path.contains("ModernUI-Core")
-        } ?: emptyList<Any>()
-        val f = out.get().asFile
-        f.parentFile.mkdirs()
-        f.writeText(JsonOutput.toJson(mapOf("jars" to jars)))
-    }
 }
 
 tasks.named<Jar>("jar") {
     dependsOn(copyTransformerToRunMods)
     archiveClassifier.set("mod")
-    exclude("META-INF/jarjar/ModernUI-Core-*.jar")
-    exclude("META-INF/jarjar/metadata.json")
-    from(cleanJarJarMetadata) {
-        rename { "META-INF/jarjar/metadata.json" }
-    }
 }
 
 val wrapForgeJar = tasks.register<Jar>("wrapForgeJar") {
