@@ -13,7 +13,7 @@ class RoundTripTest {
             construct = true,
             fields = listOf(
                 SerialProp("strInt", "strInt", null, "strInt", SerialTy.MapOf(SerialTy.Str, SerialTy.I32), false),
-                SerialProp("uuidStr", "uuidStr", null, "uuidStr", SerialTy.MapOf(SerialTy.Uuid, SerialTy.Str), false),
+                SerialProp("uuidStr", "uuidStr", null, "uuidStr", SerialTy.MapOf(SerialTy.UUID, SerialTy.Str), false),
             ),
         )
         val out = emit(cls).toString()

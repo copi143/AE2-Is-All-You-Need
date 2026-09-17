@@ -11,10 +11,7 @@ version = "1.0.0"
 dependencies {
     compileOnly(libs.ksp.api)
     implementation(libs.kotlinpoet)
-    // KSP for test fixtures only — main stays minecraft-free
     kspTest(project(":serialization"))
-    // Minecraft only for test — main remains pure Kotlin
-    // Provided via test source stubs (net/minecraft/**) + netty/fastutil
     testImplementation("it.unimi.dsi:fastutil:8.5.9")
     testImplementation(libs.netty.codec.http)
     testImplementation(libs.asm.tree)

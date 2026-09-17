@@ -93,37 +93,15 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
             val arg = type.arguments.firstOrNull()?.type?.resolve() ?: return SerialTy.SetOf(SerialTy.Str)
             return SerialTy.SetOf(ty(arg, fieldOrdinal, serialized, false))
         }
-        return when (qn) {
-            "kotlin.Boolean", "java.lang.Boolean" -> SerialTy.Bool
-            "kotlin.Byte", "java.lang.Byte" -> SerialTy.I8
-            "kotlin.Short", "java.lang.Short" -> SerialTy.I16
-            "kotlin.Int", "java.lang.Integer" -> if (varLen) SerialTy.VarI32 else SerialTy.I32
-            "kotlin.Long", "java.lang.Long" -> if (varLen) SerialTy.VarI64 else SerialTy.I64
-            "kotlin.UByte" -> SerialTy.U8
-            "kotlin.UShort" -> SerialTy.U16
-            "kotlin.UInt" -> if (varLen) SerialTy.VarU32 else SerialTy.U32
-            "kotlin.ULong" -> if (varLen) SerialTy.VarU64 else SerialTy.U64
-            "kotlin.Float", "java.lang.Float" -> SerialTy.F32
-            "kotlin.Double", "java.lang.Double" -> SerialTy.F64
-            "kotlin.String", "java.lang.String" -> SerialTy.Str
-            "kotlin.ByteArray" -> SerialTy.I8Array
-            "kotlin.IntArray" -> SerialTy.I32Array
-            "kotlin.LongArray" -> SerialTy.I64Array
-            "java.math.BigInteger" -> if (varLen) SerialTy.VarBigInt else SerialTy.BigInt
-            "java.util.UUID" -> SerialTy.Uuid
-            "net.minecraft.resources.ResourceLocation" -> SerialTy.ResLoc
-            "net.minecraft.core.BlockPos" -> SerialTy.BlockPos
-            else -> {
-                val decl = type.declaration as? KSClassDeclaration
-                val simple = type.declaration.simpleName.asString()
-                when {
-                    decl?.classKind == ClassKind.ENUM_CLASS ->
-                        SerialTy.Enum(simple, fieldOrdinal ?: decl.serializeOrdinalDefault())
-                    simple in serialized || decl?.hasAnno("Serialize") == true -> SerialTy.Nested(simple)
-                    fieldOrdinal == true -> SerialTy.Enum(simple, true)
-                    else -> SerialTy.Enum(simple, false)
-                }
-            }
+        SerialTy.primitive(qn, varLen)?.let { return it }
+        val decl = type.declaration as? KSClassDeclaration
+        val simple = type.declaration.simpleName.asString()
+        return when {
+            decl?.classKind == ClassKind.ENUM_CLASS ->
+                SerialTy.Enum(simple, fieldOrdinal ?: decl.serializeOrdinalDefault())
+            simple in serialized || decl?.hasAnno("Serialize") == true -> SerialTy.Nested(simple)
+            fieldOrdinal == true -> SerialTy.Enum(simple, true)
+            else -> SerialTy.Enum(simple, false)
         }
     }
 

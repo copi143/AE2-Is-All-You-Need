@@ -20,7 +20,7 @@ private fun collectImports(cls: SerialClass): Set<Pair<String, String>> {
     val out = mutableSetOf<Pair<String, String>>()
     fun walk(t: SerialTy) {
         when (t) {
-            SerialTy.Uuid -> out.add("java.util" to "UUID")
+            SerialTy.UUID -> out.add("java.util" to "UUID")
             SerialTy.BigInt, SerialTy.VarBigInt -> out.add("java.math" to "BigInteger")
             SerialTy.ResLoc -> out.add("net.minecraft.resources" to "ResourceLocation")
             SerialTy.BlockPos -> out.add("net.minecraft.core" to "BlockPos")
@@ -52,34 +52,50 @@ private fun toNbtFun(cls: SerialClass): FunSpec {
         .addCode(body.build()).build()
 }
 
-private fun nbtPut(body: CodeBlock.Builder, f: SerialProp, acc: String) {
-    when (val t = f.type) {
-        SerialTy.Bool -> body.addStatement("tag.putBoolean(%S, %L)", f.wireName, acc)
-        SerialTy.I8 -> body.addStatement("tag.putByte(%S, %L)", f.wireName, acc)
-        SerialTy.I16 -> body.addStatement("tag.putShort(%S, %L)", f.wireName, acc)
-        SerialTy.I32 -> body.addStatement("tag.putInt(%S, %L)", f.wireName, acc)
-        SerialTy.I64 -> body.addStatement("tag.putLong(%S, %L)", f.wireName, acc)
-        SerialTy.U8 -> body.addStatement("tag.putByte(%S, %L.toByte())", f.wireName, acc)
-        SerialTy.U16 -> body.addStatement("tag.putShort(%S, %L.toShort())", f.wireName, acc)
-        SerialTy.U32 -> body.addStatement("tag.putInt(%S, %L.toInt())", f.wireName, acc)
-        SerialTy.U64 -> body.addStatement("tag.putLong(%S, %L.toLong())", f.wireName, acc)
-        SerialTy.F32 -> body.addStatement("tag.putFloat(%S, %L)", f.wireName, acc)
-        SerialTy.F64 -> body.addStatement("tag.putDouble(%S, %L)", f.wireName, acc)
-        SerialTy.Str -> body.addStatement("tag.putString(%S, %L)", f.wireName, acc)
-        SerialTy.I8Array -> body.addStatement("tag.putByteArray(%S, %L)", f.wireName, acc)
-        SerialTy.I32Array -> body.addStatement("tag.putIntArray(%S, %L)", f.wireName, acc)
-        SerialTy.I64Array -> body.addStatement("tag.putLongArray(%S, %L)", f.wireName, acc)
+private fun nbtPutSingle(
+    body: CodeBlock.Builder, tagVar: String, key: String, acc: String, t: SerialTy, keyIsVar: Boolean
+) {
+    val kFmt = if (keyIsVar) "%L" else "%S"
+    when (t) {
+        SerialTy.Bool -> body.addStatement("$tagVar.putBoolean($kFmt, %L)", key, acc)
+        SerialTy.I8 -> body.addStatement("$tagVar.putByte($kFmt, %L)", key, acc)
+        SerialTy.I16 -> body.addStatement("$tagVar.putShort($kFmt, %L)", key, acc)
+        SerialTy.I32, SerialTy.VarI32 -> body.addStatement("$tagVar.putInt($kFmt, %L)", key, acc)
+        SerialTy.I64, SerialTy.VarI64 -> body.addStatement("$tagVar.putLong($kFmt, %L)", key, acc)
+        SerialTy.U8 -> body.addStatement("$tagVar.putByte($kFmt, %L.toByte())", key, acc)
+        SerialTy.U16 -> body.addStatement("$tagVar.putShort($kFmt, %L.toShort())", key, acc)
+        SerialTy.U32, SerialTy.VarU32 -> body.addStatement("$tagVar.putInt($kFmt, %L.toInt())", key, acc)
+        SerialTy.U64, SerialTy.VarU64 -> body.addStatement("$tagVar.putLong($kFmt, %L.toLong())", key, acc)
+        SerialTy.F32 -> body.addStatement("$tagVar.putFloat($kFmt, %L)", key, acc)
+        SerialTy.F64 -> body.addStatement("$tagVar.putDouble($kFmt, %L)", key, acc)
+        SerialTy.Str -> body.addStatement("$tagVar.putString($kFmt, %L)", key, acc)
+        SerialTy.I8Array -> body.addStatement("$tagVar.putByteArray($kFmt, %L)", key, acc)
+        SerialTy.I32Array -> body.addStatement("$tagVar.putIntArray($kFmt, %L)", key, acc)
+        SerialTy.I64Array -> body.addStatement("$tagVar.putLongArray($kFmt, %L)", key, acc)
         SerialTy.BigInt, SerialTy.VarBigInt -> body.addStatement(
-            "tag.putByteArray(%S, %L.toByteArray())", f.wireName, acc
+            "$tagVar.putByteArray($kFmt, %L.toByteArray())", key, acc
         )
 
-        SerialTy.Uuid -> body.addStatement("tag.putUUID(%S, %L)", f.wireName, acc)
-        SerialTy.ResLoc -> body.addStatement("tag.putString(%S, %L.toString())", f.wireName, acc)
-        SerialTy.BlockPos -> body.addStatement("tag.putLong(%S, %L.asLong())", f.wireName, acc)
-        is SerialTy.Enum -> if (t.ordinal) body.addStatement("tag.putByte(%S, %L.ordinal.toByte())", f.wireName, acc)
-        else body.addStatement("tag.putString(%S, %L.name)", f.wireName, acc)
+        SerialTy.UUID -> body.addStatement("$tagVar.putUUID($kFmt, %L)", key, acc)
+        SerialTy.ResLoc -> body.addStatement("$tagVar.putString($kFmt, %L.toString())", key, acc)
+        SerialTy.BlockPos -> body.addStatement("$tagVar.putLong($kFmt, %L.asLong())", key, acc)
+        is SerialTy.Enum -> if (t.ordinal) body.addStatement(
+            "$tagVar.putByte($kFmt, %L.ordinal.toByte())", key, acc
+        ) else body.addStatement("$tagVar.putString($kFmt, %L.name)", key, acc)
 
-        is SerialTy.Nested -> body.addStatement("tag.put(%S, %L.toNbt())", f.wireName, acc)
+        is SerialTy.Nested -> body.addStatement("$tagVar.put($kFmt, %L.toNbt())", key, acc)
+        else -> error("collection handled separately")
+    }
+}
+
+private fun nbtPut(body: CodeBlock.Builder, f: SerialProp, acc: String) {
+    when (val t = f.type) {
+        is SerialTy.ListOf, is SerialTy.MapOf, is SerialTy.SetOf -> {} // handled below
+        else -> {
+            nbtPutSingle(body, "tag", f.wireName, acc, t, false); return
+        }
+    }
+    when (val t = f.type) {
         is SerialTy.ListOf -> {
             body.beginControlFlow("run")
             body.addStatement("val __listTag = %T()", Clazz.ListTag)
@@ -122,11 +138,6 @@ private fun nbtPut(body: CodeBlock.Builder, f: SerialProp, acc: String) {
             body.addStatement("tag.put(%S, __listTag)", f.wireName)
             body.endControlFlow()
         }
-
-        SerialTy.VarI32 -> body.addStatement("tag.putInt(%S, %L)", f.wireName, acc)
-        SerialTy.VarI64 -> body.addStatement("tag.putLong(%S, %L)", f.wireName, acc)
-        SerialTy.VarU32 -> body.addStatement("tag.putInt(%S, %L.toInt())", f.wireName, acc)
-        SerialTy.VarU64 -> body.addStatement("tag.putLong(%S, %L.toLong())", f.wireName, acc)
     }
 }
 
@@ -161,33 +172,12 @@ private fun putListElement(body: CodeBlock.Builder, listVar: String, itemVar: St
 
 private fun nbtPutValue(body: CodeBlock.Builder, tagVar: String, key: String, acc: String, type: SerialTy) {
     when (type) {
-        SerialTy.Bool -> body.addStatement("%L.putBoolean(%S, %L)", tagVar, key, acc)
-        SerialTy.I8 -> body.addStatement("%L.putByte(%S, %L)", tagVar, key, acc)
-        SerialTy.I16 -> body.addStatement("%L.putShort(%S, %L)", tagVar, key, acc)
-        SerialTy.I32, SerialTy.VarI32 -> body.addStatement("%L.putInt(%S, %L)", tagVar, key, acc)
-        SerialTy.I64, SerialTy.VarI64 -> body.addStatement("%L.putLong(%S, %L)", tagVar, key, acc)
-        SerialTy.U8 -> body.addStatement("%L.putByte(%S, %L.toByte())", tagVar, key, acc)
-        SerialTy.U16 -> body.addStatement("%L.putShort(%S, %L.toShort())", tagVar, key, acc)
-        SerialTy.U32, SerialTy.VarU32 -> body.addStatement("%L.putInt(%S, %L.toInt())", tagVar, key, acc)
-        SerialTy.U64, SerialTy.VarU64 -> body.addStatement("%L.putLong(%S, %L.toLong())", tagVar, key, acc)
-        SerialTy.F32 -> body.addStatement("%L.putFloat(%S, %L)", tagVar, key, acc)
-        SerialTy.F64 -> body.addStatement("%L.putDouble(%S, %L)", tagVar, key, acc)
-        SerialTy.Str -> body.addStatement("%L.putString(%S, %L)", tagVar, key, acc)
-        SerialTy.I8Array -> body.addStatement("%L.putByteArray(%S, %L)", tagVar, key, acc)
-        SerialTy.I32Array -> body.addStatement("%L.putIntArray(%S, %L)", tagVar, key, acc)
-        SerialTy.I64Array -> body.addStatement("%L.putLongArray(%S, %L)", tagVar, key, acc)
-        SerialTy.BigInt, SerialTy.VarBigInt -> body.addStatement(
-            "%L.putByteArray(%S, %L.toByteArray())", tagVar, key, acc
-        )
-
-        SerialTy.Uuid -> body.addStatement("%L.putUUID(%S, %L)", tagVar, key, acc)
-        SerialTy.ResLoc -> body.addStatement("%L.putString(%S, %L.toString())", tagVar, key, acc)
-        SerialTy.BlockPos -> body.addStatement("%L.putLong(%S, %L.asLong())", tagVar, key, acc)
-        is SerialTy.Enum -> if (type.ordinal) body.addStatement(
-            "%L.putByte(%S, %L.ordinal.toByte())", tagVar, key, acc
-        ) else body.addStatement("%L.putString(%S, %L.name)", tagVar, key, acc)
-
-        is SerialTy.Nested -> body.addStatement("%L.put(%S, %L.toNbt())", tagVar, key, acc)
+        is SerialTy.ListOf, is SerialTy.MapOf, is SerialTy.SetOf -> {}
+        else -> {
+            nbtPutSingle(body, tagVar, key, acc, type, false); return
+        }
+    }
+    when (type) {
         is SerialTy.ListOf -> {
             body.addStatement("val __list = %T()", Clazz.ListTag)
             body.beginControlFlow("for (__item in %L)", acc)
@@ -227,33 +217,12 @@ private fun nbtPutValue(body: CodeBlock.Builder, tagVar: String, key: String, ac
 
 private fun nbtPutValueDynamic(body: CodeBlock.Builder, tagVar: String, keyVar: String, acc: String, type: SerialTy) {
     when (type) {
-        SerialTy.Bool -> body.addStatement("%L.putBoolean(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.I8 -> body.addStatement("%L.putByte(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.I16 -> body.addStatement("%L.putShort(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.I32, SerialTy.VarI32 -> body.addStatement("%L.putInt(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.I64, SerialTy.VarI64 -> body.addStatement("%L.putLong(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.U8 -> body.addStatement("%L.putByte(%L, %L.toByte())", tagVar, keyVar, acc)
-        SerialTy.U16 -> body.addStatement("%L.putShort(%L, %L.toShort())", tagVar, keyVar, acc)
-        SerialTy.U32, SerialTy.VarU32 -> body.addStatement("%L.putInt(%L, %L.toInt())", tagVar, keyVar, acc)
-        SerialTy.U64, SerialTy.VarU64 -> body.addStatement("%L.putLong(%L, %L.toLong())", tagVar, keyVar, acc)
-        SerialTy.F32 -> body.addStatement("%L.putFloat(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.F64 -> body.addStatement("%L.putDouble(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.Str -> body.addStatement("%L.putString(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.I8Array -> body.addStatement("%L.putByteArray(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.I32Array -> body.addStatement("%L.putIntArray(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.I64Array -> body.addStatement("%L.putLongArray(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.BigInt, SerialTy.VarBigInt -> body.addStatement(
-            "%L.putByteArray(%L, %L.toByteArray())", tagVar, keyVar, acc
-        )
-
-        SerialTy.Uuid -> body.addStatement("%L.putUUID(%L, %L)", tagVar, keyVar, acc)
-        SerialTy.ResLoc -> body.addStatement("%L.putString(%L, %L.toString())", tagVar, keyVar, acc)
-        SerialTy.BlockPos -> body.addStatement("%L.putLong(%L, %L.asLong())", tagVar, keyVar, acc)
-        is SerialTy.Enum -> if (type.ordinal) body.addStatement(
-            "%L.putByte(%L, %L.ordinal.toByte())", tagVar, keyVar, acc
-        ) else body.addStatement("%L.putString(%L, %L.name)", tagVar, keyVar, acc)
-
-        is SerialTy.Nested -> body.addStatement("%L.put(%L, %L.toNbt())", tagVar, keyVar, acc)
+        is SerialTy.ListOf, is SerialTy.MapOf, is SerialTy.SetOf -> {}
+        else -> {
+            nbtPutSingle(body, tagVar, keyVar, acc, type, true); return
+        }
+    }
+    when (type) {
         is SerialTy.ListOf -> {
             body.addStatement("val __ld = %T()", Clazz.ListTag)
             body.beginControlFlow("for (__it in %L)", acc)
@@ -284,7 +253,7 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                             f.wireName,
                             f.wireName,
                             listTagType(t.element),
-                            typeKt(t.element),
+                            t.element.shortType,
                             listGet(t.element, "__l"),
                         )
                     }
@@ -296,7 +265,7 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                             f.wireName,
                             f.wireName,
                             listTagType(t.element),
-                            typeKt(t.element),
+                            t.element.shortType,
                             listGet(t.element, "__l"),
                         )
                     }
@@ -307,8 +276,8 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                             f.name,
                             f.wireName,
                             f.wireName,
-                            typeKt(t.key),
-                            typeKt(t.value),
+                            t.key.shortType,
+                            t.value.shortType,
                             nbtGetValueDynamic(t.value, "__m", "__k"),
                         )
                     } else {
@@ -318,8 +287,8 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                             f.wireName,
                             f.wireName,
                             Clazz.Tag,
-                            typeKt(t.key),
-                            typeKt(t.value),
+                            t.key.shortType,
+                            t.value.shortType,
                             nbtGetValue(t.key, "__e", "k"),
                             nbtGetValue(t.value, "__e", "v"),
                         )
@@ -338,7 +307,7 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                     )
                     body.addStatement(
                         "val %N = ArrayList<%L>(%N.size)",
-                        f.name, typeKt(t.element), "_${f.name}",
+                        f.name, t.element.shortType, "_${f.name}",
                     )
                     body.beginControlFlow("for (i in %N.indices)", "_${f.name}")
                     body.addStatement("%N.add(%L)", f.name, listGet(t.element, "_${f.name}"))
@@ -352,7 +321,7 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                     )
                     body.addStatement(
                         "val %N = LinkedHashSet<%L>(%N.size)",
-                        f.name, typeKt(t.element), "_${f.name}",
+                        f.name, t.element.shortType, "_${f.name}",
                     )
                     body.beginControlFlow("for (i in %N.indices)", "_${f.name}")
                     body.addStatement("%N.add(%L)", f.name, listGet(t.element, "_${f.name}"))
@@ -364,7 +333,7 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                         body.addStatement("val %N = tag.getCompound(%S)", "_${f.name}", f.wireName)
                         body.addStatement(
                             "val %N = LinkedHashMap<%L, %L>(%N.allKeys.size)",
-                            f.name, typeKt(t.key), typeKt(t.value), "_${f.name}",
+                            f.name, t.key.shortType, t.value.shortType, "_${f.name}",
                         )
                         body.beginControlFlow("for (k in %N.allKeys)", "_${f.name}")
                         body.addStatement("val __v = %L", nbtGetValueDynamic(t.value, "_${f.name}", "k"))
@@ -377,7 +346,7 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                         )
                         body.addStatement(
                             "val %N = LinkedHashMap<%L, %L>(%N.size)",
-                            f.name, typeKt(t.key), typeKt(t.value), "_${f.name}",
+                            f.name, t.key.shortType, t.value.shortType, "_${f.name}",
                         )
                         body.beginControlFlow("for (i in %N.indices)", "_${f.name}")
                         body.addStatement("val __e = %N.getCompound(i)", "_${f.name}")
@@ -397,88 +366,75 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
         .returns(self).addCode(body.build()).build()
 }
 
-private fun nbtRead(t: SerialTy, k: String): CodeBlock = nbtGetValue(t, "tag", k)
+private fun nbtGetSingle(t: SerialTy, tagVar: String, key: String, keyIsVar: Boolean): CodeBlock {
+    val kFmt = if (keyIsVar) "%L" else "%S"
+    return when (t) {
+        SerialTy.Bool -> CodeBlock.of("$tagVar.getBoolean($kFmt)", key)
+        SerialTy.I8 -> CodeBlock.of("$tagVar.getByte($kFmt)", key)
+        SerialTy.I16 -> CodeBlock.of("$tagVar.getShort($kFmt)", key)
+        SerialTy.I32, SerialTy.VarI32 -> CodeBlock.of("$tagVar.getInt($kFmt)", key)
+        SerialTy.I64, SerialTy.VarI64 -> CodeBlock.of("$tagVar.getLong($kFmt)", key)
+        SerialTy.U8 -> CodeBlock.of("$tagVar.getByte($kFmt).toUByte()", key)
+        SerialTy.U16 -> CodeBlock.of("$tagVar.getShort($kFmt).toUShort()", key)
+        SerialTy.U32, SerialTy.VarU32 -> CodeBlock.of("$tagVar.getInt($kFmt).toUInt()", key)
+        SerialTy.U64, SerialTy.VarU64 -> CodeBlock.of("$tagVar.getLong($kFmt).toULong()", key)
+        SerialTy.F32 -> CodeBlock.of("$tagVar.getFloat($kFmt)", key)
+        SerialTy.F64 -> CodeBlock.of("$tagVar.getDouble($kFmt)", key)
+        SerialTy.Str -> CodeBlock.of("$tagVar.getString($kFmt)", key)
+        SerialTy.I8Array -> CodeBlock.of("$tagVar.getByteArray($kFmt)", key)
+        SerialTy.I32Array -> CodeBlock.of("$tagVar.getIntArray($kFmt)", key)
+        SerialTy.I64Array -> CodeBlock.of("$tagVar.getLongArray($kFmt)", key)
+        SerialTy.BigInt, SerialTy.VarBigInt -> CodeBlock.of("%T($tagVar.getByteArray($kFmt))", Clazz.BigInteger, key)
+        SerialTy.UUID -> CodeBlock.of("$tagVar.getUUID($kFmt)", key)
+        SerialTy.ResLoc -> CodeBlock.of("%T($tagVar.getString($kFmt))", Clazz.ResourceLocation, key)
+        SerialTy.BlockPos -> CodeBlock.of("%T.of($tagVar.getLong($kFmt))", Clazz.BlockPos, key)
+        is SerialTy.Enum -> if (t.ordinal) CodeBlock.of(
+            "%L.entries[$tagVar.getByte($kFmt).toInt() and 0xFF]", t.name, key
+        ) else CodeBlock.of("%L.valueOf($tagVar.getString($kFmt))", t.name, key)
 
-private fun nbtGetValue(t: SerialTy, tagVar: String, k: String): CodeBlock = when (t) {
-    SerialTy.VarI32 -> CodeBlock.of("%L.getInt(%S)", tagVar, k)
-    SerialTy.VarI64 -> CodeBlock.of("%L.getLong(%S)", tagVar, k)
-    SerialTy.VarU32 -> CodeBlock.of("%L.getInt(%S).toUInt()", tagVar, k)
-    SerialTy.VarU64 -> CodeBlock.of("%L.getLong(%S).toULong()", tagVar, k)
-    SerialTy.Bool -> CodeBlock.of("%L.getBoolean(%S)", tagVar, k)
-    SerialTy.I8 -> CodeBlock.of("%L.getByte(%S)", tagVar, k)
-    SerialTy.I16 -> CodeBlock.of("%L.getShort(%S)", tagVar, k)
-    SerialTy.I32 -> CodeBlock.of("%L.getInt(%S)", tagVar, k)
-    SerialTy.I64 -> CodeBlock.of("%L.getLong(%S)", tagVar, k)
-    SerialTy.U8 -> CodeBlock.of("%L.getByte(%S).toUByte()", tagVar, k)
-    SerialTy.U16 -> CodeBlock.of("%L.getShort(%S).toUShort()", tagVar, k)
-    SerialTy.U32 -> CodeBlock.of("%L.getInt(%S).toUInt()", tagVar, k)
-    SerialTy.U64 -> CodeBlock.of("%L.getLong(%S).toULong()", tagVar, k)
-    SerialTy.F32 -> CodeBlock.of("%L.getFloat(%S)", tagVar, k)
-    SerialTy.F64 -> CodeBlock.of("%L.getDouble(%S)", tagVar, k)
-    SerialTy.Str -> CodeBlock.of("%L.getString(%S)", tagVar, k)
-    SerialTy.I8Array -> CodeBlock.of("%L.getByteArray(%S)", tagVar, k)
-    SerialTy.I32Array -> CodeBlock.of("%L.getIntArray(%S)", tagVar, k)
-    SerialTy.I64Array -> CodeBlock.of("%L.getLongArray(%S)", tagVar, k)
-    SerialTy.BigInt, SerialTy.VarBigInt -> CodeBlock.of("%T(%L.getByteArray(%S))", Clazz.BigInteger, tagVar, k)
-    SerialTy.Uuid -> CodeBlock.of("%L.getUUID(%S)", tagVar, k)
-    SerialTy.ResLoc -> CodeBlock.of("%T(%L.getString(%S))", Clazz.ResourceLocation, tagVar, k)
-    SerialTy.BlockPos -> CodeBlock.of("%T.of(%L.getLong(%S))", Clazz.BlockPos, tagVar, k)
-    is SerialTy.Enum -> if (t.ordinal) CodeBlock.of("%L.entries[%L.getByte(%S).toInt() and 0xFF]", t.name, tagVar, k)
-    else CodeBlock.of("%L.valueOf(%L.getString(%S))", t.name, tagVar, k)
-
-    is SerialTy.Nested -> CodeBlock.of("%L.fromNbt(%L.getCompound(%S))", t.name, tagVar, k)
-    is SerialTy.ListOf, is SerialTy.MapOf, is SerialTy.SetOf -> error("collection handled separately")
+        is SerialTy.Nested -> CodeBlock.of("%L.fromNbt($tagVar.getCompound($kFmt))", t.name, key)
+        else -> error("collection handled separately")
+    }
 }
 
-private fun nbtGetValueDynamic(t: SerialTy, tagVar: String, keyVar: String): CodeBlock = when (t) {
-    SerialTy.Bool -> CodeBlock.of("%L.getBoolean(%L)", tagVar, keyVar)
-    SerialTy.I8 -> CodeBlock.of("%L.getByte(%L)", tagVar, keyVar)
-    SerialTy.I16 -> CodeBlock.of("%L.getShort(%L)", tagVar, keyVar)
-    SerialTy.I32, SerialTy.VarI32 -> CodeBlock.of("%L.getInt(%L)", tagVar, keyVar)
-    SerialTy.I64, SerialTy.VarI64 -> CodeBlock.of("%L.getLong(%L)", tagVar, keyVar)
-    SerialTy.U8 -> CodeBlock.of("%L.getByte(%L).toUByte()", tagVar, keyVar)
-    SerialTy.U16 -> CodeBlock.of("%L.getShort(%L).toUShort()", tagVar, keyVar)
-    SerialTy.U32, SerialTy.VarU32 -> CodeBlock.of("%L.getInt(%L).toUInt()", tagVar, keyVar)
-    SerialTy.U64, SerialTy.VarU64 -> CodeBlock.of("%L.getLong(%L).toULong()", tagVar, keyVar)
-    SerialTy.F32 -> CodeBlock.of("%L.getFloat(%L)", tagVar, keyVar)
-    SerialTy.F64 -> CodeBlock.of("%L.getDouble(%L)", tagVar, keyVar)
-    SerialTy.Str -> CodeBlock.of("%L.getString(%L)", tagVar, keyVar)
-    SerialTy.I8Array -> CodeBlock.of("%L.getByteArray(%L)", tagVar, keyVar)
-    SerialTy.I32Array -> CodeBlock.of("%L.getIntArray(%L)", tagVar, keyVar)
-    SerialTy.I64Array -> CodeBlock.of("%L.getLongArray(%L)", tagVar, keyVar)
-    SerialTy.BigInt, SerialTy.VarBigInt -> CodeBlock.of("%T(%L.getByteArray(%L))", Clazz.BigInteger, tagVar, keyVar)
-    SerialTy.Uuid -> CodeBlock.of("%L.getUUID(%L)", tagVar, keyVar)
-    SerialTy.ResLoc -> CodeBlock.of("%T(%L.getString(%L))", Clazz.ResourceLocation, tagVar, keyVar)
-    SerialTy.BlockPos -> CodeBlock.of("%T.of(%L.getLong(%L))", Clazz.BlockPos, tagVar, keyVar)
-    is SerialTy.Enum -> if (t.ordinal) CodeBlock.of(
-        "%L.entries[%L.getByte(%L).toInt() and 0xFF]", t.name, tagVar, keyVar
-    )
-    else CodeBlock.of("%L.valueOf(%L.getString(%L))", t.name, tagVar, keyVar)
+private fun nbtRead(t: SerialTy, k: String): CodeBlock = nbtGetValue(t, "tag", k)
 
-    is SerialTy.Nested -> CodeBlock.of("%L.fromNbt(%L.getCompound(%L))", t.name, tagVar, keyVar)
-    is SerialTy.ListOf -> CodeBlock.of(
-        "run { val __l = %L.getList(%L, %L); val __r = ArrayList<%L>(__l.size); for (i in __l.indices) __r.add(%L); __r }",
-        tagVar, keyVar, listTagType(t.element), typeKt(t.element), listGet(t.element, "__l"),
-    )
+private fun nbtGetValue(t: SerialTy, tagVar: String, k: String): CodeBlock {
+    if (t is SerialTy.ListOf || t is SerialTy.MapOf || t is SerialTy.SetOf) error("collection handled separately")
+    return nbtGetSingle(t, tagVar, k, false)
+}
 
-    is SerialTy.SetOf -> CodeBlock.of(
-        "run { val __l = %L.getList(%L, %L); val __r = LinkedHashSet<%L>(__l.size); for (i in __l.indices) __r.add(%L); __r }",
-        tagVar, keyVar, listTagType(t.element), typeKt(t.element), listGet(t.element, "__l"),
-    )
+private fun nbtGetValueDynamic(t: SerialTy, tagVar: String, keyVar: String): CodeBlock {
+    if (t is SerialTy.ListOf || t is SerialTy.MapOf || t is SerialTy.SetOf) {
+        // handled below
+    } else {
+        return nbtGetSingle(t, tagVar, keyVar, true)
+    }
+    return when (t) {
+        is SerialTy.ListOf -> CodeBlock.of(
+            "run { val __l = %L.getList(%L, %L); val __r = ArrayList<%L>(__l.size); for (i in __l.indices) __r.add(%L); __r }",
+            tagVar, keyVar, listTagType(t.element), t.element.shortType, listGet(t.element, "__l"),
+        )
 
-    is SerialTy.MapOf -> if (t.key == SerialTy.Str) CodeBlock.of(
-        "run { val __m = %L.getCompound(%L); val __r = LinkedHashMap<%L, %L>(__m.allKeys.size); for (__kk in __m.allKeys) __r[__kk] = %L; __r }",
-        tagVar, keyVar, typeKt(t.key), typeKt(t.value), nbtGetValueDynamic(t.value, "__m", "__kk"),
-    ) else CodeBlock.of(
-        "run { val __l = %L.getList(%L, %T.TAG_COMPOUND.toInt()); val __r = LinkedHashMap<%L, %L>(__l.size); for (i in __l.indices) { val __e = __l.getCompound(i); val __k = %L; val __v = %L; __r[__k] = __v }; __r }",
-        tagVar,
-        keyVar,
-        Clazz.Tag,
-        typeKt(t.key),
-        typeKt(t.value),
-        nbtGetValue(t.key, "__e", "k"),
-        nbtGetValue(t.value, "__e", "v"),
-    )
+        is SerialTy.SetOf -> CodeBlock.of(
+            "run { val __l = %L.getList(%L, %L); val __r = LinkedHashSet<%L>(__l.size); for (i in __l.indices) __r.add(%L); __r }",
+            tagVar, keyVar, listTagType(t.element), t.element.shortType, listGet(t.element, "__l"),
+        )
+
+        is SerialTy.MapOf -> if (t.key == SerialTy.Str) CodeBlock.of(
+            "run { val __m = %L.getCompound(%L); val __r = LinkedHashMap<%L, %L>(__m.allKeys.size); for (__kk in __m.allKeys) __r[__kk] = %L; __r }",
+            tagVar, keyVar, t.key.shortType, t.value.shortType, nbtGetValueDynamic(t.value, "__m", "__kk"),
+        ) else CodeBlock.of(
+            "run { val __l = %L.getList(%L, %T.TAG_COMPOUND.toInt()); val __r = LinkedHashMap<%L, %L>(__l.size); for (i in __l.indices) { val __e = __l.getCompound(i); val __k = %L; val __v = %L; __r[__k] = __v }; __r }",
+            tagVar,
+            keyVar,
+            Clazz.Tag,
+            t.key.shortType,
+            t.value.shortType,
+            nbtGetValue(t.key, "__e", "k"),
+            nbtGetValue(t.value, "__e", "v"),
+        )
+    }
 }
 
 private fun listTagType(elem: SerialTy): CodeBlock = when (elem) {
@@ -512,33 +468,6 @@ private fun listGet(elem: SerialTy, list: String): CodeBlock = when (elem) {
     ) else CodeBlock.of("%L.valueOf(%L.getString(i))", elem.name, list)
 
     else -> error("unsupported $elem")
-}
-
-private fun typeKt(t: SerialTy): String = when (t) {
-    SerialTy.Bool -> "Boolean"
-    SerialTy.I8 -> "Byte"
-    SerialTy.I16 -> "Short"
-    SerialTy.I32, SerialTy.VarI32 -> "Int"
-    SerialTy.I64, SerialTy.VarI64 -> "Long"
-    SerialTy.U8 -> "UByte"
-    SerialTy.U16 -> "UShort"
-    SerialTy.U32, SerialTy.VarU32 -> "UInt"
-    SerialTy.U64, SerialTy.VarU64 -> "ULong"
-    SerialTy.F32 -> "Float"
-    SerialTy.F64 -> "Double"
-    SerialTy.Str -> "String"
-    SerialTy.I8Array -> "ByteArray"
-    SerialTy.I32Array -> "IntArray"
-    SerialTy.I64Array -> "LongArray"
-    SerialTy.BigInt, SerialTy.VarBigInt -> "BigInteger"
-    SerialTy.Uuid -> "UUID"
-    SerialTy.ResLoc -> "ResourceLocation"
-    SerialTy.BlockPos -> "BlockPos"
-    is SerialTy.Enum -> t.name
-    is SerialTy.Nested -> t.name
-    is SerialTy.ListOf -> "List<${typeKt(t.element)}>"
-    is SerialTy.MapOf -> "Map<${typeKt(t.key)}, ${typeKt(t.value)}>"
-    is SerialTy.SetOf -> "Set<${typeKt(t.element)}>"
 }
 
 private fun writeFun(cls: SerialClass): FunSpec {
@@ -585,7 +514,7 @@ private fun bufWrite(body: CodeBlock.Builder, t: SerialTy, acc: String) {
         }
 
         SerialTy.BigInt, SerialTy.VarBigInt -> body.addStatement("buf.writeByteArray(%L.toByteArray())", acc)
-        SerialTy.Uuid -> body.addStatement("buf.writeUUID(%L)", acc)
+        SerialTy.UUID -> body.addStatement("buf.writeUUID(%L)", acc)
         SerialTy.ResLoc -> body.addStatement("buf.writeUtf(%L.toString())", acc)
         SerialTy.BlockPos -> body.addStatement("buf.writeLong(%L.asLong())", acc)
         is SerialTy.Enum -> if (t.ordinal) body.addStatement("buf.writeByte(%L.ordinal)", acc)
@@ -634,7 +563,7 @@ private fun readFun(cls: SerialClass): FunSpec {
                     body.addStatement("val %N = run {", f.name)
                     body.indent()
                     body.addStatement("val __n = buf.readVarInt()")
-                    body.addStatement("val __m = LinkedHashMap<%L, %L>(__n)", typeKt(t.key), typeKt(t.value))
+                    body.addStatement("val __m = LinkedHashMap<%L, %L>(__n)", t.key.shortType, t.value.shortType)
                     body.beginControlFlow("repeat(__n)")
                     body.addStatement("val __k = %L", bufRead(t.key))
                     body.addStatement("val __v = %L", bufRead(t.value))
@@ -649,7 +578,7 @@ private fun readFun(cls: SerialClass): FunSpec {
                     body.addStatement("val %N = run {", f.name)
                     body.indent()
                     body.addStatement("val __n = buf.readVarInt()")
-                    body.addStatement("val __s = LinkedHashSet<%L>(__n)", typeKt(t.element))
+                    body.addStatement("val __s = LinkedHashSet<%L>(__n)", t.element.shortType)
                     body.beginControlFlow("repeat(__n)")
                     body.addStatement("__s.add(%L)", bufRead(t.element))
                     body.endControlFlow()
@@ -688,7 +617,7 @@ private fun bufRead(t: SerialTy): CodeBlock = when (t) {
     SerialTy.I32Array -> CodeBlock.of("IntArray(buf.readVarInt()) { buf.readInt() }")
     SerialTy.I64Array -> CodeBlock.of("LongArray(buf.readVarInt()) { buf.readLong() }")
     SerialTy.BigInt, SerialTy.VarBigInt -> CodeBlock.of("%T(buf.readByteArray())", Clazz.BigInteger)
-    SerialTy.Uuid -> CodeBlock.of("buf.readUUID()")
+    SerialTy.UUID -> CodeBlock.of("buf.readUUID()")
     SerialTy.ResLoc -> CodeBlock.of("%T(buf.readUtf())", Clazz.ResourceLocation)
     SerialTy.BlockPos -> CodeBlock.of("%T.of(buf.readLong())", Clazz.BlockPos)
     is SerialTy.Enum -> if (t.ordinal) CodeBlock.of("%L.entries[buf.readUnsignedByte().toInt()]", t.name)
@@ -697,17 +626,17 @@ private fun bufRead(t: SerialTy): CodeBlock = when (t) {
     is SerialTy.Nested -> CodeBlock.of("%L.read(buf)", t.name)
     is SerialTy.ListOf -> CodeBlock.of(
         "run { val n = buf.readVarInt(); val list = ArrayList<%L>(n); repeat(n) { list.add(%L) }; list }",
-        typeKt(t.element), bufRead(t.element),
+        t.element.shortType, bufRead(t.element),
     )
 
     is SerialTy.MapOf -> CodeBlock.of(
         "run { val n = buf.readVarInt(); val m = LinkedHashMap<%L, %L>(n); repeat(n) { val k = %L; val v = %L; m[k] = v }; m }",
-        typeKt(t.key), typeKt(t.value), bufRead(t.key), bufRead(t.value),
+        t.key.shortType, t.value.shortType, bufRead(t.key), bufRead(t.value),
     )
 
     is SerialTy.SetOf -> CodeBlock.of(
         "run { val n = buf.readVarInt(); val s = LinkedHashSet<%L>(n); repeat(n) { s.add(%L) }; s }",
-        typeKt(t.element), bufRead(t.element),
+        t.element.shortType, bufRead(t.element),
     )
 }
 
@@ -720,7 +649,7 @@ private fun readIntoFun(cls: SerialClass): FunSpec {
                 body.addStatement("val %N = tag.getList(%S, %L)", "_${f.name}", f.wireName, listTagType(t.element))
                 body.addStatement(
                     "val %N = ArrayList<%L>(%N.size)",
-                    f.name, typeKt(t.element), "_${f.name}",
+                    f.name, t.element.shortType, "_${f.name}",
                 )
                 body.beginControlFlow("for (i in %N.indices)", "_${f.name}")
                 body.addStatement("%N.add(%L)", f.name, listGet(t.element, "_${f.name}"))
@@ -732,7 +661,7 @@ private fun readIntoFun(cls: SerialClass): FunSpec {
                 body.addStatement("val %N = tag.getList(%S, %L)", "_${f.name}", f.wireName, listTagType(t.element))
                 body.addStatement(
                     "val %N = LinkedHashSet<%L>(%N.size)",
-                    f.name, typeKt(t.element), "_${f.name}",
+                    f.name, t.element.shortType, "_${f.name}",
                 )
                 body.beginControlFlow("for (i in %N.indices)", "_${f.name}")
                 body.addStatement("%N.add(%L)", f.name, listGet(t.element, "_${f.name}"))
@@ -745,7 +674,7 @@ private fun readIntoFun(cls: SerialClass): FunSpec {
                     body.addStatement("val %N = tag.getCompound(%S)", "_${f.name}", f.wireName)
                     body.addStatement(
                         "val %N = LinkedHashMap<%L, %L>(%N.allKeys.size)",
-                        f.name, typeKt(t.key), typeKt(t.value), "_${f.name}",
+                        f.name, t.key.shortType, t.value.shortType, "_${f.name}",
                     )
                     body.beginControlFlow("for (k in %N.allKeys)", "_${f.name}")
                     body.addStatement("val __v = %L", nbtGetValueDynamic(t.value, "_${f.name}", "k"))
@@ -759,7 +688,7 @@ private fun readIntoFun(cls: SerialClass): FunSpec {
                     )
                     body.addStatement(
                         "val %N = LinkedHashMap<%L, %L>(%N.size)",
-                        f.name, typeKt(t.key), typeKt(t.value), "_${f.name}",
+                        f.name, t.key.shortType, t.value.shortType, "_${f.name}",
                     )
                     body.beginControlFlow("for (i in %N.indices)", "_${f.name}")
                     body.addStatement("val __e = %N.getCompound(i)", "_${f.name}")
