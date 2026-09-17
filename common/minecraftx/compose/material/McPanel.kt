@@ -65,6 +65,6 @@ fun McCloseButton(
             .clickable { onClose() },
         contentAlignment = Alignment.Center,
     ) {
-        McText(Component.literal("✕"), maxWidth = 12, color = colors.textPrimary.toArgb())
+        McText(Component.literal("✕"), maxWidth = 16, color = colors.textPrimary.toArgb())
     }
 }

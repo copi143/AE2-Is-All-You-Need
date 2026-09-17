@@ -150,6 +150,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     private val scope = CoroutineScope(MinecraftDispatcher + SupervisorJob() + frameClock)
     private val recomposer = Recomposer(effectCoroutineContext = scope.coroutineContext)
     private var composition: Composition? = null
+    private var disposed = false
 
     override val layoutNodes: MutableIntObjectMap<LayoutNode> = mutableIntObjectMapOf()
 
@@ -668,8 +669,11 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     ): Nothing = error("text input is not supported by the Compose owner")
 
     fun dispose() {
+        if (disposed) return
+        disposed = true
         McPointerCursor.apply(null)
         composition?.dispose()
+        composition = null
         mcTextInputService.stopInput()
         recomposer.cancel()
         scope.cancel()

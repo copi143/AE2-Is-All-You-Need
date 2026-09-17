@@ -40,6 +40,12 @@ class DockDropTest {
     }
 
     @Test
+    fun `ignores empty leaves`() {
+        val empty = leaf.copy(width = 0f, height = 0f)
+        assertNull(hitDockDrop(listOf(empty), 10f, 20f))
+    }
+
+    @Test
     fun `drop hints describe the action`() {
         assertEquals("并入此组", minecraftx.compose.dock.dropHint(DockDrop.Center("l0")))
         assertEquals("拆到左侧", minecraftx.compose.dock.dropHint(DockDrop.Edge("l0", DockSide.Left)))

@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import minecraftx.compose.text.LocalMcTextEngine
 import minecraftx.compose.text.McTextEngines
 
@@ -58,6 +58,6 @@ object McTheme {
 }
 
 internal val LocalColorScheme: ProvidableCompositionLocal<McColorScheme> =
-    staticCompositionLocalOf { McThemeSettings.colorScheme }
-internal val LocalTypography: ProvidableCompositionLocal<McTypography> = staticCompositionLocalOf { McTypography.Default }
-internal val LocalShapes: ProvidableCompositionLocal<McShapes> = staticCompositionLocalOf { McShapes.Default }
+    compositionLocalOf { McThemeSettings.colorScheme }
+internal val LocalTypography: ProvidableCompositionLocal<McTypography> = compositionLocalOf { McTypography.Default }
+internal val LocalShapes: ProvidableCompositionLocal<McShapes> = compositionLocalOf { McShapes.Default }

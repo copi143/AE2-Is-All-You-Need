@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -45,6 +46,8 @@ fun McDockHost(
     content: @Composable (tabId: String) -> Unit,
 ) {
     val layouts = remember { mutableStateMapOf<String, DockLeafLayout>() }
+    val latestState = rememberUpdatedState(state)
+    val latestOnStateChange = rememberUpdatedState(onStateChange)
     var dragging by remember { mutableStateOf<String?>(null) }
     var hostOrigin by remember { mutableStateOf(Offset.Zero) }
     var tick by remember { mutableIntStateOf(0) }
@@ -77,7 +80,7 @@ fun McDockHost(
             onDrag = {},
             onDragEnd = { tabId ->
                 val target = hitDockDrop(layouts.values.toList(), mouse.position.x.toFloat(), mouse.position.y.toFloat())
-                if (target != null) onStateChange(state.moveTab(tabId, target))
+                if (target != null) latestOnStateChange.value(latestState.value.moveTab(tabId, target))
                 dragging = null
             },
             content = content,
@@ -133,6 +136,8 @@ private fun DockTree(
     onDragEnd: (String) -> Unit,
     content: @Composable (tabId: String) -> Unit,
 ) {
+    val latestState = rememberUpdatedState(state)
+    val latestOnStateChange = rememberUpdatedState(onStateChange)
     when (node) {
         is DockNode.Split -> {
             var size by remember(node.id) { mutableStateOf(IntSize.Zero) }
@@ -144,7 +149,7 @@ private fun DockTree(
                     }
                     McSplitter(axis = DockAxis.Horizontal, onDrag = { delta ->
                         if (size.width > 0) {
-                            onStateChange(state.setRatio(node.id, node.ratio + delta / size.width))
+                            latestOnStateChange.value(latestState.value.setRatio(node.id, node.ratio + delta / size.width))
                         }
                     })
                     Box(Modifier.weight((1f - node.ratio).coerceIn(DockState.MIN_RATIO, DockState.MAX_RATIO))) {
@@ -158,7 +163,7 @@ private fun DockTree(
                     }
                     McSplitter(axis = DockAxis.Vertical, onDrag = { delta ->
                         if (size.height > 0) {
-                            onStateChange(state.setRatio(node.id, node.ratio + delta / size.height))
+                            latestOnStateChange.value(latestState.value.setRatio(node.id, node.ratio + delta / size.height))
                         }
                     })
                     Box(Modifier.weight((1f - node.ratio).coerceIn(DockState.MIN_RATIO, DockState.MAX_RATIO))) {
@@ -193,8 +198,8 @@ private fun DockTree(
                     active = node.active,
                     titleOf = titleOf,
                     dragging = dragging,
-                    onSelect = { onStateChange(state.selectTab(node.id, it)) },
-                    onClose = { onStateChange(state.closeTab(it)) },
+                    onSelect = { latestOnStateChange.value(latestState.value.selectTab(node.id, it)) },
+                    onClose = { latestOnStateChange.value(latestState.value.closeTab(it)) },
                     onDragStart = onDragStart,
                     onDrag = onDrag,
                     onDragEnd = onDragEnd,

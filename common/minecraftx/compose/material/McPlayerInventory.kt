@@ -19,8 +19,9 @@ fun McPlayerInventory(
     colors: McColorScheme = McTheme.colors,
     onSlotClicked: ((index: Int, button: Int, clickType: ClickType) -> Unit)? = null,
 ) {
-    val main = stacks.take(27)
-    val hotbar = stacks.drop(27).take(9)
+    val inventory = if (stacks.size >= 36) stacks else stacks + List(36 - stacks.size) { ItemStack.EMPTY }
+    val main = inventory.take(27)
+    val hotbar = inventory.drop(27).take(9)
     Column(modifier) {
         McItemGrid(
             stacks = main,

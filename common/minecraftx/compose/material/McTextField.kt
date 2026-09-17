@@ -8,12 +8,14 @@ import allyouneed.client.compose.platform.rememberFrameCallback
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -77,13 +79,15 @@ fun McTextField(
 ) {
     val engine = LocalMcTextEngine.current
     val service = LocalMcTextInputService.current
-    val id = remember { nextFieldId() }
+    val id = remember { McFieldIds.next() }
     val processor = remember { EditProcessor().apply { reset(value, null) } }
+    val latestEngine = rememberUpdatedState(engine)
+    val latestOnValueChange = rememberUpdatedState(onValueChange)
 
     var internal by remember { mutableStateOf(value) }
     var scrollX by remember { mutableFloatStateOf(0f) }
     var blinkTick by remember { mutableIntStateOf(0) }
-    rememberFrameCallback { blinkTick++ }
+    rememberFrameCallback { if (service.activeSession == id) blinkTick++ }
 
     val isActive = service.activeSession == id
 
@@ -106,13 +110,16 @@ fun McTextField(
                 onEditCommand = { commands ->
                     val newValue = processor.apply(commands)
                     internal = newValue
-                    onValueChange(newValue)
+                    latestOnValueChange.value(newValue)
                 },
                 onImeActionPerformed = onImeActionPerformed,
             )
         } else {
             service.unregisterSession(id)
         }
+    }
+    DisposableEffect(id) {
+        onDispose { service.unregisterSession(id) }
     }
 
     // Keep the caret visible while typing / moving.
@@ -138,11 +145,11 @@ fun McTextField(
                         val offset = if (internal.text.isEmpty()) {
                             0
                         } else {
-                            engine.indexAtWidth(internal.text, max(0, clickPx.roundToInt()))
+                            latestEngine.value.indexAtWidth(internal.text, max(0, clickPx.roundToInt()))
                         }
                         val newValue = processor.apply(listOf(SetSelectionCommand(offset, offset)))
                         internal = newValue
-                        onValueChange(newValue)
+                        latestOnValueChange.value(newValue)
                     }
                 }
             }
@@ -222,7 +229,15 @@ private fun DrawScope.drawContent(
                 with(engine) { paint(layout, colors.textSecondary) }
             }
         }
-    } else {
+    }
+
+    if (!value.selection.collapsed) {
+        val selStart = xForOffset(engine, text, value.selection.min, scrollX)
+        val selEnd = xForOffset(engine, text, value.selection.max, scrollX)
+        g.fill(selStart, 2, selEnd, height - 2, colors.textSelection.toArgb())
+    }
+
+    if (!text.isEmpty()) {
         val layout = engine.layout(McStyledString(text), Int.MAX_VALUE, true)
         translate(drawX, textY.toFloat()) {
             with(engine) { paint(layout, colors.textPrimary) }
@@ -234,10 +249,6 @@ private fun DrawScope.drawContent(
             val caretX = xForOffset(engine, text, value.selection.min, scrollX)
             g.fill(caretX, 2, caretX + 2, height - 2, colors.textCaret.toArgb())
         }
-    } else {
-        val selStart = xForOffset(engine, text, value.selection.min, scrollX)
-        val selEnd = xForOffset(engine, text, value.selection.max, scrollX)
-        g.fill(selStart, 2, selEnd, height - 2, colors.textSelection.toArgb())
     }
 
     val composition = value.composition
@@ -249,12 +260,12 @@ private fun DrawScope.drawContent(
 }
 
 private fun xForOffset(engine: McTextEngine, text: String, offset: Int, scrollX: Float): Int =
-    (TEXT_PAD_LEFT + engine.widthOf(text.substring(0, offset)) - scrollX).roundToInt()
+    (TEXT_PAD_LEFT + engine.widthOf(text.substring(0, offset.coerceIn(0, text.length))) - scrollX).roundToInt()
 
 private fun computeTargetScroll(engine: McTextEngine, value: TextFieldValue, current: Float, width: Int): Float {
     val visibleWidth = width - TEXT_PAD_LEFT - TEXT_PAD_RIGHT
     val maxScroll = max(0, engine.widthOf(value.text) - visibleWidth).toFloat()
-    val caretX = engine.widthOf(value.text.substring(0, value.selection.max)).toFloat()
+    val caretX = engine.widthOf(value.text.substring(0, value.selection.max.coerceIn(0, value.text.length))).toFloat()
     var target = current
     if (caretX - target < 0f) {
         target = caretX
@@ -264,9 +275,10 @@ private fun computeTargetScroll(engine: McTextEngine, value: TextFieldValue, cur
     return target.coerceIn(0f, maxScroll)
 }
 
-private val fieldIdCounter = java.util.concurrent.atomic.AtomicInteger()
-
-private fun nextFieldId(): Int = fieldIdCounter.incrementAndGet()
+internal object McFieldIds {
+    private val counter = java.util.concurrent.atomic.AtomicInteger()
+    fun next(): Int = counter.incrementAndGet()
+}
 
 private const val TEXT_PAD_LEFT = 3
 private const val TEXT_PAD_RIGHT = 3

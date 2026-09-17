@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -35,6 +36,10 @@ fun McDockTabBar(
     dragging: String? = null,
     extra: @Composable RowScope.() -> Unit = {},
 ) {
+    val latestSelect = rememberUpdatedState(onSelect)
+    val latestDragStart = rememberUpdatedState(onDragStart)
+    val latestDrag = rememberUpdatedState(onDrag)
+    val latestDragEnd = rememberUpdatedState(onDragEnd)
     Row(
         modifier = modifier.fillMaxWidth().height(McTheme.shapes.tabHeight),
         verticalAlignment = Alignment.Bottom,
@@ -65,17 +70,17 @@ fun McDockTabBar(
                                     change.consume()
                                 }
                                 PointerEventType.Move -> if (pressed && !change.isConsumed) {
-                                    if (!dragged && hypot(p.x - startX, p.y - startY) >= DRAG_SLOP) {
+                                        if (!dragged && hypot(p.x - startX, p.y - startY) >= DRAG_SLOP) {
                                         dragged = true
-                                        onDragStart(tabId)
+                                        latestDragStart.value(tabId)
                                     }
                                     if (dragged) {
-                                        onDrag(tabId)
+                                        latestDrag.value(tabId)
                                         change.consume()
                                     }
                                 }
                                 PointerEventType.Release -> if (pressed) {
-                                    if (dragged) onDragEnd(tabId) else onSelect(tabId)
+                                    if (dragged) latestDragEnd.value(tabId) else latestSelect.value(tabId)
                                     pressed = false
                                     dragged = false
                                     if (!change.isConsumed) change.consume()

@@ -1,10 +1,13 @@
 package ae2x.compose.slot
 
-import ae2x.compose.LocalAeHost
 import ae2x.compose.AeSlotGeometry
+import ae2x.compose.LocalAeHost
+import ae2x.compose.aeMenuSlot
 import ae2x.compose.format.AeAmountFormat
+import ae2x.compose.rememberGuiSync
 import allyouneed.client.compose.platform.LocalMousePosition
 import allyouneed.client.compose.platform.LocalUiScale
+import allyouneed.util.bigint.BigAmounts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -17,12 +20,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
+import appeng.api.client.AEKeyRendering
 import appeng.api.stacks.GenericStack
 import appeng.client.gui.StackWithBounds
 import appeng.client.gui.me.common.Repo
+import appeng.client.gui.me.common.RepoSlot
+import appeng.core.localization.GuiText
 import appeng.menu.me.common.GridInventoryEntry
+import minecraftx.compose.geometry.PanelGeometry
 import minecraftx.compose.material.ItemSlot
 import minecraftx.compose.theme.McTheme
+import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.Rect2i
 import net.minecraft.world.inventory.ClickType
 import net.minecraft.world.item.ItemStack
@@ -34,56 +43,82 @@ fun AeRepoGrid(
     rows: Int,
     columns: Int,
     modifier: Modifier = Modifier,
+    viewOnlyCraftable: Boolean = false,
     onEntryClick: (GridInventoryEntry?, button: Int, clickType: ClickType) -> Unit,
 ) {
+    if (columns <= 0 || rows <= 0) return
     val slotSize = McTheme.shapes.slotSize
-    val slotPx = slotSize.value
+    val slotPx = with(LocalDensity.current) { slotSize.toPx() }
     val visible = rows * columns
     val host = LocalAeHost.current
     val mouse = LocalMousePosition.current
     val uiScale = LocalUiScale.current
+    val density = LocalDensity.current
+    val powered = rememberGuiSync { repo.hasPower() }
     var gridPos by remember { mutableStateOf(Offset.Zero) }
+    val repoSlots = host.menu.slots.filterIsInstance<RepoSlot>()
     Box(
         modifier
             .size(slotSize * columns, slotSize * rows)
             .onGloballyPositioned { gridPos = it.positionInWindow() },
     ) {
-        val pointer = mouse.position
+        val pointer = mouse.inDensity(density)
         repeat(visible) { index ->
             val entry = repo.get(index)
             val col = index % columns
             val row = index / columns
             val cellX = gridPos.x + col * slotPx
             val cellY = gridPos.y + row * slotPx
-            if (pointer.x.toFloat() in cellX..(cellX + slotPx) &&
-                pointer.y.toFloat() in cellY..(cellY + slotPx)
-            ) {
+            if (PanelGeometry.containsHalfOpen(pointer.x, pointer.y, cellX, cellY, slotPx.roundToInt())) {
                 val what = entry?.what
                 if (what != null) {
                     host.reportHoverStack(
                         StackWithBounds(
                             GenericStack(what, entry.storedAmount),
                             Rect2i(
-                                (cellX * uiScale).roundToInt() + AeSlotGeometry.ITEM_INSET,
-                                (cellY * uiScale).roundToInt() + AeSlotGeometry.ITEM_INSET,
-                                AeSlotGeometry.ITEM_SIZE,
-                                AeSlotGeometry.ITEM_SIZE,
+                                (cellX * uiScale).roundToInt() + AeSlotGeometry.scaledInset(uiScale),
+                                (cellY * uiScale).roundToInt() + AeSlotGeometry.scaledInset(uiScale),
+                                AeSlotGeometry.scaledItemSize(uiScale),
+                                AeSlotGeometry.scaledItemSize(uiScale),
                             ),
                         ),
                     )
                 }
             }
+            val slot = repoSlots.getOrNull(index)
             ItemSlot(
-                stack = {
-                    repo.get(index)?.what?.wrapForDisplayOrFilter() ?: ItemStack.EMPTY
-                },
-                modifier = Modifier.offset(slotSize * col, slotSize * row),
+                stack = { repo.get(index)?.what?.wrapForDisplayOrFilter() ?: ItemStack.EMPTY },
+                modifier = Modifier
+                    .offset(slotSize * col, slotSize * row)
+                    .then(if (slot != null) Modifier.aeMenuSlot(slot) else Modifier),
                 interactive = true,
-                consumeClicks = true,
+                consumeClicks = slot == null,
                 amount = {
-                    repo.get(index)?.storedAmount?.takeIf { it > 0 }?.let { AeAmountFormat.slot(it) }
+                    val current = repo.get(index)
+                    if (current == null) {
+                        null
+                    } else {
+                        val stored = BigAmounts.getEntryAmount(current)
+                        val craftable = current.isCraftable
+                        when {
+                            craftable && (viewOnlyCraftable || stored.signum() <= 0) -> GuiText.SmallFontCraft.getLocal()
+                            stored.signum() > 0 -> AeAmountFormat.slot(stored)
+                            else -> null
+                        }
+                    }
                 },
-                craftable = { repo.get(index)?.isCraftable == true },
+                craftable = {
+                    val current = repo.get(index)
+                    current != null && current.isCraftable &&
+                        BigAmounts.getEntryAmount(current).signum() > 0 && !viewOnlyCraftable
+                },
+                disabled = !powered,
+                paintStack = { graphics, x, y ->
+                    val what = repo.get(index)?.what
+                    if (what != null) {
+                        AEKeyRendering.drawInGui(Minecraft.getInstance(), graphics, x, y, what)
+                    }
+                },
                 onSlotClicked = { button, clickType -> onEntryClick(repo.get(index), button, clickType) },
             )
         }

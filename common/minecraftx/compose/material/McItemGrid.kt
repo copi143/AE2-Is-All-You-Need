@@ -21,7 +21,8 @@ fun McItemGrid(
     onSlotClicked: ((index: Int, button: Int, clickType: ClickType) -> Unit)? = null,
 ) {
     val slot = McTheme.shapes.slotSize
-    val rows = if (columns <= 0) 0 else (stacks.size + columns - 1) / columns
+    if (columns <= 0) return
+    val rows = (stacks.size + columns - 1) / columns
     Box(modifier.size(slot * columns, slot * rows)) {
         stacks.forEachIndexed { index, stack ->
             val col = index % columns

@@ -11,11 +11,13 @@ import allyouneed.client.compose.platform.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,12 +71,14 @@ fun McTextArea(
 ) {
     val engine = LocalMcTextEngine.current
     val service = LocalMcTextInputService.current
-    val id = remember { nextFieldId() }
+    val id = remember { McFieldIds.next() }
     val processor = remember { EditProcessor().apply { reset(value, null) } }
+    val latestEngine = rememberUpdatedState(engine)
+    val latestOnValueChange = rememberUpdatedState(onValueChange)
 
     var internal by remember { mutableStateOf(value) }
     var blinkTick by remember { mutableIntStateOf(0) }
-    rememberFrameCallback { blinkTick++ }
+    rememberFrameCallback { if (service.activeSession == id) blinkTick++ }
     // Selection anchor for shift-extensions of the navigation hook (Up/Down/Home/End with shift).
     var anchor by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
@@ -115,7 +119,7 @@ fun McTextArea(
     fun applyEdit(commands: List<EditCommand>) {
         val newValue = processor.apply(commands)
         internal = newValue
-        onValueChange(newValue)
+        latestOnValueChange.value(newValue)
     }
 
     // (Re-)register as the active input session when focus arrives; release it on blur.
@@ -156,6 +160,9 @@ fun McTextArea(
             service.unregisterSession(id)
         }
     }
+    DisposableEffect(id) {
+        onDispose { service.unregisterSession(id) }
+    }
 
     Box(
         modifier
@@ -177,7 +184,7 @@ fun McTextArea(
                             .coerceIn(0, rows.lastIndex)
                         val row = rows[rowIdx]
                         val clickX = (press.x - TEXT_PAD_LEFT).roundToInt().coerceAtLeast(0)
-                        val offset = row.start + engine.indexAtWidth(row.text, clickX)
+                        val offset = row.start + latestEngine.value.indexAtWidth(row.text, clickX)
                         applyEdit(listOf(SetSelectionCommand(offset, offset)))
                     }
                 }
@@ -275,22 +282,6 @@ private fun DrawScope.drawRows(
     val firstRow = max(0, ((scrollY - TEXT_AREA_PAD_V) / rowHeightPx).toInt())
     val lastRow = min(layout.rows.lastIndex, ((scrollY + viewHeight) / rowHeightPx).toInt() + 1)
 
-    for (i in firstRow..lastRow) {
-        val row = layout.rows[i]
-        val y = rowY(i, scrollY, rowHeightPx)
-        val rowLayout = engine.layout(McStyledString(row.text), Int.MAX_VALUE, true)
-        translate(TEXT_PAD_LEFT.toFloat(), y.toFloat()) {
-            with(engine) { paint(rowLayout, colors.textPrimary) }
-        }
-    }
-    if (value.text.isEmpty() && !placeholder.isNullOrEmpty()) {
-        val ph = engine.layout(McStyledString(placeholder), Int.MAX_VALUE, true)
-        translate(TEXT_PAD_LEFT.toFloat(), rowY(0, scrollY, rowHeightPx).toFloat()) {
-            with(engine) { paint(ph, colors.textSecondary) }
-        }
-    }
-
-    // Selection highlight, intersected with every visible row.
     val selStart = value.selection.min
     val selEnd = value.selection.max
     if (!value.selection.collapsed) {
@@ -307,10 +298,23 @@ private fun DrawScope.drawRows(
                     y + rowHeightPx,
                     colors.textSelection.toArgb(),
                 )
-                // A fully-covered empty row still gets a small highlight block.
                 selStart <= row.start && selEnd >= row.end && row.text.isEmpty() ->
                     g.fill(TEXT_PAD_LEFT, y, TEXT_PAD_LEFT + 2, y + rowHeightPx, colors.textSelection.toArgb())
             }
+        }
+    }
+    for (i in firstRow..lastRow) {
+        val row = layout.rows[i]
+        val y = rowY(i, scrollY, rowHeightPx)
+        val rowLayout = engine.layout(McStyledString(row.text), Int.MAX_VALUE, true)
+        translate(TEXT_PAD_LEFT.toFloat(), y.toFloat()) {
+            with(engine) { paint(rowLayout, colors.textPrimary) }
+        }
+    }
+    if (value.text.isEmpty() && !placeholder.isNullOrEmpty()) {
+        val ph = engine.layout(McStyledString(placeholder), Int.MAX_VALUE, true)
+        translate(TEXT_PAD_LEFT.toFloat(), rowY(0, scrollY, rowHeightPx).toFloat()) {
+            with(engine) { paint(ph, colors.textSecondary) }
         }
     }
 
@@ -423,6 +427,4 @@ private const val TEXT_AREA_PAD_V = 3
 private const val TEXT_AREA_PAD_RIGHT = 9
 private const val CARET_BLINK_FRAMES = 20
 
-private val fieldIdCounter = java.util.concurrent.atomic.AtomicInteger()
 
-private fun nextFieldId(): Int = fieldIdCounter.incrementAndGet()

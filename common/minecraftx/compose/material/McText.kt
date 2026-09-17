@@ -58,8 +58,14 @@ fun McText(
 
 /** String convenience overload of [McText]. */
 @Composable
-fun Text(text: String, modifier: Modifier = Modifier, color: Int = McTheme.colors.textPrimary.toArgb()) {
-    McText(text, modifier, color)
+fun Text(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Int = McTheme.colors.textPrimary.toArgb(),
+    maxWidth: Int = Int.MAX_VALUE,
+    clipFrame: Rect? = null,
+) {
+    McText(text, modifier, color, maxWidth, clipFrame)
 }
 
 @Composable

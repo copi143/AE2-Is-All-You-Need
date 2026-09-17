@@ -109,6 +109,7 @@ class McTextInputService : PlatformTextInputService {
         this.onEditCommand = onEditCommand
         this.onImeActionPerformed = onImeActionPerformed
         this.navigation = navigation
+        hasFocusedField = true
     }
 
     /** Releases the session only if [id] is still the active field. */
@@ -118,6 +119,7 @@ class McTextInputService : PlatformTextInputService {
         onEditCommand = null
         onImeActionPerformed = null
         navigation = null
+        hasFocusedField = false
     }
 
     /** Requests focus for the field with [id] without touching its command callbacks yet. */
@@ -302,6 +304,7 @@ class McTextInputService : PlatformTextInputService {
         onEditCommand = null
         onImeActionPerformed = null
         navigation = null
+        hasFocusedField = false
     }
 
     override fun showSoftwareKeyboard() {}
@@ -346,7 +349,11 @@ class McTextInputService : PlatformTextInputService {
         }
     }
 
-    private companion object {
+    companion object {
+        @JvmStatic
+        var hasFocusedField: Boolean = false
+            internal set
+
         const val NO_SESSION = -1
 
         // GLFW modifiers

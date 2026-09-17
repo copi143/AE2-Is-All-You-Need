@@ -1,5 +1,6 @@
 package ae2x.compose.widget
 
+import ae2x.compose.rememberGuiSync
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -33,9 +34,10 @@ fun AeProgressBar(
     colors: McColorScheme = McTheme.colors,
     thickness: Dp = McTheme.shapes.progressThickness,
 ) {
-    val max = provider.maxProgress.coerceAtLeast(1)
+    val current = rememberGuiSync { provider.currentProgress }
+    val max = rememberGuiSync { provider.maxProgress }.coerceAtLeast(1)
     AeProgressBar(
-        progress = provider.currentProgress.toFloat() / max.toFloat(),
+        progress = current.toFloat() / max.toFloat(),
         modifier = modifier,
         vertical = vertical,
         colors = colors,

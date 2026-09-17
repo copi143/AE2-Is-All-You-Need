@@ -76,9 +76,7 @@ fun AeSortToggle(
         val unregister = tooltipHost.register {
             val graphics = McGraphics.current ?: return@register
             val p = mouse.inDensity(density)
-            if (p.x !in nodePos.x.toInt()..(nodePos.x + ICON).toInt() ||
-                p.y !in nodePos.y.toInt()..(nodePos.y + ICON).toInt()
-            ) {
+            if (!minecraftx.compose.geometry.PanelGeometry.containsHalfOpen(p.x, p.y, nodePos.x, nodePos.y, ICON)) {
                 return@register
             }
             val text = "${latestOrder.value.name} / ${latestDir.value.name}"
@@ -129,9 +127,7 @@ fun AeSortToggle(
                     .colorArgb(tint)
                     .blit(graphics)
                 val p = mouse.inDensity(density)
-                if (p.x in nodePos.x.toInt()..(nodePos.x + ICON).toInt() &&
-                    p.y in nodePos.y.toInt()..(nodePos.y + ICON).toInt()
-                ) {
+                if (minecraftx.compose.geometry.PanelGeometry.containsHalfOpen(p.x, p.y, nodePos.x, nodePos.y, ICON)) {
                     drawRect(color = hover)
                 }
             },

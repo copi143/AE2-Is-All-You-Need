@@ -35,7 +35,7 @@ fun AeAmountDialog(
     confirmLabel: String = "OK",
     cancelLabel: String = "Cancel",
     width: Dp = 160.dp,
-    height: Dp = 90.dp,
+    height: Dp = 110.dp,
     colors: McColorScheme = McTheme.colors,
 ) {
     McPanel(width = width, height = height, modifier = modifier, colors = colors) {

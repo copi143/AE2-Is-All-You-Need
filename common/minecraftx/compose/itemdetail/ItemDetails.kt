@@ -55,7 +55,10 @@ class ItemDetails(val stack: ItemStack) {
             add(
                 kv(
                     "硬度：",
-                    runCatching { state.getDestroySpeed(null, BlockPos.ZERO) }.getOrNull()?.let(::formatFloat) ?: "—"
+                    runCatching {
+                        val level = net.minecraft.client.Minecraft.getInstance().level
+                        state.getDestroySpeed(level, BlockPos.ZERO)
+                    }.getOrNull()?.let(::formatFloat) ?: "—"
                 )
             )
             add(kv("爆炸抗性：", formatFloat(block.getExplosionResistance())))
@@ -116,7 +119,7 @@ class ItemDetails(val stack: ItemStack) {
 
     private fun <T> tagsOf(registry: net.minecraft.core.Registry<T>, value: T): List<TagKey<T>> {
         val key = registry.getResourceKey(value).orElse(null) ?: return emptyList()
-        val holder: Holder<T> = registry.getHolderOrThrow(key)
+        val holder: Holder<T> = registry.getHolder(key).orElse(null) ?: return emptyList()
         return holder.tags().toList().sortedBy { it.location().toString() }
     }
 
@@ -132,7 +135,7 @@ class ItemDetails(val stack: ItemStack) {
     private fun nbtSection(): Section {
         val tag = stack.tag ?: return Section(section("NBT"), listOf(line("（无 NBT）")))
         val pretty = NbtUtils.prettyPrint(tag)
-        val lines = pretty.split("\n").map { line(it) }
+        val lines = pretty.replace("\r\n", "\n").split("\n").map { line(it) }
         return Section(section("NBT"), lines)
     }
 }

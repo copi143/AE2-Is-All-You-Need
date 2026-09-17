@@ -37,7 +37,7 @@ object DetailsStyling {
     /** Formats a float without trailing zeros. */
     fun formatFloat(value: Float): String {
         if (value == value.toInt().toFloat()) return value.toInt().toString()
-        val text = "%.4f".format(value).trimEnd('0').trimEnd('.')
+        val text = "%.4f".format(java.util.Locale.ROOT, value).trimEnd('0').trimEnd('.')
         return text
     }
 }

@@ -10,7 +10,6 @@ import androidx.compose.ui.layout.positionInWindow
 import appeng.client.gui.StackWithBounds
 import appeng.menu.AEBaseMenu
 import appeng.menu.SlotSemantic
-import net.minecraft.client.renderer.Rect2i
 import net.minecraft.world.inventory.Slot
 import kotlin.math.roundToInt
 

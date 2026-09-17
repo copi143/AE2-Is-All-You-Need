@@ -20,7 +20,7 @@ import minecraftx.compose.text.McStyledString
 import minecraftx.compose.text.McTextEngine
 import minecraftx.compose.text.McTextLayout
 import minecraftx.compose.theme.McTheme
-import kotlin.math.floor
+
 import kotlin.math.max
 
 /**
@@ -50,7 +50,7 @@ fun McMarkdown(
             for (cmd in cmds) drawCmd(cmd, engine)
         },
     ) { _, constraints ->
-        val maxW = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
+        val maxW = if (constraints.hasBoundedWidth) constraints.maxWidth else 256
         val palette = Palette(
             codeBackground = colors.mdCodeBackground,
             codeForeground = colors.mdCodeText,
@@ -217,7 +217,7 @@ private class LayoutBuilder(private val engine: McTextEngine, private val maxW: 
         }
         val naturalSum = natural.sum().coerceAtLeast(1)
         val scale = if (naturalSum + cols * padX * 2 > maxW) {
-            floor(((maxW - cols * padX * 2).coerceAtLeast(cols * 8).toDouble()) / naturalSum)
+            ((maxW - cols * padX * 2).coerceAtLeast(cols * 8).toDouble()) / naturalSum
         } else 1.0
         val colW = IntArray(cols) { c -> max((natural[c] * scale).toInt(), 8) + padX * 2 }
         val tableW = colW.sum().coerceAtMost(maxW)

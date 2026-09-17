@@ -46,10 +46,14 @@ fun McScrollbar(
             Modifier
                 .fillMaxSize()
                 .background(trackColor)
-                .pointerInput(state.maxScroll, travel) {
+                .pointerInput(state.maxScroll, travel, barHeight) {
                     var dragging = false
                     var grabOffset = 0f
                     fun seek(y: Float) {
+                        if (travel <= 0) {
+                            state.seek(0f)
+                            return
+                        }
                         val frac = ((y - grabOffset) / travel).coerceIn(0f, 1f)
                         state.seek(frac * state.maxScroll)
                     }
@@ -62,8 +66,9 @@ fun McScrollbar(
                                 PointerEventType.Press -> {
                                     if (change.isConsumed) continue
                                     dragging = true
-                                    val barCenter = travel * state.display / state.maxScroll
-                                    grabOffset = p.y - barCenter
+                                    val barTop = if (state.maxScroll == 0f) 0f else travel * state.display / state.maxScroll
+                                    val onBar = p.y >= barTop && p.y <= barTop + barHeight
+                                    grabOffset = if (onBar) p.y - barTop else barHeight / 2f
                                     seek(p.y)
                                     change.consume()
                                 }

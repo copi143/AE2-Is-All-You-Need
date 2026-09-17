@@ -16,6 +16,7 @@ class EmiSlotRenderer : ItemSlotRenderer {
     override fun drawStack(graphics: GuiGraphics, stack: ItemStack, x: Int, y: Int) {
         if (stack.isEmpty) return
         EmiStack.of(stack).render(graphics, x, y, 0f)
+        graphics.renderItemDecorations(net.minecraft.client.Minecraft.getInstance().font, stack, x, y)
     }
 
     override fun onClick(stack: ItemStack, button: Int) {

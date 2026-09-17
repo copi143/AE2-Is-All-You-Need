@@ -1,6 +1,7 @@
 package ae2x.compose.slot
 
 import ae2x.compose.aeMenuSlot
+import ae2x.compose.rememberGuiSync
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import appeng.menu.slot.IOptionalSlot
@@ -19,13 +20,14 @@ fun AeMenuSlot(
     colors: McColorScheme = McTheme.colors,
 ) {
     val optional = slot as? IOptionalSlot
+    val enabled = rememberGuiSync { optional?.isSlotEnabled != false }
     ItemSlot(
         stack = { slot.item },
         modifier = modifier.aeMenuSlot(slot),
         consumeClicks = false,
         amount = { amount },
         craftable = { craftable },
-        disabled = optional?.isSlotEnabled == false,
+        disabled = !enabled,
         missing = missing,
         showTooltip = true,
         colors = colors,

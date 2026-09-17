@@ -10,10 +10,9 @@ import net.minecraft.world.item.ItemStack
  * recipe lookup on click.
  */
 class VanillaSlotRenderer : ItemSlotRenderer {
-    private val font = Minecraft.getInstance().font
-
     override fun drawStack(graphics: GuiGraphics, stack: ItemStack, x: Int, y: Int) {
         if (stack.isEmpty) return
+        val font = Minecraft.getInstance().font
         graphics.renderItem(stack, x, y)
         graphics.renderItemDecorations(font, stack, x, y)
     }

@@ -64,12 +64,11 @@ abstract class ComposeContainerScreen<T : AbstractContainerMenu>(
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
         if (hasControlDown()) {
-            // Ctrl+滚轮缩放整个 Compose UI(0.5x..4x)。
-            layer.setUiScaleFactor(layer.uiScale + (delta * UI_SCALE_STEP).toFloat())
+            layer.setUiScaleFactor((layer.uiScale + (delta * UI_SCALE_STEP).toFloat()).coerceIn(0.5f, 4f))
             return true
         }
-        layer.onMouseScrolled(mouseX, mouseY, delta)
-        return true
+        if (layer.onMouseScrolled(mouseX, mouseY, delta)) return true
+        return super.mouseScrolled(mouseX, mouseY, delta)
     }
 
     override fun mouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
@@ -90,6 +89,11 @@ abstract class ComposeContainerScreen<T : AbstractContainerMenu>(
     override fun charTyped(codePoint: Char, modifiers: Int): Boolean {
         if (layer.onCharTyped(codePoint.code, modifiers)) return true
         return super.charTyped(codePoint, modifiers)
+    }
+
+    override fun removed() {
+        layer.dispose()
+        super.removed()
     }
 
     override fun onClose() {

@@ -1,14 +1,9 @@
 package ae2x.compose
 
 import allyouneed.client.compose.platform.ComposeLayer
-import allyouneed.client.compose.platform.rememberFrameCallback
 import allyouneed.client.integration.emi.EmiScreenOverlay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.positionInWindow
 import appeng.client.gui.AEBaseScreen
@@ -24,7 +19,6 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.Slot
 import org.jetbrains.annotations.Nullable
-import kotlin.math.roundToInt
 
 abstract class AeComposeScreen<M : AEBaseMenu>(
     menu: M,
@@ -54,7 +48,7 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
         }
         layer.setContent {
             CompositionLocalProvider(LocalAeHost provides this) {
-                McTheme { LiveMenuFrame { Content() } }
+                McTheme { Content() }
             }
         }
     }
@@ -98,11 +92,11 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
         if (hasControlDown()) {
-            layer.setUiScaleFactor(layer.uiScale + (delta * 0.1f).toFloat())
+            layer.setUiScaleFactor((layer.uiScale + (delta * 0.1f).toFloat()).coerceIn(0.5f, 4f))
             return true
         }
-        layer.onMouseScrolled(mouseX, mouseY, delta)
-        return true
+        if (layer.onMouseScrolled(mouseX, mouseY, delta)) return true
+        return super.mouseScrolled(mouseX, mouseY, delta)
     }
 
     override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
@@ -118,6 +112,11 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
     override fun charTyped(codePoint: Char, modifiers: Int): Boolean {
         if (layer.onCharTyped(codePoint.code, modifiers)) return true
         return super.charTyped(codePoint, modifiers)
+    }
+
+    override fun removed() {
+        layer.dispose()
+        super.removed()
     }
 
     override fun onClose() {
@@ -177,11 +176,3 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
 }
 
 private class PendingSlot(val slot: Slot, val windowX: Float, val windowY: Float)
-
-@Composable
-private fun LiveMenuFrame(content: @Composable () -> Unit) {
-    var frame by remember { mutableIntStateOf(0) }
-    rememberFrameCallback { frame++ }
-    frame
-    content()
-}

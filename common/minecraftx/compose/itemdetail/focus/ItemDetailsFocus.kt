@@ -1,7 +1,6 @@
 package minecraftx.compose.itemdetail.focus
 
 import net.minecraft.client.Minecraft
-import net.minecraft.core.Direction
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.phys.BlockHitResult
@@ -22,8 +21,22 @@ object ItemDetailsFocus {
     fun hoveredStack(): ItemStack? {
         emiHovered()?.let { return it }
         jeiHovered()?.let { return it }
+        containerSlot()?.let { return it }
         targetedBlock()?.let { return it }
         return heldItem()
+    }
+
+    private fun containerSlot(): ItemStack? {
+        val screen = Minecraft.getInstance().screen as? net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>
+            ?: return null
+        val slot = runCatching {
+            val field = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen::class.java
+                .getDeclaredField("hoveredSlot")
+            field.isAccessible = true
+            field.get(screen)
+        }.getOrNull() as? net.minecraft.world.inventory.Slot ?: return null
+        val stack = slot.item
+        return if (stack.isEmpty) null else stack
     }
 
     // ------------------------------------------------------------------
@@ -63,14 +76,10 @@ object ItemDetailsFocus {
         val runtimeClass = runtime::class.java
 
         val overlay = runtimeClass.getMethod("getIngredientListOverlay").invoke(runtime)
-        val typed = overlay::class.java.getMethod("getIngredientUnderMouse").invoke(overlay)
-        if (typed is java.util.Optional<*> && typed.isPresent) {
-            val ingredient = typed.get()
-            val itemStack = runCatching {
-                ingredient::class.java.getMethod("getItemStack").invoke(ingredient) as? java.util.Optional<*>
-            }.getOrNull()?.get()
-            if (itemStack is ItemStack) return itemStack
-        }
+        val typed = overlay::class.java.methods
+            .firstOrNull { it.name == "getIngredientUnderMouse" && it.parameterCount == 0 }
+            ?.invoke(overlay)
+        itemStackFromJei(typed)?.let { return it }
 
         val bookmark = runCatching { runtimeClass.getMethod("getBookmarkOverlay").invoke(runtime) }.getOrNull()
         if (bookmark != null) {
@@ -81,6 +90,21 @@ object ItemDetailsFocus {
         null
     } catch (e: Throwable) {
         null
+    }
+
+    private fun itemStackFromJei(typed: Any?): ItemStack? {
+        if (typed == null) return null
+        val value = if (typed is java.util.Optional<*>) typed.orElse(null) else typed
+        if (value is ItemStack) return value.takeUnless { it.isEmpty }
+        runCatching { value?.javaClass?.getMethod("getItemStack")?.invoke(value) }.getOrNull()?.let { inner ->
+            val stack = if (inner is java.util.Optional<*>) inner.orElse(null) else inner
+            if (stack is ItemStack && !stack.isEmpty) return stack
+        }
+        runCatching { value?.javaClass?.getMethod("getIngredient")?.invoke(value) }.getOrNull()?.let { inner ->
+            val stack = if (inner is java.util.Optional<*>) inner.orElse(null) else inner
+            if (stack is ItemStack && !stack.isEmpty) return stack
+        }
+        return null
     }
 
     // ------------------------------------------------------------------
@@ -95,16 +119,9 @@ object ItemDetailsFocus {
         val state = level.getBlockState(pos)
         val item = state.block.asItem()
         if (item == Items.AIR) {
-            // try the block behind an attached state (signs, torches, buttons...)
-            for (dir in Direction.entries) {
-                val behind = pos.relative(dir)
-                val behindState = level.getBlockState(behind)
-                val behindItem = behindState.block.asItem()
-                if (behindItem != Items.AIR) {
-                    return behindItem.defaultInstance
-                }
-            }
-            return null
+            val behind = pos.relative(blockHit.direction.opposite)
+            val behindItem = level.getBlockState(behind).block.asItem()
+            return if (behindItem == Items.AIR) null else behindItem.defaultInstance
         }
         return item.defaultInstance
     }

@@ -39,7 +39,7 @@ fun AeCpuList(
     visibleRows: Int = 6,
     colors: McColorScheme = McTheme.colors,
 ) {
-    val cpus = rememberGuiSync { menu.cpuList.cpus() }
+    val cpus = rememberGuiSync { menu.cpuList.cpus().toList() }
     val selected = rememberGuiSync { menu.selectedCpuSerial }
     AeCpuList(
         cpus = cpus,
@@ -60,10 +60,11 @@ fun AeCpuList(
     visibleRows: Int = 6,
     colors: McColorScheme = McTheme.colors,
 ) {
-    val rowH = 22
+    val rowH = 24
     val viewportH = visibleRows * rowH
     val state = rememberScrollState()
     McScrollBox(
+        contentWidth = 120,
         contentHeight = (cpus.size * rowH).coerceAtLeast(viewportH),
         modifier = modifier.size(120.dp, viewportH.dp),
         state = state,
@@ -134,9 +135,9 @@ private fun AeCpuRow(
     if (job != null) {
         McProgressBar(progress = cpu.progress(), modifier = Modifier.fillMaxWidth().height(2.dp), colors = colors)
     } else {
-        Spacer(Modifier.height(0.dp))
+        Spacer(Modifier.height(2.dp))
     }
 }
 
 private fun cpuName(cpu: CraftingStatusMenu.CraftingCpuListEntry): Component =
-    cpu.name() ?: GuiText.CPUs.text().copy().append(String.format(" #%d", cpu.serial()))
+    cpu.name() ?: GuiText.CPUs.text().append(String.format(" #%d", cpu.serial()))

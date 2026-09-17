@@ -139,9 +139,9 @@ object MdParser {
 
                 MarkdownElementTypes.CODE_SPAN -> {
                     val start = sb.length
-                    n.children.filter { it.type == MarkdownTokenTypes.CODE_LINE }.forEach {
-                        sb.append(it.getTextInNode(src))
-                    }
+                    val raw = n.getTextInNode(src).toString()
+                    val inner = raw.trim().trim('`')
+                    sb.append(inner)
                     if (sb.length > start) spans += McStyledString.Span(start, sb.length, s.merge(CODE_STYLE))
                 }
 

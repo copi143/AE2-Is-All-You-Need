@@ -25,4 +25,10 @@ object PanelGeometry {
             rect.right - right,
             rect.bottom - bottom,
         )
+
+    fun containsHalfOpen(px: Int, py: Int, left: Float, top: Float, size: Int): Boolean {
+        val x0 = left.toInt()
+        val y0 = top.toInt()
+        return px >= x0 && px < x0 + size && py >= y0 && py < y0 + size
+    }
 }

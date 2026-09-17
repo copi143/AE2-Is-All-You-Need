@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
@@ -133,14 +132,12 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            // Official animation: animated alpha via graphicsLayer
-            Text("Animated alpha (graphicsLayer):", color = 0xFFCCCCCC.toInt())
+            Text("Animated alpha:", color = 0xFFCCCCCC.toInt())
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 Box(
                     Modifier
                         .size(40.dp)
-                        .graphicsLayer { this.alpha = alpha }
-                        .background(Color(0xFF00AAFF)),
+                        .background(Color(0xFF00AAFF).copy(alpha = alpha)),
                 )
                 Spacer(Modifier.size(8.dp))
                 McButton(if (highlight) "Dim" else "Bright", onClick = { highlight = !highlight })

@@ -37,20 +37,27 @@ object ItemDetailsKeyBind {
 
     private fun tick() {
         if (key.consumeClick()) {
-            wasKeyDown = InputConstants.isKeyDown(Minecraft.getInstance().window.window, GLFW.GLFW_KEY_V)
+            wasKeyDown = isDetailsKeyDown()
             openForHovered()
             return
         }
-        val rawDown = InputConstants.isKeyDown(Minecraft.getInstance().window.window, GLFW.GLFW_KEY_V)
+        val rawDown = isDetailsKeyDown()
         if (rawDown && !wasKeyDown && !hasTextInputFocus()) {
             openForHovered()
         }
         wasKeyDown = rawDown
     }
 
+    private fun isDetailsKeyDown(): Boolean {
+        val window = Minecraft.getInstance().window.window
+        val bound = InputConstants.getKey(key.saveString())
+        return InputConstants.isKeyDown(window, bound.value)
+    }
+
     private fun hasTextInputFocus(): Boolean {
         val screen = Minecraft.getInstance().screen ?: return false
-        return screen.focused is EditBox
+        if (screen.focused is EditBox) return true
+        return allyouneed.client.compose.platform.McTextInputService.hasFocusedField
     }
 
     private fun openForHovered() {

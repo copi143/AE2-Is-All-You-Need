@@ -15,7 +15,7 @@ fun hitDockDrop(layouts: List<DockLeafLayout>, x: Float, y: Float, edgeFraction:
     val leaf = layouts.firstOrNull { layout ->
         x >= layout.x && x <= layout.x + layout.width && y >= layout.y && y <= layout.y + layout.height
     } ?: return null
-    if (leaf.width <= 0f || leaf.height <= 0f) return DockDrop.Center(leaf.id)
+    if (leaf.width <= 0f || leaf.height <= 0f) return null
     val lx = x - leaf.x
     val ly = y - leaf.y
     if (leaf.tabBarHeight > 0f && ly < leaf.tabBarHeight) {

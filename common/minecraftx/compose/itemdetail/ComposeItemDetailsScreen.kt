@@ -69,7 +69,7 @@ class ComposeItemDetailsScreen(
     @Composable
     override fun Content() {
         val colors = McTheme.colors
-        val rows = remember(colors) { buildRows(colors.textPrimary.toArgb()) }
+        val rows = remember(details, colors) { buildRows(colors.textPrimary.toArgb()) }
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,

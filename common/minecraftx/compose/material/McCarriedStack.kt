@@ -3,6 +3,7 @@ package minecraftx.compose.material
 import allyouneed.client.compose.platform.LocalMousePosition
 import allyouneed.client.compose.platform.McGraphics
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -22,7 +23,7 @@ fun McCarriedStack(
     val density = LocalDensity.current
     val renderer = remember { SlotRenderers.get() }
     Box(
-        modifier.drawBehind {
+        modifier.fillMaxSize().drawBehind {
             val held = stack()
             if (held.isEmpty) return@drawBehind
             val graphics = McGraphics.current ?: return@drawBehind

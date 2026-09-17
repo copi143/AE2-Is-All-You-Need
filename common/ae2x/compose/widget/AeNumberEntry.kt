@@ -28,6 +28,16 @@ fun AeNumberEntry(
         step = step,
         width = width,
         colors = colors,
+        parse = { text ->
+            val trimmed = text.trim()
+            when {
+                trimmed.isEmpty() || trimmed == "-" || trimmed == "+" -> null
+                trimmed.toLongOrNull() != null -> trimmed.toLongOrNull()
+                else -> MathExpressionParser.parse(trimmed, DecimalFormat().apply { isParseBigDecimal = true })
+                    .map { it.toLong() }
+                    .orElse(null)
+            }
+        },
     )
 }
 

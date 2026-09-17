@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.material.McScrollbar
 import minecraftx.compose.theme.McTheme
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -55,7 +56,7 @@ import kotlin.math.min
  */
 @Composable
 fun McScrollBox(
-    contentWidth: Int = Int.MAX_VALUE,
+    contentWidth: Int? = null,
     contentHeight: Int? = null,
     modifier: Modifier = Modifier,
     scrollable: Boolean = true,
@@ -69,7 +70,8 @@ fun McScrollBox(
     content: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier.then(if (scrollable) Modifier.mcScroll(state) else Modifier)) {
-        val viewportW = min(constraints.maxWidth, contentWidth)
+        val resolvedWidth = contentWidth ?: constraints.maxWidth
+        val viewportW = min(constraints.maxWidth, resolvedWidth)
         // flow 模式:首次测量前高度未知(取 0),测量完成后写回真实内容高度再重排。
         var measuredContentH by remember { mutableStateOf(contentHeight ?: 0) }
         val contentH = contentHeight ?: measuredContentH
@@ -89,7 +91,7 @@ fun McScrollBox(
                     .offset(0.dp, (-offset).dp)
                     .then(
                         if (contentHeight != null) {
-                            Modifier.size(contentWidth.dp, contentHeight.dp)
+                            Modifier.size(resolvedWidth.dp, contentHeight.dp)
                         } else {
                             Modifier.layoutUnboundedHeight { measuredContentH = it }
                         },
@@ -138,10 +140,10 @@ private fun Modifier.scissorClip(): Modifier = drawWithContent {
     val nodeY = matrix.m31()
     val scaleX = matrix.m00()
     val scaleY = matrix.m11()
-    val clipLeft = nodeX.toInt()
-    val clipTop = nodeY.toInt()
-    val clipRight = (nodeX + size.width * scaleX).toInt()
-    val clipBottom = (nodeY + size.height * scaleY).toInt()
+    val clipLeft = min(nodeX, nodeX + size.width * scaleX).toInt()
+    val clipTop = min(nodeY, nodeY + size.height * scaleY).toInt()
+    val clipRight = max(nodeX, nodeX + size.width * scaleX).toInt()
+    val clipBottom = max(nodeY, nodeY + size.height * scaleY).toInt()
     if (clipRight <= clipLeft || clipBottom <= clipTop) return@drawWithContent
     McScissor.push(g, clipLeft, clipTop, clipRight, clipBottom)
     try {

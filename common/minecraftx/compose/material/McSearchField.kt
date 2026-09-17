@@ -1,6 +1,7 @@
 package minecraftx.compose.material
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerButton
@@ -25,17 +26,18 @@ fun McSearchField(
     colors: McColorScheme = McTheme.colors,
     onSubmit: () -> Unit = {},
 ) {
+    val latestChange = rememberUpdatedState(onValueChange)
     McTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.pointerInput(value) {
+        modifier = modifier.pointerInput(Unit) {
             awaitPointerEventScope {
                 while (true) {
                     val event = awaitPointerEvent()
                     if (event.type == PointerEventType.Release && event.button == PointerButton.Secondary) {
                         val change = event.changes.firstOrNull() ?: continue
                         if (change.isConsumed) continue
-                        onValueChange(TextFieldValue("", TextRange.Zero))
+                        latestChange.value(TextFieldValue("", TextRange.Zero))
                         change.consume()
                     }
                 }

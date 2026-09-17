@@ -7,9 +7,14 @@ object AeSlotGeometry {
     const val ITEM_SIZE = 16
     const val HIDDEN = -9999
 
+    fun scaledInset(uiScale: Float): Int = (ITEM_INSET * uiScale).roundToInt()
+
+    fun scaledItemSize(uiScale: Float): Int = (ITEM_SIZE * uiScale).roundToInt()
+
     fun toSlotPos(windowX: Float, windowY: Float, uiScale: Float, guiLeft: Int, guiTop: Int): IntPair {
-        val x = (windowX * uiScale).roundToInt() + ITEM_INSET - guiLeft
-        val y = (windowY * uiScale).roundToInt() + ITEM_INSET - guiTop
+        val inset = scaledInset(uiScale)
+        val x = (windowX * uiScale).roundToInt() + inset - guiLeft
+        val y = (windowY * uiScale).roundToInt() + inset - guiTop
         return IntPair(x, y)
     }
 

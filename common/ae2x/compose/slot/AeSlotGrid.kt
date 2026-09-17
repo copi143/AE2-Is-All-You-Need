@@ -19,7 +19,8 @@ fun AeSlotGrid(
     modifier: Modifier = Modifier,
 ) {
     val slotSize = McTheme.shapes.slotSize
-    val rows = if (columns <= 0) 0 else (slots.size + columns - 1) / columns
+    if (columns <= 0) return
+    val rows = (slots.size + columns - 1) / columns
     Box(modifier.size(slotSize * columns, slotSize * rows)) {
         slots.forEachIndexed { index, slot ->
             val col = index % columns

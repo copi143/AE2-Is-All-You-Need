@@ -67,15 +67,18 @@ object McThemeSettings {
 
     private fun ensureLoaded() {
         if (loaded) return
-        loaded = true
         val file = configFile() ?: return
-        if (!file.isFile) return
-        runCatching {
+        if (!file.isFile) {
+            loaded = true
+            return
+        }
+        val ok = runCatching {
             val props = Properties()
             file.inputStream().use { props.load(it) }
             idState = McThemeId.fromId(props.getProperty(KEY))
             engineIdState = props.getProperty(ENGINE_KEY) ?: engineIdState
-        }
+        }.isSuccess
+        if (ok) loaded = true
     }
 
     private fun save() {
@@ -83,6 +86,7 @@ object McThemeSettings {
         runCatching {
             file.parentFile?.mkdirs()
             val props = Properties()
+            if (file.isFile) file.inputStream().use { props.load(it) }
             props.setProperty(KEY, idState.id)
             props.setProperty(ENGINE_KEY, engineIdState)
             file.outputStream().use { props.store(it, "$MODID client") }

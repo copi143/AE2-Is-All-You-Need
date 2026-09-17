@@ -1,6 +1,10 @@
 package ae2x.compose.screen
 
 import ae2x.compose.AeComposeScreen
+import ae2x.compose.AeSlotGeometry
+import allyouneed.util.bigint.BigAmounts
+import androidx.compose.runtime.mutableIntStateOf
+import appeng.api.behaviors.ContainerItemStrategies
 import appeng.api.config.Setting
 import appeng.api.config.Settings
 import appeng.api.config.SortDir
@@ -9,6 +13,7 @@ import appeng.api.config.TypeFilter
 import appeng.api.config.ViewItems
 import appeng.api.util.IConfigManager
 import appeng.client.gui.me.common.Repo
+import appeng.client.gui.me.common.RepoSlot
 import appeng.client.gui.widgets.IScrollSource
 import appeng.client.gui.widgets.ISortSource
 import appeng.core.AEConfig
@@ -21,7 +26,9 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.Slot
 import org.lwjgl.glfw.GLFW
+import kotlin.math.abs
 
 abstract class AeComposeMEScreen<M : MEStorageMenu>(
     menu: M,
@@ -33,8 +40,14 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
     IConfigManagerListener {
 
     val repo: Repo = Repo(this, this)
-    var scrollRow: Int = 0
+    private val scrollRowState = mutableIntStateOf(0)
+    var scrollRow: Int
+        get() = scrollRowState.intValue
+        set(value) {
+            scrollRowState.intValue = value
+        }
     var columns: Int = 9
+    var visibleRows: Int = 6
     var searchText: String = ""
         private set
 
@@ -51,7 +64,39 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
         }
     }
 
+    override fun init() {
+        repo.setRowSize(columns)
+        ensureRepoSlots()
+        super.init()
+    }
+
     override fun getCurrentScroll(): Int = scrollRow
+
+    fun maxScrollRows(): Int {
+        var totalRows = (repo.size() + columns - 1) / columns.coerceAtLeast(1)
+        if (repo.hasPinnedRow()) totalRows++
+        return (totalRows - visibleRows).coerceAtLeast(0)
+    }
+
+    fun scrollRepo(deltaRows: Int): Boolean {
+        val max = maxScrollRows()
+        val next = (scrollRow + deltaRows).coerceIn(0, max)
+        if (next == scrollRow) return max > 0
+        scrollRow = next
+        return true
+    }
+
+    fun ensureRepoSlots() {
+        val wanted = (visibleRows * columns).coerceAtLeast(0)
+        val existing = menu.slots.count { it is RepoSlot }
+        if (existing == wanted) return
+        menu.slots.removeIf { it is RepoSlot }
+        repeat(wanted) { index ->
+            val slot = RepoSlot(repo, index, AeSlotGeometry.HIDDEN, AeSlotGeometry.HIDDEN)
+            menu.slots.add(slot)
+            hideSlot(slot)
+        }
+    }
 
     override fun getSortBy(): SortOrder = menu.configManager.getSetting(Settings.SORT_BY)
 
@@ -100,8 +145,41 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
         }
     }
 
+    override fun slotClicked(slot: Slot?, slotIdx: Int, mouseButton: Int, clickType: ClickType) {
+        if (slot is RepoSlot) {
+            handleRepoClick(slot.entry, mouseButton, clickType)
+            return
+        }
+        super.slotClicked(slot, slotIdx, mouseButton, clickType)
+    }
+
+    override fun mouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {
+        if (hasControlDown()) return super.mouseScrolled(mouseX, mouseY, delta)
+        val slot = findSlot(mouseX, mouseY)
+        if (slot is RepoSlot && delta != 0.0) {
+            if (hasShiftDown()) {
+                val serial = slot.entry?.serial ?: -1L
+                val direction = if (delta > 0) InventoryAction.ROLL_DOWN else InventoryAction.ROLL_UP
+                repeat(abs(delta).toInt().coerceAtLeast(1)) {
+                    menu.handleInteraction(serial, direction)
+                }
+                return true
+            }
+            scrollRepo(if (delta > 0) -1 else 1)
+            return true
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta)
+    }
+
     fun handleRepoClick(entry: GridInventoryEntry?, button: Int, clickType: ClickType) {
         val window = Minecraft.getInstance().window.window
+        if (button == 1 && clickType == ClickType.PICKUP && !menu.carried.isEmpty) {
+            val emptying = ContainerItemStrategies.getEmptyingAction(menu.carried)
+            if (emptying != null && menu.isKeyVisible(emptying.what())) {
+                menu.handleInteraction(-1, InventoryAction.EMPTY_ITEM)
+                return
+            }
+        }
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS && entry != null) {
             menu.handleInteraction(entry.serial, InventoryAction.MOVE_REGION)
             return
@@ -114,7 +192,9 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
             return
         }
         val serial = entry.serial
-        val action = when (clickType) {
+        val effectiveType =
+            if (Minecraft.getInstance().options.keyPickItem.matchesMouse(button)) ClickType.CLONE else clickType
+        val action = when (effectiveType) {
             ClickType.QUICK_MOVE -> if (button == 1) InventoryAction.PICKUP_SINGLE else InventoryAction.SHIFT_CLICK
             ClickType.CLONE -> if (entry.isCraftable) {
                 menu.handleInteraction(serial, InventoryAction.AUTO_CRAFT)
@@ -128,8 +208,7 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
                 val pickup = if (button == 1) InventoryAction.SPLIT_OR_PLACE_SINGLE else InventoryAction.PICKUP_OR_SET_DOWN
                 if (pickup == InventoryAction.PICKUP_OR_SET_DOWN &&
                     menu.carried.isEmpty &&
-                    entry.storedAmount == 0L &&
-                    entry.isCraftable
+                    shouldCraftOnClick(entry)
                 ) {
                     menu.handleInteraction(serial, InventoryAction.AUTO_CRAFT)
                     return
@@ -138,6 +217,11 @@ abstract class AeComposeMEScreen<M : MEStorageMenu>(
             }
         }
         if (action != null) menu.handleInteraction(serial, action)
+    }
+
+    private fun shouldCraftOnClick(entry: GridInventoryEntry): Boolean {
+        if (getSortDisplay() == ViewItems.CRAFTABLE) return true
+        return BigAmounts.getEntryAmount(entry).signum() == 0 && entry.isCraftable
     }
 
     companion object {

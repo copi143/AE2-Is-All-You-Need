@@ -60,11 +60,14 @@ class EmbeddedComposeDemoScreen : Screen(Component.literal("Embedded Compose Dem
     }
 
     override fun mouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
-        if (panel.containsRaw(mouseX, mouseY)) {
-            panel.onMouseReleased(mouseX, mouseY, button)
-            return true
-        }
+        panel.onMouseReleased(mouseX, mouseY, button)
+        if (panel.containsRaw(mouseX, mouseY)) return true
         return super.mouseReleased(mouseX, mouseY, button)
+    }
+
+    override fun removed() {
+        panel.dispose()
+        super.removed()
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, delta: Double): Boolean {

@@ -59,7 +59,7 @@ fun AeEncodingPanel(
             EncodingMode.STONECUTTING -> AeStonecuttingEncoding(menu, colors = colors)
         }
         Spacer(Modifier.height(4.dp))
-        McButton("Encode", onClick = menu::encode, colors = colors)
+        McButton(appeng.core.localization.ButtonToolTips.Encode.text().string, onClick = menu::encode, colors = colors)
     }
 }
 
@@ -79,11 +79,11 @@ fun AeCraftingEncoding(
         }
         Spacer(Modifier.height(4.dp))
         Row {
-            McCheckbox(substitute, menu::setSubstitute, label = "Sub", colors = colors)
+            McCheckbox(substitute, menu::setSubstitute, label = GuiText.Substitute.text().string, colors = colors)
             Spacer(Modifier.width(8.dp))
-            McCheckbox(substituteFluids, menu::setSubstituteFluids, label = "Fluid", colors = colors)
+            McCheckbox(substituteFluids, menu::setSubstituteFluids, label = appeng.core.localization.ButtonToolTips.FluidSubstitutions.text().string, colors = colors)
             Spacer(Modifier.width(8.dp))
-            McButton("Clear", onClick = menu::clear, colors = colors)
+            McButton(appeng.core.localization.ButtonToolTips.Clear.text().string, onClick = menu::clear, colors = colors)
         }
     }
 }
@@ -119,10 +119,10 @@ fun AeProcessingEncoding(
         }
         Spacer(Modifier.height(4.dp))
         Row {
-            McButton("Clear", onClick = menu::clear, colors = colors)
+            McButton(appeng.core.localization.ButtonToolTips.Clear.text().string, onClick = menu::clear, colors = colors)
             if (menu.canCycleProcessingOutputs()) {
                 Spacer(Modifier.width(6.dp))
-                McButton("Cycle", onClick = menu::cycleProcessingOutput, colors = colors)
+                McButton(appeng.core.localization.ButtonToolTips.CycleProcessingOutput.text().string, onClick = menu::cycleProcessingOutput, colors = colors)
             }
         }
     }
@@ -147,9 +147,9 @@ fun AeSmithingEncoding(
         }
         Spacer(Modifier.height(4.dp))
         Row {
-            McCheckbox(substitute, menu::setSubstitute, label = "Sub", colors = colors)
+            McCheckbox(substitute, menu::setSubstitute, label = GuiText.Substitute.text().string, colors = colors)
             Spacer(Modifier.width(8.dp))
-            McButton("Clear", onClick = menu::clear, colors = colors)
+            McButton(appeng.core.localization.ButtonToolTips.Clear.text().string, onClick = menu::clear, colors = colors)
         }
     }
 }
@@ -160,7 +160,7 @@ fun AeStonecuttingEncoding(
     modifier: Modifier = Modifier,
     colors: McColorScheme = McTheme.colors,
 ) {
-    val recipes = rememberGuiSync { menu.stonecuttingRecipes }
+    val recipes = rememberGuiSync { menu.stonecuttingRecipes.toList() }
     val selectedId = rememberGuiSync { menu.stonecuttingRecipeId }
     val access = Minecraft.getInstance().level?.registryAccess()
     Column(modifier) {
@@ -209,7 +209,7 @@ private fun AeStonecuttingRecipeGrid(
                             .background(fill)
                             .drawBehind { drawRect(color = border, style = Stroke(1f)) }
                             .clickable { onSelect(recipe) },
-                        consumeClicks = true,
+                        consumeClicks = false,
                         interactive = false,
                         colors = colors,
                     )

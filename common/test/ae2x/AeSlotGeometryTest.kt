@@ -27,8 +27,8 @@ class AeSlotGeometryTest {
     @Test
     fun `scales window coordinates before subtracting gui origin`() {
         val mapped = AeSlotGeometry.toSlotPos(20f, 10f, uiScale = 2f, guiLeft = 0, guiTop = 0)
-        assertEquals(41, mapped.x)
-        assertEquals(21, mapped.y)
+        assertEquals(42, mapped.x)
+        assertEquals(22, mapped.y)
     }
 
     @Test

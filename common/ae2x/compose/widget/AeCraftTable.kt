@@ -1,6 +1,5 @@
 package ae2x.compose.widget
 
-import ae2x.compose.rememberGuiSync
 import allyouneed.client.compose.platform.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -55,7 +54,8 @@ fun AeCraftTable(
 ) {
     val cellW = 67
     val cellH = 22
-    val rows = if (columns <= 0) 0 else (entries.size + columns - 1) / columns
+    if (columns <= 0) return
+    val rows = (entries.size + columns - 1) / columns
     val state = rememberScrollState()
     McScrollBox(
         contentHeight = (rows * cellH).coerceAtLeast(visibleRows * cellH),
@@ -110,7 +110,8 @@ private fun AeCraftCell(entry: AeCraftRow, modifier: Modifier, colors: McColorSc
             ItemSlot(
                 stack = entry.stack,
                 consumeClicks = true,
-                showTooltip = entry.tooltip.isEmpty(),
+                showTooltip = true,
+                tooltipLines = entry.tooltip,
                 colors = colors,
             )
             if (entry.overlay != Color.Transparent) {

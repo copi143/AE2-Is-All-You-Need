@@ -68,9 +68,7 @@ fun <T : Enum<T>> AeSettingToggle(
         val unregister = tooltipHost.register {
             val graphics = McGraphics.current ?: return@register
             val p = mouse.inDensity(density)
-            if (p.x !in nodePos.x.toInt()..(nodePos.x + ICON).toInt() ||
-                p.y !in nodePos.y.toInt()..(nodePos.y + ICON).toInt()
-            ) {
+            if (!minecraftx.compose.geometry.PanelGeometry.containsHalfOpen(p.x, p.y, nodePos.x, nodePos.y, ICON)) {
                 return@register
             }
             val tip = ClientTooltipComponent.create(Component.literal(label(latest.value)).visualOrderText)
@@ -115,9 +113,7 @@ fun <T : Enum<T>> AeSettingToggle(
                     graphics.blit(Icon.TEXTURE, 0, 0, icon.x, icon.y, icon.width, icon.height)
                 }
                 val p = mouse.inDensity(density)
-                if (p.x in nodePos.x.toInt()..(nodePos.x + ICON).toInt() &&
-                    p.y in nodePos.y.toInt()..(nodePos.y + ICON).toInt()
-                ) {
+                if (minecraftx.compose.geometry.PanelGeometry.containsHalfOpen(p.x, p.y, nodePos.x, nodePos.y, ICON)) {
                     drawRect(color = colors.slotHoverOverlay)
                 }
             },

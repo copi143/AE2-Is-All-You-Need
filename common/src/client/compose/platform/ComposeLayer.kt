@@ -130,6 +130,8 @@ class ComposeLayer {
         return Offset((x / scale - origin.x).toFloat(), (y / scale - origin.y).toFloat())
     }
 
-    /** Releases the composition and coroutine scopes; call from the host's `onClose`. */
+    val hasTextInputFocus: Boolean get() = owner.mcTextInputService.hasActiveSession
+
+    /** Releases the composition and coroutine scopes; call from the host's `removed` / `onClose`. */
     fun dispose() = owner.dispose()
 }
