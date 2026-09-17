@@ -1,4 +1,4 @@
-package serialization
+package io.github.copi143.serialization
 
 import io.netty.buffer.Unpooled
 import net.minecraft.core.BlockPos
@@ -7,7 +7,7 @@ import net.minecraft.nbt.Tag
 import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.resources.ResourceLocation
 import java.math.BigInteger
-import java.util.UUID
+import java.util.*
 
 private fun <T> nbtCheck(v: T, toNbt: (T) -> CompoundTag, fromNbt: (CompoundTag) -> T) {
     val tag = toNbt(v)

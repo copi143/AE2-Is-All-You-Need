@@ -12,9 +12,9 @@ class EmitterTest {
             name = "NetworkLogEntry",
             construct = true,
             fields = listOf(
-                SerialProp("utcMillis", "utcMillis", null, "t", SerialTy.I64, false),
-                SerialProp("kind", "kind", null, "k", SerialTy.Enum("NetworkLogKind", true), false),
-                SerialProp("args", "args", null, "a", SerialTy.ListOf(SerialTy.Str), false),
+                SerialProp("utcMillis", "utcMillis", null, "t", SerialType.I64, false),
+                SerialProp("kind", "kind", null, "k", SerialType.Enum("NetworkLogKind", true), false),
+                SerialProp("args", "args", null, "a", SerialType.ListOf(SerialType.Str), false),
             ),
         )
         val out = emit(cls).toString()
@@ -34,8 +34,8 @@ class EmitterTest {
             name = "Ids",
             construct = true,
             fields = listOf(
-                SerialProp("u", "u", null, "u", SerialTy.U32, false),
-                SerialProp("v", "v", null, "v", SerialTy.VarU64, false),
+                SerialProp("u", "u", null, "u", SerialType.U32, false),
+                SerialProp("v", "v", null, "v", SerialType.VarU64, false),
             ),
         )
         val out = emit(cls).toString()

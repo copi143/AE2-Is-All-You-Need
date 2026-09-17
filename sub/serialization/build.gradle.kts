@@ -8,6 +8,10 @@ plugins {
 group = "io.github.copi143.serialization"
 version = "1.0.0"
 
+sourceSets.test {
+    kotlin.srcDir("test-minecraft")
+}
+
 dependencies {
     compileOnly(libs.ksp.api)
     implementation(libs.kotlinpoet)

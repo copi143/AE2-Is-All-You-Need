@@ -78,30 +78,30 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
         return SerialClass(cls.packageName.asString(), cls.simpleName.asString(), fields, construct)
     }
 
-    private fun ty(type: KSType, fieldOrdinal: Boolean?, serialized: Set<String>, varLen: Boolean): SerialTy {
-        val qn = type.declaration.qualifiedName?.asString() ?: return SerialTy.Str
+    private fun ty(type: KSType, fieldOrdinal: Boolean?, serialized: Set<String>, varLen: Boolean): SerialType {
+        val qn = type.declaration.qualifiedName?.asString() ?: return SerialType.Str
         if (qn == "kotlin.collections.List" || qn == "kotlin.collections.MutableList" || qn == "java.util.List") {
-            val arg = type.arguments.firstOrNull()?.type?.resolve() ?: return SerialTy.ListOf(SerialTy.Str)
-            return SerialTy.ListOf(ty(arg, fieldOrdinal, serialized, false))
+            val arg = type.arguments.firstOrNull()?.type?.resolve() ?: return SerialType.ListOf(SerialType.Str)
+            return SerialType.ListOf(ty(arg, fieldOrdinal, serialized, false))
         }
         if (qn == "kotlin.collections.Map" || qn == "kotlin.collections.MutableMap" || qn == "java.util.Map") {
-            val k = type.arguments.getOrNull(0)?.type?.resolve() ?: return SerialTy.MapOf(SerialTy.Str, SerialTy.Str)
-            val v = type.arguments.getOrNull(1)?.type?.resolve() ?: return SerialTy.MapOf(SerialTy.Str, SerialTy.Str)
-            return SerialTy.MapOf(ty(k, fieldOrdinal, serialized, false), ty(v, fieldOrdinal, serialized, false))
+            val k = type.arguments.getOrNull(0)?.type?.resolve() ?: return SerialType.MapOf(SerialType.Str, SerialType.Str)
+            val v = type.arguments.getOrNull(1)?.type?.resolve() ?: return SerialType.MapOf(SerialType.Str, SerialType.Str)
+            return SerialType.MapOf(ty(k, fieldOrdinal, serialized, false), ty(v, fieldOrdinal, serialized, false))
         }
         if (qn == "kotlin.collections.Set" || qn == "kotlin.collections.MutableSet" || qn == "java.util.Set") {
-            val arg = type.arguments.firstOrNull()?.type?.resolve() ?: return SerialTy.SetOf(SerialTy.Str)
-            return SerialTy.SetOf(ty(arg, fieldOrdinal, serialized, false))
+            val arg = type.arguments.firstOrNull()?.type?.resolve() ?: return SerialType.SetOf(SerialType.Str)
+            return SerialType.SetOf(ty(arg, fieldOrdinal, serialized, false))
         }
-        SerialTy.primitive(qn, varLen)?.let { return it }
+        SerialType.primitive(qn, varLen)?.let { return it }
         val decl = type.declaration as? KSClassDeclaration
         val simple = type.declaration.simpleName.asString()
         return when {
             decl?.classKind == ClassKind.ENUM_CLASS ->
-                SerialTy.Enum(simple, fieldOrdinal ?: decl.serializeOrdinalDefault())
-            simple in serialized || decl?.hasAnno("Serialize") == true -> SerialTy.Nested(simple)
-            fieldOrdinal == true -> SerialTy.Enum(simple, true)
-            else -> SerialTy.Enum(simple, false)
+                SerialType.Enum(simple, fieldOrdinal ?: decl.serializeOrdinalDefault())
+            simple in serialized || decl?.hasAnno("Serialize") == true -> SerialType.Nested(simple)
+            fieldOrdinal == true -> SerialType.Enum(simple, true)
+            else -> SerialType.Enum(simple, false)
         }
     }
 

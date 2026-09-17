@@ -12,8 +12,8 @@ class RoundTripTest {
             name = "WithMaps",
             construct = true,
             fields = listOf(
-                SerialProp("strInt", "strInt", null, "strInt", SerialTy.MapOf(SerialTy.Str, SerialTy.I32), false),
-                SerialProp("uuidStr", "uuidStr", null, "uuidStr", SerialTy.MapOf(SerialTy.UUID, SerialTy.Str), false),
+                SerialProp("strInt", "strInt", null, "strInt", SerialType.MapOf(SerialType.Str, SerialType.I32), false),
+                SerialProp("uuidStr", "uuidStr", null, "uuidStr", SerialType.MapOf(SerialType.UUID, SerialType.Str), false),
             ),
         )
         val out = emit(cls).toString()
@@ -34,7 +34,7 @@ class RoundTripTest {
             name = "WithSets",
             construct = true,
             fields = listOf(
-                SerialProp("strSet", "strSet", null, "strSet", SerialTy.SetOf(SerialTy.Str), false),
+                SerialProp("strSet", "strSet", null, "strSet", SerialType.SetOf(SerialType.Str), false),
             ),
         )
         val out = emit(cls).toString()
@@ -49,8 +49,8 @@ class RoundTripTest {
             name = "WithNullable",
             construct = true,
             fields = listOf(
-                SerialProp("id", "id", null, "id", SerialTy.I32, false),
-                SerialProp("optMap", "optMap", null, "optMap", SerialTy.MapOf(SerialTy.Str, SerialTy.Str), true),
+                SerialProp("id", "id", null, "id", SerialType.I32, false),
+                SerialProp("optMap", "optMap", null, "optMap", SerialType.MapOf(SerialType.Str, SerialType.Str), true),
             ),
         )
         val out = emit(cls).toString()
@@ -66,8 +66,8 @@ class RoundTripTest {
             name = "WithVarLen",
             construct = true,
             fields = listOf(
-                SerialProp("vi", "vi", null, "vi", SerialTy.VarI32, false),
-                SerialProp("vu", "vu", null, "vu", SerialTy.VarU32, false),
+                SerialProp("vi", "vi", null, "vi", SerialType.VarI32, false),
+                SerialProp("vu", "vu", null, "vu", SerialType.VarU32, false),
             ),
         )
         val out = emit(cls).toString()
@@ -84,8 +84,8 @@ class RoundTripTest {
             name = "WithUnsigned",
             construct = true,
             fields = listOf(
-                SerialProp("ub", "ub", null, "ub", SerialTy.U8, false),
-                SerialProp("ui", "ui", null, "ui", SerialTy.U32, false),
+                SerialProp("ub", "ub", null, "ub", SerialType.U8, false),
+                SerialProp("ui", "ui", null, "ui", SerialType.U32, false),
             ),
         )
         val out = emit(cls).toString()
@@ -102,9 +102,9 @@ class RoundTripTest {
             name = "Stability",
             construct = true,
             fields = listOf(
-                SerialProp("a", "a", null, "a", SerialTy.I32, false),
-                SerialProp("b", "b", null, "b", SerialTy.ListOf(SerialTy.Str), false),
-                SerialProp("c", "c", null, "c", SerialTy.MapOf(SerialTy.Str, SerialTy.I32), false),
+                SerialProp("a", "a", null, "a", SerialType.I32, false),
+                SerialProp("b", "b", null, "b", SerialType.ListOf(SerialType.Str), false),
+                SerialProp("c", "c", null, "c", SerialType.MapOf(SerialType.Str, SerialType.I32), false),
             ),
         )
         val out1 = emit(cls).toString()

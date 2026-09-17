@@ -1,10 +1,7 @@
-package serialization
+package io.github.copi143.serialization
 
 import org.junit.jupiter.api.Test
-import java.math.BigInteger
-import java.util.UUID
-import net.minecraft.core.BlockPos
-import net.minecraft.resources.ResourceLocation
+import java.util.*
 
 class IntegrationTest {
     @Test
@@ -25,7 +22,14 @@ class IntegrationTest {
         checkWithMaps(WithMaps(mapOf("a" to 1, "b" to -1), mapOf(UUID.randomUUID() to "x"), mapOf(1 to "y")))
         checkWithMaps(WithMaps(emptyMap(), emptyMap(), emptyMap()))
         checkWithSets(WithSets(setOf("a", "b"), setOf(1, -1)))
-        checkWithCollections(WithCollections(listOf(Inner(1, "a")), setOf(Inner(2, "b")), mapOf("k" to listOf("v")), mapOf(1 to Inner(3, "c"))))
+        checkWithCollections(
+            WithCollections(
+                listOf(Inner(1, "a")),
+                setOf(Inner(2, "b")),
+                mapOf("k" to listOf("v")),
+                mapOf(1 to Inner(3, "c"))
+            )
+        )
     }
 
     @Test
