@@ -1,5 +1,7 @@
 package allyouneed.parts.logger
 
+import io.github.copi143.serialization.Serialize
+
 enum class NetworkLogCategory(val mask: Int, val langKey: String) {
     Topology(1, "cat.topology"), // 拓扑
     Device(2, "cat.device"), //
@@ -17,6 +19,7 @@ enum class NetworkLogLevel {
     Info, Warn, Error,
 }
 
+@Serialize(ordinal = true)
 enum class NetworkLogKind(val category: NetworkLogCategory, val level: NetworkLogLevel, val langKey: String) {
     GridBootStart(NetworkLogCategory.Topology, NetworkLogLevel.Info, "boot_start"), //
     GridBootEnd(NetworkLogCategory.Topology, NetworkLogLevel.Info, "boot_end"), //

@@ -1,7 +1,6 @@
 package allyouneed.parts.logger
 
 import io.github.copi143.serialization.SerialName
-import io.github.copi143.serialization.SerialOrdinal
 import io.github.copi143.serialization.Serialize
 import allyouneed.util.MODID
 import net.minecraft.network.chat.Component
@@ -13,7 +12,7 @@ import java.time.format.DateTimeFormatter
 @JvmRecord
 data class NetworkLogEntry(
     @SerialName("t") val utcMillis: Long,
-    @SerialName("k") @SerialOrdinal val kind: NetworkLogKind,
+    @SerialName("k") val kind: NetworkLogKind,
     @SerialName("a") val args: List<String>,
 ) {
     fun formatLocalTime(): String = LOCAL_TIME.format(Instant.ofEpochMilli(utcMillis).atZone(ZoneId.systemDefault()))

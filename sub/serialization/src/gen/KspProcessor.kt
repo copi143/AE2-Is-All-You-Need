@@ -36,6 +36,7 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
         }
         val serialized = classes.values.map { it.simpleName.asString() }.toSet()
         for (cls in classes.values) {
+            if (cls.classKind == ClassKind.ENUM_CLASS) continue
             val file = cls.containingFile ?: continue
             val model = toModel(cls, serialized) ?: continue
             if (!generated.add("${model.pkg}.${model.name}")) continue
@@ -43,7 +44,7 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
                 Dependencies(false, file),
                 model.pkg,
                 "${model.name}Serdes",
-            ).use { it.write(emit(model).toByteArray()) }
+            ).use { it.write(emit(model).toString().toByteArray()) }
         }
         return deferred
     }
@@ -56,14 +57,18 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
             if (prop.hasAnno("SerialIgnore")) return@mapNotNull null
             if (!classMarked && !prop.hasAnno("Serialize")) return@mapNotNull null
             val type = prop.type.resolve()
-            val ordinal = prop.hasAnno("SerialOrdinal")
+            val fieldOrdinal: Boolean? = when {
+                prop.hasAnno("SerialOrdinal") -> true
+                prop.hasAnno("SerialByName") -> false
+                else -> null
+            }
             val name = prop.simpleName.asString()
             SerialProp(
                 name = name,
                 getter = name,
                 setter = if (prop.isMutable) name else null,
                 wireName = prop.annoArg("SerialName") ?: name,
-                type = ty(type, ordinal, serialized, prop.hasAnno("SerialVarLen")),
+                type = ty(type, fieldOrdinal, serialized, prop.hasAnno("SerialVarLen")),
                 nullable = type.isMarkedNullable || prop.hasAnno("SerialNullable"),
                 varLen = prop.hasAnno("SerialVarLen"),
             )
@@ -73,11 +78,20 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
         return SerialClass(cls.packageName.asString(), cls.simpleName.asString(), fields, construct)
     }
 
-    private fun ty(type: KSType, ordinal: Boolean, serialized: Set<String>, varLen: Boolean): SerialTy {
+    private fun ty(type: KSType, fieldOrdinal: Boolean?, serialized: Set<String>, varLen: Boolean): SerialTy {
         val qn = type.declaration.qualifiedName?.asString() ?: return SerialTy.Str
         if (qn == "kotlin.collections.List" || qn == "kotlin.collections.MutableList" || qn == "java.util.List") {
             val arg = type.arguments.firstOrNull()?.type?.resolve() ?: return SerialTy.ListOf(SerialTy.Str)
-            return SerialTy.ListOf(ty(arg, ordinal, serialized, varLen))
+            return SerialTy.ListOf(ty(arg, fieldOrdinal, serialized, false))
+        }
+        if (qn == "kotlin.collections.Map" || qn == "kotlin.collections.MutableMap" || qn == "java.util.Map") {
+            val k = type.arguments.getOrNull(0)?.type?.resolve() ?: return SerialTy.MapOf(SerialTy.Str, SerialTy.Str)
+            val v = type.arguments.getOrNull(1)?.type?.resolve() ?: return SerialTy.MapOf(SerialTy.Str, SerialTy.Str)
+            return SerialTy.MapOf(ty(k, fieldOrdinal, serialized, false), ty(v, fieldOrdinal, serialized, false))
+        }
+        if (qn == "kotlin.collections.Set" || qn == "kotlin.collections.MutableSet" || qn == "java.util.Set") {
+            val arg = type.arguments.firstOrNull()?.type?.resolve() ?: return SerialTy.SetOf(SerialTy.Str)
+            return SerialTy.SetOf(ty(arg, fieldOrdinal, serialized, false))
         }
         return when (qn) {
             "kotlin.Boolean", "java.lang.Boolean" -> SerialTy.Bool
@@ -85,6 +99,10 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
             "kotlin.Short", "java.lang.Short" -> SerialTy.I16
             "kotlin.Int", "java.lang.Integer" -> if (varLen) SerialTy.VarInt else SerialTy.I32
             "kotlin.Long", "java.lang.Long" -> if (varLen) SerialTy.VarLong else SerialTy.I64
+            "kotlin.UByte" -> SerialTy.U8
+            "kotlin.UShort" -> SerialTy.U16
+            "kotlin.UInt" -> if (varLen) SerialTy.VarU32 else SerialTy.U32
+            "kotlin.ULong" -> if (varLen) SerialTy.VarU64 else SerialTy.U64
             "kotlin.Float", "java.lang.Float" -> SerialTy.F32
             "kotlin.Double", "java.lang.Double" -> SerialTy.F64
             "kotlin.String", "java.lang.String" -> SerialTy.Str
@@ -99,9 +117,10 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
                 val decl = type.declaration as? KSClassDeclaration
                 val simple = type.declaration.simpleName.asString()
                 when {
-                    decl?.classKind == ClassKind.ENUM_CLASS -> SerialTy.Enum(simple, ordinal)
+                    decl?.classKind == ClassKind.ENUM_CLASS ->
+                        SerialTy.Enum(simple, fieldOrdinal ?: decl.serializeOrdinalDefault())
                     simple in serialized || decl?.hasAnno("Serialize") == true -> SerialTy.Nested(simple)
-                    ordinal -> SerialTy.Enum(simple, true)
+                    fieldOrdinal == true -> SerialTy.Enum(simple, true)
                     else -> SerialTy.Enum(simple, false)
                 }
             }
@@ -114,6 +133,11 @@ class SerdesProcessor(private val env: SymbolProcessorEnvironment) : SymbolProce
 }
 
 private fun KSAnnotated.hasAnno(short: String) = annotations.any { it.shortName.asString() == short }
+
+private fun KSClassDeclaration.serializeOrdinalDefault(): Boolean {
+    val a = annotations.firstOrNull { it.shortName.asString() == "Serialize" } ?: return false
+    return (a.arguments.firstOrNull { it.name?.asString() == "ordinal" }?.value as? Boolean) ?: false
+}
 
 private fun KSAnnotated.annoArg(short: String): String? {
     val a: KSAnnotation = annotations.firstOrNull { it.shortName.asString() == short } ?: return null

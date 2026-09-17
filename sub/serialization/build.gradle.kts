@@ -9,6 +9,7 @@ version = "1.0.0"
 
 dependencies {
     compileOnly(libs.ksp.api)
+    implementation(libs.kotlinpoet)
 }
 
 publishing {
@@ -54,5 +55,3 @@ publishing {
         mavenCentral()
     }
 }
-
-

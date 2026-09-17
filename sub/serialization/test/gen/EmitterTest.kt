@@ -17,11 +17,31 @@ class EmitterTest {
                 SerialProp("args", "args", null, "a", SerialTy.ListOf(SerialTy.Str), false),
             ),
         )
-        val out = emit(cls)
+        val out = emit(cls).toString()
+        assertContains(out, "import net.minecraft.nbt.CompoundTag")
+        assertContains(out, "import net.minecraft.network.FriendlyByteBuf")
         assertContains(out, "fun NetworkLogEntry.toNbt()")
         assertContains(out, "fun NetworkLogEntry.Companion.fromNbt")
-        assertContains(out, "tag.putLong(\"t\", this.utcMillis)")
-        assertContains(out, "tag.putByte(\"k\", this.kind.ordinal.toByte())")
+        assertContains(out, "tag.putLong(\"t\", utcMillis)")
+        assertContains(out, "tag.putByte(\"k\", kind.ordinal.toByte())")
         assertTrue("MethodHandle" !in out)
+    }
+
+    @Test
+    fun emitsUnsigned() {
+        val cls = SerialClass(
+            pkg = "t",
+            name = "Ids",
+            construct = true,
+            fields = listOf(
+                SerialProp("u", "u", null, "u", SerialTy.U32, false),
+                SerialProp("v", "v", null, "v", SerialTy.VarU64, false),
+            ),
+        )
+        val out = emit(cls).toString()
+        assertContains(out, "tag.putInt(\"u\", u.toInt())")
+        assertContains(out, "tag.getInt(\"u\").toUInt()")
+        assertContains(out, "buf.writeVarLong(v.toLong())")
+        assertContains(out, "buf.readVarLong().toULong()")
     }
 }
