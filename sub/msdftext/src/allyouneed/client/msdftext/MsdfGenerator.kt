@@ -69,9 +69,8 @@ object MsdfGenerator {
         val y1 = ceil(bounds.maxY + pad).toFloat()
         val w = (x1 - x0).toInt().coerceAtLeast(1)
         val h = (y1 - y0).toInt().coerceAtLeast(1)
-        val segs = contours.flatten()
-        if (segs.isEmpty()) return null
-        return raster(segs, w, h, x0, y0, pxRange, rasterMask(outline, w, h, x0, y0))
+        if (contours.any { it.isEmpty() }) return null
+        return raster(contours, w, h, x0, y0, pxRange, rasterMask(outline, w, h, x0, y0))
     }
 
     private fun unhintedOutline(face: AwtFontFace, cp: Int): java.awt.Shape? {
@@ -92,7 +91,10 @@ object MsdfGenerator {
     }
 
     fun generate(edges: List<MsdfEdge>, width: Int, height: Int, originX: Float, originY: Float, pxRange: Float): MsdfBitmap =
-        raster(edges.map { Seg.line(it.ax, it.ay, it.bx, it.by, it.channels) }, width, height, originX, originY, pxRange, null)
+        raster(
+            edges.map { listOf(Seg.line(it.ax, it.ay, it.bx, it.by, it.channels)) },
+            width, height, originX, originY, pxRange, null,
+        )
 
     fun colorEdges(contours: List<List<MsdfPoint>>): List<MsdfEdge> {
         val segs = contours.map { pts ->
@@ -253,8 +255,8 @@ object MsdfGenerator {
         var d = INF
         var ad = INF
         var param = 0f
-        var seg: Seg? = null
-        fun consider(sd: Float, p: Float, s: Seg) {
+        var seg: RasterSeg? = null
+        fun consider(sd: Float, p: Float, s: RasterSeg) {
             val a = abs(sd)
             if (a < ad) {
                 ad = a
@@ -265,8 +267,19 @@ object MsdfGenerator {
         }
     }
 
+    /**
+     * 每个段附带其在轮廓中的前后邻边方向(与 msdfgen 的 prevEdge/nextEdge 对应)。
+     * [aBis] 是起点处“上一段出方向 + 本段入方向”的归一角平分线,[bBis] 是终点处
+     * “本段出方向 + 下一段入方向”的归一角平分线;退化(反向共线)时为零向量。
+     */
+    private class RasterSeg(
+        val seg: Seg,
+        val aBisX: Float, val aBisY: Float,
+        val bBisX: Float, val bBisY: Float,
+    )
+
     private fun raster(
-        segs: List<Seg>,
+        contours: List<List<Seg>>,
         w: Int,
         h: Int,
         originX: Float,
@@ -274,6 +287,28 @@ object MsdfGenerator {
         pxRange: Float,
         mask: BooleanArray?,
     ): MsdfBitmap {
+        val entries = ArrayList<RasterSeg>()
+        for (contour in contours) {
+            val n = contour.size
+            if (n == 0) continue
+            for (i in 0 until n) {
+                val s = contour[i]
+                // 单段轮廓时 msdfgen 取 prev = cur = next = 自身,下式自然退化为该语义。
+                val prev = contour[(i - 1 + n) % n]
+                val next = contour[(i + 1) % n]
+                val (psx, psy) = s.startDir()
+                val (pex, pey) = s.endDir()
+                val (pvsx, pvsy) = prev.endDir()
+                val (nssx, nssy) = next.startDir()
+                val (abx, aby) = normalize(pvsx + psx, pvsy + psy)
+                val (bbx, bby) = normalize(pex + nssx, pey + nssy)
+                entries += RasterSeg(s, abx, aby, bbx, bby)
+            }
+        }
+        if (entries.isEmpty()) {
+            return MsdfBitmap(w, h, originX, originY, ByteArray(w * h * 4), pxRange)
+        }
+        val flat = entries.map { it.seg }
         val enc = FloatArray(w * h * 3)
         val truArr = FloatArray(w * h)
         val fill = BooleanArray(w * h)
@@ -289,21 +324,31 @@ object MsdfGenerator {
                 val px = originX + x + 0.5f
                 nr.ad = INF; ng.ad = INF; nb.ad = INF; nt.ad = INF
                 nr.seg = null; ng.seg = null; nb.seg = null
-                for (s in segs) {
+                for (e in entries) {
+                    val s = e.seg
                     val (sd, param) = signedDist(px, py, s)
-                    nt.consider(sd, param, s)
-                    if (s.color and RED != 0) nr.consider(sd, param, s)
-                    if (s.color and GREEN != 0) ng.consider(sd, param, s)
-                    if (s.color and BLUE != 0) nb.consider(sd, param, s)
+                    nt.consider(sd, param, e)
+                    if (s.color and RED != 0) nr.consider(sd, param, e)
+                    if (s.color and GREEN != 0) ng.consider(sd, param, e)
+                    if (s.color and BLUE != 0) nb.consider(sd, param, e)
                 }
-                if (nr.seg == null) nr.d = nt.d
-                if (ng.seg == null) ng.d = nt.d
-                if (nb.seg == null) nb.d = nt.d
+                if (nr.seg == null) {
+                    nr.d = nt.d; nr.param = nt.param
+                    nr.seg = nt.seg
+                }
+                if (ng.seg == null) {
+                    ng.d = nt.d; ng.param = nt.param
+                    ng.seg = nt.seg
+                }
+                if (nb.seg == null) {
+                    nb.d = nt.d; nb.param = nt.param
+                    nb.seg = nt.seg
+                }
                 nr.seg?.let { nr.d = toPerp(nr.d, nr.param, px, py, it) }
                 ng.seg?.let { ng.d = toPerp(ng.d, ng.param, px, py, it) }
                 nb.seg?.let { nb.d = toPerp(nb.d, nb.param, px, py, it) }
                 val i = y * w + x
-                val inside = mask?.get(i) ?: evenOdd(px, py, segs)
+                val inside = mask?.get(i) ?: evenOdd(px, py, flat)
                 fill[i] = inside
                 enc[i * 3] = nr.d
                 enc[i * 3 + 1] = ng.d
@@ -557,34 +602,49 @@ object MsdfGenerator {
         return minD.toFloat() to param.toFloat()
     }
 
-    private fun toPerp(dist: Float, param: Float, px: Float, py: Float, s: Seg): Float {
+    /**
+     * msdfgen `MultiDistanceSelector::addEdge` 的垂向距离替换:只有当像素落在端点外侧的
+     * 角平分线域内(`add > 0` / `bdd > 0`)才允许用垂向距离代替端点距离。缺了这道门控,
+     * 长直边延长线上的远端像素会被拉到边缘值,形成从字形边缘延伸出去的整行/整列细线。
+     */
+    private fun toPerp(dist: Float, param: Float, px: Float, py: Float, e: RasterSeg): Float {
+        val s = e.seg
         if (param in 0f..1f) return dist
         if (param < 0f) {
+            val aqx = px - s.x0
+            val aqy = py - s.y0
+            if (aqx * e.aBisX + aqy * e.aBisY <= 0f) return dist
             val (dx, dy) = s.startDir()
             val len = hypot(dx, dy)
             if (len < 1e-12f) return dist
             val dirx = dx / len
             val diry = dy / len
-            val aqx = px - s.x0
-            val aqy = py - s.y0
             if (aqx * dirx + aqy * diry < 0f) {
                 val perp = aqx * diry - aqy * dirx
                 if (abs(perp) <= abs(dist)) return perp
             }
         } else {
+            val bqx = px - s.x3
+            val bqy = py - s.y3
+            if (bqx * e.bBisX + bqy * e.bBisY >= 0f) return dist
             val (dx, dy) = s.endDir()
             val len = hypot(dx, dy)
             if (len < 1e-12f) return dist
             val dirx = dx / len
             val diry = dy / len
-            val bqx = px - s.x3
-            val bqy = py - s.y3
             if (bqx * dirx + bqy * diry > 0f) {
                 val perp = bqx * diry - bqy * dirx
                 if (abs(perp) <= abs(dist)) return perp
             }
         }
         return dist
+    }
+
+    private fun normalize(x: Float, y: Float): Pair<Float, Float> {
+        val len = hypot(x, y)
+        // msdfgen Vector2::normalize(allowZero=true):退化时返回零向量,调用方以此跳过替换。
+        if (len < 1e-12f) return Pair(0f, 0f)
+        return Pair(x / len, y / len)
     }
 
     private fun rasterMask(outline: java.awt.Shape, w: Int, h: Int, originX: Float, originY: Float): BooleanArray {

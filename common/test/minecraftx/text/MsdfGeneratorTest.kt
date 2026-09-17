@@ -45,6 +45,29 @@ class MsdfGeneratorTest {
     }
 
     @Test
+    fun `long bar has no streak beyond its ends`() {
+        // 回归:长直边延长线上的远端像素曾被 toPerp 拉到边缘值,形成整行细线。
+        // 宽 40 高 4 的横条,上下边缘外 1px 的行在条带端点之外必须保持干净背景。
+        val bar = listOf(
+            MsdfPoint(10f, 10f),
+            MsdfPoint(50f, 10f),
+            MsdfPoint(50f, 14f),
+            MsdfPoint(10f, 14f),
+            MsdfPoint(10f, 10f),
+        )
+        val edges = MsdfGenerator.colorEdges(listOf(bar))
+        val bmp = MsdfGenerator.generate(edges, 60, 24, 0f, 0f, 8f)
+        for (x in 0..5) {
+            assertTrue(median(bmp.pixels, 60, x, 9) < 80, "left extension at ($x,9) should be background")
+            assertTrue(median(bmp.pixels, 60, x, 14) < 80, "left extension at ($x,14) should be background")
+            assertTrue(median(bmp.pixels, 60, 59 - x, 9) < 80, "right extension should be background")
+            assertTrue(median(bmp.pixels, 60, 59 - x, 14) < 80, "right extension should be background")
+        }
+        // 条带正上方仍是正常边缘带(未把拐角修圆修掉)。
+        assertTrue(median(bmp.pixels, 60, 30, 9) > 96, "edge band above bar should remain")
+    }
+
+    @Test
     fun `atlas packs sequential glyphs without overlap`() {
         val atlas = GlyphAtlas(initialSize = 64, maxSize = 128)
         val edges = MsdfGenerator.colorEdges(
