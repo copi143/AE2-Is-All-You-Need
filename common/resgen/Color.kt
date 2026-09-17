@@ -15,6 +15,7 @@ class Color(r: Int, g: Int, b: Int): IColor {
     private constructor(srgb: RGB, b: Boolean) : this(srgb.redInt, srgb.greenInt, srgb.blueInt)
     constructor(rgb: RGB) : this(rgb.toSRGB(), true)
     constructor(jch: JzCzHz) : this(gamutMap(jch).toSRGB(), true)
+
     override val colormath = SRGB(r, g, b)
     override val termFg = "\u001b[38;2;${r};${g};${b}m"
     override val termBg = "\u001b[48;2;${r};${g};${b}m"
@@ -55,6 +56,8 @@ val AE2_GRADIENT = run {
     array
 }
 
+fun ae2Gradient(x: Float) = Color(JzCzHz(j = 0.01f, c = 0.01f, h = 240f - x * 360f))
+
 fun main() {
     println("\nLog Colors:")
     for (color in LogColor.entries) {
@@ -69,5 +72,14 @@ fun main() {
     println("\nAE2 Gradient:")
     for ((index, color) in AE2_GRADIENT.withIndex()) {
         println("Gradient $index: ${color.hex} ${color.termFg}Sample Text\u001b[m ${color.termBg}Sample Background\u001b[m")
+    }
+    println("")
+    val sb = StringBuilder()
+    for (i in 0..89) {
+        sb.append(ae2Gradient(i / 90f).termBg).append(' ')
+    }
+    val s = sb.append("\u001b[m").toString()
+    for (i in 1..3) {
+        println(s)
     }
 }
