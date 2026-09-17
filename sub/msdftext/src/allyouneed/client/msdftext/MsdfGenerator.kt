@@ -1,6 +1,8 @@
 package allyouneed.client.msdftext
 
 import java.awt.Color
+import java.awt.font.FontRenderContext
+import java.awt.geom.AffineTransform
 import java.awt.geom.PathIterator
 import java.awt.image.BufferedImage
 import kotlin.math.PI
@@ -34,6 +36,13 @@ data class MsdfBitmap(
 
 object MsdfGenerator {
     const val PX_RANGE = 8f
+    /**
+     * 生成轮廓时的 em 尺寸。AWT 的 [java.awt.font.GlyphVector] 会执行字体的
+     * TrueType hinting，把轮廓点吸到像素网格；在 48px 下这个吸附可达半个纹素，
+     * SDF 会如实编码这些台阶，放大后就是边缘锯齿。先在 1024em 取无吸附意义的
+     * 轮廓再缩回目标尺寸，等价于 FreeType 的 FT_LOAD_NO_HINTING。
+     */
+    private const val OUTLINE_EM = 1024f
     private const val INF = 1e6f
     private const val RED = 1
     private const val GREEN = 2
@@ -43,9 +52,13 @@ object MsdfGenerator {
     private val CROSS_THRESH = sin(3.0).toFloat()
 
     fun generate(face: AwtFontFace, cp: Int, pxRange: Float = PX_RANGE): MsdfBitmap? {
-        val outline = face.glyphVector(cp).getGlyphOutline(0)
+        val outline = unhintedOutline(face, cp) ?: return null
         val bounds = outline.bounds2D
         if (bounds.width <= 0.0 && bounds.height <= 0.0) return null
+        // 防呆:轮廓必须落在目标字号量级,否则 derive 语义变化会导致光栅量爆炸(界面卡死)。
+        val approx = maxOf(bounds.width, bounds.height)
+        val expect = face.font.size2D * 1.5 + pxRange + 2
+        if (approx > expect || approx <= 0.0) return null
         val contours = parse(outline)
         if (contours.isEmpty()) return null
         colorSimple(contours)
@@ -59,6 +72,23 @@ object MsdfGenerator {
         val segs = contours.flatten()
         if (segs.isEmpty()) return null
         return raster(segs, w, h, x0, y0, pxRange, rasterMask(outline, w, h, x0, y0))
+    }
+
+    private fun unhintedOutline(face: AwtFontFace, cp: Int): java.awt.Shape? {
+        // deriveFont(style, tx) 会把 tx 叠加到现有字号上(48px×1024 会上天),先归一到
+        // 1px 再放大:无论叠加还是替换语义,结果都是精确的 OUTLINE_EM units/em。
+        val unit = face.font.deriveFont(1f)
+        val emAt = AffineTransform.getScaleInstance(OUTLINE_EM.toDouble(), OUTLINE_EM.toDouble())
+        val high = unit.deriveFont(emAt)
+        val frc = FontRenderContext(AffineTransform(), true, true)
+        val raw = high.createGlyphVector(frc, Character.toChars(cp)).getGlyphOutline(0)
+        val bounds = raw.bounds2D
+        if (bounds.width <= 0.0 && bounds.height <= 0.0) return null
+        val s = (face.font.size2D / OUTLINE_EM).toDouble()
+        val it = raw.getPathIterator(AffineTransform.getScaleInstance(s, s))
+        val path = java.awt.geom.Path2D.Float(PathIterator.WIND_NON_ZERO)
+        path.append(it, false)
+        return path
     }
 
     fun generate(edges: List<MsdfEdge>, width: Int, height: Int, originX: Float, originY: Float, pxRange: Float): MsdfBitmap =
@@ -295,7 +325,22 @@ object MsdfGenerator {
                 r = -r; g = -g; b = -b; tru = -tru
             }
             val inside = fill[i]
-            if ((median(r, g, b) > 0f) != inside) {
+            val med = median(r, g, b)
+            val disagree = (med > 0f) != inside
+            // 贴边半像素分歧不纠(会拉出锯齿),孤立点(8邻域大多同侧)必须纠,否则留黑/白点
+            val x = i % w
+            val y = i / w
+            var neighInside = 0
+            var neighTotal = 0
+            for (dy in -1..1) for (dx in -1..1) {
+                if (dx == 0 && dy == 0) continue
+                val nx = x + dx; val ny = y + dy
+                if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue
+                neighTotal++
+                if (fill[ny * w + nx] == inside) neighInside++
+            }
+            val isolated = disagree && neighInside >= 6
+            if (disagree && (abs(tru) > 1f || isolated)) {
                 val s = if (inside) abs(tru) else -abs(tru)
                 r = s; g = s; b = s
             }

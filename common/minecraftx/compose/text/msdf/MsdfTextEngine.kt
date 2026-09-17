@@ -25,6 +25,7 @@ class MsdfTextEngine(
     private val atlas = GlyphAtlas()
     private val renderer = MsdfRenderer(atlas)
     private var uploadsLeft = 0
+    private var destroyed = false
 
     override val lineHeight: Int = fonts.lineHeight
 
@@ -59,13 +60,17 @@ class MsdfTextEngine(
         return text.length
     }
 
+    fun destroy() {
+        if (destroyed) return
+        destroyed = true
+        renderer.destroy()
+    }
+
     override fun DrawScope.paint(layout: McTextLayout, fallbackColor: Color) {
         val g = McGraphics.current ?: return
-        if (!renderer.ready()) return
+        if (destroyed || !renderer.ready()) return
         uploadsLeft = UPLOAD_BUDGET
-        val poseScale = kotlin.math.abs(g.pose().last().pose().m00()).coerceAtLeast(1f)
-        val spr = (MsdfGenerator.PX_RANGE * fonts.toDraw * poseScale).coerceAtLeast(1f)
-        renderer.begin(g, spr)
+        renderer.begin(g, MsdfGenerator.PX_RANGE)
         val fbArgb = fallbackColor.toArgb()
         val decorations = ArrayList<IntArray>()
         for ((li, line) in layout.lines.withIndex()) {
@@ -131,7 +136,7 @@ class MsdfTextEngine(
     }
 
     private companion object {
-        const val UPLOAD_BUDGET = 32
+        const val UPLOAD_BUDGET = 256
         const val BOLD_WEIGHT = 0.1f
         const val ITALIC_SHEAR = 0.25f
     }

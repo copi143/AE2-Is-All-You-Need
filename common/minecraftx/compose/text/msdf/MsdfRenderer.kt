@@ -5,11 +5,13 @@ import allyouneed.util.logger
 import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.client.gui.GuiGraphics
 import org.lwjgl.opengl.GL11
+import org.lwjgl.opengl.GL12
 import org.lwjgl.opengl.GL13
 import org.lwjgl.opengl.GL14
 import org.lwjgl.opengl.GL15
 import org.lwjgl.opengl.GL20
 import org.lwjgl.opengl.GL30
+import org.lwjgl.opengl.GL33
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 
@@ -19,9 +21,11 @@ internal class MsdfRenderer(private val atlas: GlyphAtlas) {
     private var uModel = -1
     private var uSampler = -1
     private var uPxRange = -1
+    private var uAtlas = -1
     private var uWeight = -1
     private var vbo = 0
     private var vao = 0
+    private var sampler = 0
     private var failed = false
     private var verts = FloatArray(FLOATS_PER_GLYPH * 64)
     private var glyphCount = 0
@@ -111,17 +115,24 @@ internal class MsdfRenderer(private val atlas: GlyphAtlas) {
                 )
                 GL20.glUseProgram(program)
                 GL13.glActiveTexture(GL13.GL_TEXTURE0)
-                GL11.glBindTexture(GL11.GL_TEXTURE_2D, atlas.textureId)
-                GL20.glUniform1i(uSampler, 0)
-                GL20.glUniform1f(uPxRange, batchPxRange)
-                GL20.glUniform1f(uWeight, batchWeight)
-                MemoryStack.stackPush().use { stack ->
-                    val buf = stack.mallocFloat(16)
-                    GL20.glUniformMatrix4fv(uModel, false, RenderSystem.getModelViewMatrix().get(buf))
-                    buf.clear()
-                    GL20.glUniformMatrix4fv(uProj, false, RenderSystem.getProjectionMatrix().get(buf))
+                ensureSampler()
+                GL33.glBindSampler(0, sampler)
+                try {
+                    GL11.glBindTexture(GL11.GL_TEXTURE_2D, atlas.textureId)
+                    GL20.glUniform1i(uSampler, 0)
+                    GL20.glUniform1f(uPxRange, batchPxRange)
+                    GL20.glUniform2f(uAtlas, atlas.size.toFloat(), atlas.size.toFloat())
+                    GL20.glUniform1f(uWeight, batchWeight)
+                    MemoryStack.stackPush().use { stack ->
+                        val buf = stack.mallocFloat(16)
+                        GL20.glUniformMatrix4fv(uModel, false, RenderSystem.getModelViewMatrix().get(buf))
+                        buf.clear()
+                        GL20.glUniformMatrix4fv(uProj, false, RenderSystem.getProjectionMatrix().get(buf))
+                    }
+                    GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, glyphCount * 6)
+                } finally {
+                    GL33.glBindSampler(0, 0)
                 }
-                GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, glyphCount * 6)
             } finally {
                 MemoryUtil.memFree(native)
                 GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0)
@@ -148,11 +159,24 @@ internal class MsdfRenderer(private val atlas: GlyphAtlas) {
             GL30.glDeleteVertexArrays(vao)
             vao = 0
         }
+        if (sampler != 0) {
+            GL33.glDeleteSamplers(sampler)
+            sampler = 0
+        }
         if (program != 0) {
             GL20.glDeleteProgram(program)
             program = 0
         }
         atlas.destroy()
+    }
+
+    private fun ensureSampler() {
+        if (sampler != 0) return
+        sampler = GL33.glGenSamplers()
+        GL33.glSamplerParameteri(sampler, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR)
+        GL33.glSamplerParameteri(sampler, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR)
+        GL33.glSamplerParameteri(sampler, GL12.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE)
+        GL33.glSamplerParameteri(sampler, GL12.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE)
     }
 
     private fun compile(): Boolean {
@@ -184,6 +208,7 @@ internal class MsdfRenderer(private val atlas: GlyphAtlas) {
         uModel = GL20.glGetUniformLocation(prog, "ModelViewMat")
         uSampler = GL20.glGetUniformLocation(prog, "Sampler0")
         uPxRange = GL20.glGetUniformLocation(prog, "PxRange")
+        uAtlas = GL20.glGetUniformLocation(prog, "AtlasSize")
         uWeight = GL20.glGetUniformLocation(prog, "Weight")
         return true
     }
@@ -253,6 +278,7 @@ void main() {
         const val FRAG = """#version 150
 uniform sampler2D Sampler0;
 uniform float PxRange;
+uniform vec2 AtlasSize;
 uniform float Weight;
 in vec2 vUv;
 in vec4 vColor;
@@ -260,11 +286,17 @@ out vec4 fragColor;
 float median3(vec3 p) {
     return max(min(p.r, p.g), min(max(p.r, p.g), p.b));
 }
+float screenPxRange() {
+    vec2 atlas = max(AtlasSize, vec2(textureSize(Sampler0, 0)));
+    vec2 unitRange = vec2(PxRange) / max(atlas, vec2(1.0));
+    vec2 fw = max(fwidth(vUv), vec2(1.0e-8));
+    vec2 screenTexSize = vec2(1.0) / fw;
+    return clamp(0.5 * dot(unitRange, screenTexSize), 1.0, 32.0);
+}
 void main() {
     vec3 msd = texture(Sampler0, vUv).rgb;
     float sd = median3(msd);
-    float opa = clamp(PxRange * (sd - 0.5 + Weight) + 0.5, 0.0, 1.0) * vColor.a;
-    if (opa < 0.004) discard;
+    float opa = clamp(screenPxRange() * (sd - 0.5 + Weight) + 0.5, 0.0, 1.0) * vColor.a;
     fragColor = vec4(vColor.rgb * opa, opa);
 }
 """

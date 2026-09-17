@@ -41,9 +41,17 @@ class VanillaTextEngine(
 
     override fun indexAtWidth(text: String, width: Int, style: McSpanStyle?): Int {
         if (text.isEmpty() || width <= 0) return 0
-        val font = Minecraft.getInstance().font
-        val kept = font.plainSubstrByWidth(text, width)
-        return kept.length
+        var x = 0
+        var i = 0
+        while (i < text.length) {
+            val cp = text.codePointAt(i)
+            val count = Character.charCount(cp)
+            val adv = widthOf(String(Character.toChars(cp)), style)
+            if (x + adv > width) return i
+            x += adv
+            i += count
+        }
+        return text.length
     }
 
     override fun DrawScope.paint(layout: McTextLayout, fallbackColor: Color) {

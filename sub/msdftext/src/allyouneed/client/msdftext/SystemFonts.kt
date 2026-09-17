@@ -55,7 +55,7 @@ object SystemFonts {
         "Droid Sans Fallback", "SimHei", "Noto Sans CJK JP",
     )
 
-    const val GEN_PX = 48f
+    const val GEN_PX = 64f
 
     fun resolve(sizePx: Float, genPx: Float = GEN_PX): FontChain {
         val available = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames

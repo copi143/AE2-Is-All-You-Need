@@ -80,12 +80,13 @@ class GlyphAtlas(
         val buf = copyRect(slot)
         try {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId)
-            resetUnpack()
-            GL11.glTexSubImage2D(
-                GL11.GL_TEXTURE_2D, 0,
-                slot.x, slot.y, slot.width, slot.height,
-                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buf,
-            )
+            withUnpack {
+                GL11.glTexSubImage2D(
+                    GL11.GL_TEXTURE_2D, 0,
+                    slot.x, slot.y, slot.width, slot.height,
+                    GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buf,
+                )
+            }
         } finally {
             MemoryUtil.memFree(buf)
         }
@@ -127,13 +128,14 @@ class GlyphAtlas(
         try {
             buf.put(pixels).flip()
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId)
-            resetUnpack()
-            GL11.glTexImage2D(
-                GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8,
-                size, size, 0,
-                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buf,
-            )
-            gpuSize = size
+            withUnpack {
+                GL11.glTexImage2D(
+                    GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8,
+                    size, size, 0,
+                    GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buf,
+                )
+                gpuSize = size
+            }
         } finally {
             MemoryUtil.memFree(buf)
         }
@@ -144,6 +146,22 @@ class GlyphAtlas(
         GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0)
         GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0)
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1)
+    }
+
+    private inline fun <T> withUnpack(block: () -> T): T {
+        val rowLength = GL11.glGetInteger(GL11.GL_UNPACK_ROW_LENGTH)
+        val skipRows = GL11.glGetInteger(GL11.GL_UNPACK_SKIP_ROWS)
+        val skipPixels = GL11.glGetInteger(GL11.GL_UNPACK_SKIP_PIXELS)
+        val alignment = GL11.glGetInteger(GL11.GL_UNPACK_ALIGNMENT)
+        resetUnpack()
+        try {
+            return block()
+        } finally {
+            GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, rowLength)
+            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, skipRows)
+            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, skipPixels)
+            GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, alignment)
+        }
     }
 
     private fun copyRect(slot: AtlasSlot): ByteBuffer {
