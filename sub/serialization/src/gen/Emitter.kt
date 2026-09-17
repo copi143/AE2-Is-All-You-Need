@@ -162,7 +162,16 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                 when (val t = f.type) {
                     is SerialType.ListOf -> {
                         body.addStatement(
-                            "val %N = if (tag.contains(%S)) run { val __l = tag.getList(%S, %L); val __r = ArrayList<%L>(__l.size); for (i in __l.indices) __r.add(%L); __r } else null",
+                            """
+                                val %N = if (tag.contains(%S)) run {
+                                    val __l = tag.getList(%S, %L)
+                                    val __r = ArrayList<%L>(__l.size)
+                                    for (i in __l.indices) {
+                                        __r.add(%L)
+                                    }
+                                    __r
+                                } else null
+                            """.trimIndent(),
                             f.name,
                             f.wireName,
                             f.wireName,
@@ -214,7 +223,19 @@ private fun fromNbtFun(cls: SerialClass): FunSpec {
                         )
                     } else {
                         body.addStatement(
-                            "val %N = if (tag.contains(%S)) run { val __l = tag.getList(%S, %T.TAG_COMPOUND.toInt()); val __r = LinkedHashMap<%L, %L>(__l.size); for (i in __l.indices) { val __e = __l.getCompound(i); val __k = %L; val __v = %L; __r[__k] = __v }; __r } else null",
+                            """
+                                val %N = if (tag.contains(%S)) run {
+                                    val __l = tag.getList(%S, %T.TAG_COMPOUND.toInt())
+                                    val __r = LinkedHashMap<%L, %L>(__l.size)
+                                    for (i in __l.indices) {
+                                        val __e = __l.getCompound(i)
+                                        val __k = %L
+                                        val __v = %L
+                                        __r[__k] = __v
+                                    }
+                                    __r
+                                } else null
+                            """.trimIndent(),
                             f.name,
                             f.wireName,
                             f.wireName,
