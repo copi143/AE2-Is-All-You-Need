@@ -92,7 +92,11 @@ fun AeRepoGrid(
                     .offset(slotSize * col, slotSize * row)
                     .then(if (slot != null) Modifier.aeMenuSlot(slot) else Modifier),
                 interactive = true,
-                consumeClicks = slot == null,
+                // Repo 格必须由 Compose 直接消费点击并走 handleRepoClick：
+                // 原版 findSlot 依赖 slot.x/y 异步定位（resize 后会 HIDDEN、首帧未定位等），
+                // 一旦 consumeClicks=false，切到原版 slotClicked 链路就会点不上、无法取出。
+                // 这里保留 aeMenuSlot 绑定（供悬停/JEI/滚轮 findSlot 用），但点击始终由 Compose 处理。
+                consumeClicks = true,
                 amount = {
                     val current = repo.get(index)
                     if (current == null) {
