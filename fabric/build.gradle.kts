@@ -12,27 +12,38 @@ dependencies {
         officialMojangMappings()
         parchment("org.parchmentmc.data:parchment-${libs.versions.parchmentMC.get()}:${libs.versions.parchment.get()}@zip")
     })
-    modImplementation(libs.fabricLoader)
-    modImplementation(libs.fabricApi)
+    modImplementation(libs.fabric.loader)
+    modImplementation(libs.fabric.api)
 
     modImplementation(libs.flk)
 
-    modImplementation(libs.ojalgo)
+    implementation(libs.compose.runtime)
+
+    compileOnly(project(":transformer"))
+    listOf(
+        include(project(path = ":transformer", configuration = "withInject")),
+        include(project(":kaptor")),
+        include(project(":averith")),
+        include(project(":indexing")),
+        include(project(":composeruntime")),
+        include(project(":msdftext")),
+        include(libs.antlr.runtime),
+        include(libs.ojalgo),
+    ).forEach { if (it != null) implementation(it) }
     modImplementation(libs.jetbrains.markdown)
     modImplementation(libs.netty.codec.http)
-    modImplementation("teamreborn:energy:3.0.0")
-    include(libs.ojalgo)
-    include(libs.jetbrains.markdown)
+    include(libs.jetbrains.markdown) {
+        isTransitive = false
+    }
     include(libs.netty.codec.http) {
         isTransitive = false
     }
-
-//    modRuntimeOnly("dev.ftb.mods:ftb-quests-fabric:${libs.versions.ftb.get()}")
 
     modImplementation(libs.jei.fabric)
     modImplementation(libs.emi.fabric)
     modImplementation(libs.jade.fabric)
 
+    modImplementation(libs.energy)
     modImplementation(libs.guideme)
     modImplementation(libs.ae2.fabric)
 
@@ -41,20 +52,8 @@ dependencies {
     // IMachineBlockEntity extends IForgeBlockEntity; fabric has no Forge classes, so pull the
     // Forge universal jar (compile-only) to resolve the hierarchy. The classifier artifact ships the
     // net.minecraftforge.* classes without the userdev zip.
-    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
+    compileOnly(variantOf(libs.forge) { classifier("universal") })
     modCompileOnly(libs.gtceu)
-
-    compileOnly(project(":transformer"))
-    implementation(project(path = ":transformer", configuration = "withInject"))
-    include(project(path = ":transformer", configuration = "withInject"))
-    include(libs.asm.analysis)
-    implementation(libs.compose.runtime)
-    include(project(":kaptor"))
-    include(project(":averith"))
-    include(project(":indexing"))
-    include(project(":composeruntime"))
-    include(project(":msdftext"))
-    include("org.antlr:antlr4-runtime:4.9.1")
 }
 
 loom {

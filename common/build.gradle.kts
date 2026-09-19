@@ -35,8 +35,6 @@ dependencies {
     api(libs.jetbrains.markdown)
     api(libs.netty.codec.http)
 
-//    modCompileOnly("dev.ftb.mods:ftb-quests:${libs.versions.ftb.get()}")
-
     modCompileOnly(libs.jei.forge)
     modCompileOnly(variantOf(libs.emi.xplat) { classifier("api") })
     modCompileOnly(libs.emi.forge)
@@ -46,7 +44,7 @@ dependencies {
 
     // The moddev-generated minecraft jar does not carry the Forge extension interfaces
     // (net.minecraftforge.common.extensions.*) that GTCEu's IMachineBlockEntity extends.
-    compileOnly("net.minecraftforge:forge:${libs.versions.forge.get()}:universal")
+    compileOnly(variantOf(libs.forge) { classifier("universal") })
     modCompileOnly(libs.gtceu)
 
     // Botania mana integration compiles against the api classifier (Xplat interfaces +

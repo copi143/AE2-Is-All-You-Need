@@ -85,12 +85,13 @@ dependencies {
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
     implementation(libs.compose.runtime)
+
     jarJar(project(":kaptor"))
     jarJar(project(":averith"))
     jarJar(project(":indexing"))
     jarJar(project(":composeruntime"))
     jarJar(project(":msdftext"))
-
+    // antlr 是 forge 的依赖，所以不用打包
     jarJar(libs.ojalgo)
     jarJar(libs.jetbrains.markdown) {
         isTransitive = false
@@ -98,8 +99,6 @@ dependencies {
     jarJar(libs.netty.codec.http) {
         isTransitive = false
     }
-
-//    modRuntimeOnly(libs.ftbq)
 
     modImplementation(libs.jei.forge)
     modImplementation(libs.emi.forge)
@@ -116,9 +115,9 @@ dependencies {
     modRuntimeOnly(variantOf(libs.mek) { classifier("generators") })
     modRuntimeOnly(variantOf(libs.mek) { classifier("tools") })
 
-    // Botania: compile against the api classifier; no runtime dependency here (players provide
-    // the full jar, which additionally requires Patchouli/Curios).
     modCompileOnly(variantOf(libs.botania) { classifier("api") })
+    modRuntimeOnly(libs.botania)
+
     testImplementation(libs.asm.tree)
 }
 
