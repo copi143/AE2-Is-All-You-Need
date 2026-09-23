@@ -31,10 +31,10 @@ class QuoteColumnsTest {
     }
 
     @Test
-    fun `forEach reads rows without materializing`() {
+    fun `forEachView reads rows without materializing`() {
         val columns = sample()
         var sum = 0L
-        columns.forEach { q -> sum += q.price }
+        columns.forEachView { q -> sum += q.price }
         assertEquals(600L, sum)
     }
 
@@ -103,6 +103,18 @@ class QuoteColumnsTest {
         val columns = sample()
         columns.scale(0, 2, 5L)
         assertEquals(Quote(1L, 200, 1005L), columns[0])
+    }
+
+    @Test
+    fun `columns is a read only List of rows`() {
+        val columns = sample()
+        val list: List<Quote> = columns
+        assertEquals(3, list.size)
+        assertEquals(Quote(2L, 200, 2000L), list[1])
+        assertTrue(list.contains(Quote(3L, 300, 3000L)))
+        assertEquals(listOf(100, 200, 300), list.map { it.price })
+        assertEquals(Quote(3L, 300, 3000L), list.last())
+        assertEquals(columns.toList(), listOf(Quote(1L, 100, 1000L), Quote(2L, 200, 2000L), Quote(3L, 300, 3000L)))
     }
 
     @Test

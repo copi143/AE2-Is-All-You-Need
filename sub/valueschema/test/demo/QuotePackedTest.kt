@@ -29,10 +29,10 @@ class QuotePackedTest {
     }
 
     @Test
-    fun `forEach reads rows without materializing`() {
+    fun `forEachView reads rows without materializing`() {
         val packed = sample()
         var sum = 0L
-        packed.forEach { q -> sum += q.price }
+        packed.forEachView { q -> sum += q.price }
         assertEquals(600L, sum)
     }
 

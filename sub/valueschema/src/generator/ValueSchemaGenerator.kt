@@ -43,6 +43,9 @@ object ValueSchemaGenerator {
                 "Struct-of-arrays storage for [%T]. Disposable performance layer; keep business logic on [%T] semantics.",
                 cls, cls,
             )
+            .superclass(ClassName("kotlin.collections", "AbstractList").parameterizedBy(cls))
+            .addSuperclassConstructorParameter("%L", "")
+            .addSuperinterface(ClassName("java.util", "RandomAccess"))
             .primaryConstructor(
                 FunSpec.constructorBuilder()
                     .addParameter(
@@ -53,7 +56,7 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addProperty(
-                PropertySpec.builder("size", INT)
+                PropertySpec.builder("size", INT, KModifier.OVERRIDE)
                     .mutable()
                     .initializer("0")
                     .setter(FunSpec.setterBuilder().addModifiers(KModifier.PRIVATE).build())
@@ -107,7 +110,7 @@ object ValueSchemaGenerator {
             )
             .addFunction(
                 FunSpec.builder("get")
-                    .addModifiers(KModifier.OPERATOR)
+                    .addModifiers(KModifier.OPERATOR, KModifier.OVERRIDE)
                     .addParameter("index", INT)
                     .returns(cls)
                     .addStatement("checkIndex(index)")
@@ -153,8 +156,11 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addFunction(
-                FunSpec.builder("forEach")
-                    .addKdoc("Iterates rows reusing a single cursor; do not store the view passed to [action].")
+                FunSpec.builder("forEachView")
+                    .addKdoc(
+                        "Iterates rows reusing a single cursor; do not store the view passed to [action]. " +
+                            "Named forEachView on purpose: plain `forEach` would silently bind to Iterable.forEach and materialize every row.",
+                    )
                     .addModifiers(KModifier.INLINE)
                     .addParameter("action", lambdaOf(view, UNIT))
                     .addStatement("val v = %T(this, 0)", view)
@@ -197,7 +203,7 @@ object ValueSchemaGenerator {
                     .addParameter("destination", cols)
                     .addParameter("predicate", lambdaOf(view, BOOLEAN))
                     .returns(cols)
-                    .beginControlFlow("forEach { v ->")
+                    .beginControlFlow("forEachView { v ->")
                     .beginControlFlow("if (predicate(v))")
                     .addStatement("destination.add(v.toValue())")
                     .endControlFlow()
@@ -216,7 +222,7 @@ object ValueSchemaGenerator {
                 FunSpec.builder("toList")
                     .returns(ClassName("kotlin.collections", "List").parameterizedBy(cls))
                     .addStatement("val result = %T<%T>(size)", ClassName("java.util", "ArrayList"), cls)
-                    .beginControlFlow("forEach {")
+                    .beginControlFlow("forEachView {")
                     .addStatement("result.add(it.toValue())")
                     .endControlFlow()
                     .addStatement("return result")
@@ -347,6 +353,9 @@ object ValueSchemaGenerator {
                     "by their bit width (row stride = STRIDE slots). Prefer this for whole-row access; prefer [%T] for column scans.",
                 cls, cols,
             )
+            .superclass(ClassName("kotlin.collections", "AbstractList").parameterizedBy(cls))
+            .addSuperclassConstructorParameter("%L", "")
+            .addSuperinterface(ClassName("java.util", "RandomAccess"))
             .primaryConstructor(
                 FunSpec.constructorBuilder()
                     .addParameter(
@@ -357,7 +366,7 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addProperty(
-                PropertySpec.builder("size", INT)
+                PropertySpec.builder("size", INT, KModifier.OVERRIDE)
                     .mutable()
                     .initializer("0")
                     .setter(FunSpec.setterBuilder().addModifiers(KModifier.PRIVATE).build())
@@ -413,7 +422,7 @@ object ValueSchemaGenerator {
             )
             .addFunction(
                 FunSpec.builder("get")
-                    .addModifiers(KModifier.OPERATOR)
+                    .addModifiers(KModifier.OPERATOR, KModifier.OVERRIDE)
                     .addParameter("index", INT)
                     .returns(cls)
                     .addStatement("checkIndex(index)")
@@ -461,8 +470,11 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addFunction(
-                FunSpec.builder("forEach")
-                    .addKdoc("Iterates rows reusing a single cursor; do not store the view passed to [action].")
+                FunSpec.builder("forEachView")
+                    .addKdoc(
+                        "Iterates rows reusing a single cursor; do not store the view passed to [action]. " +
+                            "Named forEachView on purpose: plain `forEach` would silently bind to Iterable.forEach and materialize every row.",
+                    )
                     .addModifiers(KModifier.INLINE)
                     .addParameter("action", lambdaOf(view, UNIT))
                     .addStatement("val v = %T(this, 0)", view)
@@ -505,7 +517,7 @@ object ValueSchemaGenerator {
                     .addParameter("destination", packed)
                     .addParameter("predicate", lambdaOf(view, BOOLEAN))
                     .returns(packed)
-                    .beginControlFlow("forEach { v ->")
+                    .beginControlFlow("forEachView { v ->")
                     .beginControlFlow("if (predicate(v))")
                     .addStatement("destination.add(v.toValue())")
                     .endControlFlow()
@@ -524,7 +536,7 @@ object ValueSchemaGenerator {
                 FunSpec.builder("toList")
                     .returns(ClassName("kotlin.collections", "List").parameterizedBy(cls))
                     .addStatement("val result = %T<%T>(size)", ClassName("java.util", "ArrayList"), cls)
-                    .beginControlFlow("forEach {")
+                    .beginControlFlow("forEachView {")
                     .addStatement("result.add(it.toValue())")
                     .endControlFlow()
                     .addStatement("return result")
