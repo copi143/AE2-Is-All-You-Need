@@ -15,6 +15,10 @@ import io.github.copi143.valueschema.ValueTransform
             params = "factor: Int, delta: Long",
             body = "price *= factor\nts += delta",
         ),
+        ValueTransform(
+            name = "scale2",
+            body = "price = price * 2 + 1\nts += 1",
+        ),
     ],
 )
 data class Quote(val id: Long, val price: Int, val ts: Long)

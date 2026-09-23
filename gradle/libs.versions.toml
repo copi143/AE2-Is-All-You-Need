@@ -3,6 +3,7 @@ java = "17"
 kotlin = "2.4.20"
 ksp = "2.3.12"
 kotlinpoet = "2.4.0"
+jmh-plugin = "0.7.3"
 dokka = "2.2.0"
 moddev = "2.0.143"
 loom = "1.17.12"
@@ -109,6 +110,7 @@ botania = { module = "vazkii.botania:Botania", version.ref = "botania" }
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+jmh = { id = "me.champeau.jmh", version.ref = "jmh-plugin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 moddev = { id = "net.neoforged.moddev.legacyforge", version.ref = "moddev" }
