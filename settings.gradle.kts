@@ -24,7 +24,7 @@ plugins {
 
 listOf("common", "fabric", "forge").forEach { name -> include(name) }
 
-listOf("averith", "composeruntime", "graphicsrepl", "indexing", "kaptor", "msdftext", "transformer").forEach { name ->
+listOf("averith", "composeruntime", "graphicsrepl", "indexing", "kaptor", "msdftext", "transformer", "valueschema").forEach { name ->
     include(name)
     project(":$name").projectDir = file("sub/$name")
 }
