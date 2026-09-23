@@ -12,8 +12,14 @@ package io.github.copi143.valueschema
  * The annotated class must obey the value-type contract so it can later migrate to a
  * Valhalla value class by changing only the declaration:
  * - a data class with only `val` properties in the primary constructor
- * - fields of primitive types only
+ * - fields of primitive types, or of another @ValueSchema class (nested value types are
+ *   flattened into the parent storage leaf-by-leaf, exactly like Valhalla flattens
+ *   value-class fields; recursive nesting is rejected because value types have no indirection)
  * - never relied on for identity (`===`, `synchronized`, `identityHashCode`)
+ *
+ * Nested fields are addressed by their flattened path: a field `price: Money` where
+ * `Money(amount: Long, scale: Int)` produces the leaves `price_amount` / `price_scale`
+ * (column names, primitive overload parameters, view properties, and transform-snippet locals).
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)

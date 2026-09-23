@@ -22,6 +22,7 @@ import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.UNIT
+import com.squareup.kotlinpoet.joinToCode
 
 object ValueSchemaGenerator {
 
@@ -29,14 +30,17 @@ object ValueSchemaGenerator {
 
     fun generate(model: SchemaModel): FileSpec {
         require(model.fields.isNotEmpty()) { "${model.className} must have at least one field" }
-        model.fields.forEach { it.column }
+        val leaves = model.leaves
+        require(leaves.map { it.flatName }.distinct().size == leaves.size) {
+            "${model.className} has colliding flattened leaf names: ${leaves.map { it.flatName }}"
+        }
 
         val cls = ClassName(model.packageName, model.className)
         val colsName = "${model.className}Columns"
         val viewName = "${model.className}View"
         val cols = ClassName(model.packageName, colsName)
         val view = ClassName(model.packageName, viewName)
-        val firstColumn = columnName(model.fields.first().name)
+        val firstColumn = columnName(leaves.first().flatName)
 
         val columnsType = TypeSpec.classBuilder(colsName)
             .addKdoc(
@@ -62,12 +66,12 @@ object ValueSchemaGenerator {
                     .setter(FunSpec.setterBuilder().addModifiers(KModifier.PRIVATE).build())
                     .build(),
             )
-            .addProperties(model.fields.map { f ->
-                PropertySpec.builder(columnName(f.name), f.column.arrayType)
+            .addProperties(leaves.map { leaf ->
+                PropertySpec.builder(columnName(leaf.flatName), leaf.column.arrayType)
                     .mutable()
                     .addModifiers(KModifier.INTERNAL)
                     .addAnnotation(PublishedApi::class)
-                    .initializer("%T(initialCapacity.coerceAtLeast(1))", f.column.arrayType)
+                    .initializer("%T(initialCapacity.coerceAtLeast(1))", leaf.column.arrayType)
                     .build()
             })
             .addProperty(
@@ -80,8 +84,8 @@ object ValueSchemaGenerator {
                     .addParameter("value", cls)
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
-                        model.fields.forEach { f ->
-                            addStatement("%N[size] = value.%N", columnName(f.name), f.name)
+                        leaves.forEach { leaf ->
+                            addStatement("%N[size] = %L", columnName(leaf.flatName), leaf.accessExpr("value"))
                         }
                         addStatement("size++")
                     }
@@ -90,11 +94,11 @@ object ValueSchemaGenerator {
             .addFunction(
                 FunSpec.builder("add")
                     .addKdoc("Zero-allocation overload: appends a row without constructing a [%T].", cls)
-                    .addParameters(model.fields.map { ParameterSpec.builder(it.name, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
-                        model.fields.forEach { f ->
-                            addStatement("%N[size] = %N", columnName(f.name), f.name)
+                        leaves.forEach { leaf ->
+                            addStatement("%N[size] = %N", columnName(leaf.flatName), leaf.flatName)
                         }
                         addStatement("size++")
                     }
@@ -115,9 +119,8 @@ object ValueSchemaGenerator {
                     .returns(cls)
                     .addStatement("checkIndex(index)")
                     .addStatement(
-                        "return %T(${model.fields.joinToString(", ") { "%N[index]" }})",
-                        cls,
-                        *model.fields.map { columnName(it.name) }.toTypedArray(),
+                        "return %L",
+                        constructorCall(model, cls) { leaf -> CodeBlock.of("%N[index]", columnName(leaf.flatName)) },
                     )
                     .build(),
             )
@@ -125,11 +128,11 @@ object ValueSchemaGenerator {
                 FunSpec.builder("set")
                     .addKdoc("Zero-allocation overload: replaces a row without constructing a [%T].", cls)
                     .addParameter("index", INT)
-                    .addParameters(model.fields.map { ParameterSpec.builder(it.name, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
                     .apply {
                         addStatement("checkIndex(index)")
-                        model.fields.forEach { f ->
-                            addStatement("%N[index] = %N", columnName(f.name), f.name)
+                        leaves.forEach { leaf ->
+                            addStatement("%N[index] = %N", columnName(leaf.flatName), leaf.flatName)
                         }
                     }
                     .build(),
@@ -141,8 +144,8 @@ object ValueSchemaGenerator {
                     .addParameter("value", cls)
                     .apply {
                         addStatement("checkIndex(index)")
-                        model.fields.forEach { f ->
-                            addStatement("%N[index] = value.%N", columnName(f.name), f.name)
+                        leaves.forEach { leaf ->
+                            addStatement("%N[index] = %L", columnName(leaf.flatName), leaf.accessExpr("value"))
                         }
                     }
                     .build(),
@@ -261,8 +264,8 @@ object ValueSchemaGenerator {
                     .addStatement("newCapacity *= 2")
                     .endControlFlow()
                     .apply {
-                        model.fields.forEach { f ->
-                            addStatement("%N = %N.copyOf(newCapacity)", columnName(f.name), columnName(f.name))
+                        leaves.forEach { leaf ->
+                            addStatement("%N = %N.copyOf(newCapacity)", columnName(leaf.flatName), columnName(leaf.flatName))
                         }
                     }
                     .build(),
@@ -295,11 +298,11 @@ object ValueSchemaGenerator {
                     .initializer("index")
                     .build(),
             )
-            .addProperties(model.fields.map { f ->
-                PropertySpec.builder(f.name, f.column.type)
+            .addProperties(leaves.map { leaf ->
+                PropertySpec.builder(leaf.flatName, leaf.column.type)
                     .getter(
                         FunSpec.getterBuilder()
-                            .addStatement("return columns.%N[index]", columnName(f.name))
+                            .addStatement("return columns.%N[index]", columnName(leaf.flatName))
                             .build(),
                     )
                     .build()
@@ -307,7 +310,10 @@ object ValueSchemaGenerator {
             .addFunction(
                 FunSpec.builder("toValue")
                     .returns(cls)
-                    .addStatement("return %T(${model.fields.joinToString(", ") { it.name }})", cls)
+                    .addStatement(
+                        "return %L",
+                        constructorCall(model, cls) { leaf -> CodeBlock.of("%N", leaf.flatName) },
+                    )
                     .build(),
             )
             .addFunction(
@@ -315,7 +321,7 @@ object ValueSchemaGenerator {
                     .addModifiers(KModifier.OVERRIDE)
                     .returns(STRING)
                     .addStatement(
-                        "return \"$viewName(${model.fields.joinToString(", ") { "${it.name}=\$${it.name}" }})\"",
+                        "return \"$viewName(${leaves.joinToString(", ") { "${it.flatName}=\$${it.flatName}" }})\"",
                     )
                     .build(),
             )
@@ -346,7 +352,8 @@ object ValueSchemaGenerator {
     ): TypeSpec {
         val viewName = "${model.className}PackedView"
         val view = ClassName(model.packageName, viewName)
-        val layout = packedLayout(model.fields)
+        val leaves = model.leaves
+        val layout = packedLayout(leaves)
         return TypeSpec.classBuilder(packedName)
             .addKdoc(
                 "Bit-packed flat-array storage for [%T]: a single LongArray, fields packed into 64-bit slots " +
@@ -391,8 +398,11 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
                         addStatement("val base = size * STRIDE")
-                        model.fields.forEachIndexed { i, f ->
-                            addStatement("%L", slotWrite(f, layout[i], "data[base + ${layout[i].slot}]", "value.${f.name}"))
+                        leaves.forEachIndexed { i, leaf ->
+                            addStatement(
+                                "%L",
+                                slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.accessExpr("value")),
+                            )
                         }
                         addStatement("size++")
                     }
@@ -401,12 +411,12 @@ object ValueSchemaGenerator {
             .addFunction(
                 FunSpec.builder("add")
                     .addKdoc("Zero-allocation overload: appends a row without constructing a [%T].", cls)
-                    .addParameters(model.fields.map { ParameterSpec.builder(it.name, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
                         addStatement("val base = size * STRIDE")
-                        model.fields.forEachIndexed { i, f ->
-                            addStatement("%L", slotWrite(f, layout[i], "data[base + ${layout[i].slot}]", f.name))
+                        leaves.forEachIndexed { i, leaf ->
+                            addStatement("%L", slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.flatName))
                         }
                         addStatement("size++")
                     }
@@ -428,8 +438,11 @@ object ValueSchemaGenerator {
                     .addStatement("checkIndex(index)")
                     .addStatement("val base = index * STRIDE")
                     .addStatement(
-                        "return %T(${model.fields.mapIndexed { i, f -> slotRead(f, layout[i], "data[base + ${layout[i].slot}]") }.joinToString(", ")})",
-                        cls,
+                        "return %L",
+                        constructorCall(model, cls) { leaf ->
+                            val i = leaves.indexOfFirst { it.flatName == leaf.flatName }
+                            CodeBlock.of("%L", slotRead(leaf.column, layout[i], "data[base + ${layout[i].slot}]"))
+                        },
                     )
                     .build(),
             )
@@ -437,12 +450,12 @@ object ValueSchemaGenerator {
                 FunSpec.builder("set")
                     .addKdoc("Zero-allocation overload: replaces a row without constructing a [%T].", cls)
                     .addParameter("index", INT)
-                    .addParameters(model.fields.map { ParameterSpec.builder(it.name, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
                     .apply {
                         addStatement("checkIndex(index)")
                         addStatement("val base = index * STRIDE")
-                        model.fields.forEachIndexed { i, f ->
-                            addStatement("%L", slotWrite(f, layout[i], "data[base + ${layout[i].slot}]", f.name))
+                        leaves.forEachIndexed { i, leaf ->
+                            addStatement("%L", slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.flatName))
                         }
                     }
                     .build(),
@@ -455,8 +468,11 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("checkIndex(index)")
                         addStatement("val base = index * STRIDE")
-                        model.fields.forEachIndexed { i, f ->
-                            addStatement("%L", slotWrite(f, layout[i], "data[base + ${layout[i].slot}]", "value.${f.name}"))
+                        leaves.forEachIndexed { i, leaf ->
+                            addStatement(
+                                "%L",
+                                slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.accessExpr("value")),
+                            )
                         }
                     }
                     .build(),
@@ -584,7 +600,7 @@ object ValueSchemaGenerator {
                     .addProperty(
                         PropertySpec.builder("STRIDE", INT)
                             .addModifiers(KModifier.CONST)
-                            .initializer("${packedStride(model.fields)}")
+                            .initializer("${packedStride(leaves)}")
                             .build(),
                     )
                     .build(),
@@ -599,7 +615,8 @@ object ValueSchemaGenerator {
         packedViewName: String,
         packedName: String,
     ): TypeSpec {
-        val layout = packedLayout(model.fields)
+        val leaves = model.leaves
+        val layout = packedLayout(leaves)
         return TypeSpec.classBuilder(packedViewName)
             .addKdoc("Zero-allocation cursor over one row of [%T]. Valid only while positioned; do not store it.", packed)
             .primaryConstructor(
@@ -625,13 +642,13 @@ object ValueSchemaGenerator {
                     .initializer("index")
                     .build(),
             )
-            .addProperties(model.fields.mapIndexed { i, f ->
-                PropertySpec.builder(f.name, f.column.type)
+            .addProperties(leaves.mapIndexed { i, leaf ->
+                PropertySpec.builder(leaf.flatName, leaf.column.type)
                     .getter(
                         FunSpec.getterBuilder()
                             .addStatement(
                                 "return %L",
-                                slotRead(f, layout[i], "packed.data[index * $packedName.STRIDE + ${layout[i].slot}]"),
+                                slotRead(leaf.column, layout[i], "packed.data[index * $packedName.STRIDE + ${layout[i].slot}]"),
                             )
                             .build(),
                     )
@@ -640,7 +657,10 @@ object ValueSchemaGenerator {
             .addFunction(
                 FunSpec.builder("toValue")
                     .returns(cls)
-                    .addStatement("return %T(${model.fields.joinToString(", ") { it.name }})", cls)
+                    .addStatement(
+                        "return %L",
+                        constructorCall(model, cls) { leaf -> CodeBlock.of("%N", leaf.flatName) },
+                    )
                     .build(),
             )
             .addFunction(
@@ -648,7 +668,7 @@ object ValueSchemaGenerator {
                     .addModifiers(KModifier.OVERRIDE)
                     .returns(STRING)
                     .addStatement(
-                        "return \"$packedViewName(${model.fields.joinToString(", ") { "${it.name}=\$${it.name}" }})\"",
+                        "return \"$packedViewName(${leaves.joinToString(", ") { "${it.flatName}=\$${it.flatName}" }})\"",
                     )
                     .build(),
             )
@@ -657,6 +677,24 @@ object ValueSchemaGenerator {
 
     private fun lambdaOf(parameter: ClassName, returnType: TypeName): LambdaTypeName =
         LambdaTypeName.get(null, listOf(ParameterSpec.unnamed(parameter)), returnType)
+
+    /** Rebuilds the (possibly nested) value constructor call from per-leaf read expressions. */
+    private fun constructorCall(model: SchemaModel, cls: ClassName, leaf: (LeafColumn) -> CodeBlock): CodeBlock =
+        CodeBlock.of(
+            "%T(%L)",
+            cls,
+            model.fields.map { constructorExpr(it, emptyList(), leaf) }.joinToCode(", "),
+        )
+
+    private fun constructorExpr(field: SchemaField, prefix: List<String>, leaf: (LeafColumn) -> CodeBlock): CodeBlock =
+        when (field) {
+            is FieldModel -> leaf(LeafColumn(prefix + field.name, field.column))
+            is NestedModel -> CodeBlock.of(
+                "%T(%L)",
+                field.type,
+                field.children.map { constructorExpr(it, prefix + field.name, leaf) }.joinToCode(", "),
+            )
+        }
 
     private enum class StorageKind { COLUMNS, PACKED }
 
@@ -667,6 +705,7 @@ object ValueSchemaGenerator {
         kind: StorageKind,
         layout: List<Placement>?,
     ): FunSpec {
+        val leaves = model.leaves
         val builder = FunSpec.builder(transform.name)
             .addKdoc(
                 "Field-wise transform declared via @ValueTransform; unconditionally allocation-free (no [%T] is constructed).",
@@ -676,18 +715,19 @@ object ValueSchemaGenerator {
         parseParams(transform.params).forEach { builder.addParameter(it) }
         builder.addStatement("checkIndex(index)")
         if (kind == StorageKind.PACKED) builder.addStatement("val base = index * STRIDE")
-        model.fields.forEachIndexed { i, f ->
+        leaves.forEachIndexed { i, leaf ->
             when (kind) {
-                StorageKind.COLUMNS -> builder.addStatement("var %N = %N[index]", f.name, columnName(f.name))
+                StorageKind.COLUMNS -> builder.addStatement("var %N = %N[index]", leaf.flatName, columnName(leaf.flatName))
                 StorageKind.PACKED ->
-                    builder.addStatement("var %N = %L", f.name, slotRead(f, layout!![i], "data[base + ${layout[i].slot}]"))
+                    builder.addStatement("var %N = %L", leaf.flatName, slotRead(leaf.column, layout!![i], "data[base + ${layout[i].slot}]"))
             }
         }
         builder.addCode(CodeBlock.of("%L", transform.body.trim().let { if (it.isEmpty()) "" else it + "\n" }))
-        model.fields.forEachIndexed { i, f ->
+        leaves.forEachIndexed { i, leaf ->
             when (kind) {
-                StorageKind.COLUMNS -> builder.addStatement("%N[index] = %N", columnName(f.name), f.name)
-                StorageKind.PACKED -> builder.addStatement("%L", slotWrite(f, layout!![i], "data[base + ${layout[i].slot}]", f.name))
+                StorageKind.COLUMNS -> builder.addStatement("%N[index] = %N", columnName(leaf.flatName), leaf.flatName)
+                StorageKind.PACKED ->
+                    builder.addStatement("%L", slotWrite(leaf.column, layout!![i], "data[base + ${layout[i].slot}]", leaf.flatName))
             }
         }
         return builder.build()
@@ -715,9 +755,9 @@ object ValueSchemaGenerator {
         else -> ClassName.bestGuess(name)
     }
 
-    private fun slotRead(f: FieldModel, p: Placement, slotRef: String): String {
+    private fun slotRead(col: PrimitiveColumn, p: Placement, slotRef: String): String {
         val raw = if (p.bitOffset == 0) slotRef else "($slotRef ushr ${p.bitOffset})"
-        return when (f.column) {
+        return when (col) {
             PrimitiveColumn.LONG -> slotRef
             PrimitiveColumn.DOUBLE -> "Double.fromBits($slotRef)"
             PrimitiveColumn.INT -> "$raw.toInt()"
@@ -729,7 +769,7 @@ object ValueSchemaGenerator {
         }
     }
 
-    private fun valueBits(f: FieldModel, valueExpr: String): String = when (f.column) {
+    private fun valueBits(col: PrimitiveColumn, valueExpr: String): String = when (col) {
         PrimitiveColumn.LONG -> valueExpr
         PrimitiveColumn.DOUBLE -> "$valueExpr.toRawBits()"
         PrimitiveColumn.INT -> "($valueExpr.toLong() and 0xFFFFFFFFL)"
@@ -740,10 +780,10 @@ object ValueSchemaGenerator {
         PrimitiveColumn.CHAR -> "$valueExpr.code.toLong()"
     }
 
-    private fun slotWrite(f: FieldModel, p: Placement, slotRef: String, valueExpr: String): String {
-        val bits = valueBits(f, valueExpr)
-        if (f.column.bitWidth == 64) return "$slotRef = $bits"
-        val mask = maskLiteral(f.column.bitWidth)
+    private fun slotWrite(col: PrimitiveColumn, p: Placement, slotRef: String, valueExpr: String): String {
+        val bits = valueBits(col, valueExpr)
+        if (col.bitWidth == 64) return "$slotRef = $bits"
+        val mask = maskLiteral(col.bitWidth)
         val cleared = if (p.bitOffset == 0) {
             "($slotRef and $mask.inv())"
         } else {

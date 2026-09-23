@@ -1,14 +1,33 @@
 package io.github.copi143.valueschema
 
 import io.github.copi143.valueschema.generator.FieldModel
+import io.github.copi143.valueschema.generator.NestedModel
 import io.github.copi143.valueschema.generator.SchemaModel
 import io.github.copi143.valueschema.generator.TransformModel
 import io.github.copi143.valueschema.generator.ValueSchemaGenerator
+import com.squareup.kotlinpoet.ClassName
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
 
 class ValueSchemaGeneratorTest {
+
+    private val order = SchemaModel(
+        packageName = "demo",
+        className = "Order",
+        fields = listOf(
+            FieldModel("id", "Long"),
+            NestedModel(
+                "price",
+                ClassName("demo", "Money"),
+                listOf(FieldModel("amount", "Long"), FieldModel("scale", "Int")),
+            ),
+            FieldModel("qty", "Int"),
+        ),
+        transforms = listOf(
+            TransformModel(name = "discount", params = "bps: Int", body = "price_amount -= price_amount * bps / 10000"),
+        ),
+    )
 
     private val quote = SchemaModel(
         packageName = "demo",
@@ -116,6 +135,38 @@ class ValueSchemaGeneratorTest {
     fun `rejects malformed transform params`() {
         val model = quote.copy(
             transforms = listOf(TransformModel(name = "bad", params = "oops", body = "")),
+        )
+        assertFailsWith<IllegalArgumentException> { generate(model) }
+    }
+
+    @Test
+    fun `flattens nested value type into leaf columns`() {
+        val code = generate(order)
+        assertContains(code, "internal var ids: LongArray")
+        assertContains(code, "internal var price_amounts: LongArray")
+        assertContains(code, "internal var price_scales: IntArray")
+        assertContains(code, "internal var qtys: IntArray")
+        assertContains(code, "return Order(ids[index], Money(price_amounts[index], price_scales[index]), qtys[index])")
+        assertContains(code, "price_amounts[size] = value.price.amount")
+        assertContains(code, "price_amount: Long")
+        assertContains(code, "var price_amount = price_amounts[index]")
+    }
+
+    @Test
+    fun `nested value type shares packed slots leaf by leaf`() {
+        val code = generate(order)
+        assertContains(code, "public const val STRIDE: Int = 3")
+    }
+
+    @Test
+    fun `rejects colliding flattened leaf names`() {
+        val model = SchemaModel(
+            packageName = "demo",
+            className = "Bad",
+            fields = listOf(
+                FieldModel("price_amount", "Long"),
+                NestedModel("price", ClassName("demo", "Money"), listOf(FieldModel("amount", "Long"))),
+            ),
         )
         assertFailsWith<IllegalArgumentException> { generate(model) }
     }
