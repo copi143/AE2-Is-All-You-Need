@@ -1,8 +1,11 @@
-package averith
+package averith.util
 
 import java.security.InvalidParameterException
 import kotlin.text.iterator
 
+/**
+ * 全局的唯一 ID，程序重启不保证稳定
+ */
 class GlobalID private constructor(val int: Int) {
     val string = idString[int]
 
@@ -38,4 +41,8 @@ class GlobalID private constructor(val int: Int) {
             return !slash
         }
     }
+}
+
+interface StringRepresentable {
+    val string: String
 }

@@ -4,3 +4,7 @@ plugins {
 
 group = "averith"
 version = "0.0.0"
+
+dependencies {
+    api(libs.ojalgo)
+}

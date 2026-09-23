@@ -1,4 +1,4 @@
-package allyouneed.logic.crafting
+package averith.planner
 
 import org.ojalgo.optimisation.ExpressionsBasedModel
 import org.ojalgo.optimisation.Variable
@@ -7,11 +7,12 @@ import kotlin.math.max
 import kotlin.math.roundToLong
 
 /**
- * 纯数值合成规划核心：不依赖任何 AE/MC 类型，可被单元测试直接构造。
+ * 纯数值合成规划核心：不依赖任何游戏/模组类型，可被单元测试直接构造。
  *
- * 承担 ojalgo MIP 建模、大数折叠分解、目标物品自身库存的一次性记账。
- * 输入输出全是普通 Kotlin 类型（Long / BigInteger / DoubleArray），
- * AE 类型（AEKey/IPatternDetails）的包装由 [MipCraftingPlanner] 完成。
+ * 对 [PlanGraph] 描述的"物品 ↔ 配方"二分图做 MIP 求解，承担 ojalgo MIP 建模、
+ * 大数折叠分解、目标物品自身库存的一次性记账。输入输出全是普通 Kotlin 类型
+ * （Long / BigInteger / DoubleArray），调用方自行把 [Solve.xs] 的下标映射回
+ * [PlanRecipe.payload]。
  *
  * ## 两阶段
  * 1. `minimise Σ x_r`，满足目标约束 → 最优计划（simulation=false）
@@ -34,12 +35,8 @@ import kotlin.math.roundToLong
  * 加显式上界 [MAX_VAR] 修复：精确域需求 ≤ 2^20，合法合成次数不会超过 2^20，
  * 2^24 有 16 倍余量且远低于崩溃量级。
  */
-class CraftingSolverCore(
-    private val nItems: Int,
-    private val mRecipes: Int,
-    private val deltaByItem: Array<out Map<Int, Long>>,
-    private val targetId: Int,
-    private val isEmitter: BooleanArray,
+class MipPlanner(
+    private val graph: PlanGraph<*>,
 ) {
     companion object {
         /** double 可精确表示的整数上限（2^53）。超出后 MIP 数值不可信，必须折叠。 */
@@ -56,9 +53,27 @@ class CraftingSolverCore(
         private const val TIME_ABORT_MS = 60_000L
     }
 
-    /** 纯数值解：不含任何 AE 类型，由 [MipCraftingPlanner] 包装成对外 Result。 */
-    data class Solve(
-        /** 各配方执行次数。 */
+    private val nItems = graph.stock.size
+    private val mRecipes = graph.recipes.size
+    private val targetId: Int = graph.target
+    private val baseStock: Array<BigInteger> = graph.stock
+    private val isEmitter = BooleanArray(mRecipes) { r -> graph.recipes[r].emitter }
+    /** deltaByItem[item] = map(recipe -> 净变化)，正 = 产出，负 = 消耗。 */
+    private val deltaByItem = Array<HashMap<Int, Long>>(nItems) { HashMap() }
+
+    init {
+        if (targetId < 0 || targetId >= nItems) {
+            throw IllegalStateException("Target item $targetId is not part of the plan graph")
+        }
+        for ((r, recipe) in graph.recipes.withIndex()) {
+            for (ref in recipe.sources) deltaByItem[ref.id].merge(r, -ref.amount, Long::plus)
+            for (ref in recipe.targets) deltaByItem[ref.id].merge(r, ref.amount, Long::plus)
+        }
+    }
+
+    /** 纯数值解：不含任何游戏/模组类型，由调用方包装成对外结果。 */
+    class Solve(
+        /** 各配方执行次数，下标对应 [PlanGraph.recipes]。 */
         val xs: LongArray,
         /** 最终交付量（含目标物品自身库存回填）。 */
         val finalAmount: Long,
@@ -71,20 +86,20 @@ class CraftingSolverCore(
     )
 
     /**
-     * 主入口：为 [amount] 的需求、基于 [stockBig] 库存求计划。
+     * 主入口：为 [amount] 的需求、基于 [graph] 中的库存求计划。
      *
      * 目标物品自身库存先一次性满足（[fillOwnStock]），其余需求折叠分解。
      */
-    fun plan(amount: Long, stockBig: Array<BigInteger>): Solve {
+    fun plan(amount: Long): Solve {
         if (amount <= 0) return emptySolve()
-        if (amount <= EXACT_LIMIT) return exactPlan(amount, stockBig)
+        if (amount <= EXACT_LIMIT) return exactPlan(amount, baseStock.copyOf())
 
         // 目标自身库存一次性满足，不参与放大（否则缩放会把"库存满足"误当成可放大的生产）
-        val ownStock = minOf(stockBig[targetId], amount.toBigInteger()).toLong()
-        if (ownStock >= amount) return exactPlan(amount, stockBig)
+        val ownStock = minOf(baseStock[targetId], amount.toBigInteger()).toLong()
+        if (ownStock >= amount) return exactPlan(amount, baseStock.copyOf())
 
         // 纯生产库存：目标库存清零，保证 base 是"可安全 ×k 的纯生产基数"
-        val prodStock = stockBig.copyOf()
+        val prodStock = baseStock.copyOf()
         prodStock[targetId] = BigInteger.ZERO
 
         val produced = foldPlan(amount - ownStock, prodStock)
