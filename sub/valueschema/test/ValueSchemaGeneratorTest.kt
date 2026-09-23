@@ -113,7 +113,8 @@ class ValueSchemaGeneratorTest {
         )
         val code = generate(model)
         assertContains(code, "const val STRIDE: Int = 1")
-        assertContains(code, "and 0x1L")
+        assertContains(code, "(data[base + 0] and 1L) != 0L")
+        assertContains(code, "data[base + 0] = (if (x) 1L else 0L) or ((if (y) 1L else 0L) shl 1)")
     }
 
     @Test

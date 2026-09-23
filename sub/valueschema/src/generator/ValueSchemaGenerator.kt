@@ -398,12 +398,7 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
                         addStatement("val base = size * STRIDE")
-                        leaves.forEachIndexed { i, leaf ->
-                            addStatement(
-                                "%L",
-                                slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.accessExpr("value")),
-                            )
-                        }
+                        emitPackedStores(leaves, layout) { it.accessExpr("value") }
                         addStatement("size++")
                     }
                     .build(),
@@ -415,9 +410,7 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
                         addStatement("val base = size * STRIDE")
-                        leaves.forEachIndexed { i, leaf ->
-                            addStatement("%L", slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.flatName))
-                        }
+                        emitPackedStores(leaves, layout) { it.flatName }
                         addStatement("size++")
                     }
                     .build(),
@@ -454,9 +447,7 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("checkIndex(index)")
                         addStatement("val base = index * STRIDE")
-                        leaves.forEachIndexed { i, leaf ->
-                            addStatement("%L", slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.flatName))
-                        }
+                        emitPackedStores(leaves, layout) { it.flatName }
                     }
                     .build(),
             )
@@ -468,12 +459,7 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("checkIndex(index)")
                         addStatement("val base = index * STRIDE")
-                        leaves.forEachIndexed { i, leaf ->
-                            addStatement(
-                                "%L",
-                                slotWrite(leaf.column, layout[i], "data[base + ${layout[i].slot}]", leaf.accessExpr("value")),
-                            )
-                        }
+                        emitPackedStores(leaves, layout) { it.accessExpr("value") }
                     }
                     .build(),
             )
@@ -723,14 +709,32 @@ object ValueSchemaGenerator {
             }
         }
         builder.addCode(CodeBlock.of("%L", transform.body.trim().let { if (it.isEmpty()) "" else it + "\n" }))
-        leaves.forEachIndexed { i, leaf ->
-            when (kind) {
-                StorageKind.COLUMNS -> builder.addStatement("%N[index] = %N", columnName(leaf.flatName), leaf.flatName)
-                StorageKind.PACKED ->
-                    builder.addStatement("%L", slotWrite(leaf.column, layout!![i], "data[base + ${layout[i].slot}]", leaf.flatName))
+        when (kind) {
+            StorageKind.COLUMNS -> leaves.forEach { leaf ->
+                builder.addStatement("%N[index] = %N", columnName(leaf.flatName), leaf.flatName)
             }
+            StorageKind.PACKED -> builder.emitPackedStores(leaves, layout!!) { it.flatName }
         }
         return builder.build()
+    }
+
+    /**
+     * Emits one direct store per 64-bit slot. Every generated writer always writes ALL leaf
+     * fields, so no slot ever contains foreign bits worth preserving: fields sharing a slot
+     * are OR-folded into a single full-slot value instead of a read-modify-write per field.
+     */
+    private fun FunSpec.Builder.emitPackedStores(
+        leaves: List<LeafColumn>,
+        layout: List<Placement>,
+        valueExpr: (LeafColumn) -> String,
+    ) {
+        leaves.indices.groupBy { layout[it].slot }.forEach { (slot, idxs) ->
+            val expr = idxs.joinToString(" or ") { i ->
+                val bits = valueBits(leaves[i].column, valueExpr(leaves[i]))
+                if (layout[i].bitOffset == 0) bits else "($bits shl ${layout[i].bitOffset})"
+            }
+            addStatement("data[base + $slot] = $expr")
+        }
     }
 
     private fun parseParams(params: String): List<ParameterSpec> {
@@ -780,24 +784,4 @@ object ValueSchemaGenerator {
         PrimitiveColumn.CHAR -> "$valueExpr.code.toLong()"
     }
 
-    private fun slotWrite(col: PrimitiveColumn, p: Placement, slotRef: String, valueExpr: String): String {
-        val bits = valueBits(col, valueExpr)
-        if (col.bitWidth == 64) return "$slotRef = $bits"
-        val mask = maskLiteral(col.bitWidth)
-        val cleared = if (p.bitOffset == 0) {
-            "($slotRef and $mask.inv())"
-        } else {
-            "($slotRef and ($mask shl ${p.bitOffset}).inv())"
-        }
-        val shifted = if (p.bitOffset == 0) bits else "($bits shl ${p.bitOffset})"
-        return "$slotRef = $cleared or $shifted"
-    }
-
-    private fun maskLiteral(width: Int): String = when (width) {
-        32 -> "0xFFFFFFFFL"
-        16 -> "0xFFFFL"
-        8 -> "0xFFL"
-        1 -> "0x1L"
-        else -> error("no mask for width $width")
-    }
 }
