@@ -2,6 +2,7 @@ package io.github.copi143.valueschema
 
 import io.github.copi143.valueschema.generator.FieldModel
 import io.github.copi143.valueschema.generator.SchemaModel
+import io.github.copi143.valueschema.generator.TransformModel
 import io.github.copi143.valueschema.generator.ValueSchemaGenerator
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -45,6 +46,78 @@ class ValueSchemaGeneratorTest {
         assertContains(code, "get() = columns.ids[index]")
         assertContains(code, "get() = columns.prices[index]")
         assertContains(code, "fun toValue(): Quote = Quote(id, price, ts)")
+    }
+
+    @Test
+    fun `generates zero allocation primitive overloads`() {
+        val code = generate()
+        assertContains(code, "Zero-allocation overload: appends a row without constructing a [Quote].")
+        assertContains(code, "ids[size] = id")
+        assertContains(code, "(price.toLong() and 0xFFFFFFFFL)")
+    }
+
+    @Test
+    fun `generates packed flat array storage`() {
+        val code = generate()
+        assertContains(code, "class QuotePacked(")
+        assertContains(code, "const val STRIDE: Int = 3")
+        assertContains(code, "class QuotePackedView @PublishedApi internal constructor(")
+        assertContains(code, "val base = size * STRIDE")
+        assertContains(code, "(value.price.toLong() and 0xFFFFFFFFL)")
+    }
+
+    @Test
+    fun `packs sub word fields into shared slots`() {
+        val model = SchemaModel(
+            packageName = "demo",
+            className = "TwoPairs",
+            fields = listOf(
+                FieldModel("a", "Int"),
+                FieldModel("b", "Int"),
+                FieldModel("c", "Int"),
+                FieldModel("d", "Int"),
+            ),
+        )
+        val code = generate(model)
+        // four 32-bit fields fit in two 64-bit slots
+        assertContains(code, "const val STRIDE: Int = 2")
+        // b is read from the high half of slot 0
+        assertContains(code, "ushr 32")
+    }
+
+    @Test
+    fun `packs boolean as a single bit`() {
+        val model = SchemaModel(
+            packageName = "demo",
+            className = "Flags",
+            fields = listOf(FieldModel("x", "Boolean"), FieldModel("y", "Boolean")),
+        )
+        val code = generate(model)
+        assertContains(code, "const val STRIDE: Int = 1")
+        assertContains(code, "and 0x1L")
+    }
+
+    @Test
+    fun `generates field wise transform from snippet`() {
+        val model = quote.copy(
+            transforms = listOf(
+                TransformModel(name = "cappedAt", params = "limit: Int", body = "if (price > limit) price = limit"),
+            ),
+        )
+        val code = generate(model)
+        assertContains(code, "fun cappedAt(")
+        assertContains(code, "var price = prices[index]")
+        assertContains(code, "if (price > limit) price = limit")
+        assertContains(code, "prices[index] = price")
+        assertContains(code, "val base = index * STRIDE")
+    }
+
+    @Test
+    fun `rejects malformed transform params`() {
+        val model = quote.copy(
+            transforms = listOf(TransformModel(name = "bad", params = "oops", body = "")),
+        )
+        assertFailsWith<IllegalArgumentException> { generate(model) }
     }
 
     @Test

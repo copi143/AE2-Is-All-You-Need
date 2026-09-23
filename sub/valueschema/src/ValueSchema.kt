@@ -17,4 +17,20 @@ package io.github.copi143.valueschema
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
-annotation class ValueSchema
+annotation class ValueSchema(val transforms: Array<ValueTransform> = [])
+
+/**
+ * Declares a field-wise transform to be generated on the Columns/Packed storage.
+ *
+ * [body] is a Kotlin code snippet pasted into the generated function and compiled by kotlinc
+ * (so it is type-checked like ordinary code). Inside the snippet, every field of the schema is
+ * in scope as a mutable local variable; after the snippet runs, all fields are written back to
+ * storage. The generated function is unconditionally allocation-free: no value instance is
+ * ever constructed.
+ *
+ * Constraints: the snippet may only touch field-name locals, [params], and pure Kotlin
+ * (no `this`, no `copy`, no member calls on the value). [params] is a simple comma-separated
+ * list of `name: Type` declarations.
+ */
+@Retention(AnnotationRetention.SOURCE)
+annotation class ValueTransform(val name: String, val params: String = "", val body: String)

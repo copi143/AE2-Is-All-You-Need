@@ -3,6 +3,7 @@ package io.github.copi143.valueschema.processor
 import io.github.copi143.valueschema.generator.FieldModel
 import io.github.copi143.valueschema.generator.PrimitiveColumn
 import io.github.copi143.valueschema.generator.SchemaModel
+import io.github.copi143.valueschema.generator.TransformModel
 import io.github.copi143.valueschema.generator.ValueSchemaGenerator
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -13,6 +14,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Modifier
 
@@ -74,7 +76,22 @@ private class ValueSchemaProcessor(
             logger.error("@ValueSchema class $name must declare at least one field", decl)
             return null
         }
-        return SchemaModel(decl.packageName.asString(), name, fields)
+        return SchemaModel(decl.packageName.asString(), name, fields, extractTransforms(decl))
+    }
+
+    private fun extractTransforms(decl: KSClassDeclaration): List<TransformModel> {
+        val annotation = decl.annotations.firstOrNull {
+            it.annotationType.resolve().declaration.qualifiedName?.asString() == VALUE_SCHEMA_ANNOTATION
+        } ?: return emptyList()
+        val values = annotation.arguments.firstOrNull { it.name?.asString() == "transforms" }?.value
+        return (values as? List<*>)?.filterIsInstance<KSAnnotation>()?.map { transform ->
+            val args = transform.arguments.associate { it.name?.asString() to it.value }
+            TransformModel(
+                name = args["name"] as? String ?: "",
+                params = args["params"] as? String ?: "",
+                body = args["body"] as? String ?: "",
+            )
+        } ?: emptyList()
     }
 
     private fun write(decl: KSClassDeclaration, model: SchemaModel) {
