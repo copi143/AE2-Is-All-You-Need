@@ -12,8 +12,9 @@ import net.minecraft.world.phys.BlockHitResult
  *
  *  1. EMI's hovered stack (via `EmiApi.getHoveredStack`),
  *  2. JEI's ingredient list / bookmark overlay under the mouse,
- *  3. the block the player is looking at (vanilla raycast),
- *  4. the item currently held in hand.
+ *  3. the hovered slot of an open container screen,
+ *  4. the block the player is looking at (vanilla raycast),
+ *  5. the item currently held in hand.
  *
  * EMI and JEI are accessed through reflection so that the common module stays
  * loadable even when either mod is absent.

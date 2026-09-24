@@ -117,10 +117,6 @@ class ComposeLayer {
     fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
         owner.onKeyPressed(keyCode, scanCode, modifiers)
 
-    /** Forwards a key-release (GLFW keyCode/scanCode/modifiers). */
-    fun onKeyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
-        owner.onKeyReleased(keyCode, scanCode, modifiers)
-
     /** Forwards a committed character (direct key or IME); true when a text field consumed it. */
     fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =
         owner.onCharTyped(codePoint, modifiers)

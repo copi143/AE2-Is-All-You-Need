@@ -45,8 +45,8 @@ import java.text.BreakIterator
  * lets it run under a plain JVM unit test (see `common/test/.../McTextInputServiceTest.kt`).
  *
  * Keyboard codes mirror the GLFW ABI values ([org.lwjgl.glfw.GLFW] constants that Minecraft forwards
- * through `Screen.keyPressed`); they are re-declared here as plain Ints to keep the lwjgl dependency
- * out of the common module.
+ * through `Screen.keyPressed`); they are re-declared here as plain Ints so this file stays
+ * MC-free and unit-testable.
  */
 interface TextClipboard {
     fun getText(): String?

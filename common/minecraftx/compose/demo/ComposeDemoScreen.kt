@@ -9,7 +9,7 @@ import minecraftx.compose.material.McScrollbar
 import minecraftx.compose.material.McText
 import minecraftx.compose.material.McTooltip
 import minecraftx.compose.foundation.McVirtualColumn
-import minecraftx.compose.material.Text
+import minecraftx.compose.material.McText
 import allyouneed.client.compose.platform.ComposeContainerScreen
 import allyouneed.client.compose.platform.LocalMousePosition
 import allyouneed.client.compose.platform.rememberScrollState
@@ -66,8 +66,8 @@ import net.minecraft.world.item.Items
  * 空菜单仅用于让 EMI 识别本屏为容器屏;没有槽位,EMI 的配方填充会回落到玩家物品栏。
  */
 class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMenu>(
-    ComposeContainerScreen.EmptyMenu(),
-    ComposeContainerScreen.playerInventory(),
+    EmptyMenu(),
+    playerInventory(),
     Component.literal("Compose Demo"),
 ) {
 
@@ -90,8 +90,8 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-            Text("Compose Demo", color = 0xFFFFAA00.toInt())
-            Text("Ctrl+滚轮缩放 UI,当前 %.1fx".format(currentUiScale()), color = 0xFF88FFFF.toInt())
+            McText("Compose Demo", color = 0xFFFFAA00.toInt())
+            McText("Ctrl+滚轮缩放 UI,当前 %.1fx".format(currentUiScale()), color = 0xFF88FFFF.toInt())
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
 
@@ -114,7 +114,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
 
             Row {
-                Text("Count: $count", color = 0xFF00FF00.toInt())
+                McText("Count: $count", color = 0xFF00FF00.toInt())
                 Spacer(Modifier.size(8.dp))
                 McButton("+1", onClick = { count++ }, modifier = Modifier.padding(horizontal = 4.dp))
                 McButton("Reset", onClick = { count = 0 }, modifier = Modifier.padding(horizontal = 4.dp))
@@ -122,7 +122,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("McProgressBar: ${(sliderValue * 100).toInt()}%", color = 0xFFAAAAAA.toInt())
+            McText("McProgressBar: ${(sliderValue * 100).toInt()}%", color = 0xFFAAAAAA.toInt())
             McProgressBar(progress = sliderValue, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
             Row {
                 McButton("-", onClick = { sliderValue = (sliderValue - 0.1f).coerceIn(0f, 1f) })
@@ -132,7 +132,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("Animated alpha:", color = 0xFFCCCCCC.toInt())
+            McText("Animated alpha:", color = 0xFFCCCCCC.toInt())
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 Box(
                     Modifier
@@ -161,7 +161,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Color boxes demo
-            Text("Color Boxes:", color = 0xFFCCCCCC.toInt())
+            McText("Color Boxes:", color = 0xFFCCCCCC.toInt())
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 Box(
                     modifier = Modifier
@@ -192,7 +192,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Framework scrollable panel:虚拟化文本列 + 平滑滚动 + 点击/拖拽滚动条
-            Text("McVirtualColumn (framework):", color = 0xFFCCCCCC.toInt())
+            McText("McVirtualColumn (framework):", color = 0xFFCCCCCC.toInt())
             val demoLines = remember {
                 buildList {
                     for (i in 0 until 60) {
@@ -224,7 +224,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Framework McScrollBox:通用 overflow 容器,内容可滚动 + 裁剪 + 滚动条
-            Text("McScrollBox (framework):", color = 0xFFCCCCCC.toInt())
+            McText("McScrollBox (framework):", color = 0xFFCCCCCC.toInt())
             Box(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
@@ -251,7 +251,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("McTab / McCheckbox / McToggle / McNumberField / McSearchField:", color = 0xFFCCCCCC.toInt())
+            McText("McTab / McCheckbox / McToggle / McNumberField / McSearchField:", color = 0xFFCCCCCC.toInt())
             var tab by remember { mutableStateOf(0) }
             McTabRow(Modifier.padding(vertical = 4.dp)) {
                 McTab("Crafting", selected = tab == 0, onClick = { tab = 0 })
@@ -281,7 +281,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             // McTextField 输入框演示:像浏览器一样支持"开启输入法"与"关闭输入法(纯 ASCII)"两种模式。
             // IME 模式文本走 Screen.charTyped(直接按键与 IME 提交文本都会到达);ASCII 模式忽略
             // charTyped,按键用 US 布局 shift 表映射。编辑键(退格/方向键/Home/End/Ctrl+A)两模式通用。
-            Text("McTextField (IME on/off):", color = 0xFFCCCCCC.toInt())
+            McText("McTextField (IME on/off):", color = 0xFFCCCCCC.toInt())
             var imeText by remember { mutableStateOf(TextFieldValue("")) }
             McTextField(
                 value = imeText,
@@ -304,7 +304,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // McTextArea 多行文本域:软折行、↑/↓/Home/End 行间导航、跨行选区、滚轮 + 滚动条。
-            Text("McTextArea (多行):", color = 0xFFCCCCCC.toInt())
+            McText("McTextArea (多行):", color = 0xFFCCCCCC.toInt())
             var areaText by remember { mutableStateOf(TextFieldValue("")) }
             McTextArea(
                 value = areaText,
@@ -318,7 +318,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // McMarkdown:GFM 全集渲染 + 实时编辑预览(文本引擎切换对它同样生效)
-            Text("McMarkdown (GFM, 实时预览):", color = 0xFFCCCCCC.toInt())
+            McText("McMarkdown (GFM, 实时预览):", color = 0xFFCCCCCC.toInt())
             var mdSource by remember { mutableStateOf(TextFieldValue(DEMO_MARKDOWN)) }
             McTextField(
                 value = mdSource,
@@ -332,7 +332,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("McDockHost (拖标签 / 拖分隔条):", color = 0xFFCCCCCC.toInt())
+            McText("McDockHost (拖标签 / 拖分隔条):", color = 0xFFCCCCCC.toInt())
             var dock by remember {
                 mutableStateOf(
                     DockState(
@@ -362,7 +362,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             }
             if (dock.closed.isNotEmpty()) {
                 Row(Modifier.padding(top = 4.dp)) {
-                    Text("已关闭: ", color = 0xFFAAAAAA.toInt())
+                    McText("已关闭: ", color = 0xFFAAAAAA.toInt())
                     for (id in dock.closed) {
                         McButton(id, onClick = { dock = dock.openTab(id) }, modifier = Modifier.padding(end = 4.dp))
                     }
@@ -372,14 +372,14 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Tooltip 双版本:vanilla 浮动 tooltip(ItemSlot)与 Compose 浮动 tooltip(McTooltip)
-            Text("Tooltip 双版本:", color = 0xFFCCCCCC.toInt())
+            McText("Tooltip 双版本:", color = 0xFFCCCCCC.toInt())
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 ItemSlot(
                     stack = ItemStack(Items.GOLD_INGOT),
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
                 Spacer(Modifier.size(8.dp))
-                Text("左:vanilla 渲染 (ItemSlot)", color = 0xFFAAAAAA.toInt())
+                McText("左:vanilla 渲染 (ItemSlot)", color = 0xFFAAAAAA.toInt())
             }
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 Box(
@@ -401,7 +401,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                         },
                 )
                 Spacer(Modifier.size(8.dp))
-                Text("右:compose 渲染 (McTooltip)", color = 0xFFAAAAAA.toInt())
+                McText("右:compose 渲染 (McTooltip)", color = 0xFFAAAAAA.toInt())
             }
             }
             }

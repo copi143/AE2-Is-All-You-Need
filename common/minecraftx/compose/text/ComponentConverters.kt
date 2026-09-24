@@ -37,30 +37,6 @@ fun Component.toStyledString(): McStyledString {
     return McStyledString(sb.toString(), spans)
 }
 
-/** A flat (text, MC style) segment — the engine-internal layout input. */
-internal class McRun(val text: String, val style: Style, val visual: McSpanStyle?)
-
-/**
- * Splits a McStyledString into non-overlapping runs of uniform MC style. Ranges outside any span
- * keep the default (empty) style so the paint phase can apply its fallback color.
- */
-internal fun McStyledString.toMcRuns(base: Style = Style.EMPTY): List<McRun> {
-    if (text.isEmpty()) return emptyList()
-    if (spans.isEmpty()) return listOf(McRun(text, base, null))
-
-    val out = mutableListOf<McRun>()
-    var cursor = 0
-    for (range in spans.sortedBy { it.start }) {
-        val start = maxOf(range.start, cursor)
-        val end = minOf(range.end, text.length)
-        if (start > cursor) out += McRun(text.substring(cursor, start), base, null)
-        if (end > start) out += McRun(text.substring(start, end), range.style.toMcStyle(base), range.style)
-        cursor = maxOf(cursor, end)
-    }
-    if (cursor < text.length) out += McRun(text.substring(cursor), base, null)
-    return out.filter { it.text.isNotEmpty() }
-}
-
 private fun Style.toMcSpanStyleOrNull(): McSpanStyle? {
     val bold = isBold
     val italic = isItalic

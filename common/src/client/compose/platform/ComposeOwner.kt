@@ -131,7 +131,7 @@ import kotlin.math.roundToInt
  * tree ([mousePosition]) is in **global logical** coordinates (local + [uiOrigin]) so it stays
  * comparable with `positionInWindow()`.
  */
-internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
+internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner, PositionCalculator {
 
     override var density: Density = Density(1f)
     override var layoutDirection: LayoutDirection = LayoutDirection.Ltr
@@ -388,7 +388,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         // Per-frame callbacks (e.g. scroll-state smoothing) run before the snapshot apply / measure
         // / draw of the same frame, so animation refresh rate == game frame rate, no coroutine lag.
         frameCallbacks.advance()
-        SnapshotSync.requestApply()
+        Snapshot.sendApplyNotifications()
         val size = sizeProvider()
         measureAndLayoutDelegate.updateRootConstraints(
             Constraints(maxWidth = size.width, maxHeight = size.height),
@@ -525,7 +525,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     }
 
     private fun processPointerEvent(event: PointerInputEvent): Boolean {
-        val result = pointerInputEventProcessor.process(event, IdentityPositionCalculator)
+        val result = pointerInputEventProcessor.process(event, this)
         return result.anyChangeConsumed
     }
 
@@ -536,9 +536,6 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     /** Forwards a raw key-press to the active text input session; true when a field consumed it. */
     fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
         mcTextInputService.onKeyPressed(keyCode, modifiers)
-
-    /** Forwards a raw key-release. Text fields currently ignore releases. */
-    fun onKeyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean = false
 
     /** Forwards a committed character (direct key or IME) to the active text input session. */
     fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =
@@ -723,23 +720,12 @@ private fun buildPointerEvent(
     )
 }
 
-private object IdentityPositionCalculator : PositionCalculator {
-    override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
-    override fun localToScreen(localPosition: Offset): Offset = localPosition
-}
-
 private object McTypeface : Typeface {
     override val fontFamily: FontFamily get() = FontFamily.Default
 }
 
 @Suppress("DEPRECATION")
 private fun createViewConfiguration(density: Density): ViewConfiguration = DefaultViewConfiguration(density)
-
-internal object SnapshotSync {
-    fun requestApply() {
-        Snapshot.sendApplyNotifications()
-    }
-}
 
 /**
  * Dispatches coroutines onto the Minecraft client (game) thread — the thread that owns

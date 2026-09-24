@@ -71,7 +71,6 @@ fun McNumberField(
                 }
             },
             imeEnabled = false,
-            singleLine = true,
             width = width,
             height = 16,
             colors = colors,

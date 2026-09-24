@@ -29,13 +29,22 @@ import allyouneed.util.logger
 import appeng.api.features.P2PTunnelAttunement
 import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader
+import minecraftx.compose.text.McTextEngines
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
 import net.fabricmc.fabric.api.client.model.ModelLoadingRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry
+import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.MenuScreens
 import net.minecraft.client.renderer.RenderType
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.packs.PackType
+import net.minecraft.server.packs.resources.PreparableReloadListener
+import net.minecraft.server.packs.resources.ResourceManager
+import net.minecraft.util.profiling.ProfilerFiller
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
 
 fun initClient() {
     logger.info("Initializing Client...")
@@ -53,6 +62,23 @@ fun initClient() {
     }
     ItemDetailsKeyBind.init()
     allyouneed.client.compose.platform.ComposePrewarm.startAsync()
+    // 资源重载时释放 MSDF 文本引擎的 GPU 资源(shader/图集纹理/VAO),下次绘制时惰性重建。
+    ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(
+        object : IdentifiableResourceReloadListener {
+            override fun getFabricId(): ResourceLocation = ResourceLocation(MODID, "msdf_text_gl")
+
+            override fun reload(
+                preparationBarrier: PreparableReloadListener.PreparationBarrier,
+                resourceManager: ResourceManager,
+                preparationsProfiler: ProfilerFiller,
+                reloadProfiler: ProfilerFiller,
+                backgroundExecutor: Executor,
+                gameExecutor: Executor,
+            ): CompletableFuture<Void> = CompletableFuture.completedFuture<Void?>(null)
+                .thenCompose { preparationBarrier.wait(null) }
+                .thenRunAsync({ McTextEngines.releaseMsdfGl() }, gameExecutor)
+        },
+    )
     ColorProviderRegistry.ITEM.register(
         { stack, tintIndex -> StorageCellItem.getColor(stack, tintIndex) },
         *AllStorageCells.entries.map { it.define.asItem() }.toTypedArray(),

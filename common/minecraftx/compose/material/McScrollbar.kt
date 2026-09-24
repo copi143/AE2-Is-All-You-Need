@@ -41,7 +41,7 @@ fun McScrollbar(
         val trackHeight = constraints.maxHeight
         val barHeight = max(16, trackHeight * trackHeight / (trackHeight + state.maxScroll.toInt()))
         val travel = trackHeight - barHeight
-        val barY = if (state.maxScroll == 0f) 0 else (travel * state.display / state.maxScroll).toInt()
+        val barY = (travel * state.display / state.maxScroll).toInt()
         Box(
             Modifier
                 .fillMaxSize()
@@ -66,7 +66,7 @@ fun McScrollbar(
                                 PointerEventType.Press -> {
                                     if (change.isConsumed) continue
                                     dragging = true
-                                    val barTop = if (state.maxScroll == 0f) 0f else travel * state.display / state.maxScroll
+                                    val barTop = travel * state.display / state.maxScroll
                                     val onBar = p.y >= barTop && p.y <= barTop + barHeight
                                     grabOffset = if (onBar) p.y - barTop else barHeight / 2f
                                     seek(p.y)

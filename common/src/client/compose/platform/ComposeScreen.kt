@@ -32,9 +32,6 @@ abstract class ComposeScreen(title: Component) : Screen(title) {
     @Composable
     protected fun currentUiScale(): Float = layer.uiScale
 
-    /** Current whole-UI zoom factor for use outside composition (e.g. event handlers). */
-    protected fun uiScaleFactor(): Float = layer.uiScale
-
     override fun resize(minecraft: Minecraft, width: Int, height: Int) {
         super.resize(minecraft, width, height)
         // Force the tree to re-measure against the new window size so layout follows GUI scale /
@@ -68,11 +65,6 @@ abstract class ComposeScreen(title: Component) : Screen(title) {
     override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
         if (layer.onKeyPressed(keyCode, scanCode, modifiers)) return true
         return super.keyPressed(keyCode, scanCode, modifiers)
-    }
-
-    override fun keyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
-        if (layer.onKeyReleased(keyCode, scanCode, modifiers)) return true
-        return super.keyReleased(keyCode, scanCode, modifiers)
     }
 
     override fun charTyped(codePoint: Char, modifiers: Int): Boolean {

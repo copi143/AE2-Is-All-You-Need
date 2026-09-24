@@ -24,7 +24,6 @@ import minecraftx.compose.text.McTextEngines
 @Composable
 fun McTheme(
     colorScheme: McColorScheme? = null,
-    typography: McTypography = McTypography.Default,
     shapes: McShapes = McShapes.Default,
     content: @Composable () -> Unit,
 ) {
@@ -32,24 +31,18 @@ fun McTheme(
     val engine = McTextEngines.byId(McThemeSettings.textEngineId)
     CompositionLocalProvider(
         LocalColorScheme provides resolved,
-        LocalTypography provides typography,
         LocalShapes provides shapes,
         LocalMcTextEngine provides engine,
         content = content,
     )
 }
 
-/** Convenience accessor: `McTheme.colors` / `McTheme.typography` / `McTheme.shapes`. */
+/** Convenience accessor: `McTheme.colors` / `McTheme.shapes`. */
 object McTheme {
     val colors: McColorScheme
         @Composable
         @ReadOnlyComposable
         get() = LocalColorScheme.current
-
-    val typography: McTypography
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalTypography.current
 
     val shapes: McShapes
         @Composable
@@ -59,5 +52,4 @@ object McTheme {
 
 internal val LocalColorScheme: ProvidableCompositionLocal<McColorScheme> =
     compositionLocalOf { McThemeSettings.colorScheme }
-internal val LocalTypography: ProvidableCompositionLocal<McTypography> = compositionLocalOf { McTypography.Default }
 internal val LocalShapes: ProvidableCompositionLocal<McShapes> = compositionLocalOf { McShapes.Default }

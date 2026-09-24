@@ -61,7 +61,6 @@ import kotlin.math.roundToInt
  * @param value the controlled editing state (text + selection + composition).
  * @param onValueChange called with every edit; update [value] back from here.
  * @param imeEnabled whether this field accepts IME text; false switches to pure ASCII input.
- * @param singleLine when true Enter fires [onImeActionPerformed], otherwise it inserts a newline.
  * @param placeholder muted hint drawn while the field is empty.
  */
 @Composable
@@ -70,7 +69,6 @@ fun McTextField(
     onValueChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier,
     imeEnabled: Boolean = true,
-    singleLine: Boolean = true,
     width: Int = 200,
     height: Int = 20,
     placeholder: String? = null,
@@ -100,12 +98,12 @@ fun McTextField(
     }
 
     // (Re-)register as the active input session when focus arrives; release it on blur.
-    LaunchedEffect(isActive, imeEnabled, singleLine) {
+    LaunchedEffect(isActive, imeEnabled) {
         if (isActive) {
             service.registerSession(
                 id = id,
                 imeEnabled = imeEnabled,
-                singleLine = singleLine,
+                singleLine = true,
                 valueProvider = { internal },
                 onEditCommand = { commands ->
                     val newValue = processor.apply(commands)

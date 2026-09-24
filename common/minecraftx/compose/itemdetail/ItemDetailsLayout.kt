@@ -1,9 +1,8 @@
 package minecraftx.compose.itemdetail
 
 /**
- * Shared geometry for the item-details screen. The panel is a fixed rectangle
- * so that the EMI, JEI and vanilla fallback renderers all align their header
- * and content areas.
+ * Shared geometry for the item-details screen: the panel is a fixed rectangle with a stable
+ * header / content split.
  */
 object ItemDetailsLayout {
     const val WIDTH = 340

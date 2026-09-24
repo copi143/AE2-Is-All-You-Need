@@ -41,9 +41,6 @@ abstract class ComposeContainerScreen<T : AbstractContainerMenu>(
     @Composable
     protected fun currentUiScale(): Float = layer.uiScale
 
-    /** 供组合外部(如事件回调)读取的缩放系数。 */
-    protected fun uiScaleFactor(): Float = layer.uiScale
-
     override fun resize(minecraft: Minecraft, width: Int, height: Int) {
         super.resize(minecraft, width, height)
         // 强制按新窗口尺寸重新测量,布局跟随 GUI 缩放/窗口变化(根约束每帧也刷新)。
@@ -79,11 +76,6 @@ abstract class ComposeContainerScreen<T : AbstractContainerMenu>(
     override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
         if (layer.onKeyPressed(keyCode, scanCode, modifiers)) return true
         return super.keyPressed(keyCode, scanCode, modifiers)
-    }
-
-    override fun keyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
-        if (layer.onKeyReleased(keyCode, scanCode, modifiers)) return true
-        return super.keyReleased(keyCode, scanCode, modifiers)
     }
 
     override fun charTyped(codePoint: Char, modifiers: Int): Boolean {
