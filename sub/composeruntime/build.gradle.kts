@@ -14,16 +14,28 @@ val composeRuntime = configurations.create("composeRuntime") {
 }
 
 dependencies {
+    compileOnly(libs.compose.ui.graphics)
+
     composeRuntime(libs.compose.ui)
     composeRuntime(libs.compose.foundation)
     composeRuntime(libs.compose.foundation.layout)
     composeRuntime(libs.compose.animation)
     composeRuntime(libs.compose.material)
-    composeRuntime(project(":graphicsrepl"))
 }
 
-val unpackComposeClasses = tasks.register<Sync>("unpackComposeClasses") {
-    dependsOn(":graphicsrepl:jar", composeRuntime)
+val officialUiGraphicsJar = configurations.detachedConfiguration(
+    dependencies.create(libs.compose.ui.graphics.get())
+)
+officialUiGraphicsJar.isTransitive = false
+
+val officialUiDesktopJar = configurations.detachedConfiguration(
+    dependencies.create(libs.compose.ui.asProvider().get())
+)
+officialUiDesktopJar.isTransitive = false
+
+tasks.named<Jar>("jar") {
+    description =
+        "Produces a Compose desktop runtime jar without skiko, with the skiko-dependent ui-graphics classes replaced by the local implementations."
     from(composeRuntime.map { file ->
         if (file.isDirectory) {
             file
@@ -33,13 +45,8 @@ val unpackComposeClasses = tasks.register<Sync>("unpackComposeClasses") {
             zipTree(file)
         }
     })
-    into(layout.buildDirectory.dir("composeClasses"))
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-tasks.named<Jar>("jar") {
-    dependsOn(unpackComposeClasses)
-    from(layout.buildDirectory.dir("composeClasses"))
+    from(zipTree(officialUiGraphicsJar.singleFile))
+    from(zipTree(officialUiDesktopJar.singleFile)) { include("androidx/compose/ui/graphics/**") }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes(mapOf("Automatic-Module-Name" to "org.jetbrains.compose.desktop.runtime"))
