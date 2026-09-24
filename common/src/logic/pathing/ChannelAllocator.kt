@@ -1,4 +1,4 @@
-package allyouneed.me.pathing
+package allyouneed.logic.pathing
 
 import allyouneed.api.AsyncChannelNodeHolder
 import allyouneed.mixin.ae2.GridConnectionAccessor

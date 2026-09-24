@@ -1,4 +1,4 @@
-package allyouneed.me.pathing
+package allyouneed.logic.pathing
 
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

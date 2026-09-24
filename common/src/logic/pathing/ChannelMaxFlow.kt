@@ -1,4 +1,4 @@
-package allyouneed.me.pathing
+package allyouneed.logic.pathing
 
 import io.github.copi143.valueschema.ValueSchema
 
