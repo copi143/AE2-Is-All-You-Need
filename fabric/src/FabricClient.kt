@@ -52,6 +52,7 @@ fun initClient() {
         Minecraft.getInstance().isWindowActive
     }
     ItemDetailsKeyBind.init()
+    allyouneed.client.compose.platform.ComposePrewarm.startAsync()
     ColorProviderRegistry.ITEM.register(
         { stack, tintIndex -> StorageCellItem.getColor(stack, tintIndex) },
         *AllStorageCells.entries.map { it.define.asItem() }.toTypedArray(),

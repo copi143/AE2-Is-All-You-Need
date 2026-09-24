@@ -1,6 +1,8 @@
 package minecraftx.compose.itemdetail.focus
 
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.phys.BlockHitResult
@@ -27,14 +29,14 @@ object ItemDetailsFocus {
     }
 
     private fun containerSlot(): ItemStack? {
-        val screen = Minecraft.getInstance().screen as? net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>
+        val screen = Minecraft.getInstance().screen as? AbstractContainerScreen<*>
             ?: return null
         val slot = runCatching {
-            val field = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen::class.java
+            val field = AbstractContainerScreen::class.java
                 .getDeclaredField("hoveredSlot")
             field.isAccessible = true
             field.get(screen)
-        }.getOrNull() as? net.minecraft.world.inventory.Slot ?: return null
+        }.getOrNull() as? Slot ?: return null
         val stack = slot.item
         return if (stack.isEmpty) null else stack
     }

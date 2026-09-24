@@ -1,6 +1,7 @@
 package allyouneed.client
 
 import allyouneed.Platform
+import allyouneed.client.compose.platform.ComposePrewarm
 import allyouneed.client.guide.IayGuide
 import allyouneed.multiblock.async.AsyncBlockKind
 import allyouneed.multiblock.async.AsyncBlockRegistry
@@ -116,6 +117,7 @@ object ForgeClientEvents {
                     AsyncCraftingStatusScreen(menu, inv, title, style)
                 }
             }
+            ComposePrewarm.startAsync()
         }
     }
 }

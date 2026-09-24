@@ -10,12 +10,19 @@ import minecraftx.compose.theme.McThemeSettings
 object McTextEngines {
     val vanilla = VanillaTextEngine("vanilla")
     val spaced = VanillaTextEngine("spaced", letterSpacing = 2)
-    val msdf: McTextEngine by lazy { MsdfTextEngine() }
+    private var msdfInstance: MsdfTextEngine? = null
+    val msdf: McTextEngine
+        get() = msdfInstance ?: MsdfTextEngine().also { msdfInstance = it }
 
     val all: List<McTextEngine>
-        get() = listOf(vanilla, spaced, msdf)
+        get() = listOfNotNull(vanilla, spaced, msdfInstance)
 
-    fun byId(id: String): McTextEngine = all.firstOrNull { it.id == id } ?: vanilla
+    fun byId(id: String): McTextEngine = when (id) {
+        vanilla.id -> vanilla
+        spaced.id -> spaced
+        "msdf" -> msdf
+        else -> vanilla
+    }
 }
 
 /**
