@@ -90,10 +90,11 @@ JMH（`./gradlew :valueschema:jmh`，n=100,000，Quote = Long+Int+Long）：
 
 ## 执行顺序
 
-1. `me/pathing` 手写 SoA → 生成 SoA（纯重构，验证表达力缺口）
-2. `NetworkLogEntry` 列存化（真实批量收益）
-3. AE2 `PathingCalculation` 整体 SoA 重写（与现有 mixin 合并）
-4. AE2 `KeyCounter` int-id 化（需兼容策略设计）
-5. EMI bake 后 CSR 化（离线、只读，风险可控）
+1. ~~`me/pathing` 手写 SoA → 生成 SoA~~（完成）
+2. ~~`NetworkLogEntry` 列存化~~（完成，`NetworkLogRow` 含 enum 字段）
+3. ~~AE2 `PathingCalculation` 整体 SoA 重写~~（已由既有 mixin 整体替换，失效）
+4. AE2 `TickManagerService`：`PriorityQueue<TickTracker>` → `me/tick/IndexedHeap`（mixin 持有堆下标，remove/重定位 O(n)→O(log n)，排序不变；完成，堆本体 262 项测试中 6 项覆盖）
+5. AE2 `KeyCounter` int-id 化（需兼容策略设计；注意：KeyInterner 单例化前提尚未存在，fuzzy AVL 顺序需精确复刻）
+6. ~~EMI bake 后 CSR 化~~（完成：`EmiRecipes$Manager` 的 byInput/byOutput 在构造 RETURN 注入点拍平为 `util/CsrIndex`（offsets[]+recipeIds[]），stack→intId 保留原 ComparisonHashStrategy 映射，原 map 字段置空释放；查询返回不可变随机访问视图，顺序语义不变；`byWorkstation` public 字段未动）
 
 参考源码：AE2 15.4.10 / EMI 1.1.24 sources 解包于 `.tmp/ae2src`、`.tmp/emisrc`。
