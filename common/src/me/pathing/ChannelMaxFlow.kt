@@ -1,12 +1,18 @@
 package allyouneed.me.pathing
 
+import io.github.copi143.valueschema.ValueSchema
+
+@ValueSchema
+data class FlowArc(
+    val to: Int,
+    val cap: Int,
+    val rev: Int,
+    val next: Int,
+)
+
 class ChannelMaxFlow(vertexCount: Int, edgeHint: Int = vertexCount * 4) {
     val vertexCount: Int = vertexCount
-    private var edgeCount = 0
-    private var to = IntArray(max(8, edgeHint * 2))
-    private var cap = IntArray(to.size)
-    private var rev = IntArray(to.size)
-    private var next = IntArray(to.size)
+    private val arcs = FlowArcColumns(max(8, edgeHint * 2))
     private val head = IntArray(vertexCount) { -1 }
     private val seen = IntArray(vertexCount)
     private val queue = IntArray(vertexCount)
@@ -14,23 +20,23 @@ class ChannelMaxFlow(vertexCount: Int, edgeHint: Int = vertexCount * 4) {
     private var stamp = 1
 
     fun addEdge(u: Int, v: Int, capacity: Int): Int {
-        val e = edgeCount
+        val e = arcs.size
         addArc(u, v, capacity, e + 1)
         addArc(v, u, 0, e)
         return e
     }
 
-    fun flow(edge: Int): Int = cap[rev[edge]]
+    fun flow(edge: Int): Int = arcs.caps[arcs.revs[edge]]
 
-    fun residual(edge: Int): Int = cap[edge]
+    fun residual(edge: Int): Int = arcs.caps[edge]
 
     fun setResidual(edge: Int, value: Int) {
-        cap[edge] = value
+        arcs.caps[edge] = value
     }
 
     fun addFlow(edge: Int, amount: Int) {
-        cap[edge] -= amount
-        cap[rev[edge]] += amount
+        arcs.caps[edge] -= amount
+        arcs.caps[arcs.revs[edge]] += amount
     }
 
     fun maxFlow(s: Int, t: Int): Int {
@@ -56,16 +62,16 @@ class ChannelMaxFlow(vertexCount: Int, edgeHint: Int = vertexCount * 4) {
         var v = t
         while (v != s) {
             val e = parentEdge[v]
-            val r = cap[e]
+            val r = arcs.caps[e]
             if (r < bneck) bneck = r
-            v = to[rev[e]]
+            v = arcs.tos[arcs.revs[e]]
         }
         v = t
         while (v != s) {
             val e = parentEdge[v]
-            cap[e] -= bneck
-            cap[rev[e]] += bneck
-            v = to[rev[e]]
+            arcs.caps[e] -= bneck
+            arcs.caps[arcs.revs[e]] += bneck
+            v = arcs.tos[arcs.revs[e]]
         }
         return bneck
     }
@@ -79,14 +85,14 @@ class ChannelMaxFlow(vertexCount: Int, edgeHint: Int = vertexCount * 4) {
             val u = queue[qh++]
             var e = head[u]
             while (e >= 0) {
-                val v = to[e]
-                if (cap[e] > 0 && seen[v] != stamp) {
+                val v = arcs.tos[e]
+                if (arcs.caps[e] > 0 && seen[v] != stamp) {
                     seen[v] = stamp
                     parentEdge[v] = e
                     if (v == t) return true
                     queue[qt++] = v
                 }
-                e = next[e]
+                e = arcs.nexts[e]
             }
         }
         return false
@@ -101,21 +107,9 @@ class ChannelMaxFlow(vertexCount: Int, edgeHint: Int = vertexCount * 4) {
     }
 
     private fun addArc(u: Int, v: Int, capacity: Int, revEdge: Int) {
-        if (edgeCount == to.size) grow()
-        val e = edgeCount++
-        to[e] = v
-        cap[e] = capacity
-        rev[e] = revEdge
-        next[e] = head[u]
+        val e = arcs.size
+        arcs.add(to = v, cap = capacity, rev = revEdge, next = head[u])
         head[u] = e
-    }
-
-    private fun grow() {
-        val n = to.size * 2
-        to = to.copyOf(n)
-        cap = cap.copyOf(n)
-        rev = rev.copyOf(n)
-        next = next.copyOf(n)
     }
 
     companion object {

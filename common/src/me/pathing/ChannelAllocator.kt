@@ -44,41 +44,42 @@ object ChannelAllocator {
             }
         }
 
-        val maxChannels = IntArray(n)
-        val flags = IntArray(n)
-        val isController = BooleanArray(n)
-        val demand = BooleanArray(n)
-        val swallow = BooleanArray(n)
-        val group = IntArray(n) { -1 }
+        val nodeCols = ChannelNodeColumns(n)
         for (i in 0 until n) {
             val node = nodes[i]
-            maxChannels[i] = node.maxChannels
-            flags[i] = packFlags(node)
-            isController[i] = node.owner is ControllerBlockEntity
-            demand[i] = node.hasFlag(GridFlags.REQUIRE_CHANNEL)
+            var swallow = false
             val owner = node.owner
             if (owner is IAsyncChannelSink && owner.isFormed() && node is AsyncChannelNodeHolder) {
-                swallow[i] = maxChannels[i] != Int.MAX_VALUE
+                swallow = node.maxChannels != Int.MAX_VALUE
             }
+            nodeCols.add(
+                maxChannel = node.maxChannels,
+                flag = packFlags(node),
+                controller = node.owner is ControllerBlockEntity,
+                demand = node.hasFlag(GridFlags.REQUIRE_CHANNEL),
+                swallow = swallow,
+                group = -1,
+            )
         }
-        denyUnformedPlanes(nodes, demand)
-        assignGroups(nodes, demand, group)
+        denyUnformedPlanes(nodes, nodeCols.demands)
+        assignGroups(nodes, nodeCols.demands, nodeCols.groups)
 
-        val connA = IntArray(conns.size)
-        val connB = IntArray(conns.size)
+        val edgeCols = ChannelEdgeColumns(conns.size)
         for (c in conns.indices) {
-            connA[c] = index.getValue(conns[c].a())
-            connB[c] = index.getValue(conns[c].b())
+            edgeCols.add(
+                endA = index.getValue(conns[c].a()),
+                endB = index.getValue(conns[c].b()),
+            )
         }
 
-        val graph = ChannelGraph(n, maxChannels, flags, isController, demand, swallow, group, connA, connB)
+        val graph = ChannelGraph(nodeCols, edgeCols)
         val result = ChannelTreeAllocator.allocate(graph)
 
         for (i in 0 until n) {
             val node = nodes[i]
             (node as GridNodeAccessor).`allyouneed$setUsedChannels`(result.nodeUsed[i])
-            if (swallow[i] && result.assigned[i] && node is AsyncChannelNodeHolder) {
-                node.asyncSwallowedChannels = maxChannels[i]
+            if (nodeCols.swallows[i] && result.assigned[i] && node is AsyncChannelNodeHolder) {
+                node.asyncSwallowedChannels = nodeCols.maxChannels[i]
             }
         }
         for (c in conns.indices) {

@@ -1,94 +1,102 @@
 package allyouneed.me.pathing
 
+import io.github.copi143.valueschema.Default
+import io.github.copi143.valueschema.ValueSchema
 import java.util.ArrayDeque
+
+@ValueSchema
+data class TreeNodeState(
+    val used: Int,
+    val assigned: Boolean,
+    val ride: Boolean,
+    @Default("-1") val parentNode: Int,
+    @Default("-1") val parentConn: Int,
+    val allowsCompressed: Boolean,
+    val bottleneck: Int,
+    val visited: Boolean,
+    val ridePending: Boolean,
+)
+
+@ValueSchema
+data class ConnFlow(
+    val ab: Int,
+    val ba: Int,
+)
 
 object ChannelTreeAllocator {
     fun allocate(g: ChannelGraph): ChannelResult {
         val n = g.nodeCount
-        val nodeUsed = IntArray(n)
-        val connAB = IntArray(g.connCount)
-        val connBA = IntArray(g.connCount)
-        val assigned = BooleanArray(n)
-        val ride = BooleanArray(n)
-        val parentNode = IntArray(n) { -1 }
-        val parentConn = IntArray(n) { -1 }
-        val allowsCompressed = BooleanArray(n)
-        val bottleneck = IntArray(n)
-        val visited = BooleanArray(n)
-        val ridePending = BooleanArray(n)
+        val st = TreeNodeStateColumns(n)
+        st.resize(n)
+        val connFlow = ConnFlowColumns(g.connCount)
+        connFlow.resize(g.connCount)
         val members = groupMembers(g)
         var extraEdges = false
         var paid = 0
 
         val queues = Array(3) { ArrayDeque<Int>() }
         for (i in 0 until n) {
-            if (g.isController[i]) visited[i] = true
+            if (g.nodes.controllers[i]) st.visiteds[i] = true
         }
         for (i in 0 until n) {
-            if (!g.isController[i]) continue
+            if (!g.nodes.controllers[i]) continue
             for (c in g.nodeAdj[i]) {
                 val peer = g.other(c, i)
-                if (g.isController[peer] || visited[peer]) continue
-                discover(g, peer, i, c, 0, visited, parentNode, parentConn, allowsCompressed, queues)
+                if (g.nodes.controllers[peer] || st.visiteds[peer]) continue
+                discover(g, peer, i, c, 0, st, queues)
             }
         }
         for (q in 0..2) {
             val queue = queues[q]
             while (queue.isNotEmpty()) {
                 val u = queue.removeFirst()
-                if (g.demand[u] && !ridePending[u]) {
-                    if (tryUse(
-                            g, u, bottleneck, allowsCompressed, assigned,
-                            nodeUsed, connAB, connBA, parentNode, parentConn,
-                        )
-                    ) {
+                if (g.nodes.demands[u] && !st.ridePendings[u]) {
+                    if (tryUse(g, u, st, connFlow)) {
                         paid++
-                        if (g.swallow[u]) bottleneck[u] = g.maxChannels[u]
-                        val gid = g.group[u]
+                        if (g.nodes.swallows[u]) st.bottlenecks[u] = g.nodes.maxChannels[u]
+                        val gid = g.nodes.groups[u]
                         if (gid >= 0) {
                             for (m in members[gid]) {
-                                if (m != u) ridePending[m] = true
+                                if (m != u) st.ridePendings[m] = true
                             }
                         }
                     }
                 }
                 for (c in g.nodeAdj[u]) {
                     val peer = g.other(c, u)
-                    if (visited[peer]) {
-                        if (c != parentConn[u]) {
-                            val parent = parentNode[u]
-                            if (!(g.isController[peer] && parent >= 0 && g.isController[parent])) {
+                    if (st.visiteds[peer]) {
+                        if (c != st.parentConns[u]) {
+                            val parent = st.parentNodes[u]
+                            if (!(g.nodes.controllers[peer] && parent >= 0 && g.nodes.controllers[parent])) {
                                 extraEdges = true
                             }
                         }
                         continue
                     }
-                    discover(g, peer, u, c, q, visited, parentNode, parentConn, allowsCompressed, queues)
+                    discover(g, peer, u, c, q, st, queues)
                 }
             }
         }
 
         val demandGroups = countDemand(g)
         var usedPhase2 = false
-        if (paid < demandGroups && extraEdges && canReachUnpaid(g, nodeUsed, assigned, members)) {
-            val extra = augment(
-                g, nodeUsed, connAB, connBA, assigned, parentNode, parentConn, members, paid,
-            )
+        if (paid < demandGroups && extraEdges && canReachUnpaid(g, st, members)) {
+            val extra = augment(g, st, connFlow, members, paid)
             if (extra > 0) {
                 paid += extra
                 usedPhase2 = true
             }
         }
 
-        val connUsed = IntArray(g.connCount) { connAB[it] + connBA[it] }
+        val connUsed = IntArray(g.connCount) { connFlow.abs[it] + connFlow.bas[it] }
         var byBlocks = 0
-        for (v in nodeUsed) byBlocks += v
+        for (v in st.useds) byBlocks += v
         for (v in connUsed) byBlocks += v
 
         for (gid in members.indices) {
             var payer = -1
             for (m in members[gid]) {
-                if (assigned[m]) {
+                if (st.assigneds[m]) {
                     payer = m
                     break
                 }
@@ -96,12 +104,12 @@ object ChannelTreeAllocator {
             if (payer < 0) continue
             for (m in members[gid]) {
                 if (m == payer) continue
-                ride[m] = true
-                nodeUsed[m]++
+                st.rides[m] = true
+                st.useds[m]++
             }
         }
 
-        return ChannelResult(nodeUsed, connUsed, assigned, ride, paid, byBlocks, usedPhase2)
+        return ChannelResult(st.useds, connUsed, st.assigneds, st.rides, paid, byBlocks, usedPhase2)
     }
 
     private fun discover(
@@ -110,17 +118,14 @@ object ChannelTreeAllocator {
         parent: Int,
         conn: Int,
         queueIndex: Int,
-        visited: BooleanArray,
-        parentNode: IntArray,
-        parentConn: IntArray,
-        allowsCompressed: BooleanArray,
+        st: TreeNodeStateColumns,
         queues: Array<ArrayDeque<Int>>,
     ) {
-        visited[node] = true
-        parentNode[node] = parent
-        parentConn[node] = conn
+        st.visiteds[node] = true
+        st.parentNodes[node] = parent
+        st.parentConns[node] = conn
         val selfCc = !g.has(node, ChannelGraph.NO_COMPRESSED)
-        allowsCompressed[node] = if (g.isController[parent]) selfCc else allowsCompressed[parent] && selfCc
+        st.allowsCompresseds[node] = if (g.nodes.controllers[parent]) selfCc else st.allowsCompresseds[parent] && selfCc
         val idx = max(nodeQueue(g, node), queueIndex)
         queues[idx].addLast(node)
     }
@@ -128,61 +133,48 @@ object ChannelTreeAllocator {
     private fun tryUse(
         g: ChannelGraph,
         start: Int,
-        bottleneck: IntArray,
-        allowsCompressed: BooleanArray,
-        assigned: BooleanArray,
-        nodeUsed: IntArray,
-        connAB: IntArray,
-        connBA: IntArray,
-        parentNode: IntArray,
-        parentConn: IntArray,
+        st: TreeNodeStateColumns,
+        connFlow: ConnFlowColumns,
     ): Boolean {
-        if (g.has(start, ChannelGraph.COMPRESSED) && !allowsCompressed[start]) return false
+        if (g.has(start, ChannelGraph.COMPRESSED) && !st.allowsCompresseds[start]) return false
         var pi = start
-        while (pi >= 0 && !g.isController[pi]) {
-            val cap = g.maxChannels[pi]
-            if (cap == 0 || bottleneck[pi] >= cap) return false
-            pi = parentNode[pi]
+        while (pi >= 0 && !g.nodes.controllers[pi]) {
+            val cap = g.nodes.maxChannels[pi]
+            if (cap == 0 || st.bottlenecks[pi] >= cap) return false
+            pi = st.parentNodes[pi]
         }
         pi = start
-        while (pi >= 0 && !g.isController[pi]) {
-            bottleneck[pi]++
-            pi = parentNode[pi]
+        while (pi >= 0 && !g.nodes.controllers[pi]) {
+            st.bottlenecks[pi]++
+            pi = st.parentNodes[pi]
         }
-        assigned[start] = true
-        addPath(g, start, nodeUsed, connAB, connBA, parentNode, parentConn)
+        st.assigneds[start] = true
+        addPath(g, start, st, connFlow)
         return true
     }
 
     private fun addPath(
         g: ChannelGraph,
         start: Int,
-        nodeUsed: IntArray,
-        connAB: IntArray,
-        connBA: IntArray,
-        parentNode: IntArray,
-        parentConn: IntArray,
+        st: TreeNodeStateColumns,
+        connFlow: ConnFlowColumns,
     ) {
         var child = start
         while (true) {
-            nodeUsed[child]++
-            val c = parentConn[child]
+            st.useds[child]++
+            val c = st.parentConns[child]
             if (c < 0) break
-            val p = parentNode[child]
-            if (g.connA[c] == p && g.connB[c] == child) connAB[c]++ else connBA[c]++
-            if (g.isController[p]) break
+            val p = st.parentNodes[child]
+            if (g.edges.endAs[c] == p && g.edges.endBs[c] == child) connFlow.abs[c]++ else connFlow.bas[c]++
+            if (g.nodes.controllers[p]) break
             child = p
         }
     }
 
     private fun augment(
         g: ChannelGraph,
-        nodeUsed: IntArray,
-        connAB: IntArray,
-        connBA: IntArray,
-        assigned: BooleanArray,
-        parentNode: IntArray,
-        parentConn: IntArray,
+        st: TreeNodeStateColumns,
+        connFlow: ConnFlowColumns,
         members: Array<IntArray>,
         paid: Int,
     ): Int {
@@ -190,19 +182,19 @@ object ChannelTreeAllocator {
         val unpaidGroups = ArrayList<Int>()
         val groupUnpaid = BooleanArray(members.size) { true }
         for (i in 0 until n) {
-            if (assigned[i]) {
-                val gid = g.group[i]
+            if (st.assigneds[i]) {
+                val gid = g.nodes.groups[i]
                 if (gid >= 0) groupUnpaid[gid] = false
             }
         }
         for (gid in groupUnpaid.indices) {
-            if (groupUnpaid[gid] && members[gid].isNotEmpty() && members[gid].any { g.demand[it] }) {
+            if (groupUnpaid[gid] && members[gid].isNotEmpty() && members[gid].any { g.nodes.demands[it] }) {
                 unpaidGroups.add(gid)
             }
         }
         val solos = ArrayList<Int>()
         for (i in 0 until n) {
-            if (g.demand[i] && !assigned[i] && g.group[i] < 0) solos.add(i)
+            if (g.nodes.demands[i] && !st.assigneds[i] && g.nodes.groups[i] < 0) solos.add(i)
         }
         if (solos.isEmpty() && unpaidGroups.isEmpty()) return 0
 
@@ -218,27 +210,27 @@ object ChannelTreeAllocator {
         val connEdgeAB = IntArray(g.connCount)
         val connEdgeBA = IntArray(g.connCount)
         for (i in 0 until n) {
-            if (g.isController[i]) {
+            if (g.nodes.controllers[i]) {
                 sEdge[i] = flow.addEdge(s, vout[i], ChannelMaxFlow.INF)
             } else {
-                val cap = capOf(g.maxChannels[i])
+                val cap = capOf(g.nodes.maxChannels[i])
                 vertEdge[i] = flow.addEdge(vin[i], vout[i], cap)
             }
         }
         for (c in 0 until g.connCount) {
-            val a = g.connA[c]
-            val b = g.connB[c]
+            val a = g.edges.endAs[c]
+            val b = g.edges.endBs[c]
             connEdgeAB[c] = flow.addEdge(vout[a], vin[b], ChannelMaxFlow.INF)
             connEdgeBA[c] = flow.addEdge(vout[b], vin[a], ChannelMaxFlow.INF)
         }
 
         for (i in 0 until n) {
-            if (!assigned[i]) continue
-            applyAssigned(g, i, flow, vin, vout, vertEdge, sEdge, connEdgeAB, connEdgeBA, parentNode, parentConn)
+            if (!st.assigneds[i]) continue
+            applyAssigned(g, i, flow, vin, vout, vertEdge, sEdge, connEdgeAB, connEdgeBA, st)
             flow.addFlow(flow.addEdge(vout[i], t, 1), 1)
         }
         for (i in 0 until n) {
-            if (assigned[i] && g.swallow[i] && vertEdge[i] >= 0) {
+            if (st.assigneds[i] && g.nodes.swallows[i] && vertEdge[i] >= 0) {
                 flow.setResidual(vertEdge[i], 0)
             }
         }
@@ -256,7 +248,7 @@ object ChannelTreeAllocator {
         for ((idx, gid) in unpaidGroups.withIndex()) {
             val gv = groupBase + idx
             for (m in members[gid]) {
-                if (g.demand[m]) flow.addEdge(vout[m], gv, ChannelMaxFlow.INF)
+                if (g.nodes.demands[m]) flow.addEdge(vout[m], gv, ChannelMaxFlow.INF)
             }
             groupTEdge[idx] = flow.addEdge(gv, t, 1)
             val compressed = members[gid].any { g.has(it, ChannelGraph.COMPRESSED) }
@@ -265,7 +257,7 @@ object ChannelTreeAllocator {
 
         val noComp = ArrayList<Int>()
         for (i in 0 until n) {
-            if (!g.isController[i] && g.has(i, ChannelGraph.NO_COMPRESSED) && vertEdge[i] >= 0) {
+            if (!g.nodes.controllers[i] && g.has(i, ChannelGraph.NO_COMPRESSED) && vertEdge[i] >= 0) {
                 noComp.add(i)
             }
         }
@@ -289,29 +281,29 @@ object ChannelTreeAllocator {
         flow.maxFlow(s, t)
 
         for (i in 0 until n) {
-            if (vertEdge[i] >= 0) nodeUsed[i] = flow.flow(vertEdge[i])
+            if (vertEdge[i] >= 0) st.useds[i] = flow.flow(vertEdge[i])
         }
         for (c in 0 until g.connCount) {
-            connAB[c] = flow.flow(connEdgeAB[c])
-            connBA[c] = flow.flow(connEdgeBA[c])
+            connFlow.abs[c] = flow.flow(connEdgeAB[c])
+            connFlow.bas[c] = flow.flow(connEdgeBA[c])
         }
         var extra = 0
         for (i in solos) {
-            if (flow.flow(soloEdge[i]) > 0 && !assigned[i]) {
-                assigned[i] = true
+            if (flow.flow(soloEdge[i]) > 0 && !st.assigneds[i]) {
+                st.assigneds[i] = true
                 extra++
             }
         }
         for ((idx, gid) in unpaidGroups.withIndex()) {
             if (flow.flow(groupTEdge[idx]) > 0) {
-                var payer = members[gid].firstOrNull { g.demand[it] } ?: continue
+                var payer = members[gid].firstOrNull { g.nodes.demands[it] } ?: continue
                 for (m in members[gid]) {
-                    if (g.demand[m] && nodeUsed[m] > 0) {
+                    if (g.nodes.demands[m] && st.useds[m] > 0) {
                         payer = m
                         break
                     }
                 }
-                assigned[payer] = true
+                st.assigneds[payer] = true
                 extra++
             }
         }
@@ -328,18 +320,17 @@ object ChannelTreeAllocator {
         sEdge: IntArray,
         connEdgeAB: IntArray,
         connEdgeBA: IntArray,
-        parentNode: IntArray,
-        parentConn: IntArray,
+        st: TreeNodeStateColumns,
     ) {
         var child = start
         if (vertEdge[child] >= 0) flow.addFlow(vertEdge[child], 1)
         while (true) {
-            val c = parentConn[child]
+            val c = st.parentConns[child]
             if (c < 0) break
-            val p = parentNode[child]
-            if (g.connA[c] == p && g.connB[c] == child) flow.addFlow(connEdgeAB[c], 1)
+            val p = st.parentNodes[child]
+            if (g.edges.endAs[c] == p && g.edges.endBs[c] == child) flow.addFlow(connEdgeAB[c], 1)
             else flow.addFlow(connEdgeBA[c], 1)
-            if (g.isController[p]) {
+            if (g.nodes.controllers[p]) {
                 if (sEdge[p] >= 0) flow.addFlow(sEdge[p], 1)
                 break
             }
@@ -350,21 +341,20 @@ object ChannelTreeAllocator {
 
     private fun canReachUnpaid(
         g: ChannelGraph,
-        nodeUsed: IntArray,
-        assigned: BooleanArray,
+        st: TreeNodeStateColumns,
         members: Array<IntArray>,
     ): Boolean {
         val n = g.nodeCount
         val groupPaid = BooleanArray(members.size)
         for (i in 0 until n) {
-            if (!assigned[i]) continue
-            val gid = g.group[i]
+            if (!st.assigneds[i]) continue
+            val gid = g.nodes.groups[i]
             if (gid >= 0) groupPaid[gid] = true
         }
         val seen = BooleanArray(n)
         val q = ArrayDeque<Int>()
         for (i in 0 until n) {
-            if (!g.isController[i]) continue
+            if (!g.nodes.controllers[i]) continue
             seen[i] = true
             q.addLast(i)
         }
@@ -373,11 +363,11 @@ object ChannelTreeAllocator {
             for (c in g.nodeAdj[u]) {
                 val v = g.other(c, u)
                 if (seen[v]) continue
-                if (g.demand[v] && !assigned[v]) {
-                    val gid = g.group[v]
+                if (g.nodes.demands[v] && !st.assigneds[v]) {
+                    val gid = g.nodes.groups[v]
                     if (gid < 0 || !groupPaid[gid]) return true
                 }
-                if (g.isController[v] || remaining(g, v, nodeUsed, assigned) > 0) {
+                if (g.nodes.controllers[v] || remaining(g, v, st) > 0) {
                     seen[v] = true
                     q.addLast(v)
                 }
@@ -386,21 +376,21 @@ object ChannelTreeAllocator {
         return false
     }
 
-    private fun remaining(g: ChannelGraph, node: Int, nodeUsed: IntArray, assigned: BooleanArray): Int {
-        if (g.swallow[node] && assigned[node]) return 0
-        val cap = capOf(g.maxChannels[node])
-        val used = nodeUsed[node]
+    private fun remaining(g: ChannelGraph, node: Int, st: TreeNodeStateColumns): Int {
+        if (g.nodes.swallows[node] && st.assigneds[node]) return 0
+        val cap = capOf(g.nodes.maxChannels[node])
+        val used = st.useds[node]
         return if (used >= cap) 0 else cap - used
     }
 
     private fun countDemand(g: ChannelGraph): Int {
         var maxG = -1
-        for (v in g.group) if (v > maxG) maxG = v
+        for (v in g.nodes.groups) if (v > maxG) maxG = v
         var d = 0
         val seen = if (maxG >= 0) BooleanArray(maxG + 1) else BooleanArray(0)
         for (i in 0 until g.nodeCount) {
-            if (!g.demand[i]) continue
-            val gid = g.group[i]
+            if (!g.nodes.demands[i]) continue
+            val gid = g.nodes.groups[i]
             if (gid >= 0) {
                 if (seen[gid]) continue
                 seen[gid] = true
@@ -412,14 +402,14 @@ object ChannelTreeAllocator {
 
     private fun groupMembers(g: ChannelGraph): Array<IntArray> {
         var maxG = -1
-        for (v in g.group) if (v > maxG) maxG = v
+        for (v in g.nodes.groups) if (v > maxG) maxG = v
         if (maxG < 0) return emptyArray()
         val deg = IntArray(maxG + 1)
-        for (v in g.group) if (v >= 0) deg[v]++
+        for (v in g.nodes.groups) if (v >= 0) deg[v]++
         val out = Array(maxG + 1) { IntArray(deg[it]) }
         deg.fill(0)
         for (i in 0 until g.nodeCount) {
-            val gid = g.group[i]
+            val gid = g.nodes.groups[i]
             if (gid >= 0) out[gid][deg[gid]++] = i
         }
         return out

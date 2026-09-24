@@ -3,6 +3,7 @@ plugins {
     id("multiloader-common")
     alias(libs.plugins.moddev)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
 
 legacyForge {
@@ -20,6 +21,8 @@ legacyForge {
 
 dependencies {
     compileOnly(libs.mixin)
+    compileOnlyApi(project(":valueschema"))
+    ksp(project(":valueschema"))
     api(libs.kotlinx.coroutines.core)
     api(project(":kaptor"))
     api(project(":averith"))
@@ -69,6 +72,8 @@ dependencies {
     }
     // fastutil 由 Minecraft 内嵌提供（不在测试 classpath），这里仅为测试暴露其类。
     testImplementation("it.unimi.dsi:fastutil:8.5.9")
+    // NetworkLogPage 等类型继承 AE2 的 PacketWritable，测试需要其类定义在 classpath 上。
+    testImplementation(libs.ae2.forge)
 
     testRuntimeOnly(project(":composeruntime"))
     testRuntimeOnly(project(":msdftext"))
@@ -101,6 +106,9 @@ configurations {
 
 sourceSets.main {
     kotlin.srcDirs("minecraftx", "ae2x")
+    // KSP 生成目录显式挂入：loader 模块经 commonKotlin 配置重编译 common 源码，
+    // 生成代码随之流入（artifacts 块在配置期求值，早于 KSP 插件自动注册 srcDir）。
+    kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/main/kotlin"))
     resources.srcDirs("res")
 }
 

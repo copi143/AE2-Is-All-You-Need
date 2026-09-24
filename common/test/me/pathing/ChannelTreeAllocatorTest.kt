@@ -353,8 +353,21 @@ class ChannelTreeAllocatorTest {
         swallow: BooleanArray = BooleanArray(n),
         group: IntArray = IntArray(n) { -1 },
     ): ChannelGraph {
-        val connA = IntArray(edges.size) { edges[it].first }
-        val connB = IntArray(edges.size) { edges[it].second }
-        return ChannelGraph(n, maxCh, flags, controllers, demand, swallow, group, connA, connB)
+        val nodeCols = ChannelNodeColumns(n)
+        for (i in 0 until n) {
+            nodeCols.add(
+                maxChannel = maxCh[i],
+                flag = flags[i],
+                controller = controllers[i],
+                demand = demand[i],
+                swallow = swallow[i],
+                group = group[i],
+            )
+        }
+        val edgeCols = ChannelEdgeColumns(edges.size)
+        for ((a, b) in edges) {
+            edgeCols.add(endA = a, endB = b)
+        }
+        return ChannelGraph(nodeCols, edgeCols)
     }
 }
