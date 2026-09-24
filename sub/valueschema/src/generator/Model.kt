@@ -75,28 +75,53 @@ sealed interface SchemaField {
     val name: String
 }
 
-/** A leaf field backed directly by a primitive column / bit-packed slot. */
-data class FieldModel(override val name: String, val typeName: String, val default: String? = null) : SchemaField {
+/** A leaf field backed directly by a primitive column / bit-packed slot. Enum fields store their ordinal in an Int column. */
+data class FieldModel(
+    override val name: String,
+    val typeName: String,
+    val default: String? = null,
+    val enumType: ClassName? = null,
+    val enumEntryCount: Int = 0,
+) : SchemaField {
+    val isEnum: Boolean get() = enumType != null
     val column: PrimitiveColumn
-        get() = PrimitiveColumn.ofKotlinName(typeName)
-            ?: throw IllegalArgumentException("Unsupported field type '$typeName' for field '$name'; only primitives are supported")
+        get() = if (isEnum) {
+            PrimitiveColumn.INT
+        } else {
+            PrimitiveColumn.ofKotlinName(typeName)
+                ?: throw IllegalArgumentException("Unsupported field type '$typeName' for field '$name'; only primitives are supported")
+        }
 }
+
+/** Bit width of an enum field stored as its ordinal. */
+fun enumBitWidth(entryCount: Int): Int = if (entryCount <= 1) 1 else 32 - (entryCount - 1).countLeadingZeroBits()
 
 /** A nested @ValueSchema value type; flattened into the parent storage like a Valhalla value class field. */
 data class NestedModel(override val name: String, val type: ClassName, val children: List<SchemaField>) : SchemaField
 
 /** A leaf of the flattened field tree: its access path from the root plus its primitive column. */
-data class LeafColumn(val path: List<String>, val column: PrimitiveColumn, val default: String? = null) {
+data class LeafColumn(
+    val path: List<String>,
+    val column: PrimitiveColumn,
+    val default: String? = null,
+    val enumType: ClassName? = null,
+    val enumEntryCount: Int = 0,
+) {
     /** Column/slot-local name, e.g. `price_amount` for path [price, amount]. */
     val flatName: String get() = path.joinToString("_")
 
     /** Access expression on a value instance, e.g. `value.price.amount`. */
     fun accessExpr(root: String): String = (listOf(root) + path).joinToString(".")
+
+    val isEnum: Boolean get() = enumType != null
+
+    /** Bit width in the packed layout; enums occupy only ceil(log2(entries)) bits. */
+    val bitWidth: Int get() = if (isEnum) enumBitWidth(enumEntryCount) else column.bitWidth
 }
 
 fun List<SchemaField>.flatten(prefix: List<String> = emptyList()): List<LeafColumn> = flatMap { f ->
     when (f) {
-        is FieldModel -> listOf(LeafColumn(prefix + f.name, f.column, f.default))
+        is FieldModel -> listOf(LeafColumn(prefix + f.name, f.column, f.default, f.enumType, f.enumEntryCount))
         is NestedModel -> f.children.flatten(prefix + f.name)
     }
 }
@@ -106,7 +131,7 @@ fun packedLayout(leaves: List<LeafColumn>): List<Placement> {
     var slot = 0
     var usedBits = 0
     return leaves.map { leaf ->
-        val width = leaf.column.bitWidth
+        val width = leaf.bitWidth
         if (usedBits + width > 64) {
             slot++
             usedBits = 0

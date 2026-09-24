@@ -85,7 +85,7 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
                         leaves.forEach { leaf ->
-                            addStatement("%N[size] = %L", columnName(leaf.flatName), leaf.accessExpr("value"))
+                            addStatement("%N[size] = %L", columnName(leaf.flatName), ordinalOf(leaf, leaf.accessExpr("value")))
                         }
                         addStatement("size++")
                     }
@@ -94,11 +94,11 @@ object ValueSchemaGenerator {
             .addFunction(
                 FunSpec.builder("add")
                     .addKdoc("Zero-allocation overload: appends a row without constructing a [%T].", cls)
-                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, leafType(it)).build() })
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
                         leaves.forEach { leaf ->
-                            addStatement("%N[size] = %N", columnName(leaf.flatName), leaf.flatName)
+                            addStatement("%N[size] = %L", columnName(leaf.flatName), ordinalOf(leaf, leaf.flatName))
                         }
                         addStatement("size++")
                     }
@@ -120,7 +120,7 @@ object ValueSchemaGenerator {
                     .addStatement("checkIndex(index)")
                     .addStatement(
                         "return %L",
-                        constructorCall(model, cls) { leaf -> CodeBlock.of("%N[index]", columnName(leaf.flatName)) },
+                        constructorCall(model, cls) { leaf -> columnRead(leaf, CodeBlock.of("%N[index]", columnName(leaf.flatName))) },
                     )
                     .build(),
             )
@@ -128,11 +128,11 @@ object ValueSchemaGenerator {
                 FunSpec.builder("set")
                     .addKdoc("Zero-allocation overload: replaces a row without constructing a [%T].", cls)
                     .addParameter("index", INT)
-                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, leafType(it)).build() })
                     .apply {
                         addStatement("checkIndex(index)")
                         leaves.forEach { leaf ->
-                            addStatement("%N[index] = %N", columnName(leaf.flatName), leaf.flatName)
+                            addStatement("%N[index] = %L", columnName(leaf.flatName), ordinalOf(leaf, leaf.flatName))
                         }
                     }
                     .build(),
@@ -145,7 +145,7 @@ object ValueSchemaGenerator {
                     .apply {
                         addStatement("checkIndex(index)")
                         leaves.forEach { leaf ->
-                            addStatement("%N[index] = %L", columnName(leaf.flatName), leaf.accessExpr("value"))
+                            addStatement("%N[index] = %L", columnName(leaf.flatName), ordinalOf(leaf, leaf.accessExpr("value")))
                         }
                     }
                     .build(),
@@ -322,10 +322,10 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addProperties(leaves.map { leaf ->
-                PropertySpec.builder(leaf.flatName, leaf.column.type)
+                PropertySpec.builder(leaf.flatName, leafType(leaf))
                     .getter(
                         FunSpec.getterBuilder()
-                            .addStatement("return columns.%N[index]", columnName(leaf.flatName))
+                            .addStatement("return %L", columnRead(leaf, CodeBlock.of("columns.%N[index]", columnName(leaf.flatName))))
                             .build(),
                     )
                     .build()
@@ -429,7 +429,7 @@ object ValueSchemaGenerator {
             .addFunction(
                 FunSpec.builder("add")
                     .addKdoc("Zero-allocation overload: appends a row without constructing a [%T].", cls)
-                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, leafType(it)).build() })
                     .apply {
                         addStatement("ensureCapacity(size + 1)")
                         addStatement("val base = size * STRIDE")
@@ -457,7 +457,7 @@ object ValueSchemaGenerator {
                         "return %L",
                         constructorCall(model, cls) { leaf ->
                             val i = leaves.indexOfFirst { it.flatName == leaf.flatName }
-                            CodeBlock.of("%L", slotRead(leaf.column, layout[i], "data[base + ${layout[i].slot}]"))
+                            slotRead(leaf, layout[i], "data[base + ${layout[i].slot}]")
                         },
                     )
                     .build(),
@@ -466,7 +466,7 @@ object ValueSchemaGenerator {
                 FunSpec.builder("set")
                     .addKdoc("Zero-allocation overload: replaces a row without constructing a [%T].", cls)
                     .addParameter("index", INT)
-                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, it.column.type).build() })
+                    .addParameters(leaves.map { ParameterSpec.builder(it.flatName, leafType(it)).build() })
                     .apply {
                         addStatement("checkIndex(index)")
                         addStatement("val base = index * STRIDE")
@@ -683,12 +683,12 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addProperties(leaves.mapIndexed { i, leaf ->
-                PropertySpec.builder(leaf.flatName, leaf.column.type)
+                PropertySpec.builder(leaf.flatName, leafType(leaf))
                     .getter(
                         FunSpec.getterBuilder()
                             .addStatement(
                                 "return %L",
-                                slotRead(leaf.column, layout[i], "packed.data[index * $packedName.STRIDE + ${layout[i].slot}]"),
+                                slotRead(leaf, layout[i], "packed.data[index * $packedName.STRIDE + ${layout[i].slot}]"),
                             )
                             .build(),
                     )
@@ -728,7 +728,7 @@ object ValueSchemaGenerator {
 
     private fun constructorExpr(field: SchemaField, prefix: List<String>, leaf: (LeafColumn) -> CodeBlock): CodeBlock =
         when (field) {
-            is FieldModel -> leaf(LeafColumn(prefix + field.name, field.column))
+            is FieldModel -> leaf(LeafColumn(prefix + field.name, field.column, field.default, field.enumType, field.enumEntryCount))
             is NestedModel -> CodeBlock.of(
                 "%T(%L)",
                 field.type,
@@ -757,15 +757,15 @@ object ValueSchemaGenerator {
         if (kind == StorageKind.PACKED) builder.addStatement("val base = index * STRIDE")
         leaves.forEachIndexed { i, leaf ->
             when (kind) {
-                StorageKind.COLUMNS -> builder.addStatement("var %N = %N[index]", leaf.flatName, columnName(leaf.flatName))
+                StorageKind.COLUMNS -> builder.addStatement("var %N = %L", leaf.flatName, columnRead(leaf, CodeBlock.of("%N[index]", columnName(leaf.flatName))))
                 StorageKind.PACKED ->
-                    builder.addStatement("var %N = %L", leaf.flatName, slotRead(leaf.column, layout!![i], "data[base + ${layout[i].slot}]"))
+                    builder.addStatement("var %N = %L", leaf.flatName, slotRead(leaf, layout!![i], "data[base + ${layout[i].slot}]"))
             }
         }
         builder.addCode(CodeBlock.of("%L", transform.body.trim().let { if (it.isEmpty()) "" else it + "\n" }))
         when (kind) {
             StorageKind.COLUMNS -> leaves.forEach { leaf ->
-                builder.addStatement("%N[index] = %N", columnName(leaf.flatName), leaf.flatName)
+                builder.addStatement("%N[index] = %L", columnName(leaf.flatName), ordinalOf(leaf, leaf.flatName))
             }
             StorageKind.PACKED -> builder.emitPackedStores(leaves, layout!!) { it.flatName }
         }
@@ -783,11 +783,11 @@ object ValueSchemaGenerator {
         valueExpr: (LeafColumn) -> String,
     ) {
         leaves.indices.groupBy { layout[it].slot }.forEach { (slot, idxs) ->
-            val expr = idxs.joinToString(" or ") { i ->
-                val bits = valueBits(leaves[i].column, valueExpr(leaves[i]))
-                if (layout[i].bitOffset == 0) bits else "($bits shl ${layout[i].bitOffset})"
-            }
-            addStatement("data[base + $slot] = $expr")
+            val expr = idxs.map { i ->
+                val bits = valueBits(leaves[i], valueExpr(leaves[i]))
+                if (layout[i].bitOffset == 0) bits else CodeBlock.of("(%L shl %L)", bits, layout[i].bitOffset)
+            }.joinToCode(" or ")
+            addStatement("data[base + $slot] = %L", expr)
         }
     }
 
@@ -822,29 +822,47 @@ object ValueSchemaGenerator {
         else -> ClassName.bestGuess(name)
     }
 
-    private fun slotRead(col: PrimitiveColumn, p: Placement, slotRef: String): String {
+    private fun slotRead(leaf: LeafColumn, p: Placement, slotRef: String): CodeBlock {
         val raw = if (p.bitOffset == 0) slotRef else "($slotRef ushr ${p.bitOffset})"
-        return when (col) {
-            PrimitiveColumn.LONG -> slotRef
-            PrimitiveColumn.DOUBLE -> "Double.fromBits($slotRef)"
-            PrimitiveColumn.INT -> "$raw.toInt()"
-            PrimitiveColumn.FLOAT -> "Float.fromBits($raw.toInt())"
-            PrimitiveColumn.SHORT -> "$raw.toShort()"
-            PrimitiveColumn.BYTE -> "$raw.toByte()"
-            PrimitiveColumn.BOOLEAN -> "($raw and 1L) != 0L"
-            PrimitiveColumn.CHAR -> "$raw.toInt().toChar()"
+        if (leaf.isEnum) {
+            val mask = (1L shl leaf.bitWidth) - 1
+            return CodeBlock.of("%T.entries[(%L and %L).toInt()]", leaf.enumType, raw, "${mask}L")
+        }
+        return when (leaf.column) {
+            PrimitiveColumn.LONG -> CodeBlock.of("%L", slotRef)
+            PrimitiveColumn.DOUBLE -> CodeBlock.of("Double.fromBits(%L)", slotRef)
+            PrimitiveColumn.INT -> CodeBlock.of("%L.toInt()", raw)
+            PrimitiveColumn.FLOAT -> CodeBlock.of("Float.fromBits(%L.toInt())", raw)
+            PrimitiveColumn.SHORT -> CodeBlock.of("%L.toShort()", raw)
+            PrimitiveColumn.BYTE -> CodeBlock.of("%L.toByte()", raw)
+            PrimitiveColumn.BOOLEAN -> CodeBlock.of("(%L and 1L) != 0L", raw)
+            PrimitiveColumn.CHAR -> CodeBlock.of("%L.toInt().toChar()", raw)
         }
     }
 
-    private fun valueBits(col: PrimitiveColumn, valueExpr: String): String = when (col) {
-        PrimitiveColumn.LONG -> valueExpr
-        PrimitiveColumn.DOUBLE -> "$valueExpr.toRawBits()"
-        PrimitiveColumn.INT -> "($valueExpr.toLong() and 0xFFFFFFFFL)"
-        PrimitiveColumn.FLOAT -> "($valueExpr.toRawBits().toLong() and 0xFFFFFFFFL)"
-        PrimitiveColumn.SHORT -> "($valueExpr.toLong() and 0xFFFFL)"
-        PrimitiveColumn.BYTE -> "($valueExpr.toLong() and 0xFFL)"
-        PrimitiveColumn.BOOLEAN -> "(if ($valueExpr) 1L else 0L)"
-        PrimitiveColumn.CHAR -> "$valueExpr.code.toLong()"
+    private fun valueBits(leaf: LeafColumn, valueExpr: String): CodeBlock = when {
+        leaf.isEnum -> CodeBlock.of("(%L).ordinal.toLong()", valueExpr)
+        else -> when (leaf.column) {
+            PrimitiveColumn.LONG -> CodeBlock.of("%L", valueExpr)
+            PrimitiveColumn.DOUBLE -> CodeBlock.of("%L.toRawBits()", valueExpr)
+            PrimitiveColumn.INT -> CodeBlock.of("(%L.toLong() and 0xFFFFFFFFL)", valueExpr)
+            PrimitiveColumn.FLOAT -> CodeBlock.of("(%L.toRawBits().toLong() and 0xFFFFFFFFL)", valueExpr)
+            PrimitiveColumn.SHORT -> CodeBlock.of("(%L.toLong() and 0xFFFFL)", valueExpr)
+            PrimitiveColumn.BYTE -> CodeBlock.of("(%L.toLong() and 0xFFL)", valueExpr)
+            PrimitiveColumn.BOOLEAN -> CodeBlock.of("(if (%L) 1L else 0L)", valueExpr)
+            PrimitiveColumn.CHAR -> CodeBlock.of("%L.code.toLong()", valueExpr)
+        }
     }
+
+    /** Read expression for a column-array element, mapping stored ordinals back to enum entries. */
+    private fun columnRead(leaf: LeafColumn, arrayExpr: CodeBlock): CodeBlock =
+        if (leaf.isEnum) CodeBlock.of("%T.entries[%L]", leaf.enumType, arrayExpr) else arrayExpr
+
+    /** Store expression for a value being written to a column/slot, mapping enums to their ordinal. */
+    private fun ordinalOf(leaf: LeafColumn, valueExpr: String): String =
+        if (leaf.isEnum) "($valueExpr).ordinal" else valueExpr
+
+    /** Type exposed to callers for a leaf: the enum class itself, or the primitive type. */
+    private fun leafType(leaf: LeafColumn): TypeName = leaf.enumType ?: leaf.column.type
 
 }

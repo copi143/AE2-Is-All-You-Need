@@ -89,6 +89,24 @@ private class ValueSchemaProcessor(
                 fields += FieldModel(fieldName, typeName, default)
                 continue
             }
+            if (typeDecl is KSClassDeclaration && typeDecl.classKind == ClassKind.ENUM_CLASS) {
+                if (type.isMarkedNullable) {
+                    logger.error("@ValueSchema class $name field '$fieldName': enum field must be non-nullable", param)
+                    return null
+                }
+                val entries = typeDecl.declarations.filterIsInstance<KSClassDeclaration>()
+                    .filter { it.classKind == ClassKind.ENUM_ENTRY }
+                    .toList()
+                if (entries.isEmpty()) {
+                    logger.error("@ValueSchema class $name field '$fieldName': enum $typeName has no entries", param)
+                    return null
+                }
+                val qualified = typeDecl.qualifiedName?.asString() ?: continue
+                val default = extractEnumDefault(param, entries, name, fieldName)
+                if (default === INVALID) return null
+                fields += FieldModel(fieldName, qualified, default, ClassName.bestGuess(qualified), entries.size)
+                continue
+            }
             if (typeDecl is KSClassDeclaration && typeDecl.annotations.any {
                     it.annotationType.resolve().declaration.qualifiedName?.asString() == VALUE_SCHEMA_ANNOTATION
                 }
@@ -107,13 +125,20 @@ private class ValueSchemaProcessor(
                     return null
                 }
                 val children = extractFields(typeDecl, path + qualified) ?: return null
+                if (hasDefault(param)) {
+                    logger.error(
+                        "@ValueSchema class $name field '$fieldName': @Default belongs on leaf fields; annotate the fields of nested type $qualified instead",
+                        param,
+                    )
+                    return null
+                }
                 fields += NestedModel(fieldName, ClassName.bestGuess(qualified), children)
                 continue
             }
             logger.error(
                 "@ValueSchema class $name field '$fieldName' has unsupported type '$typeName'; " +
-                    "supported: primitives (${PrimitiveColumn.entries.joinToString(", ") { it.kotlinName }}) " +
-                    "or another @ValueSchema class",
+                    "supported: primitives (${PrimitiveColumn.entries.joinToString(", ") { it.kotlinName }}), " +
+                    "an enum (stored as its ordinal), or another @ValueSchema class",
                 param,
             )
             return null
@@ -154,6 +179,34 @@ private class ValueSchemaProcessor(
             logger.error("@ValueSchema class $className field '$fieldName' has invalid @Default value '$raw': ${e.message}", param)
             INVALID
         }
+    }
+
+    private fun hasDefault(param: com.google.devtools.ksp.symbol.KSValueParameter): Boolean = param.annotations.any {
+        it.annotationType.resolve().declaration.qualifiedName?.asString() == DEFAULT_ANNOTATION
+    }
+
+    /** @return the entry ordinal as a decimal string, null if no @Default, or [INVALID] if malformed. */
+    private fun extractEnumDefault(
+        param: com.google.devtools.ksp.symbol.KSValueParameter,
+        entries: List<KSClassDeclaration>,
+        className: String,
+        fieldName: String,
+    ): String? {
+        if (!hasDefault(param)) return null
+        val annotation = param.annotations.first {
+            it.annotationType.resolve().declaration.qualifiedName?.asString() == DEFAULT_ANNOTATION
+        }
+        val raw = annotation.arguments.firstOrNull { it.name?.asString() == "value" }?.value as? String ?: return INVALID
+        val ordinal = entries.indexOfFirst { it.simpleName.asString() == raw }
+        if (ordinal < 0) {
+            logger.error(
+                "@ValueSchema class $className field '$fieldName': @Default('$raw') names no enum entry; " +
+                    "available: ${entries.joinToString(", ") { it.simpleName.asString() }}",
+                param,
+            )
+            return INVALID
+        }
+        return ordinal.toString()
     }
 
     private fun write(decl: KSClassDeclaration, model: SchemaModel) {

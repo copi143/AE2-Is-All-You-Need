@@ -247,4 +247,37 @@ class ValueSchemaGeneratorTest {
             generate(quote.copy(fields = listOf(FieldModel("price", "Int", default = "abc"))))
         }
     }
+
+    @Test
+    fun `enum field is stored as ordinal Int column`() {
+        val model = SchemaModel(
+            packageName = "demo",
+            className = "Event",
+            fields = listOf(
+                FieldModel("id", "Long"),
+                FieldModel("kind", "demo.Kind", enumType = ClassName("demo", "Kind"), enumEntryCount = 3),
+                FieldModel("flag", "Boolean"),
+            ),
+        )
+        val code = generate(model)
+        assertContains(code, "kinds: IntArray")
+        assertContains(code, "kind: Kind,")
+        assertContains(code, "kinds[size] = (kind).ordinal")
+        assertContains(code, "return Event(ids[index], Kind.entries[kinds[index]], flags[index])")
+        // packed: id(64) slot0; kind 2 bits + flag 1 bit share slot1
+        assertContains(code, "public const val STRIDE: Int = 2")
+        assertContains(code, "Kind.entries[(data[base + 1] and 3L).toInt()]")
+    }
+
+    @Test
+    fun `enum default fills by ordinal`() {
+        val model = SchemaModel(
+            packageName = "demo",
+            className = "Event",
+            fields = listOf(
+                FieldModel("kind", "demo.Kind", default = "2", enumType = ClassName("demo", "Kind"), enumEntryCount = 3),
+            ),
+        )
+        assertContains(generate(model), "kinds.fill(2, size, newSize)")
+    }
 }
