@@ -74,6 +74,12 @@ dependencies {
     testImplementation("it.unimi.dsi:fastutil:8.5.9")
     // NetworkLogPage 等类型继承 AE2 的 PacketWritable，测试需要其类定义在 classpath 上。
     testImplementation(libs.ae2.forge)
+    // NBT 相关测试需要 Minecraft 类；直接使用 MDG 产出的 merged jar（与 main 编译用的一致）。
+    val minecraftMerged = layout.buildDirectory.file("moddev/artifacts/vanilla-1.20.1-merged.jar")
+    testCompileOnly(files(minecraftMerged) { builtBy("createMinecraftArtifacts") })
+    testRuntimeOnly(files(minecraftMerged) { builtBy("createMinecraftArtifacts") })
+    // merged jar 无 POM，MC 1.20.1 的 DataFixerUpper 传递依赖需显式补（NBT 序列化用）。
+    testRuntimeOnly("com.mojang:datafixerupper:6.0.8")
 
     testRuntimeOnly(project(":composeruntime"))
     testRuntimeOnly(project(":msdftext"))
@@ -84,6 +90,10 @@ configurations["testRuntimeClasspath"].exclude(
     group = "org.jetbrains.compose.ui",
     module = "ui-graphics-desktop",
 )
+// datafixerupper 6.0.8 依赖的 guava 31.0.1/error_prone 2.7.1 不在本地缓存；强制到已缓存版本以支持离线构建。
+configurations["testRuntimeClasspath"].resolutionStrategy {
+    force("com.google.guava:guava:31.1-jre")
+}
 
 tasks.withType<Test> {
     dependsOn(":graphicsrepl:jar")
