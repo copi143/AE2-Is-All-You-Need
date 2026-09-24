@@ -40,3 +40,15 @@ annotation class ValueSchema(val transforms: Array<ValueTransform> = [])
  */
 @Retention(AnnotationRetention.SOURCE)
 annotation class ValueTransform(val name: String, val params: String = "", val body: String)
+
+/**
+ * Overrides the initial value of a field for rows created by the generated `resize(newSize)`.
+ *
+ * KSP cannot see Kotlin constructor default values, so the fill value is given as a string
+ * holding a literal of the field's type (e.g. `"-1"`, `"true"`, `"1.5"`). Fields without this
+ * annotation are zero-filled (`0` / `0L` / `0.0` / `false` / `'\0'`), matching the semantics of
+ * a freshly allocated primitive array. Also applies to leaf fields of nested @ValueSchema types.
+ */
+@Target(AnnotationTarget.VALUE_PARAMETER)
+@Retention(AnnotationRetention.SOURCE)
+annotation class Default(val value: String)

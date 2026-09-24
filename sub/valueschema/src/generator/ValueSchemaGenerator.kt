@@ -237,6 +237,29 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addFunction(
+                FunSpec.builder("resize")
+                    .addKdoc(
+                        "Grows to [newSize] rows; new rows are filled with @Default values (zero/false otherwise), " +
+                            "like a freshly allocated primitive array. Shrinking only moves the size marker.",
+                    )
+                    .addParameter("newSize", INT)
+                    .addStatement("require(newSize >= 0) { \"newSize must be >= 0: \" + newSize }")
+                    .beginControlFlow("if (newSize > size)")
+                    .addStatement("ensureCapacity(newSize)")
+                    .apply {
+                        leaves.forEach { leaf ->
+                            addStatement(
+                                "%N.fill(%L, size, newSize)",
+                                columnName(leaf.flatName),
+                                leaf.column.defaultLiteral(leaf.default),
+                            )
+                        }
+                    }
+                    .endControlFlow()
+                    .addStatement("size = newSize")
+                    .build(),
+            )
+            .addFunction(
                 FunSpec.builder("toString")
                     .addModifiers(KModifier.OVERRIDE)
                     .returns(STRING)
@@ -550,6 +573,37 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addFunction(
+                FunSpec.builder("resize")
+                    .addKdoc(
+                        "Grows to [newSize] rows; new rows are filled with @Default values (zero/false otherwise), " +
+                            "encoded as per-slot constant words. Shrinking only moves the size marker.",
+                    )
+                    .addParameter("newSize", INT)
+                    .addStatement("require(newSize >= 0) { \"newSize must be >= 0: \" + newSize }")
+                    .beginControlFlow("if (newSize > size)")
+                    .addStatement("ensureCapacity(newSize)")
+                    .apply {
+                        val words = defaultSlotWords(leaves, layout)
+                        if (words.all { it == 0L }) {
+                            addStatement("data.fill(0L, size * STRIDE, newSize * STRIDE)")
+                        } else {
+                            words.forEachIndexed { slot, word ->
+                                addStatement("run {")
+                                addStatement("    var i = size * STRIDE + $slot")
+                                addStatement("    val end = newSize * STRIDE")
+                                addStatement("    while (i < end) {")
+                                addStatement("        data[i] = ${word}L")
+                                addStatement("        i += STRIDE")
+                                addStatement("    }")
+                                addStatement("}")
+                            }
+                        }
+                    }
+                    .endControlFlow()
+                    .addStatement("size = newSize")
+                    .build(),
+            )
+            .addFunction(
                 FunSpec.builder("toString")
                     .addModifiers(KModifier.OVERRIDE)
                     .returns(STRING)
@@ -735,6 +789,15 @@ object ValueSchemaGenerator {
             }
             addStatement("data[base + $slot] = $expr")
         }
+    }
+
+    /** Default row as per-slot constant words: each leaf's encoded default OR-ed into its slot. */
+    private fun defaultSlotWords(leaves: List<LeafColumn>, layout: List<Placement>): LongArray {
+        val words = LongArray(layout.last().slot + 1)
+        leaves.forEachIndexed { i, leaf ->
+            words[layout[i].slot] = words[layout[i].slot] or (leaf.column.defaultBits(leaf.default) shl layout[i].bitOffset)
+        }
+        return words
     }
 
     private fun parseParams(params: String): List<ParameterSpec> {

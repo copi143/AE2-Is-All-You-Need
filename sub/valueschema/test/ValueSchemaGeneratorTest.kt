@@ -212,4 +212,39 @@ class ValueSchemaGeneratorTest {
             assertContains(code, arrayType)
         }
     }
+
+    @Test
+    fun `resize fills defaults per column`() {
+        val model = SchemaModel(
+            packageName = "demo",
+            className = "Scratch",
+            fields = listOf(
+                FieldModel("value", "Int"),
+                FieldModel("link", "Int", default = "-1"),
+                FieldModel("active", "Boolean", default = "true"),
+            ),
+        )
+        val code = generate(model)
+        assertContains(code, "public fun resize(newSize: Int)")
+        assertContains(code, "values.fill(0, size, newSize)")
+        assertContains(code, "links.fill(-1, size, newSize)")
+        assertContains(code, "actives.fill(true, size, newSize)")
+        // packed: value(32) slot0 off0 default 0, link(32) slot0 off32 default -1 -> word 0xFFFFFFFF00000000;
+        // active(1) slot1 default true -> word 1
+        assertContains(code, "data[i] = -4294967296L")
+        assertContains(code, "data[i] = 1L")
+    }
+
+    @Test
+    fun `packed resize with all-zero defaults fills the whole range`() {
+        val code = generate(quote)
+        assertContains(code, "data.fill(0L, size * STRIDE, newSize * STRIDE)")
+    }
+
+    @Test
+    fun `rejects invalid default literal`() {
+        assertFailsWith<IllegalArgumentException> {
+            generate(quote.copy(fields = listOf(FieldModel("price", "Int", default = "abc"))))
+        }
+    }
 }

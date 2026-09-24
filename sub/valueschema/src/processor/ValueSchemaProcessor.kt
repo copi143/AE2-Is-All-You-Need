@@ -83,7 +83,10 @@ private class ValueSchemaProcessor(
             val typeDecl = type.declaration
             val typeName = typeDecl.qualifiedName?.asString()?.removePrefix("kotlin.")
             if (typeName != null && PrimitiveColumn.ofKotlinName(typeName) != null) {
-                fields += FieldModel(fieldName, typeName)
+                val column = PrimitiveColumn.ofKotlinName(typeName)!!
+                val default = extractDefault(param, column, name, fieldName)
+                if (default === INVALID) return null
+                fields += FieldModel(fieldName, typeName, default)
                 continue
             }
             if (typeDecl is KSClassDeclaration && typeDecl.annotations.any {
@@ -133,6 +136,26 @@ private class ValueSchemaProcessor(
         } ?: emptyList()
     }
 
+    /** @return the raw @Default string, null if absent, or [INVALID] if present but malformed. */
+    private fun extractDefault(
+        param: com.google.devtools.ksp.symbol.KSValueParameter,
+        column: PrimitiveColumn,
+        className: String,
+        fieldName: String,
+    ): String? {
+        val annotation = param.annotations.firstOrNull {
+            it.annotationType.resolve().declaration.qualifiedName?.asString() == DEFAULT_ANNOTATION
+        } ?: return null
+        val raw = annotation.arguments.firstOrNull { it.name?.asString() == "value" }?.value as? String ?: return INVALID
+        return try {
+            column.parseDefault(raw)
+            raw
+        } catch (e: Exception) {
+            logger.error("@ValueSchema class $className field '$fieldName' has invalid @Default value '$raw': ${e.message}", param)
+            INVALID
+        }
+    }
+
     private fun write(decl: KSClassDeclaration, model: SchemaModel) {
         val file = ValueSchemaGenerator.generate(model)
         val dependencies = decl.containingFile?.let { Dependencies(aggregating = false, it) }
@@ -144,5 +167,7 @@ private class ValueSchemaProcessor(
 
     companion object {
         private const val VALUE_SCHEMA_ANNOTATION = "io.github.copi143.valueschema.ValueSchema"
+        private const val DEFAULT_ANNOTATION = "io.github.copi143.valueschema.Default"
+        private val INVALID: String = String(CharArray(0))
     }
 }
