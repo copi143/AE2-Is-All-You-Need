@@ -83,7 +83,6 @@ dependencies {
 
     testRuntimeOnly(project(":composeruntime"))
     testRuntimeOnly(project(":msdftext"))
-    testRuntimeOnly(project(":graphicsrepl"))
 }
 
 configurations["testRuntimeClasspath"].exclude(
@@ -96,7 +95,7 @@ configurations["testRuntimeClasspath"].resolutionStrategy {
 }
 
 tasks.withType<Test> {
-    dependsOn(":graphicsrepl:jar")
+    dependsOn(":composeruntime:jar")
 }
 
 configurations {

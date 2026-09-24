@@ -116,7 +116,7 @@ dependencies {
     modRuntimeOnly(variantOf(libs.mek) { classifier("tools") })
 
     modCompileOnly(variantOf(libs.botania) { classifier("api") })
-    modRuntimeOnly(libs.botania)
+//    modRuntimeOnly(libs.botania)
 
     testImplementation(libs.asm.tree)
 }
