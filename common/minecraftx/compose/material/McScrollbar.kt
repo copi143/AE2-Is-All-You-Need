@@ -1,7 +1,6 @@
 package minecraftx.compose.material
 
 import allyouneed.client.compose.platform.ScrollState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,10 +9,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import minecraftx.compose.theme.McColorScheme
 import minecraftx.compose.theme.McTheme
 import kotlin.math.max
 
@@ -21,7 +21,8 @@ import kotlin.math.max
  * Slim vertical scrollbar bound to a [ScrollState]. Clicking the track jumps directly; dragging
  * scrubs 1:1 with the cursor ([ScrollState.seek] writes the display value immediately, skipping the
  * smooth animation). Positions are logical (root constraints are /scale), so the mapping to the
- * scroll value stays consistent with the wheel.
+ * scroll value stays consistent with the wheel. Track and bar chrome come from the active theme
+ * style ([McTheme.style]).
  *
  * The composable measures itself from the incoming modifier — size it with `Modifier.size(width,
  * trackHeight)` (or `fillMaxHeight()` inside a sized parent). It draws nothing when
@@ -33,11 +34,11 @@ fun McScrollbar(
     modifier: Modifier = Modifier,
     trackWidth: androidx.compose.ui.unit.Dp = 4.dp,
     barWidth: androidx.compose.ui.unit.Dp = 2.dp,
-    trackColor: Color = McTheme.colors.scrollbarTrack,
-    barColor: Color = McTheme.colors.scrollbarBar,
+    colors: McColorScheme = McTheme.colors,
 ) {
     BoxWithConstraints(modifier) {
         if (state.maxScroll <= 0f) return@BoxWithConstraints
+        val style = McTheme.style
         val trackHeight = constraints.maxHeight
         val barHeight = max(16, trackHeight * trackHeight / (trackHeight + state.maxScroll.toInt()))
         val travel = trackHeight - barHeight
@@ -45,7 +46,7 @@ fun McScrollbar(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(trackColor)
+                .drawBehind { with(style) { scrollbarTrackChrome(colors) } }
                 .pointerInput(state.maxScroll, travel, barHeight) {
                     var dragging = false
                     var grabOffset = 0f
@@ -91,7 +92,7 @@ fun McScrollbar(
                 .fillMaxWidth()
                 .offset(x = ((trackWidth - barWidth) / 2), y = barY.dp)
                 .size(barWidth, barHeight.dp)
-                .background(barColor),
+                .drawBehind { with(style) { scrollbarBarChrome(colors) } },
         )
     }
 }

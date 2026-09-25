@@ -65,8 +65,6 @@ fun McScrollBox(
     state: ScrollState = rememberScrollState(),
     backgroundColor: Color? = null,
     scrollbarWidth: Int = 4,
-    scrollbarColor: Color = McTheme.colors.scrollbarBar,
-    scrollbarTrackColor: Color = McTheme.colors.scrollbarTrack,
     content: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier.then(if (scrollable) Modifier.mcScroll(state) else Modifier)) {
@@ -107,8 +105,6 @@ fun McScrollBox(
                     .size(scrollbarWidth.dp, viewportH.dp),
                 trackWidth = scrollbarWidth.dp,
                 barWidth = scrollbarWidth.dp,
-                trackColor = scrollbarTrackColor,
-                barColor = scrollbarColor,
             )
         }
     }

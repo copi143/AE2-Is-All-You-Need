@@ -1,6 +1,5 @@
 package minecraftx.compose.material
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.theme.McColorScheme
@@ -27,6 +25,7 @@ fun McCheckbox(
     label: String? = null,
     colors: McColorScheme = McTheme.colors,
 ) {
+    val style = McTheme.style
     Row(
         modifier = modifier.clickable(enabled = enabled) { onCheckedChange(!checked) },
         verticalAlignment = Alignment.CenterVertically,
@@ -34,8 +33,7 @@ fun McCheckbox(
         Box(
             modifier = Modifier
                 .size(10.dp)
-                .background(colors.checkboxBackground)
-                .drawBehind { drawRect(color = colors.checkboxBorder, style = Stroke(1f)) },
+                .drawBehind { with(style) { checkboxChrome(colors, checked) } },
             contentAlignment = Alignment.Center,
         ) {
             if (checked) {
@@ -58,18 +56,18 @@ fun McToggle(
     enabled: Boolean = true,
     colors: McColorScheme = McTheme.colors,
 ) {
+    val style = McTheme.style
     Box(
         modifier = modifier
             .size(20.dp, 10.dp)
-            .background(if (checked) colors.toggleTrackOn else colors.toggleTrackOff)
-            .drawBehind { drawRect(color = colors.buttonBorder, style = Stroke(1f)) }
+            .drawBehind { with(style) { toggleTrackChrome(colors, checked) } }
             .clickable(enabled = enabled) { onCheckedChange(!checked) },
     ) {
         Box(
             modifier = Modifier
                 .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
                 .size(8.dp)
-                .background(colors.toggleThumb),
+                .drawBehind { with(style) { toggleThumbChrome(colors, checked) } },
         )
     }
 }

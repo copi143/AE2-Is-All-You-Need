@@ -61,6 +61,7 @@ fun initClient() {
         Minecraft.getInstance().isWindowActive
     }
     ItemDetailsKeyBind.init()
+    minecraftx.compose.demo.DemoKeyBind.init()
     allyouneed.client.compose.platform.ComposePrewarm.startAsync()
     // 资源重载时释放 MSDF 文本引擎的 GPU 资源(shader/图集纹理/VAO),下次绘制时惰性重建。
     ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(

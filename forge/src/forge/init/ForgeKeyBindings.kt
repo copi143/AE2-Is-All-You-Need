@@ -25,6 +25,7 @@ object ForgeKeyBindingRegistration {
     @SubscribeEvent
     fun onRegisterKeys(event: RegisterKeyMappingsEvent) {
         ItemDetailsKeyBind.init()
+        minecraftx.compose.demo.DemoKeyBind.init()
         ForgeKeyBindings.keys.forEach(event::register)
     }
 }

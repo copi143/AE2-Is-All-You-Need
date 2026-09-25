@@ -1,6 +1,5 @@
 package minecraftx.compose.material
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -12,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.theme.McColorScheme
@@ -37,21 +35,11 @@ fun McTab(
     colors: McColorScheme = McTheme.colors,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val fill = if (selected) colors.tabBackgroundSelected else colors.tabBackground
+    val style = McTheme.style
     Box(
         modifier = modifier
             .height(McTheme.shapes.tabHeight)
-            .background(fill)
-            .drawBehind {
-                drawRect(color = colors.tabBorder, style = Stroke(1f))
-                if (selected) {
-                    drawRect(
-                        color = colors.tabIndicator,
-                        topLeft = androidx.compose.ui.geometry.Offset(0f, size.height - 2f),
-                        size = androidx.compose.ui.geometry.Size(size.width, 2f),
-                    )
-                }
-            }
+            .drawBehind { with(style) { tabChrome(colors, selected) } }
             .then(if (handleClicks) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,

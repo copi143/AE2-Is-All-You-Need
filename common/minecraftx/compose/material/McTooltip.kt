@@ -1,13 +1,10 @@
 package minecraftx.compose.material
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.theme.McTheme
@@ -34,16 +31,15 @@ fun McTooltip(
     lines: List<Component>,
     modifier: Modifier = Modifier,
     textColor: Int = McTheme.colors.textPrimary.toArgb(),
-    background: Color = McTheme.colors.tooltipBackground,
-    border: Color = McTheme.colors.tooltipBorder,
     maxWidth: Int = 220,
     paddingX: Int = 4,
     paddingY: Int = 3,
 ) {
+    val colors = McTheme.colors
+    val style = McTheme.style
     Column(
         modifier = modifier
-            .background(background)
-            .drawBehind { drawRect(color = border, style = Stroke(1f)) }
+            .drawBehind { with(style) { tooltipChrome(colors) } }
             .padding(horizontal = paddingX.dp, vertical = paddingY.dp),
     ) {
         for (line in lines) {

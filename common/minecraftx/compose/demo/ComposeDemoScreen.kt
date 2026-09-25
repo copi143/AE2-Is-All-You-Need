@@ -53,6 +53,7 @@ import minecraftx.compose.dock.McDockHost
 import minecraftx.compose.markdown.McMarkdown
 import minecraftx.compose.material.McPanel
 import minecraftx.compose.text.McTextEngines
+import minecraftx.compose.theme.McStyles
 import minecraftx.compose.theme.McTheme
 import minecraftx.compose.theme.McThemeId
 import minecraftx.compose.theme.McThemeSettings
@@ -106,6 +107,17 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                     McButton(
                         if (McThemeSettings.textEngineId == engine.id) "[${engine.id}]" else engine.id,
                         onClick = { McThemeSettings.textEngineId = engine.id },
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
+            }
+
+            // 风格策略全局切换:风格改变组件的渲染方式(斜面/圆角/辉光/细线),即时生效
+            Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                for (s in McStyles.all) {
+                    McButton(
+                        if (McThemeSettings.style.id == s.id) "[${s.id}]" else s.id,
+                        onClick = { McThemeSettings.style = s },
                         modifier = Modifier.padding(end = 4.dp),
                     )
                 }

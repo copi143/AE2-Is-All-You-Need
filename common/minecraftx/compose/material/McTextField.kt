@@ -77,6 +77,7 @@ fun McTextField(
 ) {
     val engine = LocalMcTextEngine.current
     val service = LocalMcTextInputService.current
+    val style = McTheme.style
     val id = remember { McFieldIds.next() }
     val processor = remember { EditProcessor().apply { reset(value, null) } }
     val latestEngine = rememberUpdatedState(engine)
@@ -153,6 +154,7 @@ fun McTextField(
             }
             .drawBehind {
                 val g = McGraphics.current ?: return@drawBehind
+                with(style) { inputChrome(colors, isActive) }
                 drawField(
                     g = g,
                     engine = engine,
@@ -181,10 +183,6 @@ private fun DrawScope.drawField(
     placeholder: String?,
     colors: McColorScheme,
 ) {
-    val border = if (focused) colors.inputBorderFocused else colors.inputBorder
-    g.fill(0, 0, width, height, border.toArgb())
-    g.fill(1, 1, width - 1, height - 1, colors.inputBackground.toArgb())
-
     val matrix = g.pose().last().pose()
     val nodeX = matrix.m30()
     val nodeY = matrix.m31()

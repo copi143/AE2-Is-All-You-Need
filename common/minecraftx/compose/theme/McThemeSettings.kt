@@ -27,15 +27,30 @@ enum class McThemeId(val id: String) {
 object McThemeSettings {
     private const val KEY = "theme"
     private const val ENGINE_KEY = "textEngine"
+    private const val STYLE_KEY = "style"
     private var loaded = false
 
     private var idState by mutableStateOf(McThemeId.Dark)
     private var engineIdState by mutableStateOf("vanilla")
+    private var styleIdState by mutableStateOf(MinimalMcStyle.id)
 
     val id: McThemeId
         get() {
             ensureLoaded()
             return idState
+        }
+
+    /** Active component style strategy (global default; overridable per subtree via [McTheme]). */
+    var style: McStyle
+        get() {
+            ensureLoaded()
+            return McStyles.byId(styleIdState)
+        }
+        set(value) {
+            ensureLoaded()
+            if (styleIdState == value.id) return
+            styleIdState = value.id
+            save()
         }
 
     /** Raw active text-engine id (resolved leniently by [minecraftx.compose.text.McTextEngines]). */
@@ -77,6 +92,7 @@ object McThemeSettings {
             file.inputStream().use { props.load(it) }
             idState = McThemeId.fromId(props.getProperty(KEY))
             engineIdState = props.getProperty(ENGINE_KEY) ?: engineIdState
+            styleIdState = props.getProperty(STYLE_KEY) ?: styleIdState
         }.isSuccess
         if (ok) loaded = true
     }
@@ -89,6 +105,7 @@ object McThemeSettings {
             if (file.isFile) file.inputStream().use { props.load(it) }
             props.setProperty(KEY, idState.id)
             props.setProperty(ENGINE_KEY, engineIdState)
+            props.setProperty(STYLE_KEY, styleIdState)
             file.outputStream().use { props.store(it, "$MODID client") }
         }
     }
