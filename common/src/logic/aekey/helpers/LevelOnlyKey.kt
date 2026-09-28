@@ -1,4 +1,4 @@
-package allyouneed.logic.aekey
+package allyouneed.logic.aekey.helpers
 
 import allyouneed.item.packet.AllPackets
 import allyouneed.util.MODID

@@ -1,6 +1,7 @@
 package allyouneed.logic.aekey
 
 import allyouneed.Platform
+import allyouneed.logic.aekey.helpers.MetricLevelKey
 import allyouneed.util.logger
 import kotlin.math.roundToInt
 
@@ -16,10 +17,7 @@ import kotlin.math.roundToInt
  * Instantiated as [ManaKey] for actual use.
  * Must be registered to AE2's [appeng.api.stacks.AEKeyTypes] during mod initialization.
  */
-enum class ManaType(
-    override val id: String,
-    val unit: String,
-) : MetricLevelKey.Metric<ManaKey> {
+enum class ManaType(override val id: String, val unit: String) : MetricLevelKey.Metric<ManaKey> {
     AM("ae2", "AM"), //
     BotaniaMana("botania", "Mana"), //
     BloodMagicLP("bloodmagic", "LP"), //

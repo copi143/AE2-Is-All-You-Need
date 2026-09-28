@@ -1,6 +1,6 @@
 package allyouneed.forge.init
 
-import allyouneed.Main
+import allyouneed.CommonMain
 import allyouneed.Platform
 import allyouneed.forge.botania.BotaniaManaCompat
 import allyouneed.util.MODID
@@ -18,7 +18,7 @@ object ForgeCommonEvents {
     @SubscribeEvent
     fun onCommonSetup(event: FMLCommonSetupEvent) {
         event.enqueueWork {
-            Main.commonSetup()
+            CommonMain.commonSetup()
             // Optional Botania integration: mana import/export bus strategies.
             if (Platform.isModLoaded("botania")) {
                 BotaniaManaCompat.register()
@@ -30,7 +30,7 @@ object ForgeCommonEvents {
     @SubscribeEvent
     fun onLoadComplete(event: FMLLoadCompleteEvent) {
         event.enqueueWork {
-            Main.afterAllMods()
+            CommonMain.afterAllMods()
         }
     }
 

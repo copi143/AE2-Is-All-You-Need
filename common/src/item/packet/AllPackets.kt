@@ -1,7 +1,8 @@
 package allyouneed.item.packet
 
 import allyouneed.logic.aekey.*
-import allyouneed.logic.aekey.MetricLevelKey.Metric
+import allyouneed.logic.aekey.helpers.MetricLevelKey
+import allyouneed.logic.aekey.helpers.MetricLevelKey.Metric
 import allyouneed.util.rl
 import appeng.api.config.Actionable
 import appeng.api.stacks.AEFluidKey

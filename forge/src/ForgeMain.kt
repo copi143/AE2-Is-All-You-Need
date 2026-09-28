@@ -36,7 +36,7 @@ class ForgeMain {
         // ForgeRegistry.register throws "The object ... is being added too late".
         MOD_BUS.addListener { event: RegisterEvent ->
             if (event.registryKey.location() == ResourceLocation("ae2", "keytypes")) {
-                Main.registerAEKeyTypes()
+                CommonMain.registerAEKeyTypes()
             }
         }
 
@@ -52,7 +52,7 @@ class ForgeMain {
             GTAEPowerHatch.init(MOD_BUS)
         }
 
-        Main.init()
+        CommonMain.init()
 
         // Initialize the scripting system
         try {

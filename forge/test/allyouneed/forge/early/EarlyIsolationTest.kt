@@ -1,5 +1,6 @@
 package allyouneed.forge.early
 
+import allyouneed.EarlyLoaderMod
 import org.junit.jupiter.api.Test
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor

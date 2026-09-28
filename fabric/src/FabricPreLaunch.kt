@@ -1,6 +1,5 @@
-package allyouneed.fabric.early
+package allyouneed
 
-import allyouneed.Main
 import allyouneed.transformer.KeyResolver
 import allyouneed.transformer.NewCallTransformer
 import allyouneed.transformer.RuntimeClasses
@@ -24,7 +23,7 @@ import java.lang.reflect.Proxy
  */
 class FabricPreLaunch : PreLaunchEntrypoint {
     override fun onPreLaunch() {
-        Main.beforeAllMods()
+        CommonMain.beforeAllMods()
         try {
             install()
         } catch (t: Throwable) {
@@ -36,8 +35,8 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         RuntimeClasses.install()
         val knot = Thread.currentThread().contextClassLoader
         val delegate = field(knot, "delegate") ?: throw IllegalStateException("Knot delegate missing")
-        val mixinTransformer = field(delegate, "mixinTransformer")
-            ?: throw IllegalStateException("mixinTransformer missing")
+        val mixinTransformer =
+            field(delegate, "mixinTransformer") ?: throw IllegalStateException("mixinTransformer missing")
         val wrapped = wrapMixinTransformer(mixinTransformer)
         putField(delegate, "mixinTransformer", wrapped)
         logger.info("Wrapped Knot mixin transformer for lazy AEKey intern (post-mixin)")
@@ -75,8 +74,7 @@ class FabricPreLaunch : PreLaunchEntrypoint {
 
     private fun isMixin(cn: ClassNode): Boolean {
         val desc = "Lorg/spongepowered/asm/mixin/Mixin;"
-        return cn.visibleAnnotations?.any { it.desc == desc } == true ||
-            cn.invisibleAnnotations?.any { it.desc == desc } == true
+        return cn.visibleAnnotations?.any { it.desc == desc } == true || cn.invisibleAnnotations?.any { it.desc == desc } == true
     }
 
     private fun field(owner: Any, name: String): Any? {

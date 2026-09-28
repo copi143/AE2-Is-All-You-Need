@@ -5,6 +5,7 @@ import allyouneed.util.interfaces.PlatformHelper
 import appeng.api.config.PowerUnits
 import com.gregtechceu.gtceu.api.capability.compat.FeCompat
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.Minecraft
 import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.loading.FMLLoader
 
@@ -21,8 +22,12 @@ class ForgePlatformHelper : PlatformHelper {
         ForgeKeyBindings.keys += key
     }
 
-    override fun onClientTick(handler: () -> Unit) {
-        ForgeKeyBindings.tickHandlers += handler
+    override fun onClientTickStart(handler: (Minecraft) -> Unit) {
+        ForgeKeyBindings.tickStart += handler
+    }
+
+    override fun onClientTickEnd(handler: (Minecraft) -> Unit) {
+        ForgeKeyBindings.tickEnd += handler
     }
 
     override fun energyUnitRatio(id: String): Double {

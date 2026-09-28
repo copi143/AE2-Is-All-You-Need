@@ -1,8 +1,8 @@
 package minecraftx.compose.itemdetail
 
 import allyouneed.Platform
-import minecraftx.compose.itemdetail.focus.ItemDetailsFocus
 import com.mojang.blaze3d.platform.InputConstants
+import minecraftx.compose.itemdetail.focus.ItemDetailsFocus
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.components.EditBox
@@ -32,7 +32,7 @@ object ItemDetailsKeyBind {
 
         key = KeyMapping(KEY_ID, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY_ID)
         Platform.registerKeyBinding(key)
-        Platform.onClientTick(::tick)
+        Platform.onClientTickEnd { tick() }
     }
 
     private fun tick() {
@@ -56,8 +56,7 @@ object ItemDetailsKeyBind {
 
     private fun hasTextInputFocus(): Boolean {
         val screen = Minecraft.getInstance().screen ?: return false
-        if (screen.focused is EditBox) return true
-        return allyouneed.client.compose.platform.McTextInputService.hasFocusedField
+        return screen.focused is EditBox || allyouneed.client.compose.platform.McTextInputService.hasFocusedField
     }
 
     private fun openForHovered() {

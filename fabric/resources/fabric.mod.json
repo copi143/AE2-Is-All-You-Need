@@ -16,7 +16,7 @@
     "preLaunch": [
       {
         "adapter": "kotlin",
-        "value": "allyouneed.fabric.early.FabricPreLaunch"
+        "value": "allyouneed.FabricPreLaunch"
       }
     ],
     "main": [

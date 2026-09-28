@@ -1,5 +1,7 @@
 package allyouneed.logic.aekey
 
+import allyouneed.logic.aekey.helpers.MetricLevelKey
+
 /**
  * 能量 AEKey。
  *

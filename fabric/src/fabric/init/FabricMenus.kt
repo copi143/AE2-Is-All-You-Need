@@ -9,20 +9,15 @@ import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
 import allyouneed.terminal.WirelessOmniTerminalMenu
 import net.minecraft.world.inventory.MenuType
 
+@Suppress("unused", "LocalVariableName")
 object FabricMenus {
     fun register() {
-        @Suppress("UNUSED_VARIABLE") val _w: MenuType<*> = WirelessPseudoPatternTerminalMenu.TYPE
-
-        @Suppress("UNUSED_VARIABLE") val _ma: MenuType<*> = MachineAssemblerMenu.TYPE
-
-        @Suppress("UNUSED_VARIABLE") val _pt: MenuType<*> = UnifiedPatternEncodingTermMenu.TYPE
-
-        @Suppress("UNUSED_VARIABLE") val _io: MenuType<*> = MEIODriveMenu.TYPE
-
-        @Suppress("UNUSED_VARIABLE") val _nl: MenuType<*> = NetworkLoggerMenu.TYPE
-
-        @Suppress("UNUSED_VARIABLE") val _ac: MenuType<*> = AsyncCraftingStatusMenu.TYPE
-
-        @Suppress("UNUSED_VARIABLE") val _wo: MenuType<*> = WirelessOmniTerminalMenu.TYPE
+        val _w: MenuType<*> = WirelessPseudoPatternTerminalMenu.TYPE
+        val _ma: MenuType<*> = MachineAssemblerMenu.TYPE
+        val _pt: MenuType<*> = UnifiedPatternEncodingTermMenu.TYPE
+        val _io: MenuType<*> = MEIODriveMenu.TYPE
+        val _nl: MenuType<*> = NetworkLoggerMenu.TYPE
+        val _ac: MenuType<*> = AsyncCraftingStatusMenu.TYPE
+        val _wo: MenuType<*> = WirelessOmniTerminalMenu.TYPE
     }
 }

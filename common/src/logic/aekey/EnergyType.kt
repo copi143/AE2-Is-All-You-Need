@@ -1,6 +1,7 @@
 package allyouneed.logic.aekey
 
 import allyouneed.Platform
+import allyouneed.logic.aekey.helpers.MetricLevelKey
 import allyouneed.util.logger
 import kotlin.math.roundToInt
 
@@ -16,10 +17,7 @@ import kotlin.math.roundToInt
  * Instantiated as [EnergyKey] for actual use.
  * Must be registered to AE2's [appeng.api.stacks.AEKeyTypes] during mod initialization.
  */
-enum class EnergyType(
-    override val id: String,
-    val unit: String,
-) : MetricLevelKey.Metric<EnergyKey> {
+enum class EnergyType(override val id: String, val unit: String) : MetricLevelKey.Metric<EnergyKey> {
     AE("ae2", "AE"), //
     ForgeEnergy("forge", "FE"), //
     TechReborn("team_reborn_energy", "E"), //

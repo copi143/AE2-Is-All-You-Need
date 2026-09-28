@@ -1,5 +1,7 @@
 package allyouneed.logic.aekey
 
+import allyouneed.logic.aekey.helpers.MetricLevelKey
+
 /**
  * 魔力 AEKey。
  *

@@ -2,6 +2,7 @@ package allyouneed.util.interfaces
 
 import allyouneed.util.logger
 import net.minecraft.client.KeyMapping
+import net.minecraft.client.Minecraft
 import java.util.*
 
 interface PlatformHelper {
@@ -28,10 +29,12 @@ interface PlatformHelper {
      */
     fun registerKeyBinding(key: KeyMapping)
 
+    fun onClientTickStart(handler: (Minecraft) -> Unit)
+
     /**
      * Registers a handler that is invoked once per client tick, after the tick has ended.
      */
-    fun onClientTick(handler: () -> Unit)
+    fun onClientTickEnd(handler: (Minecraft) -> Unit)
 
     /**
      * 一单位的 AE2 能源对应目标能源的数值。
