@@ -1,7 +1,7 @@
 package allyouneed.mixin.ae2;
 
 import allyouneed.util.AE2Kt;
-import allyouneed.util.CommonKt;
+import allyouneed.util.NumExtKt;
 import allyouneed.util.bigint.BigCpuStorage;
 import appeng.api.networking.crafting.ICraftingCPU;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
@@ -20,7 +20,7 @@ public class CraftingStatusMenuMixin {
     private long allyouneed$cpuStorage(ICraftingCPU cpu) {
         if (cpu instanceof CraftingCPUCluster cluster) {
             if (AE2Kt.isUnboundedCapacity(cluster)) return Long.MAX_VALUE;
-            return CommonKt.saturateToLong(AE2Kt.getBigStorage(cluster));
+            return NumExtKt.saturateToLong(AE2Kt.getBigStorage(cluster));
         }
         return cpu.getAvailableStorage();
     }

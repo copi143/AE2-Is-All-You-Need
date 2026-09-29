@@ -1,7 +1,7 @@
 package allyouneed.mixin.ae2;
 
 import allyouneed.api.BigAmountHolder;
-import allyouneed.util.CommonKt;
+import allyouneed.util.NumExtKt;
 import allyouneed.util.bigint.BigAmounts;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.KeyCounter;
@@ -49,7 +49,7 @@ public abstract class MEInventoryUpdatePacketBuilderMixin {
         BigInteger big = BigAmounts.getCurrentAmount(key);
         if (big != null) {
             this.allyouneed$pendingBig = big;
-            return CommonKt.saturateToLong(big);
+            return NumExtKt.saturateToLong(big);
         }
         this.allyouneed$pendingBig = null;
         return counter.get(key);

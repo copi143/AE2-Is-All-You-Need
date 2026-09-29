@@ -1,13 +1,13 @@
 package allyouneed.parts.logger
 
 import allyouneed.util.MODID
-import allyouneed.util.addMapped
+import allyouneed.util.mcText
+import allyouneed.util.mcTranslate
+import allyouneed.util.toListTag
 import net.minecraft.nbt.CompoundTag
-import net.minecraft.nbt.ListTag
-import net.minecraft.nbt.StringTag
 import net.minecraft.nbt.Tag
 import net.minecraft.network.FriendlyByteBuf
-import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.MutableComponent
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -27,15 +27,15 @@ data class NetworkLogEntry(val utcMillis: Long, val kind: NetworkLogKind, val ar
         return CompoundTag().apply {
             putLong("t", utcMillis)
             putByte("k", kind.ordinal.toByte())
-            put("a", ListTag().addMapped(args) { StringTag.valueOf(it) })
+            put("a", args.toListTag())
         }
     }
 
     fun formatLocalTime(): String = LOCAL_TIME.format(Instant.ofEpochMilli(utcMillis).atZone(ZoneId.systemDefault()))
 
-    fun message(): Component = Component.translatable("gui.$MODID.log.${kind.langKey}", *args.toTypedArray())
+    fun message(): MutableComponent = "gui.$MODID.log.${kind.langKey}".mcTranslate(*args.toTypedArray())
 
-    fun toComponent(): Component = Component.literal("[${formatLocalTime()}] ").append(message())
+    fun toComponent(): MutableComponent = "[${formatLocalTime()}] ".mcText.append(message())
 
     fun toPlainLine(): String = "[${formatLocalTime()}] ${message().string}"
 

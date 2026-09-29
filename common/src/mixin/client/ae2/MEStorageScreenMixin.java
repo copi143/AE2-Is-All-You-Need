@@ -1,7 +1,7 @@
 package allyouneed.mixin.client.ae2;
 
-import allyouneed.util.CommonKt;
 import allyouneed.util.MetricFormat;
+import allyouneed.util.NumExtKt;
 import allyouneed.util.bigint.BigAmounts;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
@@ -66,7 +66,7 @@ public abstract class MEStorageScreenMixin {
         if (big.bitLength() > 14) { // > ~16384 always show
             return true;
         }
-        return Tooltips.shouldShowAmountTooltip(what, CommonKt.saturateToLong(big));
+        return Tooltips.shouldShowAmountTooltip(what, NumExtKt.saturateToLong(big));
     }
 
     @Redirect(method = "renderGridInventoryEntryTooltip", at = @At(value = "INVOKE", target = "Lappeng/core/localization/Tooltips;getAmountTooltip(Lappeng/core/localization/ButtonToolTips;Lappeng/api/stacks/AEKey;J)Lnet/minecraft/network/chat/Component;"), remap = false)

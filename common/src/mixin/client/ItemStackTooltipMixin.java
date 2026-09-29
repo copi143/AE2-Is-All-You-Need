@@ -18,15 +18,11 @@ import java.util.List;
  */
 @Mixin(ItemStack.class)
 public abstract class ItemStackTooltipMixin {
-
     @Inject(method = "getTooltipLines", at = @At("RETURN"))
-    private void allyouneed$appendMacTooltip(
-            Player player,
-            TooltipFlag flag,
-            CallbackInfoReturnable<List<Component>> cir
-    ) {
-        ItemStack self = (ItemStack) (Object) this;
-        if (!self.hasTag() || !self.getTag().contains(MacNbt.ITEM_TAG)) {
+    private void allyouneed$appendMacTooltip(Player player, TooltipFlag flag, CallbackInfoReturnable<List<Component>> cir) {
+        var self = (ItemStack) (Object) this;
+        var tag = self.getTag();
+        if (tag == null || !tag.contains(MacNbt.ITEM_TAG)) {
             return;
         }
         List<Component> lines = cir.getReturnValue();

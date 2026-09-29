@@ -2,7 +2,7 @@ package allyouneed.mixin.ae2;
 
 import allyouneed.api.BigCpuCapacity;
 import allyouneed.cell.CraftingStorage;
-import allyouneed.util.CommonKt;
+import allyouneed.util.NumExtKt;
 import appeng.block.crafting.ICraftingUnitType;
 import appeng.blockentity.crafting.CraftingBlockEntity;
 import appeng.me.cluster.implementations.CraftingCPUCluster;
@@ -89,7 +89,7 @@ public class CraftingCPUClusterMixin implements BigCpuCapacity {
             return;
         }
         if (this.allyouneed$bigStorage.signum() > 0) {
-            cir.setReturnValue(CommonKt.saturateToLong(this.allyouneed$bigStorage));
+            cir.setReturnValue(NumExtKt.saturateToLong(this.allyouneed$bigStorage));
         }
     }
 
