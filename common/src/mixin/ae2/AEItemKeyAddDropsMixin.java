@@ -25,7 +25,7 @@ public abstract class AEItemKeyAddDropsMixin {
     ) {
         if (amount > 64) {
             AEItemKey self = (AEItemKey) (Object) this;
-            drops.add(AllPackets.INSTANCE.createItemPacket(self, amount));
+            drops.add(AllPackets.INSTANCE.createPacket(self, amount));
             ci.cancel();
         }
     }

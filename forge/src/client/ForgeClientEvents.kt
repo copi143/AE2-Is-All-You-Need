@@ -74,6 +74,8 @@ object ForgeClientEvents {
             Minecraft.getInstance().isWindowActive
         }
         event.enqueueWork {
+            PacketItemModels.init()
+
             // AE2 crafting storage uses cutout so light_base transparency is not solid black
             for (storage in CraftingStorage.entries) {
                 ItemBlockRenderTypes.setRenderLayer(storage.define.block(), RenderType.cutout())

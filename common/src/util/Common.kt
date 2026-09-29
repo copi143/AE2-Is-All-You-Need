@@ -2,6 +2,8 @@
 
 package allyouneed.util
 
+import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.MutableComponent
 import net.minecraft.resources.ResourceLocation
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
@@ -23,6 +25,10 @@ fun ResourceLocation.joinChild(child: String): ResourceLocation {
     return "$path/$child".rl(namespace)
 }
 
+val String.mcText: MutableComponent get() = Component.literal(this)
+val String.mcTranslate: MutableComponent get() = Component.translatable(this)
+fun String.mcTranslate(vararg args: Any?): MutableComponent = Component.translatable(this, *args)
+
 /**
  * 将 2^N 格式化为带数量级词头的形式
  */
@@ -43,24 +49,6 @@ fun formatScaledUnit(exp: Int, name: String? = null) = run {
         else -> "${1 shl exp}b"
     }
     if (name == null) prefix else "${prefix}_${name}"
-}
-
-/** 浮点数的指数部分 */
-val Float.floatingExp get() = ((this.toBits() ushr 23) and 0xFF) - 127
-
-/** 浮点数的指数部分 */
-val Double.floatingExp get() = ((this.toBits() ushr 52).toInt() and 0x7FF) - 1023
-
-fun BigInteger.saturateToLong(): Long {
-    if (this.signum() < 0) return 0L
-    if (this.bitLength() > 63) return Long.MAX_VALUE
-    return this.toLong()
-}
-
-fun BigInteger.saturateToInt(): Int {
-    if (this.signum() < 0) return 0
-    if (this.bitLength() > 31) return Int.MAX_VALUE
-    return this.toInt()
 }
 
 /** Java 18 才加入导致的 */

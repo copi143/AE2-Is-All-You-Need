@@ -87,14 +87,37 @@ class AssetGen(
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
     }
 
-    fun packetItem(name: String, displayName: String, contentTexture: String, overlayTexture: String = "item/packet_overlay") {
+    /**
+     * 合并封包物品：单个物品，按 NBT 类型通过 `ae2isallyouneed:type` item property
+     * 切换图标（model overrides）。[variants] 为 (类型键, layer0 纹理) 列表，顺序即谓词值
+     * 从 0.125 开始以 0.125 递增（ClampedItemPropertyFunction 钳制到 [0,1]，0.125 步长
+     * 在二进制浮点下精确）；无 NBT 时回退到第一个变体的图标。
+     */
+    fun packetItem(name: String, displayName: String, variants: List<Pair<String, String>>, overlayTexture: String = "item/packet_overlay") {
         translations["item.$modId.$name"] = displayName
 
-        val itemJson = JsonObject().apply {
+        fun modelJson(contentTexture: String) = JsonObject().apply {
             addProperty("parent", "minecraft:item/generated")
             add("textures", JsonObject().apply {
                 addProperty("layer0", "$modId:$contentTexture")
                 addProperty("layer1", "$modId:$overlayTexture")
+            })
+        }
+
+        for ((variant, contentTexture) in variants) {
+            itemModels += GeneratedFile("models/item/$name/$variant.json", modelJson(contentTexture))
+        }
+
+        val itemJson = modelJson(variants.first().second).apply {
+            add("overrides", JsonArray().apply {
+                for ((i, variant) in variants.withIndex()) {
+                    add(JsonObject().apply {
+                        add("predicate", JsonObject().apply {
+                            addProperty("$modId:type", (i + 1) * 0.125)
+                        })
+                        addProperty("model", "$modId:item/$name/${variant.first}")
+                    })
+                }
             })
         }
         itemModels += GeneratedFile("models/item/$name.json", itemJson)

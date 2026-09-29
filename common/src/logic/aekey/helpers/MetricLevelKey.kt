@@ -44,7 +44,7 @@ abstract class MetricLevelKey : AEKey() {
 
     override fun addDrops(amount: Long, drops: MutableList<ItemStack>, level: Level, pos: BlockPos) {
         if (amount <= 0) return
-        drops.add(AllPackets.createMetricLevelPacket(metric, this.level, amount))
+        drops.add(AllPackets.createPacket(this, amount))
     }
 
     override fun isTagged(tag: TagKey<*>): Boolean = false

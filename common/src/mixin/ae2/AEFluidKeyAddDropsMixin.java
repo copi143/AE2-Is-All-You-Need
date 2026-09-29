@@ -25,7 +25,7 @@ public abstract class AEFluidKeyAddDropsMixin {
     ) {
         if (amount > 0) {
             AEFluidKey self = (AEFluidKey) (Object) this;
-            drops.add(AllPackets.INSTANCE.createFluidPacket(self, amount));
+            drops.add(AllPackets.INSTANCE.createPacket(self, amount));
             ci.cancel();
         }
     }

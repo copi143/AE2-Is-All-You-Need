@@ -304,22 +304,19 @@ fun main(args: Array<String>) {
         itemLang("pseudo_pattern", "Pseudo Pattern")
         itemLang("plane_bus", "ME Annihilation/Formation Plane Bus")
 
-        // Packet items: layered model (layer0=content icon, layer1=packet overlay)
-        packetItem("e_packet", "Energy Packet", "item/energy_icon")
-        packetItem("m_packet", "Mana Packet", "item/mana_icon")
-        packetItem("f_packet", "Fluid Packet", "item/fluid_icon")
-        packetItem("i_packet", "Item Packet", "item/item_icon")
-        packetItem("hp_packet", "HP Packet", "item/hp_icon")
-        packetItem("sta_packet", "STA Packet", "item/sta_icon")
-        packetItem("xp_packet", "XP Packet", "item/xp_icon")
+        // Packet item: single item; icon switches per AEKeyType via model overrides.
+        // 变体顺序与 AllPackets.ICON_VALUES 的谓词值一一对应（0.125 起，0.125 步进）。
+        packetItem("packet", "Packet", listOf(
+            "item" to "item/item_icon",
+            "fluid" to "item/fluid_icon",
+            "energy" to "item/energy_icon",
+            "mana" to "item/mana_icon",
+            "hp" to "item/hp_icon",
+            "sta" to "item/sta_icon",
+            "xp" to "item/xp_icon",
+        ))
 
-        translation("packet.$modId.type.energy", "Energy")
-        translation("packet.$modId.type.mana", "Mana")
-        translation("packet.$modId.type.fluid", "Fluid")
-        translation("packet.$modId.type.item", "Item")
-        translation("packet.$modId.type.hp", "HP")
-        translation("packet.$modId.type.sta", "STA")
-        translation("packet.$modId.type.xp", "XP")
+        translation("item.$modId.packet.typed", "Packet (%s)")
     }
 
     retexture(output) {

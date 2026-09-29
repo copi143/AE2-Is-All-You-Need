@@ -2,15 +2,9 @@
 navigation:
   parent: index.md
   title: 资源封包
-  icon: i_packet
+  icon: packet
 item_ids:
-  - ae2isallyouneed:e_packet
-  - ae2isallyouneed:m_packet
-  - ae2isallyouneed:f_packet
-  - ae2isallyouneed:i_packet
-  - ae2isallyouneed:hp_packet
-  - ae2isallyouneed:sta_packet
-  - ae2isallyouneed:xp_packet
+  - ae2isallyouneed:packet
 ---
 
 # 资源封包
