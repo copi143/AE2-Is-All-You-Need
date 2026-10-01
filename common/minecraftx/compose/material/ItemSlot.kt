@@ -18,7 +18,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -72,6 +71,7 @@ fun ItemSlot(
     val mouse = LocalMousePosition.current
     val density = LocalDensity.current
     val slotSize = McTheme.shapes.slotSize.value.roundToInt().coerceAtLeast(1)
+    val style = McTheme.style
     var nodePos by remember { mutableStateOf(Offset.Zero) }
 
     DisposableEffect(tooltipHost, uiScale, showTooltip, slotSize) {
@@ -145,8 +145,7 @@ fun ItemSlot(
             .drawBehind {
                 val held = latestStack.value()
                 val qty = latestAmount.value()
-                drawRect(color = colors.slotBackground)
-                drawRect(color = colors.slotBorder, style = Stroke(1f))
+                with(style) { slotChrome(colors) }
                 val painter = latestPaint.value
                 McGraphics.defer { g ->
                     if (painter != null) painter(g, 1, 1) else renderer.drawStack(g, held, 1, 1)

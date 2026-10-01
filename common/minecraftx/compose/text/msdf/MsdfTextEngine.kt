@@ -61,7 +61,7 @@ class MsdfTextEngine(
     /** Frees the renderer's GPU objects; they are lazily recreated on the next [paint]. */
     fun releaseGl() = renderer.destroy()
 
-    override fun paint(layout: McTextLayout, fallbackColor: Color) {
+    override fun paint(layout: McTextLayout, fallbackColor: Color, shadow: Boolean) {
         val g = McGraphics.current ?: return
         if (!renderer.ready()) return
         uploadsLeft = UPLOAD_BUDGET
@@ -72,48 +72,67 @@ class MsdfTextEngine(
             val top = (li * layout.lineHeight).toFloat()
             for (run in line.runs) {
                 val argb = run.style?.color?.toArgb() ?: fbArgb
-                val a = ((argb ushr 24) and 0xFF) / 255f
-                val r = ((argb ushr 16) and 0xFF) / 255f
-                val gr = ((argb ushr 8) and 0xFF) / 255f
-                val b = (argb and 0xFF) / 255f
-                val weight = if (run.style?.bold == true) BOLD_WEIGHT else 0f
-                val shear = if (run.style?.italic == true) ITALIC_SHEAR * fonts.ascent else 0f
-                var pen = run.x.toFloat()
-                var i = 0
-                val s = run.text
-                while (i < s.length) {
-                    val cp = s.codePointAt(i)
-                    val face = fonts.faceFor(cp)
-                    val adv = face.advance(cp)
-                    val slot = glyph(cp)
-                    if (slot != null) {
-                        val inv = 1f / atlas.size
-                        val s = fonts.toDraw
-                        val x0 = pen + slot.originX * s
-                        val y0 = top + fonts.ascent + slot.originY * s
-                        renderer.quad(
-                            x0, y0, x0 + slot.width * s, y0 + slot.height * s,
-                            slot.x * inv, slot.y * inv,
-                            (slot.x + slot.width) * inv, (slot.y + slot.height) * inv,
-                            r, gr, b, a, shear, weight,
-                        )
-                    }
-                    pen += adv
-                    i += Character.charCount(cp)
-                }
-                val runW = (pen - run.x).roundToInt()
-                if (run.style?.underline == true) {
-                    val y = (top + layout.lineHeight - 1f).roundToInt()
-                    decorations += intArrayOf(run.x, y, run.x + runW, y + 1, argb)
-                }
-                if (run.style?.strikethrough == true) {
-                    val y = (top + layout.lineHeight * 0.5f).roundToInt()
-                    decorations += intArrayOf(run.x, y, run.x + runW, y + 1, argb)
+                // 阴影与本体同批提交:先阴影(+1,+1,1/4 强度,原版公式),后本体。
+                for (pass in if (shadow) 0..1 else 1..1) {
+                    val c = if (pass == 0) (argb and 0xFF000000.toInt()) or ((argb and 0xFCFCFC) ushr 2) else argb
+                    val off = if (pass == 0) 1f else 0f
+                    paintRun(run, top, c, off, off, layout, decorations)
                 }
             }
         }
         renderer.flush()
         for (d in decorations) g.fill(d[0], d[1], d[2], d[3], d[4])
+    }
+
+    private fun paintRun(
+        run: minecraftx.compose.text.StyledRun,
+        top: Float,
+        argb: Int,
+        offX: Float,
+        offY: Float,
+        layout: McTextLayout,
+        decorations: MutableList<IntArray>,
+    ) {
+        val a = ((argb ushr 24) and 0xFF) / 255f
+        val r = ((argb ushr 16) and 0xFF) / 255f
+        val gr = ((argb ushr 8) and 0xFF) / 255f
+        val b = (argb and 0xFF) / 255f
+        val weight = if (run.style?.bold == true) BOLD_WEIGHT else 0f
+        val shear = if (run.style?.italic == true) ITALIC_SHEAR * fonts.ascent else 0f
+        var pen = run.x.toFloat() + offX
+        var i = 0
+        val s = run.text
+        while (i < s.length) {
+            val cp = s.codePointAt(i)
+            val face = fonts.faceFor(cp)
+            val adv = face.advance(cp)
+            val slot = glyph(cp)
+            if (slot != null) {
+                val inv = 1f / atlas.size
+                val sc = fonts.toDraw
+                val x0 = pen + slot.originX * sc
+                val y0 = top + offY + fonts.ascent + slot.originY * sc
+                renderer.quad(
+                    x0, y0, x0 + slot.width * sc, y0 + slot.height * sc,
+                    slot.x * inv, slot.y * inv,
+                    (slot.x + slot.width) * inv, (slot.y + slot.height) * inv,
+                    r, gr, b, a, shear, weight,
+                )
+            }
+            pen += adv
+            i += Character.charCount(cp)
+        }
+        if (offX == 0f && offY == 0f) {
+            val runW = (pen - run.x).roundToInt()
+            if (run.style?.underline == true) {
+                val y = (top + layout.lineHeight - 1f).roundToInt()
+                decorations += intArrayOf(run.x, y, run.x + runW, y + 1, argb)
+            }
+            if (run.style?.strikethrough == true) {
+                val y = (top + layout.lineHeight * 0.5f).roundToInt()
+                decorations += intArrayOf(run.x, y, run.x + runW, y + 1, argb)
+            }
+        }
     }
 
     private fun glyph(cp: Int): AtlasSlot? {

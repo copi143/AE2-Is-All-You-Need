@@ -281,7 +281,8 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                 )
                 McScrollbar(
                     state = demoScroll,
-                    modifier = Modifier.align(Alignment.CenterEnd).size(4.dp, 120.dp),
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                        .size(McTheme.style.scrollbarTrackWidth, 120.dp),
                 )
             }
 

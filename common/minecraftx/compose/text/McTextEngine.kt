@@ -33,9 +33,10 @@ interface McTextEngine {
 
     /**
      * Draw [layout] with its top-left at the current pose origin. Runs without an explicit
-     * color use [fallbackColor].
+     * color use [fallbackColor]. [shadow] renders the vanilla drop shadow (+1,+1, quarter
+     * intensity) behind the text.
      */
-    fun paint(layout: McTextLayout, fallbackColor: Color)
+    fun paint(layout: McTextLayout, fallbackColor: Color, shadow: Boolean = false)
 
     /** Advance width of [text] in px, equivalent to a single-line unbounded [layout]. */
     fun widthOf(text: String, style: McSpanStyle? = null): Int
@@ -52,10 +53,17 @@ interface McTextEngine {
  * the active draw-pass recording (or draws directly in live mode), keeping the replay order intact.
  * Replaces `translate(x, y) { with(engine) { paint(...) } }`, which cannot be deferred safely.
  */
-fun DrawScope.paintDeferred(engine: McTextEngine, layout: McTextLayout, color: Color, x: Float, y: Float) {
+fun DrawScope.paintDeferred(
+    engine: McTextEngine,
+    layout: McTextLayout,
+    color: Color,
+    x: Float,
+    y: Float,
+    shadow: Boolean = false,
+) {
     val canvas = drawContext.canvas
     canvas.save()
     canvas.translate(x, y)
-    McGraphics.defer { engine.paint(layout, color) }
+    McGraphics.defer { engine.paint(layout, color, shadow) }
     canvas.restore()
 }

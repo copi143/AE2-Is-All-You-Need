@@ -69,6 +69,7 @@ fun McButton(
         McText(
             Component.literal(label),
             color = style.buttonLabelColor(colors, enabled, hovered).toArgb(),
+            shadow = style.buttonLabelShadow,
         )
     }
 }

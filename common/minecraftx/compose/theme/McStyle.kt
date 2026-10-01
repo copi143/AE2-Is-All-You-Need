@@ -1,6 +1,8 @@
 package minecraftx.compose.theme
 
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /**
  * 风格策略:完整主题 = 风格策略(McStyle,决定组件的渲染方式和行为属性) + 配色策略
@@ -32,6 +34,9 @@ interface McStyle {
     fun buttonLabelColor(colors: McColorScheme, enabled: Boolean, hovered: Boolean) =
         if (enabled) colors.textPrimary else colors.textDisabled
 
+    /** 按钮文本是否带原版投影(+1,+1 四分之一强度);vanilla 风格为 true。 */
+    val buttonLabelShadow: Boolean get() = false
+
     /** 标签页外框;[selected] 为当前选中页。 */
     fun DrawScope.tabChrome(colors: McColorScheme, selected: Boolean)
 
@@ -55,6 +60,16 @@ interface McStyle {
 
     /** 滚动条滑块。 */
     fun DrawScope.scrollbarBarChrome(colors: McColorScheme)
+
+    /** 滚动条轨道/滑块宽度(原版为 8/8,扁平风格默认 4/2)。 */
+    val scrollbarTrackWidth: Dp get() = 4.dp
+    val scrollbarBarWidth: Dp get() = 2.dp
+
+    /** 物品槽(18x18)外框;默认纯平铺色+细边框,vanilla 风格会覆写为凹陷斜面。 */
+    fun DrawScope.slotChrome(colors: McColorScheme) {
+        drawRect(colors.slotBackground)
+        drawRect(colors.slotBorder, style = androidx.compose.ui.graphics.drawscope.Stroke(1f))
+    }
 
     /** 文本输入框外框(多行框同用)。 */
     fun DrawScope.inputChrome(colors: McColorScheme, focused: Boolean)

@@ -48,7 +48,7 @@ class VanillaTextEngine(
         return text.length
     }
 
-    override fun paint(layout: McTextLayout, fallbackColor: Color) {
+    override fun paint(layout: McTextLayout, fallbackColor: Color, shadow: Boolean) {
         val g = McGraphics.current ?: return
         val font = Minecraft.getInstance().font
         val fbArgb = fallbackColor.toArgb()
@@ -57,7 +57,7 @@ class VanillaTextEngine(
             for (run in line.runs) {
                 val mcStyle = run.style?.toMcStyle() ?: Style.EMPTY
                 val argb = run.style?.color?.let { it.toArgb() } ?: fbArgb
-                g.drawString(font, FormattedCharSequence.forward(run.text, mcStyle), run.x, y, argb, false)
+                g.drawString(font, FormattedCharSequence.forward(run.text, mcStyle), run.x, y, argb, shadow)
             }
         }
     }

@@ -39,8 +39,9 @@ fun McText(
     color: Int = McTheme.colors.textPrimary.toArgb(),
     maxWidth: Int = Int.MAX_VALUE,
     clipFrame: Rect? = null,
+    shadow: Boolean = false,
 ) {
-    McTextInternal(text.toStyledString(), modifier, color, maxWidth, clipFrame)
+    McTextInternal(text.toStyledString(), modifier, color, maxWidth, clipFrame, shadow)
 }
 
 @Composable
@@ -50,8 +51,9 @@ fun McText(
     color: Int = McTheme.colors.textPrimary.toArgb(),
     maxWidth: Int = Int.MAX_VALUE,
     clipFrame: Rect? = null,
+    shadow: Boolean = false,
 ) {
-    McTextInternal(McStyledString(text), modifier, color, maxWidth, clipFrame)
+    McTextInternal(McStyledString(text), modifier, color, maxWidth, clipFrame, shadow)
 }
 
 @Composable
@@ -61,6 +63,7 @@ private fun McTextInternal(
     color: Int,
     maxWidth: Int,
     clipFrame: Rect?,
+    shadow: Boolean,
 ) {
     val engine = LocalMcTextEngine.current
     val layout = rememberTextLayout(styled, maxWidth.coerceAtLeast(0), singleLine = true)
@@ -68,7 +71,7 @@ private fun McTextInternal(
     Layout(
         content = {},
         modifier = modifier.drawBehind {
-            drawClipped(engine, layout, drawnWidth, color, clipFrame)
+            drawClipped(engine, layout, drawnWidth, color, clipFrame, shadow)
         },
     ) { _, constraints: Constraints ->
         val w = constraints.constrainWidth(min(drawnWidth, maxWidth))
@@ -87,13 +90,14 @@ fun McWrappedText(
     modifier: Modifier = Modifier,
     color: Int = McTheme.colors.textPrimary.toArgb(),
     maxLines: Int = Int.MAX_VALUE,
+    shadow: Boolean = false,
 ) {
     val engine = LocalMcTextEngine.current
     var laidOut: McTextLayout = McTextLayout.EMPTY
     Layout(
         content = {},
         modifier = modifier.drawBehind {
-            drawClipped(engine, laidOut, laidOut.width, color, clipFrame = null)
+            drawClipped(engine, laidOut, laidOut.width, color, clipFrame = null, shadow)
         },
     ) { _, constraints ->
         val maxW = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
@@ -112,8 +116,9 @@ fun McWrappedText(
     modifier: Modifier = Modifier,
     color: Int = McTheme.colors.textPrimary.toArgb(),
     maxLines: Int = Int.MAX_VALUE,
+    shadow: Boolean = false,
 ) {
-    McWrappedText(McStyledString(text), modifier, color, maxLines)
+    McWrappedText(McStyledString(text), modifier, color, maxLines, shadow)
 }
 
 /**
@@ -133,16 +138,17 @@ private fun drawClipped(
     widthPx: Int,
     color: Int,
     clipFrame: Rect?,
+    shadow: Boolean,
 ) {
     val lineHeightPx = engine.lineHeight
     if (clipFrame == null) {
-        McGraphics.defer { engine.paint(layout, Color(color)) }
+        McGraphics.defer { engine.paint(layout, Color(color), shadow) }
         return
     }
     if (clipFrame.left <= 0f && clipFrame.top <= 0f &&
         clipFrame.right >= widthPx.toFloat() && clipFrame.bottom >= lineHeightPx.toFloat()
     ) {
-        McGraphics.defer { engine.paint(layout, Color(color)) }
+        McGraphics.defer { engine.paint(layout, Color(color), shadow) }
         return
     }
     if (clipFrame.right <= 0f || clipFrame.bottom <= 0f ||
@@ -162,7 +168,7 @@ private fun drawClipped(
     if (clipRight <= clipLeft || clipBottom <= clipTop) return
     McScissor.push(null, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
     try {
-        McGraphics.defer { engine.paint(layout, Color(color)) }
+        McGraphics.defer { engine.paint(layout, Color(color), shadow) }
     } finally {
         McScissor.pop(null)
     }

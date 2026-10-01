@@ -32,8 +32,8 @@ import kotlin.math.max
 fun McScrollbar(
     state: ScrollState,
     modifier: Modifier = Modifier,
-    trackWidth: androidx.compose.ui.unit.Dp = 4.dp,
-    barWidth: androidx.compose.ui.unit.Dp = 2.dp,
+    trackWidth: androidx.compose.ui.unit.Dp = McTheme.style.scrollbarTrackWidth,
+    barWidth: androidx.compose.ui.unit.Dp = McTheme.style.scrollbarBarWidth,
     colors: McColorScheme = McTheme.colors,
 ) {
     BoxWithConstraints(modifier) {
