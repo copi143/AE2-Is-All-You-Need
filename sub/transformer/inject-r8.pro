@@ -4,3 +4,10 @@
 -keepattributes Signature,InnerClasses,EnclosingMethod
 -keep,allowoptimization class appeng.api.stacks.** { *; }
 -keep,allowoptimization class net.minecraft.resources.** { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.GsonFastPath { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.FastFactory { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.FastAdapterGenerator { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.FastAdapterEntry { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.FrameSafeClassWriter { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.StreamJsonObject { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.FallbackSignal { *; }

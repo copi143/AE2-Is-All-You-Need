@@ -8,9 +8,11 @@ plugins {
 }
 
 sourceSets.create("inject") {
-    java.srcDirs.clear()
+    java.setSrcDirs(listOf("inject"))
     kotlin.setSrcDirs(listOf("inject"))
 }
+
+sourceSets["test"].java.setSrcDirs(listOf("test"))
 
 configurations.create("injectClasses") {
     isCanBeConsumed = true
@@ -60,7 +62,11 @@ dependencies {
     embed(libs.asm.analysis) { isTransitive = false }
     "injectCompileOnly"(kotlin("stdlib"))
     "injectCompileOnly"(libs.ae2.forge)
+    "injectCompileOnly"(libs.gson)
+    "injectCompileOnly"(libs.asm)
+    "injectCompileOnly"(libs.slf4j)
     testImplementation(sourceSets["inject"].output)
+    testImplementation(libs.gson)
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -144,7 +150,10 @@ val r8InjectJar = tasks.register<JavaExec>("r8InjectJar") {
                 add("--lib")
                 add(r8Jdk.get().metadata.installationPath.asFile.absolutePath)
                 val injectCp = project.configurations.getByName("injectCompileClasspath")
-                injectCp.filter { "appliedenergistics" in it.name }.forEach {
+                injectCp.filter {
+                    val n = it.name
+                    "appliedenergistics" in n || "gson" in n || n.startsWith("asm-") || "slf4j" in n
+                }.forEach {
                     add("--lib")
                     add(it.absolutePath)
                 }

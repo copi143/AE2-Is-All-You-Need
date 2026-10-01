@@ -26,6 +26,7 @@ antlr = "4.9.1" # 由于 forge 依赖，从 4.13.2 调整为 4.9.1
 r8 = "9.4.14"
 asm = "9.8"
 slf4j = "1.7.30"
+gson = "2.10" # 与 MC 1.20.1 自带 Gson 对齐，transformer 针对其内部结构做特征校验
 
 junit = "6.1.3"
 junit-launcher = "6.1.3"
@@ -68,6 +69,7 @@ asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
 asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
 asm-analysis = { module = "org.ow2.asm:asm-analysis", version.ref = "asm" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 fml = { module = "net.minecraftforge:fmlloader", version.ref = "forge" }
 
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
