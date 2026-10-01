@@ -21,19 +21,38 @@ import kotlin.math.abs
 
 class PathTessellationTest {
 
+    /** True when all three vertices of triangle [t] are fully opaque (i.e. not a feather fringe). */
+    private fun isCoreTri(soup: TriangleSoup, t: Int): Boolean {
+        val c = soup.colors
+        return ((c[t] ushr 24) == 0xFF) && ((c[t + 1] ushr 24) == 0xFF) && ((c[t + 2] ushr 24) == 0xFF)
+    }
+
+    private fun coreTriCount(soup: TriangleSoup): Int {
+        var count = 0
+        for (v in soup.colors.indices step 3) {
+            if (isCoreTri(soup, v)) count++
+        }
+        return count
+    }
+
+    /** Area of the opaque core triangles only; the feather fringe is excluded. */
     private fun soupArea(soup: TriangleSoup): Double {
         var total = 0.0
         val pos = soup.positions
         var i = 0
+        var v = 0
         while (i + 5 < pos.size) {
-            val ax = pos[i].toDouble()
-            val ay = pos[i + 1].toDouble()
-            val bx = pos[i + 2].toDouble()
-            val by = pos[i + 3].toDouble()
-            val cx = pos[i + 4].toDouble()
-            val cy = pos[i + 5].toDouble()
-            total += abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2.0
+            if (isCoreTri(soup, v)) {
+                val ax = pos[i].toDouble()
+                val ay = pos[i + 1].toDouble()
+                val bx = pos[i + 2].toDouble()
+                val by = pos[i + 3].toDouble()
+                val cx = pos[i + 4].toDouble()
+                val cy = pos[i + 5].toDouble()
+                total += abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay)) / 2.0
+            }
             i += 6
+            v += 3
         }
         return total
     }
@@ -50,7 +69,7 @@ class PathTessellationTest {
     @Test
     fun `rect fill produces two triangles with exact area`() {
         val soup = fillContours(rectPath(0f, 0f, 10f, 20f).flattenContours(), PathFillType.NonZero, 0xFFFFFFFF.toInt())
-        assertEquals(2, soup.positions.size / 6)
+        assertEquals(2, coreTriCount(soup))
         assertEquals(200.0, soupArea(soup), 1e-3)
     }
 
@@ -97,7 +116,7 @@ class PathTessellationTest {
             listOf(listOf(Offset(0f, 0f), Offset(10f, 0f))),
             2f, StrokeCap.Butt, StrokeJoin.Bevel, 0xFFFFFFFF.toInt(),
         )
-        assertEquals(2, soup.positions.size / 6)
+        assertEquals(2, coreTriCount(soup))
         assertEquals(20.0, soupArea(soup), 1e-3)
     }
 

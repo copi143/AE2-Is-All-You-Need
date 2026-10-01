@@ -34,7 +34,7 @@ object McThemeSettings {
 
     private var idState by mutableStateOf(McThemeId.Dark)
     private var engineIdState by mutableStateOf("vanilla")
-    private var styleIdState by mutableStateOf(MinimalMcStyle.id)
+    private var styleIdState by mutableStateOf(MaterialMcStyle.id)
     private var updateModeState by mutableStateOf(ComposeFrameDriver.UpdateMode.PARALLEL)
 
     val id: McThemeId

@@ -29,7 +29,76 @@ class TriangleSoup {
         colors.add(color); colors.add(color); colors.add(color)
     }
 
+    fun tri(
+        ax: Float, ay: Float, bx: Float, by: Float, cx: Float, cy: Float,
+        colorA: Int, colorB: Int, colorC: Int,
+    ) {
+        positions.add(ax); positions.add(ay)
+        positions.add(bx); positions.add(by)
+        positions.add(cx); positions.add(cy)
+        colors.add(colorA); colors.add(colorB); colors.add(colorC)
+    }
+
     fun isEmpty(): Boolean = positions.isEmpty()
+}
+
+/**
+ * Edge feather width in logical px: shapes get a ring of triangles whose vertex alpha fades
+ * to 0 over this distance, emulating anti-aliasing in a pipeline (RenderType.gui quads) that
+ * has no MSAA.
+ */
+private const val FEATHER = 0.75f
+
+private fun alpha0(color: Int): Int = color and 0x00FFFFFF
+
+/**
+ * Appends one feather quad along edge a→b, fading from [color] at the edge to transparent
+ * at offset (nx, ny) (the outward offset, length ~[FEATHER]).
+ */
+private fun featherEdge(
+    soup: TriangleSoup,
+    ax: Float, ay: Float, bx: Float, by: Float,
+    nx: Float, ny: Float,
+    color: Int,
+) {
+    soup.tri(ax, ay, bx, by, bx + nx, by + ny, color, color, alpha0(color))
+    soup.tri(ax, ay, bx + nx, by + ny, ax + nx, ay + ny, color, alpha0(color), alpha0(color))
+}
+
+/**
+ * Feathers every edge of [ring] pointing away from the ring centroid. For outer rings that is
+ * the shape exterior; for hole rings the centroid sits inside the hole, so the same rule
+ * feathers into the hole — both are the correct AA direction. (If a concave edge ever gets the
+ * "wrong" side, the fade lands on top of the same-color interior and is invisible.)
+ */
+private fun featherRing(soup: TriangleSoup, ring: List<Offset>, color: Int) {
+    val n = ring.size
+    if (n < 3) return
+    var cx = 0f
+    var cy = 0f
+    for (p in ring) {
+        cx += p.x
+        cy += p.y
+    }
+    cx /= n
+    cy /= n
+    for (i in 0 until n) {
+        val a = ring[i]
+        val b = ring[(i + 1) % n]
+        val dx = b.x - a.x
+        val dy = b.y - a.y
+        val len = sqrt(dx * dx + dy * dy)
+        if (len <= 0f) continue
+        var nx = -dy / len
+        var ny = dx / len
+        val mx = (a.x + b.x) / 2f - cx
+        val my = (a.y + b.y) / 2f - cy
+        if (nx * mx + ny * my < 0f) {
+            nx = -nx
+            ny = -ny
+        }
+        featherEdge(soup, a.x, a.y, b.x, b.y, nx * FEATHER, ny * FEATHER, color)
+    }
 }
 
 fun fillContours(contours: List<List<Offset>>, fillType: PathFillType, color: Int): TriangleSoup {
@@ -39,6 +108,7 @@ fun fillContours(contours: List<List<Offset>>, fillType: PathFillType, color: In
     if (rings.isEmpty()) return soup
     val evenOdd = fillType == PathFillType.EvenOdd
     triangulateLevel(rings, soup, color, evenOdd)
+    for (ring in rings) featherRing(soup, ring, color)
     return soup
 }
 
@@ -52,19 +122,22 @@ fun strokeContours(
     val soup = TriangleSoup()
     val w = (width / 2f).coerceAtLeast(0.5f)
     for (raw in contours) {
+        // Detect closure on the raw contour: cleanedOpen drops the duplicated
+        // closing point, after which first==last can never hold.
+        val closed = raw.size >= 3 && raw.first() == raw.last()
         val pts = cleanedOpen(raw) ?: continue
         if (pts.size < 2) continue
-        val closed = pts.size >= 3 && pts.first() == pts.last()
-        val ring = if (closed) pts.dropLast(1) else pts
+        val ring = pts
         if (ring.size < 2) continue
         val roundJoin = join == StrokeJoin.Round
         val roundCap = cap == StrokeCap.Round
-        // Segment quads.
+        // Segment quads + edge feather.
         val count = ring.size
         for (i in 0 until (if (closed) count else count - 1)) {
             val a = ring[i]
             val b = ring[(i + 1) % count]
             quadForSegment(soup, a, b, w, color)
+            featherSegment(soup, a, b, w, color)
         }
         // Joins.
         for (i in (if (closed) 0 else 1) until (if (closed) count else count - 1)) {
@@ -97,6 +170,26 @@ private fun quadForSegment(soup: TriangleSoup, a: Offset, b: Offset, halfWidth: 
     soup.tri(a.x - nx, a.y - ny, b.x - nx, b.y - ny, b.x + nx, b.y + ny, color)
 }
 
+/** Fades both long edges of the a→b stroke segment to transparent over [FEATHER] px. */
+private fun featherSegment(soup: TriangleSoup, a: Offset, b: Offset, halfWidth: Float, color: Int) {
+    val dx = b.x - a.x
+    val dy = b.y - a.y
+    val len = sqrt(dx * dx + dy * dy)
+    if (len <= 0f) return
+    val nx = -dy / len
+    val ny = dx / len
+    featherEdge(
+        soup,
+        a.x + nx * halfWidth, a.y + ny * halfWidth, b.x + nx * halfWidth, b.y + ny * halfWidth,
+        nx * FEATHER, ny * FEATHER, color,
+    )
+    featherEdge(
+        soup,
+        a.x - nx * halfWidth, a.y - ny * halfWidth, b.x - nx * halfWidth, b.y - ny * halfWidth,
+        -nx * FEATHER, -ny * FEATHER, color,
+    )
+}
+
 private fun normals(p: Offset, q: Offset, halfWidth: Float): Pair<Offset, Offset> {
     val dx = q.x - p.x
     val dy = q.y - p.y
@@ -110,6 +203,15 @@ private fun bevelJoin(soup: TriangleSoup, prev: Offset, curr: Offset, next: Offs
     val (n2, _) = normals(curr, next, w)
     soup.tri(curr.x + n1.x, curr.y + n1.y, curr.x, curr.y, curr.x + n2.x, curr.y + n2.y, color)
     soup.tri(curr.x - n1.x, curr.y - n1.y, curr.x, curr.y, curr.x - n2.x, curr.y - n2.y, color)
+    // Feather the two outer bevel edges, along the averaged normal direction.
+    val mx = n1.x + n2.x
+    val my = n1.y + n2.y
+    val mlen = sqrt(mx * mx + my * my)
+    if (mlen <= 0f) return
+    val fx = mx / mlen * FEATHER
+    val fy = my / mlen * FEATHER
+    featherEdge(soup, curr.x + n1.x, curr.y + n1.y, curr.x + n2.x, curr.y + n2.y, fx, fy, color)
+    featherEdge(soup, curr.x - n1.x, curr.y - n1.y, curr.x - n2.x, curr.y - n2.y, -fx, -fy, color)
 }
 
 private fun roundJoinFan(soup: TriangleSoup, prev: Offset, curr: Offset, next: Offset, w: Float, color: Int) {
@@ -132,6 +234,9 @@ private fun fanBetween(soup: TriangleSoup, center: Offset, from: Offset, to: Off
         val qx = center.x + w * cos(a)
         val qy = center.y + w * sin(a)
         soup.tri(center.x, center.y, px, py, qx, qy, color)
+        // Radial feather on the outer arc.
+        val mid = a0 + (a1 - a0) * (i - 0.5f) / steps
+        featherEdge(soup, px, py, qx, qy, cos(mid) * FEATHER, sin(mid) * FEATHER, color)
         px = qx
         py = qy
     }
@@ -156,6 +261,8 @@ private fun roundCapFan(soup: TriangleSoup, inner: Offset, end: Offset, w: Float
         val qx = end.x + w * cos(a)
         val qy = end.y + w * sin(a)
         soup.tri(end.x, end.y, px, py, qx, qy, color)
+        val mid = a0 + Math.PI.toFloat() * (i - 0.5f) / steps * (if (start) 1f else -1f)
+        featherEdge(soup, px, py, qx, qy, cos(mid) * FEATHER, sin(mid) * FEATHER, color)
         px = qx
         py = qy
     }

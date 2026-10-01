@@ -119,10 +119,16 @@ object MaterialMcStyle : McStyle {
 
     override fun DrawScope.toggleTrackChrome(colors: McColorScheme, checked: Boolean) {
         round(if (checked) colors.toggleTrackOn else colors.toggleTrackOff, size.height / 2f)
+        // M3: the off track carries an outline-colored ring.
+        if (!checked) {
+            drawRoundRect(colors.inputBorder, cornerRadius = CornerRadius(size.height / 2f), style = Stroke(1.5f))
+        }
     }
 
     override fun DrawScope.toggleThumbChrome(colors: McColorScheme, checked: Boolean) {
-        round(colors.toggleThumb, size.minDimension / 2f)
+        // M3: thumb is onPrimary when on, outline when off (a dark thumb on the dark
+        // off-track would be nearly invisible).
+        round(if (checked) colors.toggleThumb else colors.inputBorder, size.minDimension / 2f)
     }
 
     override fun DrawScope.progressTrackChrome(colors: McColorScheme) {

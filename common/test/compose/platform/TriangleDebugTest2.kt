@@ -21,6 +21,16 @@ class TriangleDebugTest2 {
         cs.firstOrNull()?.let { println(it.joinToString()) }
         val soup = fillContours(cs, PathFillType.NonZero, -1)
         println("tris=${soup.positions.size/6}")
-        assertEquals(1, soup.positions.size/6)
+        // Core triangles only: the AA feather fringe adds extra edge quads.
+        var core = 0
+        for (v in soup.colors.indices step 3) {
+            if ((soup.colors[v] ushr 24) == 0xFF &&
+                (soup.colors[v + 1] ushr 24) == 0xFF &&
+                (soup.colors[v + 2] ushr 24) == 0xFF
+            ) {
+                core++
+            }
+        }
+        assertEquals(1, core)
     }
 }

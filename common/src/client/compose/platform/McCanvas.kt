@@ -235,12 +235,47 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
         radiusY: Float,
         paint: Paint,
     ) {
-        if (paint.style == PaintingStyle.Stroke) {
-            strokeRect(left, top, right, bottom, paint)
-        } else {
-            val color = argb(paint)
-            emit { g -> g.fill(left.toInt(), top.toInt(), right.toInt(), bottom.toInt(), color) }
+        if (radiusX <= 0f || radiusY <= 0f) {
+            drawRect(left, top, right, bottom, paint)
+            return
         }
+        if (right <= left || bottom <= top) return
+        val rx = min(radiusX, (right - left) / 2f)
+        val ry = min(radiusY, (bottom - top) / 2f)
+        val contour = roundRectContour(left, top, right, bottom, rx, ry)
+        val color = argb(paint)
+        val soup = if (paint.style == PaintingStyle.Stroke) {
+            strokeContours(listOf(contour), strokeWidth(paint), paint.strokeCap, paint.strokeJoin, color)
+        } else {
+            fillContours(listOf(contour), PathFillType.NonZero, color)
+        }
+        emitSoup(soup)
+    }
+
+    /** Closed polygon approximating a rounded rect: four quarter arcs joined by the edge runs. */
+    private fun roundRectContour(
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        rx: Float,
+        ry: Float,
+    ): List<Offset> {
+        val steps = (max(rx, ry) / 2f).toInt().coerceIn(2, 16)
+        val pts = ArrayList<Offset>(steps * 4 + 5)
+        fun arc(cx: Float, cy: Float, startDegrees: Float) {
+            for (i in 0..steps) {
+                val a = Math.toRadians(startDegrees + 90.0 * i / steps)
+                pts += Offset(cx + rx * cos(a).toFloat(), cy + ry * sin(a).toFloat())
+            }
+        }
+        // Y grows downward: TL starts at 180°, then sweep clockwise through TR, BR, BL.
+        arc(left + rx, top + ry, 180f)
+        arc(right - rx, top + ry, 270f)
+        arc(right - rx, bottom - ry, 0f)
+        arc(left + rx, bottom - ry, 90f)
+        pts += pts.first()
+        return pts
     }
 
     override fun drawOval(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
@@ -260,7 +295,7 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
                 ),
             )
         } else {
-            drawEllipseFan(cx, cy, rx, ry, 0f, 360f, useCenter = true, paint)
+            emitSoup(fillContours(listOf(sampleEllipse(cx, cy, rx, ry)), PathFillType.NonZero, argb(paint)))
         }
     }
 
@@ -277,7 +312,7 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
                 ),
             )
         } else {
-            drawEllipseFan(center.x, center.y, radius, radius, 0f, 360f, useCenter = true, paint)
+            emitSoup(fillContours(listOf(sampleEllipse(center.x, center.y, radius, radius)), PathFillType.NonZero, argb(paint)))
         }
     }
 
@@ -301,7 +336,9 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
             val pts = sampleArcPoints(cx, cy, rx, ry, startAngle, sweepAngle, useCenter)
             emitSoup(strokeContours(listOf(pts), strokeWidth(paint), paint.strokeCap, paint.strokeJoin, argb(paint)))
         } else {
-            drawEllipseFan(cx, cy, rx, ry, startAngle, sweepAngle, useCenter, paint)
+            // Pie (useCenter) / chord contours close implicitly; fillContours feathers the rim.
+            val pts = sampleArcPoints(cx, cy, rx, ry, startAngle, sweepAngle, useCenter)
+            emitSoup(fillContours(listOf(pts), PathFillType.NonZero, argb(paint)))
         }
     }
 
@@ -330,31 +367,6 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
             pts += Offset(cx + rx * cos(a).toFloat(), cy + ry * sin(a).toFloat())
         }
         return pts
-    }
-
-    private fun drawEllipseFan(
-        cx: Float,
-        cy: Float,
-        rx: Float,
-        ry: Float,
-        startDegrees: Float,
-        sweepDegrees: Float,
-        useCenter: Boolean,
-        paint: Paint,
-    ) {
-        val color = argb(paint)
-        val pts = sampleArcPoints(cx, cy, rx, ry, startDegrees, sweepDegrees, useCenter)
-        val soup = TriangleSoup()
-        if (useCenter) {
-            for (i in 1 until pts.size - 1) {
-                soup.tri(pts[0].x, pts[0].y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color)
-            }
-        } else if (pts.size >= 3) {
-            for (i in 1 until pts.size - 1) {
-                soup.tri(pts[0].x, pts[0].y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color)
-            }
-        }
-        emitSoup(soup)
     }
 
     override fun drawPath(path: Path, paint: Paint) {
