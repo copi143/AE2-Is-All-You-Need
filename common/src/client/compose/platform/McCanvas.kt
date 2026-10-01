@@ -242,14 +242,21 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
         if (right <= left || bottom <= top) return
         val rx = min(radiusX, (right - left) / 2f)
         val ry = min(radiusY, (bottom - top) / 2f)
-        val contour = roundRectContour(left, top, right, bottom, rx, ry)
         val color = argb(paint)
-        val soup = if (paint.style == PaintingStyle.Stroke) {
-            strokeContours(listOf(contour), strokeWidth(paint), paint.strokeCap, paint.strokeJoin, color)
-        } else {
-            fillContours(listOf(contour), PathFillType.NonZero, color)
+        val strokeHalf = if (paint.style == PaintingStyle.Stroke) strokeWidth(paint) / 2f else 0f
+        // Prefer the SDF shader (analytic AA); fall back to tessellation + feather fringe.
+        emit { g ->
+            if (rx == ry && McShapePipeline.roundRect(g, left, top, right, bottom, rx, color, strokeHalf)) {
+                return@emit
+            }
+            val contour = roundRectContour(left, top, right, bottom, rx, ry)
+            val soup = if (strokeHalf > 0f) {
+                strokeContours(listOf(contour), strokeHalf * 2f, paint.strokeCap, paint.strokeJoin, color)
+            } else {
+                fillContours(listOf(contour), PathFillType.NonZero, color)
+            }
+            flushSoup(g, soup)
         }
-        emitSoup(soup)
     }
 
     /** Closed polygon approximating a rounded rect: four quarter arcs joined by the edge runs. */
@@ -301,18 +308,24 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
 
     override fun drawCircle(center: Offset, radius: Float, paint: Paint) {
         if (radius <= 0f) return
-        if (paint.style == PaintingStyle.Stroke) {
-            emitSoup(
-                strokeContours(
-                    listOf(sampleEllipse(center.x, center.y, radius, radius)),
-                    strokeWidth(paint),
-                    paint.strokeCap,
-                    paint.strokeJoin,
-                    argb(paint),
-                ),
-            )
-        } else {
-            emitSoup(fillContours(listOf(sampleEllipse(center.x, center.y, radius, radius)), PathFillType.NonZero, argb(paint)))
+        val color = argb(paint)
+        val strokeHalf = if (paint.style == PaintingStyle.Stroke) strokeWidth(paint) / 2f else 0f
+        emit { g ->
+            if (McShapePipeline.roundRect(
+                    g,
+                    center.x - radius, center.y - radius, center.x + radius, center.y + radius,
+                    radius, color, strokeHalf,
+                )
+            ) {
+                return@emit
+            }
+            val contour = sampleEllipse(center.x, center.y, radius, radius)
+            val soup = if (strokeHalf > 0f) {
+                strokeContours(listOf(contour), strokeHalf * 2f, paint.strokeCap, paint.strokeJoin, color)
+            } else {
+                fillContours(listOf(contour), PathFillType.NonZero, color)
+            }
+            flushSoup(g, soup)
         }
     }
 
@@ -370,7 +383,7 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
     }
 
     override fun drawPath(path: Path, paint: Paint) {
-        val contours = path.flattenContours()
+        val contours = path.flattenContours(0.25f)
         if (contours.isEmpty()) {
             return
         }
@@ -555,9 +568,11 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
     }
 
     private fun flushSoup(graphics: GuiGraphics, soup: TriangleSoup) {
+        // Fast path: own GL pipeline (no winding normalization needed — culling is off there).
+        if (McShapePipeline.draw(graphics, soup)) return
         val matrix = graphics.pose().last().pose()
-        // Batch into the shared RenderType.gui() buffer so all color geometry of the pass
-        // merges into one draw call with vanilla fills. gui() culls back faces: the GUI
+        // Fallback: batch into the shared RenderType.gui() buffer so all color geometry of the
+        // pass merges into one draw call with vanilla fills. gui() culls back faces: the GUI
         // projection flips Y, so only triangles with negative signed area (in post-transform
         // coordinates) survive — normalize winding per triangle before writing.
         val consumer = graphics.bufferSource().getBuffer(RenderType.gui())

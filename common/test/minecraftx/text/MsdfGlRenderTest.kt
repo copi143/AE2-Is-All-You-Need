@@ -401,7 +401,7 @@ class MsdfGlRenderTest {
     }
 
     private companion object {
-        const val VERT = """#version 150
+        const val VERT = """#version 330 core
 in vec3 Position;
 in vec2 UV0;
 in vec4 Color;
@@ -415,7 +415,7 @@ void main() {
     vColor = Color;
 }
 """
-        const val FRAG_NEW = """#version 150
+        const val FRAG_NEW = """#version 330 core
 uniform sampler2D Sampler0;
 uniform float PxRange;
 uniform vec2 AtlasSize;
@@ -440,7 +440,7 @@ void main() {
     fragColor = vec4(vColor.rgb * opa, opa);
 }
 """
-        const val FRAG_DBG_SD = """#version 150
+        const val FRAG_DBG_SD = """#version 330 core
 uniform sampler2D Sampler0;
 uniform float PxRange;
 uniform vec2 AtlasSize;
@@ -457,7 +457,7 @@ void main() {
     fragColor = vec4(vec3(sd), 1.0);
 }
 """
-        const val FRAG_DBG_RANGE = """#version 150
+        const val FRAG_DBG_RANGE = """#version 330 core
 uniform sampler2D Sampler0;
 uniform float PxRange;
 uniform vec2 AtlasSize;
@@ -476,7 +476,7 @@ void main() {
     fragColor = vec4(vec3(screenPxRange() / 45.0), 1.0);
 }
 """
-        const val FRAG_OLD = """#version 150
+        const val FRAG_OLD = """#version 330 core
 uniform sampler2D Sampler0;
 uniform float PxRange;
 uniform vec2 AtlasSize;

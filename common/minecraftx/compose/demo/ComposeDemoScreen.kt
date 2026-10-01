@@ -125,10 +125,10 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                 )
                 Spacer(Modifier.size(8.dp))
                 // 双层切换的全局层:改配置里的引擎 id,所有文本组件立即换渲染路径
-                for (engine in McTextEngines.all) {
+                for (engineId in McTextEngines.allIds) {
                     McButton(
-                        if (McThemeSettings.textEngineId == engine.id) "[${engine.id}]" else engine.id,
-                        onClick = { McThemeSettings.textEngineId = engine.id },
+                        if (McThemeSettings.textEngineId == engineId) "[$engineId]" else engineId,
+                        onClick = { McThemeSettings.textEngineId = engineId },
                         modifier = Modifier.padding(end = 4.dp),
                     )
                 }

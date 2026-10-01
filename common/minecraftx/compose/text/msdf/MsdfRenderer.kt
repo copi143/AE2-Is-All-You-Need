@@ -260,7 +260,7 @@ internal class MsdfRenderer(private val atlas: GlyphAtlas) {
     private companion object {
         const val FLOATS_PER_GLYPH = 6 * 9
 
-        const val VERT = """#version 150
+        const val VERT = """#version 330 core
 in vec3 Position;
 in vec2 UV0;
 in vec4 Color;
@@ -275,7 +275,7 @@ void main() {
 }
 """
 
-        const val FRAG = """#version 150
+        const val FRAG = """#version 330 core
 uniform sampler2D Sampler0;
 uniform float PxRange;
 uniform vec2 AtlasSize;

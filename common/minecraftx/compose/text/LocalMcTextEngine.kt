@@ -14,8 +14,12 @@ object McTextEngines {
     val msdf: McTextEngine
         get() = msdfInstance ?: MsdfTextEngine().also { msdfInstance = it }
 
+    /** Only the engines instantiated so far (msdf is created lazily); use [allIds] for listing. */
     val all: List<McTextEngine>
         get() = listOfNotNull(vanilla, msdfInstance)
+
+    /** Stable ids of every registered engine, including lazily-created ones. */
+    val allIds: List<String> = listOf(vanilla.id, "msdf")
 
     fun byId(id: String): McTextEngine = when (id) {
         vanilla.id -> vanilla
