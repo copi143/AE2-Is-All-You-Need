@@ -39,5 +39,3 @@ fun McItemGrid(
         }
     }
 }
-
-private operator fun androidx.compose.ui.unit.Dp.times(count: Int) = this * count.toFloat()

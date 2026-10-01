@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// common 源码随 loader 重编译；编译期同样用 composeruntime 的 repacked jar 提供
+// androidx.compose.ui.graphics（见 common/build.gradle.kts 注释）。
+evaluationDependsOn(":composeruntime")
+
 val modId = project.property("modId") as String
 
 dependencies {
@@ -54,7 +58,13 @@ dependencies {
     // net.minecraftforge.* classes without the userdev zip.
     compileOnly(variantOf(libs.forge) { classifier("universal") })
     modCompileOnly(libs.gtceu)
+    compileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
 }
+
+configurations["compileClasspath"].exclude(
+    group = "org.jetbrains.compose.ui",
+    module = "ui-graphics-desktop",
+)
 
 loom {
     val aw = project(":common").file("resources/${modId}.aw")

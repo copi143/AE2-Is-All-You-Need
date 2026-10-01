@@ -1,6 +1,7 @@
 package allyouneed.client
 
 import allyouneed.Platform
+import allyouneed.client.compose.platform.ComposePrewarm
 import allyouneed.client.guide.IayGuide
 import allyouneed.multiblock.async.AsyncBlockKind
 import allyouneed.multiblock.async.AsyncBlockRegistry
@@ -26,13 +27,17 @@ import allyouneed.util.notify.DesktopNotify
 import allyouneed.util.MODID
 import appeng.client.gui.style.StyleManager
 import appeng.hooks.BuiltInModelHooks
+import minecraftx.compose.text.McTextEngines
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.MenuScreens
 import net.minecraft.client.renderer.ItemBlockRenderTypes
 import net.minecraft.client.renderer.RenderType
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.packs.resources.ResourceManager
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.client.event.ModelEvent
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent
 import net.minecraftforge.client.event.RegisterColorHandlersEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.common.Mod
@@ -66,6 +71,16 @@ object ForgeClientEvents {
     @SubscribeEvent
     fun onRegisterAdditionalModels(event: ModelEvent.RegisterAdditional) {
         event.register(ResourceLocation(MODID, "block/crafting/atlas_materials"))
+    }
+
+    /** 资源重载时释放 MSDF 文本引擎的 GPU 资源(shader/图集纹理/VAO),下次绘制时惰性重建。 */
+    @SubscribeEvent
+    fun onRegisterClientReloadListeners(event: RegisterClientReloadListenersEvent) {
+        event.registerReloadListener(object : ResourceManagerReloadListener {
+            override fun onResourceManagerReload(resourceManager: ResourceManager) {
+                McTextEngines.releaseMsdfGl()
+            }
+        })
     }
 
     @SubscribeEvent
@@ -118,6 +133,7 @@ object ForgeClientEvents {
                     AsyncCraftingStatusScreen(menu, inv, title, style)
                 }
             }
+            ComposePrewarm.startAsync()
         }
     }
 }

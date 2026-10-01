@@ -9,8 +9,9 @@ import minecraftx.compose.material.McScrollbar
 import minecraftx.compose.material.McText
 import minecraftx.compose.material.McTooltip
 import minecraftx.compose.foundation.McVirtualColumn
-import minecraftx.compose.material.Text
+import minecraftx.compose.material.McText
 import allyouneed.client.compose.platform.ComposeContainerScreen
+import allyouneed.client.compose.platform.ComposeFrameDriver
 import allyouneed.client.compose.platform.LocalMousePosition
 import allyouneed.client.compose.platform.rememberScrollState
 import androidx.compose.animation.AnimatedVisibility
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import minecraftx.compose.material.McButton
+import minecraftx.compose.material.McImage
 import minecraftx.compose.material.McCheckbox
 import minecraftx.compose.material.McNumberField
 import minecraftx.compose.material.McProgressBar
@@ -34,16 +36,29 @@ import minecraftx.compose.material.McTab
 import minecraftx.compose.material.McTabRow
 import minecraftx.compose.material.McToggle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PaintingStyle
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.graphics.VertexMode
+import androidx.compose.ui.graphics.Vertices
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.TextFieldValue
 import minecraftx.compose.dock.DockAxis
@@ -53,9 +68,17 @@ import minecraftx.compose.dock.McDockHost
 import minecraftx.compose.markdown.McMarkdown
 import minecraftx.compose.material.McPanel
 import minecraftx.compose.text.McTextEngines
+import minecraftx.compose.theme.McStyles
 import minecraftx.compose.theme.McTheme
 import minecraftx.compose.theme.McThemeId
 import minecraftx.compose.theme.McThemeSettings
+import minecraftx.compose.material.toImageBitmap
+import androidx.compose.ui.graphics.setArgbPixels
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.flattenContours
+import allyouneed.client.compose.platform.fillContours
+import allyouneed.util.MODID
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -66,8 +89,8 @@ import net.minecraft.world.item.Items
  * 空菜单仅用于让 EMI 识别本屏为容器屏;没有槽位,EMI 的配方填充会回落到玩家物品栏。
  */
 class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMenu>(
-    ComposeContainerScreen.EmptyMenu(),
-    ComposeContainerScreen.playerInventory(),
+    EmptyMenu(),
+    playerInventory(),
     Component.literal("Compose Demo"),
 ) {
 
@@ -90,8 +113,8 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-            Text("Compose Demo", color = 0xFFFFAA00.toInt())
-            Text("Ctrl+滚轮缩放 UI,当前 %.1fx".format(currentUiScale()), color = 0xFF88FFFF.toInt())
+            McText("Compose Demo", color = 0xFFFFAA00.toInt())
+            McText("Ctrl+滚轮缩放 UI,当前 %.1fx".format(currentUiScale()), color = 0xFF88FFFF.toInt())
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
 
@@ -111,10 +134,32 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                 }
             }
 
+            // 风格策略全局切换:风格改变组件的渲染方式(斜面/圆角/辉光/细线),即时生效
+            Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                for (s in McStyles.all) {
+                    McButton(
+                        if (McThemeSettings.style.id == s.id) "[${s.id}]" else s.id,
+                        onClick = { McThemeSettings.style = s },
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
+            }
+
+            // UI 更新模式动态切换:并行 = 世界渲染阶段 worker 线程更新+录制;同步 = GUI 阶段更新
+            Row {
+                for (mode in ComposeFrameDriver.UpdateMode.entries) {
+                    McButton(
+                        if (McThemeSettings.updateMode == mode) "[${mode.label}]" else mode.label,
+                        onClick = { McThemeSettings.updateMode = mode },
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                }
+            }
+
             Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp))
 
             Row {
-                Text("Count: $count", color = 0xFF00FF00.toInt())
+                McText("Count: $count", color = 0xFF00FF00.toInt())
                 Spacer(Modifier.size(8.dp))
                 McButton("+1", onClick = { count++ }, modifier = Modifier.padding(horizontal = 4.dp))
                 McButton("Reset", onClick = { count = 0 }, modifier = Modifier.padding(horizontal = 4.dp))
@@ -122,7 +167,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("McProgressBar: ${(sliderValue * 100).toInt()}%", color = 0xFFAAAAAA.toInt())
+            McText("McProgressBar: ${(sliderValue * 100).toInt()}%", color = 0xFFAAAAAA.toInt())
             McProgressBar(progress = sliderValue, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
             Row {
                 McButton("-", onClick = { sliderValue = (sliderValue - 0.1f).coerceIn(0f, 1f) })
@@ -132,7 +177,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("Animated alpha:", color = 0xFFCCCCCC.toInt())
+            McText("Animated alpha:", color = 0xFFCCCCCC.toInt())
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 Box(
                     Modifier
@@ -161,7 +206,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Color boxes demo
-            Text("Color Boxes:", color = 0xFFCCCCCC.toInt())
+            McText("Color Boxes:", color = 0xFFCCCCCC.toInt())
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 Box(
                     modifier = Modifier
@@ -191,8 +236,27 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
+            // 新 Canvas 能力:drawPath/drawArc/drawImage/变换(skew/rotate)/裁剪/顶点绘制
+            McText("Canvas (drawPath/drawArc/drawImage/变换/裁剪/顶点):", color = 0xFFCCCCCC.toInt())
+            val demoImage = remember {
+                ResourceLocation(MODID, "textures/item/1k_item_storage_cell.png").toImageBitmap()
+                    ?: run {
+                        val bmp = androidx.compose.ui.graphics.ImageBitmap(16, 16)
+                        val px = IntArray(256) { i ->
+                            val x = i % 16
+                            val y = i / 16
+                            if ((x / 4 + y / 4) % 2 == 0) 0xFFFFD54A.toInt() else 0xFF4A90D9.toInt()
+                        }
+                        bmp.setArgbPixels(px)
+                        bmp
+                    }
+            }
+            CanvasShowcaseGrid(image = demoImage)
+
+            Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
+
             // Framework scrollable panel:虚拟化文本列 + 平滑滚动 + 点击/拖拽滚动条
-            Text("McVirtualColumn (framework):", color = 0xFFCCCCCC.toInt())
+            McText("McVirtualColumn (framework):", color = 0xFFCCCCCC.toInt())
             val demoLines = remember {
                 buildList {
                     for (i in 0 until 60) {
@@ -224,7 +288,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Framework McScrollBox:通用 overflow 容器,内容可滚动 + 裁剪 + 滚动条
-            Text("McScrollBox (framework):", color = 0xFFCCCCCC.toInt())
+            McText("McScrollBox (framework):", color = 0xFFCCCCCC.toInt())
             Box(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
@@ -251,7 +315,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("McTab / McCheckbox / McToggle / McNumberField / McSearchField:", color = 0xFFCCCCCC.toInt())
+            McText("McTab / McCheckbox / McToggle / McNumberField / McSearchField:", color = 0xFFCCCCCC.toInt())
             var tab by remember { mutableStateOf(0) }
             McTabRow(Modifier.padding(vertical = 4.dp)) {
                 McTab("Crafting", selected = tab == 0, onClick = { tab = 0 })
@@ -281,7 +345,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             // McTextField 输入框演示:像浏览器一样支持"开启输入法"与"关闭输入法(纯 ASCII)"两种模式。
             // IME 模式文本走 Screen.charTyped(直接按键与 IME 提交文本都会到达);ASCII 模式忽略
             // charTyped,按键用 US 布局 shift 表映射。编辑键(退格/方向键/Home/End/Ctrl+A)两模式通用。
-            Text("McTextField (IME on/off):", color = 0xFFCCCCCC.toInt())
+            McText("McTextField (IME on/off):", color = 0xFFCCCCCC.toInt())
             var imeText by remember { mutableStateOf(TextFieldValue("")) }
             McTextField(
                 value = imeText,
@@ -304,7 +368,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // McTextArea 多行文本域:软折行、↑/↓/Home/End 行间导航、跨行选区、滚轮 + 滚动条。
-            Text("McTextArea (多行):", color = 0xFFCCCCCC.toInt())
+            McText("McTextArea (多行):", color = 0xFFCCCCCC.toInt())
             var areaText by remember { mutableStateOf(TextFieldValue("")) }
             McTextArea(
                 value = areaText,
@@ -318,7 +382,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // McMarkdown:GFM 全集渲染 + 实时编辑预览(文本引擎切换对它同样生效)
-            Text("McMarkdown (GFM, 实时预览):", color = 0xFFCCCCCC.toInt())
+            McText("McMarkdown (GFM, 实时预览):", color = 0xFFCCCCCC.toInt())
             var mdSource by remember { mutableStateOf(TextFieldValue(DEMO_MARKDOWN)) }
             McTextField(
                 value = mdSource,
@@ -332,7 +396,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
 
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
-            Text("McDockHost (拖标签 / 拖分隔条):", color = 0xFFCCCCCC.toInt())
+            McText("McDockHost (拖标签 / 拖分隔条):", color = 0xFFCCCCCC.toInt())
             var dock by remember {
                 mutableStateOf(
                     DockState(
@@ -362,7 +426,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             }
             if (dock.closed.isNotEmpty()) {
                 Row(Modifier.padding(top = 4.dp)) {
-                    Text("已关闭: ", color = 0xFFAAAAAA.toInt())
+                    McText("已关闭: ", color = 0xFFAAAAAA.toInt())
                     for (id in dock.closed) {
                         McButton(id, onClick = { dock = dock.openTab(id) }, modifier = Modifier.padding(end = 4.dp))
                     }
@@ -372,14 +436,14 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             Spacer(Modifier.fillMaxWidth().padding(vertical = 8.dp))
 
             // Tooltip 双版本:vanilla 浮动 tooltip(ItemSlot)与 Compose 浮动 tooltip(McTooltip)
-            Text("Tooltip 双版本:", color = 0xFFCCCCCC.toInt())
+            McText("Tooltip 双版本:", color = 0xFFCCCCCC.toInt())
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 ItemSlot(
                     stack = ItemStack(Items.GOLD_INGOT),
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
                 Spacer(Modifier.size(8.dp))
-                Text("左:vanilla 渲染 (ItemSlot)", color = 0xFFAAAAAA.toInt())
+                McText("左:vanilla 渲染 (ItemSlot)", color = 0xFFAAAAAA.toInt())
             }
             Row(modifier = Modifier.padding(vertical = 4.dp)) {
                 Box(
@@ -401,7 +465,7 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
                         },
                 )
                 Spacer(Modifier.size(8.dp))
-                Text("右:compose 渲染 (McTooltip)", color = 0xFFAAAAAA.toInt())
+                McText("右:compose 渲染 (McTooltip)", color = 0xFFAAAAAA.toInt())
             }
             }
             }
@@ -420,6 +484,185 @@ class ComposeDemoScreen : ComposeContainerScreen<ComposeContainerScreen.EmptyMen
             }
         }
     }
+
+/**
+ * 新 Canvas 能力一锅烩:每个格子独立演示一项,通过带标签的卡片让能力一目了然。
+ */
+@Composable
+private fun CanvasShowcaseGrid(image: androidx.compose.ui.graphics.ImageBitmap) {
+    val star = remember { starPath(28f, 28f, 20f, 8f) }
+    val heart = remember { heartPath(28f, 30f, 36f, 30f) }
+    val circleClip = remember { Path().apply { addOval(Rect(6f, 6f, 42f, 42f)) } }
+    val paints = remember {
+        mapOf(
+            "fillYellow" to Paint().apply { color = Color(0xFFFFD54A) },
+            "strokeRed" to Paint().apply { color = Color(0xFFE05555); style = PaintingStyle.Stroke; strokeWidth = 2f },
+            "fillBlue" to Paint().apply { color = Color(0xFF4A90D9) },
+            "fillGreen" to Paint().apply { color = Color(0xFF4A9B6A) },
+        )
+    }
+    fun label(text: String) = @Composable { McText(text, color = 0xFFAAAAAA.toInt(), maxWidth = 60) }
+
+    @Composable
+    fun Cell(title: String, content: @Composable () -> Unit) {
+        Column(
+            modifier = Modifier
+                .size(68.dp, 76.dp)
+                .padding(2.dp)
+                .drawBehind { drawRect(Color(0x66000000)) },
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp, 56.dp)
+                    .drawBehind { drawRect(Color(0xFF232323)) },
+                contentAlignment = Alignment.Center,
+            ) { content() }
+            Spacer(Modifier.size(2.dp))
+            McText(title, color = 0xFFAAAAAA.toInt(), maxWidth = 68)
+        }
+    }
+
+    Column {
+        Row {
+            Cell("填充星形") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas {
+                            it.drawPath(star, paints.getValue("fillYellow"))
+                        }
+                    },
+                )
+            }
+            Cell("描边爱心") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { it.drawPath(heart, paints.getValue("strokeRed")) }
+                    },
+                )
+            }
+            Cell("扇形+圆弧") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { c ->
+                            c.drawArc(4f, 4f, 52f, 52f, 30f, 240f, true, paints.getValue("fillBlue"))
+                            c.drawArc(4f, 4f, 52f, 52f, 30f, 240f, false, paints.getValue("strokeRed"))
+                        }
+                    },
+                )
+            }
+            Cell("图片原图") {
+                McImage(image, modifier = Modifier.size(32.dp))
+            }
+        }
+        Row {
+            Cell("图片拉伸") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { c ->
+                            c.drawImageRect(
+                                image, IntOffset.Zero, IntSize(image.width, image.height),
+                                IntOffset(0, 0), IntSize(48, 48), paints.getValue("fillGreen"),
+                            )
+                        }
+                    },
+                )
+            }
+            Cell("skew") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { c ->
+                            c.save(); c.skew(0.35f, 0f)
+                            c.drawRect(8f, 12f, 48f, 44f, paints.getValue("fillBlue"))
+                            c.restore()
+                        }
+                    },
+                )
+            }
+            Cell("rotate") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { c ->
+                            c.save(); c.translate(28f, 28f); c.rotate(20f)
+                            c.drawRect(-18f, -12f, 18f, 12f, paints.getValue("fillYellow"))
+                            c.restore()
+                        }
+                    },
+                )
+            }
+            Cell("clipPath") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { c ->
+                            c.save(); c.clipPath(circleClip)
+                            c.drawRect(0f, 0f, 56f, 56f, paints.getValue("fillGreen"))
+                            c.restore()
+                        }
+                    },
+                )
+            }
+        }
+        Row {
+            Cell("散点/折线") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { c ->
+                            c.drawPoints(
+                                PointMode.Points,
+                                listOf(Offset(10f, 20f), Offset(22f, 12f), Offset(34f, 20f), Offset(46f, 12f)),
+                                paints.getValue("strokeRed"),
+                            )
+                            c.drawPoints(
+                                PointMode.Polygon,
+                                listOf(Offset(6f, 40f), Offset(28f, 28f), Offset(50f, 40f), Offset(6f, 40f)),
+                                paints.getValue("strokeRed"),
+                            )
+                        }
+                    },
+                )
+            }
+            Cell("顶点色") {
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawIntoCanvas { c ->
+                            c.drawVertices(
+                                Vertices(
+                                    VertexMode.Triangles,
+                                    listOf(Offset(10f, 44f), Offset(46f, 44f), Offset(28f, 12f)),
+                                    listOf(Offset(0f, 1f), Offset(1f, 1f), Offset(0.5f, 0f)),
+                                    listOf(Color(0xFFFF0000), Color(0xFF00FF00), Color(0xFF0000FF)),
+                                    listOf(),
+                                ), BlendMode.SrcOver, paints.getValue("fillGreen"),
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun starPath(cx: Float, cy: Float, outerR: Float, innerR: Float, points: Int = 5): Path {
+    val path = Path()
+    for (i in 0 until points * 2) {
+        val r = if (i % 2 == 0) outerR else innerR
+        val a = -Math.PI / 2 + i * Math.PI / points
+        val x = cx + r * kotlin.math.cos(a).toFloat()
+        val y = cy + r * kotlin.math.sin(a).toFloat()
+        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+    }
+    path.close()
+    return path
+}
+
+private fun heartPath(cx: Float, cy: Float, w: Float, h: Float): Path {
+    val path = Path()
+    path.moveTo(cx, cy + h * 0.35f)
+    path.cubicTo(cx - w * 0.5f, cy - h * 0.15f, cx - w * 0.35f, cy - h * 0.5f, cx, cy - h * 0.15f)
+    path.cubicTo(cx + w * 0.35f, cy - h * 0.5f, cx + w * 0.5f, cy - h * 0.15f, cx, cy + h * 0.35f)
+    path.close()
+    return path
+}
 
     private companion object {
         /** GFM 全集演示源:标题/强调/删除线/行内码/链接/嵌套列表/任务列表/引用/代码块/表格/分隔线。 */

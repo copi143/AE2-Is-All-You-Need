@@ -7,7 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
@@ -20,7 +19,6 @@ import minecraftx.compose.text.McTextLayout
 import minecraftx.compose.text.rememberTextLayout
 import minecraftx.compose.text.toStyledString
 import minecraftx.compose.theme.McTheme
-import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.network.chat.Component
 import kotlin.math.max
 import kotlin.math.min
@@ -56,18 +54,6 @@ fun McText(
     McTextInternal(McStyledString(text), modifier, color, maxWidth, clipFrame)
 }
 
-/** String convenience overload of [McText]. */
-@Composable
-fun Text(
-    text: String,
-    modifier: Modifier = Modifier,
-    color: Int = McTheme.colors.textPrimary.toArgb(),
-    maxWidth: Int = Int.MAX_VALUE,
-    clipFrame: Rect? = null,
-) {
-    McText(text, modifier, color, maxWidth, clipFrame)
-}
-
 @Composable
 private fun McTextInternal(
     styled: McStyledString,
@@ -82,8 +68,7 @@ private fun McTextInternal(
     Layout(
         content = {},
         modifier = modifier.drawBehind {
-            val g = McGraphics.current ?: return@drawBehind
-            drawClipped(g, engine, layout, drawnWidth, color, clipFrame)
+            drawClipped(engine, layout, drawnWidth, color, clipFrame)
         },
     ) { _, constraints: Constraints ->
         val w = constraints.constrainWidth(min(drawnWidth, maxWidth))
@@ -108,8 +93,7 @@ fun McWrappedText(
     Layout(
         content = {},
         modifier = modifier.drawBehind {
-            val g = McGraphics.current ?: return@drawBehind
-            drawClipped(g, engine, laidOut, laidOut.width, color, clipFrame = null)
+            drawClipped(engine, laidOut, laidOut.width, color, clipFrame = null)
         },
     ) { _, constraints ->
         val maxW = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
@@ -137,12 +121,13 @@ fun McWrappedText(
  * is provided and the glyph box only partially overlaps it, a hardware scissor clips the text to the
  * frame; rows fully inside or fully outside the frame skip the scissor entirely.
  *
- * The clip rectangle is derived from the live modelview pose instead of manually re-deriving the
- * panel geometry: glyph drawing transforms vertices with that same `pose().last().pose()` matrix,
- * so the scissor region stays pixel-aligned with the drawn text regardless of zoom.
+ * Runs at record time: the glyph drawing itself is deferred via [McGraphics.defer] and executes at
+ * the GUI stage, while the scissor ops are recorded in order around it. The clip rectangle is
+ * derived from the current pose ([McGraphics.currentPose], valid in both record and live mode)
+ * instead of manually re-deriving the panel geometry: glyph drawing transforms vertices with that
+ * same matrix, so the scissor region stays pixel-aligned with the drawn text regardless of zoom.
  */
-private fun DrawScope.drawClipped(
-    g: GuiGraphics,
+private fun drawClipped(
     engine: McTextEngine,
     layout: McTextLayout,
     widthPx: Int,
@@ -151,13 +136,13 @@ private fun DrawScope.drawClipped(
 ) {
     val lineHeightPx = engine.lineHeight
     if (clipFrame == null) {
-        with(engine) { paint(layout, Color(color)) }
+        McGraphics.defer { engine.paint(layout, Color(color)) }
         return
     }
     if (clipFrame.left <= 0f && clipFrame.top <= 0f &&
         clipFrame.right >= widthPx.toFloat() && clipFrame.bottom >= lineHeightPx.toFloat()
     ) {
-        with(engine) { paint(layout, Color(color)) }
+        McGraphics.defer { engine.paint(layout, Color(color)) }
         return
     }
     if (clipFrame.right <= 0f || clipFrame.bottom <= 0f ||
@@ -165,7 +150,7 @@ private fun DrawScope.drawClipped(
     ) {
         return
     }
-    val matrix = g.pose().last().pose()
+    val matrix = McGraphics.currentPose() ?: return
     val nodeX = matrix.m30()
     val nodeY = matrix.m31()
     val scaleX = matrix.m00()
@@ -175,10 +160,10 @@ private fun DrawScope.drawClipped(
     val clipRight = min(nodeX + widthPx * scaleX, nodeX + clipFrame.right * scaleX)
     val clipBottom = min(nodeY + lineHeightPx * scaleY, nodeY + clipFrame.bottom * scaleY)
     if (clipRight <= clipLeft || clipBottom <= clipTop) return
-    McScissor.push(g, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
+    McScissor.push(null, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
     try {
-        with(engine) { paint(layout, Color(color)) }
+        McGraphics.defer { engine.paint(layout, Color(color)) }
     } finally {
-        McScissor.pop(g)
+        McScissor.pop(null)
     }
 }

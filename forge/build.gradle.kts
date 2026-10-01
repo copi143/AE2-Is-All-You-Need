@@ -12,6 +12,10 @@ plugins {
 
 val modId = project.property("modId") as String
 
+// common 源码随 loader 重编译；编译期同样用 composeruntime 的 repacked jar 提供
+// androidx.compose.ui.graphics（见 common/build.gradle.kts 注释）。
+evaluationDependsOn(":composeruntime")
+
 mixin {
     add(sourceSets.main.get(), "$modId.refmap.json")
     config("$modId.mixins.json")
@@ -85,6 +89,7 @@ dependencies {
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
     implementation(libs.compose.runtime)
+    compileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
 
     jarJar(project(":kaptor"))
     jarJar(project(":averith"))
@@ -120,6 +125,11 @@ dependencies {
 
     testImplementation(libs.asm.tree)
 }
+
+configurations["compileClasspath"].exclude(
+    group = "org.jetbrains.compose.ui",
+    module = "ui-graphics-desktop",
+)
 
 fun Task.usesTransformerJar() {
     dependsOn(copyTransformerToRunMods)

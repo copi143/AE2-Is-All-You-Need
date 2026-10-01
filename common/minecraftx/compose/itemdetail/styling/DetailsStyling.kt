@@ -3,17 +3,12 @@ package minecraftx.compose.itemdetail.styling
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
 
-/**
- * Shared colors and small component builders used by the item-details UI across
- * the vanilla fallback, the EMI and the JEI renderers.
- */
+/** Shared colors and small component builders used by the item-details UI. */
 object DetailsStyling {
-    const val COLOR_TITLE = 0xFFFFFFFF.toInt()
     const val COLOR_SECTION = 0xFFFFAA00.toInt()
     const val COLOR_LABEL = 0xFFAAAAAA.toInt()
     const val COLOR_VALUE = 0xFFFFFFFF.toInt()
     const val COLOR_KEY = 0xFF55FF55.toInt()
-    const val COLOR_DIM = 0xFF777777.toInt()
 
     private val SECTION_STYLE: Style = Style.EMPTY.withColor(COLOR_SECTION).withBold(true)
     private val LABEL_STYLE: Style = Style.EMPTY.withColor(COLOR_LABEL)

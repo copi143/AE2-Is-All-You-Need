@@ -26,12 +26,13 @@ fun McCarriedStack(
         modifier.fillMaxSize().drawBehind {
             val held = stack()
             if (held.isEmpty) return@drawBehind
-            val graphics = McGraphics.current ?: return@drawBehind
             val p = mouse.inDensity(density)
-            graphics.pose().pushPose()
-            graphics.pose().translate((p.x - 8).toFloat(), (p.y - 8).toFloat(), 400f)
-            renderer.drawStack(graphics, held, 0, 0)
-            graphics.pose().popPose()
+            McGraphics.defer { graphics ->
+                graphics.pose().pushPose()
+                graphics.pose().translate((p.x - 8).toFloat(), (p.y - 8).toFloat(), 400f)
+                renderer.drawStack(graphics, held, 0, 0)
+                graphics.pose().popPose()
+            }
         },
     )
 }

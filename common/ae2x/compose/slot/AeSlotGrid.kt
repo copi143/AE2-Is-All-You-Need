@@ -42,5 +42,3 @@ fun AeSlotGrid(
     val host = LocalAeHost.current
     AeSlotGrid(semantic.slotsOf(host.menu), columns, modifier)
 }
-
-private operator fun androidx.compose.ui.unit.Dp.times(count: Int) = this * count.toFloat()

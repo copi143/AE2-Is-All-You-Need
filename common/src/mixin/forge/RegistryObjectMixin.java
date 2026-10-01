@@ -1,5 +1,6 @@
 package allyouneed.mixin.forge;
 
+import allyouneed.util.NoStackTraceThrowable;
 import net.minecraftforge.registries.RegistryObject;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -27,29 +28,13 @@ public abstract class RegistryObjectMixin {
      * 只在启动时读一次，避免每次分配都查系统属性。
      */
     @Unique
-    private static final boolean ALLYOUNEED$FULL_CALL_SITE =
-            Boolean.getBoolean("allyouneed.registryCallSite.full");
+    private static final boolean ALLYOUNEED$FULL_CALL_SITE = Boolean.getBoolean("allyouneed.registryCallSite.full");
 
-    @Redirect(
-            method = "<init>(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;Z)V",
-            at = @At(value = "NEW", target = "(Ljava/lang/String;)Ljava/lang/Throwable;")
-    )
+    @Redirect(method = "<init>(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;Z)V", at = @At(value = "NEW", target = "(Ljava/lang/String;)Ljava/lang/Throwable;"))
     private Throwable allyouneed$lazyCallerStack(String message) {
         if (ALLYOUNEED$FULL_CALL_SITE) {
             return new Throwable(message);
         }
-        // writableStackTrace=false：跳过 fillInStackTrace 的全栈 walk；
-        // 同一 modid 的消息内容完全相同，intern 掉重复 String。
-        return new NoStackTrace(message.intern());
-    }
-
-    /**
-     * 不捕获调用栈的 Throwable 占位。{@code super(msg, null, true, false)}
-     * 是 protected，只能经由子类调用。
-     */
-    private static final class NoStackTrace extends Throwable {
-        NoStackTrace(String message) {
-            super(message, null, true, false);
-        }
+        return new NoStackTraceThrowable(message.intern());
     }
 }

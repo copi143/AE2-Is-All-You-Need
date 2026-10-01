@@ -9,8 +9,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import allyouneed.me.pathing.ChannelAllocStats;
-import allyouneed.me.pathing.ChannelAllocator;
+import allyouneed.logic.pathing.ChannelAllocStats;
+import allyouneed.logic.pathing.ChannelAllocator;
 
 @Mixin(value = PathingCalculation.class, remap = false)
 public abstract class PathingCalculationMixin {

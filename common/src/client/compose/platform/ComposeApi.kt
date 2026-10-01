@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
  * active [GuiGraphics] via [McGraphics].
  */
 class TooltipHost {
-    private val renderers = mutableListOf<() -> Unit>()
+    private val renderers = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
     fun register(renderer: () -> Unit): () -> Unit {
         renderers += renderer
@@ -23,7 +23,7 @@ class TooltipHost {
     }
 
     fun render(graphics: GuiGraphics) {
-        for (renderer in renderers.toList()) renderer()
+        for (renderer in renderers) renderer()
     }
 }
 
@@ -60,7 +60,7 @@ val LocalFrameCallbacks = compositionLocalOf<FrameCallbackHost> { error("No Fram
  * mouse move / frame before the tree draws, so it can be read safely from pointer handlers and draw
  * scopes without racing a separate coordinate source.
  */
-class MousePosition(var position: IntOffset) {
+class MousePosition(@Volatile var position: IntOffset) {
     /** Translates the logical root-space position into [density] space (multiplies by [Density.density]). */
     fun inDensity(density: Density): IntOffset = IntOffset(
         (position.x * density.density).roundToInt(),

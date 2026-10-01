@@ -107,10 +107,11 @@ fun <T : Enum<T>> AeSettingToggle(
                 }
             }
             .drawBehind {
-                val graphics = McGraphics.current ?: return@drawBehind
-                graphics.blit(Icon.TEXTURE, 0, 0, Icon.TOOLBAR_BUTTON_BACKGROUND.x, Icon.TOOLBAR_BUTTON_BACKGROUND.y, ICON, ICON)
-                if (icon != null) {
-                    graphics.blit(Icon.TEXTURE, 0, 0, icon.x, icon.y, icon.width, icon.height)
+                McGraphics.defer { graphics ->
+                    graphics.blit(Icon.TEXTURE, 0, 0, Icon.TOOLBAR_BUTTON_BACKGROUND.x, Icon.TOOLBAR_BUTTON_BACKGROUND.y, ICON, ICON)
+                    if (icon != null) {
+                        graphics.blit(Icon.TEXTURE, 0, 0, icon.x, icon.y, icon.width, icon.height)
+                    }
                 }
                 val p = mouse.inDensity(density)
                 if (minecraftx.compose.geometry.PanelGeometry.containsHalfOpen(p.x, p.y, nodePos.x, nodePos.y, ICON)) {

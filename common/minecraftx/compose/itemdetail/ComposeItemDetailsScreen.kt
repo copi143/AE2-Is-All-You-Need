@@ -48,7 +48,7 @@ class ComposeItemDetailsScreen(
 ) : ComposeContainerScreen<ComposeContainerScreen.EmptyMenu>(
     ComposeContainerScreen.EmptyMenu(),
     ComposeContainerScreen.playerInventory(),
-    Component.literal("Block Details"),
+    Component.literal("Item/Block Details"),
 ) {
 
     private fun buildRows(valueColor: Int): List<McLine> {
@@ -74,8 +74,6 @@ class ComposeItemDetailsScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            // 面板在可用逻辑尺寸内收缩,小屏/缩放窗口时不再被切掉底部(见
-            // McPanel 内容区内嵌的 McVirtualColumn:内容高度随之变化,自动重算 maxScroll)。
             BoxWithConstraints {
                 val panelW = min(ItemDetailsLayout.WIDTH, constraints.maxWidth)
                 val panelH = min(ItemDetailsLayout.HEIGHT, constraints.maxHeight)
@@ -88,7 +86,6 @@ class ComposeItemDetailsScreen(
                 }
 
                 McPanel(width = panelW.dp, height = panelH.dp) {
-                    // Header:物品 slot(不可交互,EMI/vanilla 渲染),标题,关闭按钮
                     ItemSlot(
                         stack = details.stack,
                         modifier = Modifier.offset(ItemDetailsLayout.PADDING.dp, ItemDetailsLayout.PADDING.dp),

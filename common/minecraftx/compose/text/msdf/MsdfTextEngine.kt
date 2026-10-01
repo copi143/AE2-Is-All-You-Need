@@ -7,7 +7,6 @@ import allyouneed.client.msdftext.GlyphKey
 import allyouneed.client.msdftext.MsdfGenerator
 import allyouneed.client.msdftext.SystemFonts
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.toArgb
 import minecraftx.compose.text.McSpanStyle
 import minecraftx.compose.text.McStyledString
@@ -25,7 +24,6 @@ class MsdfTextEngine(
     private val atlas = GlyphAtlas()
     private val renderer = MsdfRenderer(atlas)
     private var uploadsLeft = 0
-    private var destroyed = false
 
     override val lineHeight: Int = fonts.lineHeight
 
@@ -60,15 +58,12 @@ class MsdfTextEngine(
         return text.length
     }
 
-    fun destroy() {
-        if (destroyed) return
-        destroyed = true
-        renderer.destroy()
-    }
+    /** Frees the renderer's GPU objects; they are lazily recreated on the next [paint]. */
+    fun releaseGl() = renderer.destroy()
 
-    override fun DrawScope.paint(layout: McTextLayout, fallbackColor: Color) {
+    override fun paint(layout: McTextLayout, fallbackColor: Color) {
         val g = McGraphics.current ?: return
-        if (destroyed || !renderer.ready()) return
+        if (!renderer.ready()) return
         uploadsLeft = UPLOAD_BUDGET
         renderer.begin(g, MsdfGenerator.PX_RANGE)
         val fbArgb = fallbackColor.toArgb()

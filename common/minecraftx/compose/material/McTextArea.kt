@@ -32,14 +32,13 @@ import androidx.compose.ui.text.input.SetSelectionCommand
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.translate
 import minecraftx.compose.foundation.mcScroll
 import minecraftx.compose.text.LocalMcTextEngine
 import minecraftx.compose.text.McStyledString
 import minecraftx.compose.text.McTextEngine
+import minecraftx.compose.text.paintDeferred
 import minecraftx.compose.theme.McColorScheme
 import minecraftx.compose.theme.McTheme
-import net.minecraft.client.gui.GuiGraphics
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -71,6 +70,7 @@ fun McTextArea(
 ) {
     val engine = LocalMcTextEngine.current
     val service = LocalMcTextInputService.current
+    val style = McTheme.style
     val id = remember { McFieldIds.next() }
     val processor = remember { EditProcessor().apply { reset(value, null) } }
     val latestEngine = rememberUpdatedState(engine)
@@ -190,9 +190,8 @@ fun McTextArea(
                 }
             }
             .drawBehind {
-                val g = McGraphics.current ?: return@drawBehind
+                with(style) { inputChrome(colors, isActive) }
                 drawArea(
-                    g = g,
                     engine = engine,
                     value = internal,
                     layout = layout,
@@ -228,7 +227,6 @@ private class LayoutHolder {
 }
 
 private fun DrawScope.drawArea(
-    g: GuiGraphics,
     engine: McTextEngine,
     value: TextFieldValue,
     layout: TextAreaLayout,
@@ -242,11 +240,7 @@ private fun DrawScope.drawArea(
     placeholder: String?,
     colors: McColorScheme,
 ) {
-    val border = if (focused) colors.inputBorderFocused else colors.inputBorder
-    g.fill(0, 0, width, height, border.toArgb())
-    g.fill(1, 1, width - 1, height - 1, colors.inputBackground.toArgb())
-
-    val matrix = g.pose().last().pose()
+    val matrix = McGraphics.currentPose() ?: return
     val nodeX = matrix.m30()
     val nodeY = matrix.m31()
     val scaleX = matrix.m00()
@@ -257,17 +251,16 @@ private fun DrawScope.drawArea(
     val clipRight = minOf(nodeX + width * scaleX, nodeX + (width - 1) * scaleX)
     val clipBottom = minOf(nodeY + height * scaleY, nodeY + (height - 1) * scaleY)
     if (clipRight > clipLeft && clipBottom > clipTop) {
-        McScissor.push(g, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
+        McScissor.push(null, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
         try {
-            drawRows(g, engine, value, layout, scrollY, viewHeight, blinkTick, focused, rowHeightPx, placeholder, colors)
+            drawRows(engine, value, layout, scrollY, viewHeight, blinkTick, focused, rowHeightPx, placeholder, colors)
         } finally {
-            McScissor.pop(g)
+            McScissor.pop(null)
         }
     }
 }
 
 private fun DrawScope.drawRows(
-    g: GuiGraphics,
     engine: McTextEngine,
     value: TextFieldValue,
     layout: TextAreaLayout,
@@ -285,21 +278,20 @@ private fun DrawScope.drawRows(
     val selStart = value.selection.min
     val selEnd = value.selection.max
     if (!value.selection.collapsed) {
+        val selection = colors.textSelection.toArgb()
         for (i in firstRow..lastRow) {
             val row = layout.rows[i]
             val y = rowY(i, scrollY, rowHeightPx)
             val a = max(selStart, row.start)
             val b = min(selEnd, row.end)
             when {
-                a < b -> g.fill(
-                    xInRow(engine, row, a - row.start),
-                    y,
-                    xInRow(engine, row, b - row.start),
-                    y + rowHeightPx,
-                    colors.textSelection.toArgb(),
-                )
+                a < b -> {
+                    val x0 = xInRow(engine, row, a - row.start)
+                    val x1 = xInRow(engine, row, b - row.start)
+                    McGraphics.defer { g -> g.fill(x0, y, x1, y + rowHeightPx, selection) }
+                }
                 selStart <= row.start && selEnd >= row.end && row.text.isEmpty() ->
-                    g.fill(TEXT_PAD_LEFT, y, TEXT_PAD_LEFT + 2, y + rowHeightPx, colors.textSelection.toArgb())
+                    McGraphics.defer { g -> g.fill(TEXT_PAD_LEFT, y, TEXT_PAD_LEFT + 2, y + rowHeightPx, selection) }
             }
         }
     }
@@ -307,15 +299,11 @@ private fun DrawScope.drawRows(
         val row = layout.rows[i]
         val y = rowY(i, scrollY, rowHeightPx)
         val rowLayout = engine.layout(McStyledString(row.text), Int.MAX_VALUE, true)
-        translate(TEXT_PAD_LEFT.toFloat(), y.toFloat()) {
-            with(engine) { paint(rowLayout, colors.textPrimary) }
-        }
+        paintDeferred(engine, rowLayout, colors.textPrimary, TEXT_PAD_LEFT.toFloat(), y.toFloat())
     }
     if (value.text.isEmpty() && !placeholder.isNullOrEmpty()) {
         val ph = engine.layout(McStyledString(placeholder), Int.MAX_VALUE, true)
-        translate(TEXT_PAD_LEFT.toFloat(), rowY(0, scrollY, rowHeightPx).toFloat()) {
-            with(engine) { paint(ph, colors.textSecondary) }
-        }
+        paintDeferred(engine, ph, colors.textSecondary, TEXT_PAD_LEFT.toFloat(), rowY(0, scrollY, rowHeightPx).toFloat())
     }
 
     // Blinking caret at the collapsed cursor position.
@@ -324,26 +312,25 @@ private fun DrawScope.drawRows(
         if (caretRow in firstRow..lastRow) {
             val row = layout.rows[caretRow]
             val x = xInRow(engine, row, value.selection.min - row.start)
-            g.fill(x, rowY(caretRow, scrollY, rowHeightPx), x + 2, rowY(caretRow, scrollY, rowHeightPx) + rowHeightPx, colors.textCaret.toArgb())
+            val y = rowY(caretRow, scrollY, rowHeightPx)
+            val caret = colors.textCaret.toArgb()
+            McGraphics.defer { g -> g.fill(x, y, x + 2, y + rowHeightPx, caret) }
         }
     }
 
     // Composing-text underline (IME preedit region), intersected with each visible row.
     val composition = value.composition
     if (composition != null && !composition.collapsed) {
+        val underline = colors.textCaret.toArgb()
         for (i in firstRow..lastRow) {
             val row = layout.rows[i]
             val y = rowY(i, scrollY, rowHeightPx)
             val a = max(composition.min, row.start)
             val b = min(composition.max, row.end)
             if (a < b) {
-                g.fill(
-                    xInRow(engine, row, a - row.start),
-                    y + rowHeightPx - 2,
-                    xInRow(engine, row, b - row.start),
-                    y + rowHeightPx,
-                    colors.textCaret.toArgb(),
-                )
+                val x0 = xInRow(engine, row, a - row.start)
+                val x1 = xInRow(engine, row, b - row.start)
+                McGraphics.defer { g -> g.fill(x0, y + rowHeightPx - 2, x1, y + rowHeightPx, underline) }
             }
         }
     }

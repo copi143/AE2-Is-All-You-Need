@@ -3,7 +3,11 @@ plugins {
     id("multiloader-common")
     alias(libs.plugins.moddev)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
+
+// 需要在配置期拿到 :composeruntime 的 jar 任务（classpath 用其 repacked 输出）。
+evaluationDependsOn(":composeruntime")
 
 legacyForge {
     mcpVersion = libs.versions.neoForm.get()
@@ -20,6 +24,8 @@ legacyForge {
 
 dependencies {
     compileOnly(libs.mixin)
+    compileOnlyApi(project(":valueschema"))
+    ksp(project(":valueschema"))
     api(libs.kotlinx.coroutines.core)
     api(project(":kaptor"))
     api(project(":averith"))
@@ -31,6 +37,11 @@ dependencies {
     api(libs.compose.foundation.layout)
     api(libs.compose.animation)
     api(libs.compose.material)
+    // 编译期也可见 composeruntime 的 skiko 替换类（含新增的 Path/ImageBitmap 纯 JVM 实现）；
+    // 运行时 fabric include / forge jarJar 本来打包的就是这个 repacked jar。
+    // 注：不用 compileOnly(project(...))，改用 jar 任务输出，以保证 classpath 上拿到的是
+    // 含替换类的 repacked jar。
+    compileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
     api(libs.ojalgo)
     api(libs.jetbrains.markdown)
     api(libs.netty.codec.http)
@@ -59,6 +70,7 @@ dependencies {
     testImplementation(project(":transformer"))
     testImplementation(project(path = ":transformer", configuration = "injectClasses"))
     testImplementation(libs.slf4j)
+    testCompileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
 
     testImplementation("org.lwjgl:lwjgl:3.3.1")
     testRuntimeOnly("org.lwjgl:lwjgl:3.3.1:natives-linux")
@@ -69,6 +81,14 @@ dependencies {
     }
     // fastutil 由 Minecraft 内嵌提供（不在测试 classpath），这里仅为测试暴露其类。
     testImplementation("it.unimi.dsi:fastutil:8.5.9")
+    // NetworkLogPage 等类型继承 AE2 的 PacketWritable，测试需要其类定义在 classpath 上。
+    testImplementation(libs.ae2.forge)
+    // NBT 相关测试需要 Minecraft 类；直接使用 MDG 产出的 merged jar（与 main 编译用的一致）。
+    val minecraftMerged = layout.buildDirectory.file("moddev/artifacts/vanilla-1.20.1-merged.jar")
+    testCompileOnly(files(minecraftMerged) { builtBy("createMinecraftArtifacts") })
+    testRuntimeOnly(files(minecraftMerged) { builtBy("createMinecraftArtifacts") })
+    // merged jar 无 POM，MC 1.20.1 的 DataFixerUpper 传递依赖需显式补（NBT 序列化用）。
+    testRuntimeOnly("com.mojang:datafixerupper:6.0.8")
 
     testRuntimeOnly(project(":composeruntime"))
     testRuntimeOnly(project(":msdftext"))
@@ -78,6 +98,16 @@ configurations["testRuntimeClasspath"].exclude(
     group = "org.jetbrains.compose.ui",
     module = "ui-graphics-desktop",
 )
+// 编译期统一用 composeruntime 的 repacked jar 提供 androidx.compose.ui.graphics
+//（官方 ui-graphics-desktop 会遮挡其中的 skiko 替换类与新增 API）。
+configurations["compileClasspath"].exclude(
+    group = "org.jetbrains.compose.ui",
+    module = "ui-graphics-desktop",
+)
+// datafixerupper 6.0.8 依赖的 guava 31.0.1/error_prone 2.7.1 不在本地缓存；强制到已缓存版本以支持离线构建。
+configurations["testRuntimeClasspath"].resolutionStrategy {
+    force("com.google.guava:guava:31.1-jre")
+}
 
 tasks.withType<Test> {
     dependsOn(":composeruntime:jar")
@@ -100,6 +130,9 @@ configurations {
 
 sourceSets.main {
     kotlin.srcDirs("minecraftx", "ae2x")
+    // KSP 生成目录显式挂入：loader 模块经 commonKotlin 配置重编译 common 源码，
+    // 生成代码随之流入（artifacts 块在配置期求值，早于 KSP 插件自动注册 srcDir）。
+    kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/main/kotlin"))
     resources.srcDirs("res")
 }
 

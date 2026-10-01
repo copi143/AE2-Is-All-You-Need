@@ -17,8 +17,11 @@ common/src/client/compose/platform/             # 实际 sourceSet: common/src (
 ├── ComposeContainerScreen.kt# 容器型全屏屏（EMI 返回栈兼容）
 ├── ComposeApi.kt            # TooltipHost / MousePosition / FrameCallbackHost / Local* 共享 API
 ├── ScrollState.kt           # target/display 双值平滑滚动 + rememberScrollState（帧回调驱动）
-├── McGraphics.kt            # 当前 GuiGraphics 的公开持有者（渲染桥接）
-├── McCanvas.kt              # Canvas → GuiGraphics 指令桥（含 flush / scissor 透传）
+├── McGraphics.kt            # 渲染桥接：当前 GuiGraphics 持有者 + defer/currentPose 录制接口
+├── McCanvas.kt              # Canvas → GuiGraphics/GL 指令桥（矩形/路径三角化/纹理/裁剪全覆盖，双模式:即时/录制）
+├── McDrawRecorder.kt        # 录制产物:有序绘图命令列表 + 虚拟 pose 栈
+├── ComposeFrameDriver.kt    # 帧首驱动:GameRendererMixin 注入,世界渲染阶段更新+录制所有活跃层
+├── PathTessellation.kt      # 路径 CPU 三角化（earcut 填洞 + 描边展开）
 ├── McTextInputService.kt    # 文本输入桥：无 IME（服务端）时的原生键盘码 → EditCommand 映射
 ├── McPointerCursor.kt       # PointerIcon → GLFW 系统光标
 └── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
@@ -64,20 +67,41 @@ common/ae2x/compose/
               AeCpuList.kt / AeCraftTable.kt / AeAmountDialog.kt / AeEncodingPanel.kt
 ```
 
-渲染驱动链（每帧，游戏线程）：
+渲染驱动链（两阶段流水线，两种更新模式由 `ComposeFrameDriver.updateMode` 切换）：
 
 ```text
-ComposeLayer.render(g, mouseX, mouseY, partialTick, rect)
-  → owner.render
-      → frameClock.onNewFrame()                 // 唤醒 suspend 动画协程
+# 模式 PARALLEL(默认):帧首(世界渲染阶段,GameRenderer.render HEAD,GameRendererMixin 注入)
+ComposeFrameDriver.onGameFrameStart(partialTick)
+  → 提交到 "compose-ui-worker" 线程:owner.updateAndRecord(...)(持 updateLock,与世界渲染并行)
+      → frameClock.onNewFrame()                 // 唤醒 suspend 动画协程(协程在 worker 上内联恢复)
       → frameCallbacks.advance()                // 滚动平滑等每帧步进
-      → SnapshotSync.requestApply()             // 应用 recomposition 结果
+      → Snapshot.sendApplyNotifications()       // 应用 recomposition 结果
       → updateRootConstraints(逻辑尺寸) + measureAndLayout()
       → dispatchMouseMove(px/uiScale - origin)  // 维护悬停状态
+      → if (drawDirty) record()                 // 仅 UI 变化时重录:tessellation/遍历在这里
+          → root.draw(McCanvas(null, recorder)) // 绘制指令录制成命令列表(纯 CPU,无 GL)
+
+# GUI 阶段(Screen.render → ComposeLayer.render,渲染线程)
+  → owner.render(g, ...)                        // join worker 任务(世界渲染慢则不等待)
+      // 模式 GUI_STAGE:driver 不提交,这里同步执行同样的 updateAndRecord 后再回放
       → pose.translate(origin*scale); pose.scale(scale)
-      → root.draw(McCanvas(graphics))           // 绘制指令桥接进 GuiGraphics
-  → tooltipHost.render(g)                       // 浮动 tooltip 画在树之上
+      → recordedOps.forEach { it(g) }           // 回放:fill/三角批/纹理/裁剪 + defer 文本与物品
+  → tooltipHost.render(g)                       // 浮动 tooltip 画在树之上(始终即时)
 ```
+
+线程模型（PARALLEL):compose 树的全部访问由每个 owner 的 `updateLock` 串行化——
+worker 持有它做 update/record；渲染线程的输入事件、resize、dispose 也经同一把锁。
+worker 持锁期间从不阻塞等待渲染线程（协程调度器在 worker 上内联恢复）,因此不会死锁。
+GL/GLFW 相关操作（纹理上传、光标、MSDF atlas）只发生在渲染线程的回放阶段。
+
+脏标记 `drawDirty` 来源：任意 snapshot 状态写入（全局写观察器）、待执行的 measure/layout、
+指针移动/点击/滚动、uiScale/origin/resize 变化、`ComposeLayer.invalidateDraw()`。
+UI 静止时 GUI 阶段只剩一次命令回放，重composition/布局/三角化全部跳过。
+
+**对自定义 drawBehind 的约束**：录制阶段 `McGraphics.current` 为 null。直接使用
+`GuiGraphics` 的代码必须包进 `McGraphics.defer { g -> ... }`（回放时按序执行，捕获值取录制时刻）；
+读取 pose 矩阵用 `McGraphics.currentPose()`（双模式有效）；`McScissor.push/pop` 传 null 即可
+（自动录制）。Canvas 高级指令（drawRect/drawPath/...）无需改动。
 
 ---
 

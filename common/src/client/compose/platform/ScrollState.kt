@@ -84,8 +84,8 @@ class ScrollState(
  * as this composable is composed.
  */
 @Composable
-fun rememberScrollState(maxScroll: Float = 0f): ScrollState {
-    val state = remember { ScrollState(maxScroll) }
+fun rememberScrollState(): ScrollState {
+    val state = remember { ScrollState() }
     rememberFrameCallback(state::advance)
     return state
 }

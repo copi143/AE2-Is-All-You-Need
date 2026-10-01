@@ -143,32 +143,37 @@ fun ItemSlot(
                 },
             )
             .drawBehind {
-                val graphics = McGraphics.current ?: return@drawBehind
                 val held = latestStack.value()
                 val qty = latestAmount.value()
                 drawRect(color = colors.slotBackground)
                 drawRect(color = colors.slotBorder, style = Stroke(1f))
                 val painter = latestPaint.value
-                if (painter != null) painter(graphics, 1, 1) else renderer.drawStack(graphics, held, 1, 1)
+                McGraphics.defer { g ->
+                    if (painter != null) painter(g, 1, 1) else renderer.drawStack(g, held, 1, 1)
+                }
                 if (disabled) drawRect(color = colors.slotDisabledOverlay)
                 if (missing) drawRect(color = colors.slotMissingOverlay)
                 if (!qty.isNullOrEmpty()) {
-                    val font = Minecraft.getInstance().font
-                    graphics.pose().pushPose()
-                    graphics.pose().translate(1f, 1f, 200f)
-                    graphics.pose().scale(0.5f, 0.5f, 1f)
-                    val textX = slotSize * 2 - 2 - font.width(qty)
-                    val textY = slotSize * 2 - 2 - font.lineHeight
-                    graphics.drawString(font, qty, textX, textY, 0xFFFFFF, false)
-                    graphics.pose().popPose()
+                    McGraphics.defer { g ->
+                        val font = Minecraft.getInstance().font
+                        g.pose().pushPose()
+                        g.pose().translate(1f, 1f, 200f)
+                        g.pose().scale(0.5f, 0.5f, 1f)
+                        val textX = slotSize * 2 - 2 - font.width(qty)
+                        val textY = slotSize * 2 - 2 - font.lineHeight
+                        g.drawString(font, qty, textX, textY, 0xFFFFFF, false)
+                        g.pose().popPose()
+                    }
                 }
                 if (latestCraftable.value()) {
-                    val font = Minecraft.getInstance().font
-                    graphics.pose().pushPose()
-                    graphics.pose().translate(1f, 1f, 200f)
-                    graphics.pose().scale(0.5f, 0.5f, 1f)
-                    graphics.drawString(font, "+", 0, 0, 0x00FF00, false)
-                    graphics.pose().popPose()
+                    McGraphics.defer { g ->
+                        val font = Minecraft.getInstance().font
+                        g.pose().pushPose()
+                        g.pose().translate(1f, 1f, 200f)
+                        g.pose().scale(0.5f, 0.5f, 1f)
+                        g.drawString(font, "+", 0, 0, 0x00FF00, false)
+                        g.pose().popPose()
+                    }
                 }
                 val p = mouse.inDensity(density)
                 if (PanelGeometry.containsHalfOpen(p.x, p.y, nodePos.x, nodePos.y, slotSize)) {

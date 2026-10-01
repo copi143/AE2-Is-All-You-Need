@@ -10,11 +10,20 @@ import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.VertexMode
 import androidx.compose.ui.graphics.Vertices
+import androidx.compose.ui.graphics.flattenContours
+import androidx.compose.ui.graphics.jvmArgb
+import androidx.compose.ui.graphics.jvmGeneration
+import androidx.compose.ui.graphics.singleRectOrNull
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.blaze3d.vertex.BufferBuilder
 import com.mojang.blaze3d.vertex.BufferUploader
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.Tesselator
@@ -22,21 +31,40 @@ import com.mojang.blaze3d.vertex.VertexFormat
 import com.mojang.math.Axis
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.renderer.GameRenderer
+import net.minecraft.client.renderer.RenderType
+import org.joml.Matrix4f
+import org.lwjgl.opengl.GL11
+import org.lwjgl.opengl.GL12
+import org.lwjgl.system.MemoryUtil
+import java.util.WeakHashMap
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.math.tan
 
 /**
  * Bridges the official androidx.compose Canvas drawing commands to Minecraft's [GuiGraphics]
  * (immediate-mode GUI rendering). No offscreen surface, no skiko: every command is translated
- * directly into GuiGraphics calls, so the Compose tree paints with vanilla MC rendering state.
+ * directly into GuiGraphics calls or GL triangle/texture draws, so the Compose tree paints with
+ * vanilla MC rendering state.
  *
- * Transform support: translate / scale / rotate and intersecting clipRect. Path/image/arc
- * drawing and clipPath are not implemented.
+ * Transform support: translate / scale / rotate / skew / concat and intersecting clipRect /
+ * clipPath (rectangular paths stay pixel-exact, general paths clip to their bounds).
+ * Path fill uses CPU ear-clipping triangulation (EvenOdd holes supported); path stroke is
+ * expanded to triangles (miter renders as bevel). Known gaps, kept deliberately:
+ * paint shaders / color filters / path effects, saveLayer alpha compositing, vertex textures,
+ * shadow / blur render effects.
+ *
+ * Two modes, driven by the two-phase pipeline in [ComposeOwner]:
+ *  - **live** ([graphics] != null): every command executes immediately (legacy fallback path).
+ *  - **record** ([recorder] != null): all CPU work (tessellation, colors with alpha baked) runs
+ *    now, but the resulting draw is appended to [McDrawRecorder.ops] as a closure executed later
+ *    against the live GUI-stage graphics. Pose transforms are applied to the recorder's virtual
+ *    pose stack and mirrored as recorded ops, so replay sees identical matrices.
  */
-class McCanvas(private val graphics: GuiGraphics) : Canvas {
+class McCanvas internal constructor(private val graphics: GuiGraphics?, private val recorder: McDrawRecorder?) : Canvas {
 
     private var alphaMultiplier: Float = 1f
     private val clipDepthAtSave = ArrayDeque<Int>()
@@ -66,22 +94,45 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
 
     private fun strokeWidth(paint: Paint): Float = max(paint.strokeWidth, 1f)
 
+    /** Executes [op] now (live mode) or appends it to the recording (record mode). */
+    private inline fun emit(crossinline op: (GuiGraphics) -> Unit) {
+        val r = recorder
+        if (r != null) {
+            r.ops += { g -> op(g) }
+        } else {
+            op(graphics!!)
+        }
+    }
+
+    /** Applies [op] to the active pose stack and, when recording, mirrors it as a recorded op. */
+    private inline fun poseOp(crossinline op: (com.mojang.blaze3d.vertex.PoseStack) -> Unit) {
+        val r = recorder
+        if (r != null) {
+            op(r.poseStack)
+            r.ops += { g -> op(g.pose()) }
+        } else {
+            op(graphics!!.pose())
+        }
+    }
+
     private fun strokeRect(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
         val color = argb(paint)
         val w = strokeWidth(paint)
-        graphics.fill(left.toInt(), top.toInt(), right.toInt(), (top + w).toInt(), color)
-        graphics.fill(left.toInt(), (bottom - w).toInt(), right.toInt(), bottom.toInt(), color)
-        graphics.fill(left.toInt(), top.toInt(), (left + w).toInt(), bottom.toInt(), color)
-        graphics.fill((right - w).toInt(), top.toInt(), right.toInt(), bottom.toInt(), color)
+        emit { g ->
+            g.fill(left.toInt(), top.toInt(), right.toInt(), (top + w).toInt(), color)
+            g.fill(left.toInt(), (bottom - w).toInt(), right.toInt(), bottom.toInt(), color)
+            g.fill(left.toInt(), top.toInt(), (left + w).toInt(), bottom.toInt(), color)
+            g.fill((right - w).toInt(), top.toInt(), right.toInt(), bottom.toInt(), color)
+        }
     }
 
     override fun save() {
-        graphics.pose().pushPose()
+        poseOp { it.pushPose() }
         clipDepthAtSave.addLast(McScissor.depth)
     }
 
     override fun restore() {
-        graphics.pose().popPose()
+        poseOp { it.popPose() }
         val mark = if (clipDepthAtSave.isEmpty()) 0 else clipDepthAtSave.removeLast()
         while (McScissor.depth > mark) McScissor.pop(graphics)
     }
@@ -89,25 +140,49 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
     override fun saveLayer(bounds: Rect, paint: Paint) = save()
 
     override fun translate(dx: Float, dy: Float) {
-        graphics.pose().translate(dx, dy, 0f)
+        poseOp { it.translate(dx, dy, 0f) }
     }
 
     override fun scale(sx: Float, sy: Float) {
         if (sx == 1f && sy == 1f) return
-        graphics.pose().scale(sx, sy, 1f)
+        poseOp { it.scale(sx, sy, 1f) }
     }
 
     override fun rotate(degrees: Float) {
-        graphics.pose().mulPose(Axis.ZP.rotationDegrees(degrees))
+        poseOp { it.mulPose(Axis.ZP.rotationDegrees(degrees)) }
     }
 
-    override fun skew(sx: Float, sy: Float) = Unit
+    override fun skew(sx: Float, sy: Float) {
+        if (sx == 0f && sy == 0f) return
+        poseOp { pose ->
+            pose.mulPoseMatrix(
+                Matrix4f().set(
+                    1f, tan(sx), 0f, 0f,
+                    tan(sy), 1f, 0f, 0f,
+                    0f, 0f, 1f, 0f,
+                    0f, 0f, 0f, 1f,
+                ),
+            )
+        }
+    }
 
-    override fun concat(matrix: Matrix) = Unit
+    override fun concat(matrix: Matrix) {
+        val v = matrix.values.copyOf()
+        poseOp { pose ->
+            pose.mulPoseMatrix(
+                Matrix4f().set(
+                    v[0], v[1], v[2], v[3],
+                    v[4], v[5], v[6], v[7],
+                    v[8], v[9], v[10], v[11],
+                    v[12], v[13], v[14], v[15],
+                ),
+            )
+        }
+    }
 
     override fun clipRect(left: Float, top: Float, right: Float, bottom: Float, clipOp: ClipOp) {
         if (clipOp != ClipOp.Intersect) return
-        val matrix = graphics.pose().last().pose()
+        val matrix = (recorder?.poseStack ?: graphics!!.pose()).last().pose()
         val x0 = matrix.m30() + left * matrix.m00()
         val y0 = matrix.m31() + top * matrix.m11()
         val x1 = matrix.m30() + right * matrix.m00()
@@ -121,7 +196,12 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         )
     }
 
-    override fun clipPath(path: Path, clipOp: ClipOp) = Unit
+    override fun clipPath(path: Path, clipOp: ClipOp) {
+        if (clipOp != ClipOp.Intersect) return
+        // Rectangular paths stay pixel-exact; anything else clips to its bounds.
+        val rect = path.singleRectOrNull() ?: path.getBounds()
+        clipRect(rect.left, rect.top, rect.right, rect.bottom, ClipOp.Intersect)
+    }
 
     override fun drawLine(p1: Offset, p2: Offset, paint: Paint) {
         val color = argb(paint)
@@ -131,9 +211,9 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         val width = abs(p2.x - p1.x)
         val height = abs(p2.y - p1.y)
         if (width >= height) {
-            graphics.fill(left.toInt(), (top - w / 2).toInt(), (left + width).toInt(), (top - w / 2 + w).toInt(), color)
+            emit { g -> g.fill(left.toInt(), (top - w / 2).toInt(), (left + width).toInt(), (top - w / 2 + w).toInt(), color) }
         } else {
-            graphics.fill((left - w / 2).toInt(), top.toInt(), (left - w / 2 + w).toInt(), (top + height).toInt(), color)
+            emit { g -> g.fill((left - w / 2).toInt(), top.toInt(), (left - w / 2 + w).toInt(), (top + height).toInt(), color) }
         }
     }
 
@@ -141,7 +221,8 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         if (paint.style == PaintingStyle.Stroke) {
             strokeRect(left, top, right, bottom, paint)
         } else {
-            graphics.fill(left.toInt(), top.toInt(), right.toInt(), bottom.toInt(), argb(paint))
+            val color = argb(paint)
+            emit { g -> g.fill(left.toInt(), top.toInt(), right.toInt(), bottom.toInt(), color) }
         }
     }
 
@@ -157,31 +238,46 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         if (paint.style == PaintingStyle.Stroke) {
             strokeRect(left, top, right, bottom, paint)
         } else {
-            graphics.fill(left.toInt(), top.toInt(), right.toInt(), bottom.toInt(), argb(paint))
+            val color = argb(paint)
+            emit { g -> g.fill(left.toInt(), top.toInt(), right.toInt(), bottom.toInt(), color) }
         }
     }
 
     override fun drawOval(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
-        val center = Offset((left + right) / 2f, (top + bottom) / 2f)
-        drawCircle(center, min(right - left, bottom - top) / 2f, paint)
+        val cx = (left + right) / 2f
+        val cy = (top + bottom) / 2f
+        val rx = abs(right - left) / 2f
+        val ry = abs(bottom - top) / 2f
+        if (rx <= 0f || ry <= 0f) return
+        if (paint.style == PaintingStyle.Stroke) {
+            emitSoup(
+                strokeContours(
+                    listOf(sampleEllipse(cx, cy, rx, ry)),
+                    strokeWidth(paint),
+                    paint.strokeCap,
+                    paint.strokeJoin,
+                    argb(paint),
+                ),
+            )
+        } else {
+            drawEllipseFan(cx, cy, rx, ry, 0f, 360f, useCenter = true, paint)
+        }
     }
 
     override fun drawCircle(center: Offset, radius: Float, paint: Paint) {
-        val color = argb(paint)
-        val segments = 24
-        val step = (2.0 * Math.PI) / segments
-        val colorInt = color
-        val x0 = center.x
-        val y0 = center.y
-        var p0x = x0 + radius
-        var p0y = y0
-        for (i in 1..segments) {
-            val angle = i * step
-            val px = x0 + radius * cos(angle).toFloat()
-            val py = y0 + radius * sin(angle).toFloat()
-            graphics.fillTriangle(p0x, p0y, px, py, x0, y0, colorInt)
-            p0x = px
-            p0y = py
+        if (radius <= 0f) return
+        if (paint.style == PaintingStyle.Stroke) {
+            emitSoup(
+                strokeContours(
+                    listOf(sampleEllipse(center.x, center.y, radius, radius)),
+                    strokeWidth(paint),
+                    paint.strokeCap,
+                    paint.strokeJoin,
+                    argb(paint),
+                ),
+            )
+        } else {
+            drawEllipseFan(center.x, center.y, radius, radius, 0f, 360f, useCenter = true, paint)
         }
     }
 
@@ -194,11 +290,100 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         sweepAngle: Float,
         useCenter: Boolean,
         paint: Paint,
-    ) = Unit
+    ) {
+        if (sweepAngle == 0f) return
+        val cx = (left + right) / 2f
+        val cy = (top + bottom) / 2f
+        val rx = abs(right - left) / 2f
+        val ry = abs(bottom - top) / 2f
+        if (rx <= 0f || ry <= 0f) return
+        if (paint.style == PaintingStyle.Stroke) {
+            val pts = sampleArcPoints(cx, cy, rx, ry, startAngle, sweepAngle, useCenter)
+            emitSoup(strokeContours(listOf(pts), strokeWidth(paint), paint.strokeCap, paint.strokeJoin, argb(paint)))
+        } else {
+            drawEllipseFan(cx, cy, rx, ry, startAngle, sweepAngle, useCenter, paint)
+        }
+    }
 
-    override fun drawPath(path: Path, paint: Paint) = Unit
+    private fun sampleEllipse(cx: Float, cy: Float, rx: Float, ry: Float): List<Offset> {
+        val steps = max(24, (max(rx, ry) / 4f).toInt())
+        return List(steps + 1) { i ->
+            val a = (i.toDouble() / steps * 2.0 * Math.PI).toFloat()
+            Offset(cx + rx * cos(a), cy + ry * sin(a))
+        }
+    }
 
-    override fun drawImage(image: ImageBitmap, topLeftOffset: Offset, paint: Paint) = Unit
+    private fun sampleArcPoints(
+        cx: Float,
+        cy: Float,
+        rx: Float,
+        ry: Float,
+        startDegrees: Float,
+        sweepDegrees: Float,
+        useCenter: Boolean,
+    ): List<Offset> {
+        val steps = max(2, (abs(sweepDegrees) / 10f).toInt() + 1)
+        val pts = ArrayList<Offset>(steps + 2)
+        if (useCenter) pts += Offset(cx, cy)
+        for (i in 0..steps) {
+            val a = Math.toRadians((startDegrees + sweepDegrees * i / steps).toDouble())
+            pts += Offset(cx + rx * cos(a).toFloat(), cy + ry * sin(a).toFloat())
+        }
+        return pts
+    }
+
+    private fun drawEllipseFan(
+        cx: Float,
+        cy: Float,
+        rx: Float,
+        ry: Float,
+        startDegrees: Float,
+        sweepDegrees: Float,
+        useCenter: Boolean,
+        paint: Paint,
+    ) {
+        val color = argb(paint)
+        val pts = sampleArcPoints(cx, cy, rx, ry, startDegrees, sweepDegrees, useCenter)
+        val soup = TriangleSoup()
+        if (useCenter) {
+            for (i in 1 until pts.size - 1) {
+                soup.tri(pts[0].x, pts[0].y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color)
+            }
+        } else if (pts.size >= 3) {
+            for (i in 1 until pts.size - 1) {
+                soup.tri(pts[0].x, pts[0].y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y, color)
+            }
+        }
+        emitSoup(soup)
+    }
+
+    override fun drawPath(path: Path, paint: Paint) {
+        val contours = path.flattenContours()
+        if (contours.isEmpty()) {
+            return
+        }
+        val color = argb(paint)
+        val soup = if (paint.style == PaintingStyle.Stroke) {
+            strokeContours(contours, strokeWidth(paint), paint.strokeCap, paint.strokeJoin, color)
+        } else {
+            fillContours(contours, path.fillType, color)
+        }
+        emitSoup(soup)
+    }
+
+    override fun drawImage(image: ImageBitmap, topLeftOffset: Offset, paint: Paint) {
+        val alpha = paint.alpha * alphaMultiplier
+        emit { g ->
+            drawTexturedQuad(
+                g,
+                image,
+                srcX = 0, srcY = 0, srcW = image.width, srcH = image.height,
+                dstX = topLeftOffset.x, dstY = topLeftOffset.y,
+                dstW = image.width.toFloat(), dstH = image.height.toFloat(),
+                alpha = alpha,
+            )
+        }
+    }
 
     override fun drawImageRect(
         image: ImageBitmap,
@@ -207,41 +392,257 @@ class McCanvas(private val graphics: GuiGraphics) : Canvas {
         dstOffset: IntOffset,
         dstSize: IntSize,
         paint: Paint,
-    ) = Unit
+    ) {
+        if (srcSize.width <= 0 || srcSize.height <= 0 || dstSize.width <= 0 || dstSize.height <= 0) return
+        val alpha = paint.alpha * alphaMultiplier
+        emit { g ->
+            drawTexturedQuad(
+                g,
+                image,
+                srcX = srcOffset.x, srcY = srcOffset.y, srcW = srcSize.width, srcH = srcSize.height,
+                dstX = dstOffset.x.toFloat(), dstY = dstOffset.y.toFloat(),
+                dstW = dstSize.width.toFloat(), dstH = dstSize.height.toFloat(),
+                alpha = alpha,
+            )
+        }
+    }
 
-    override fun drawPoints(pointMode: PointMode, points: List<Offset>, paint: Paint) = Unit
+    private fun drawTexturedQuad(
+        graphics: GuiGraphics,
+        image: ImageBitmap,
+        srcX: Int, srcY: Int, srcW: Int, srcH: Int,
+        dstX: Float, dstY: Float, dstW: Float, dstH: Float,
+        alpha: Float,
+    ) {
+        val tex = McTextureCache.textureFor(image) ?: return
+        graphics.flush()
+        val matrix = graphics.pose().last().pose()
+        val u0 = srcX.toFloat() / tex.width
+        val v0 = (srcY + srcH).toFloat() / tex.height
+        val u1 = (srcX + srcW).toFloat() / tex.width
+        val v1 = srcY.toFloat() / tex.height
+        RenderSystem.disableDepthTest()
+        RenderSystem.enableBlend()
+        RenderSystem.defaultBlendFunc()
+        RenderSystem.setShader(GameRenderer::getPositionTexShader)
+        RenderSystem.setShaderTexture(0, tex.id)
+        RenderSystem.setShaderColor(1f, 1f, 1f, alpha.coerceIn(0f, 1f))
+        val builder = Tesselator.getInstance().getBuilder()
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX)
+        builder.vertex(matrix, dstX, dstY + dstH, 0f).uv(u0, v0).endVertex()
+        builder.vertex(matrix, dstX + dstW, dstY + dstH, 0f).uv(u1, v0).endVertex()
+        builder.vertex(matrix, dstX + dstW, dstY, 0f).uv(u1, v1).endVertex()
+        builder.vertex(matrix, dstX, dstY, 0f).uv(u0, v1).endVertex()
+        BufferUploader.drawWithShader(builder.end())
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f)
+        RenderSystem.disableBlend()
+    }
 
-    override fun drawRawPoints(pointMode: PointMode, points: FloatArray, paint: Paint) = Unit
+    override fun drawPoints(pointMode: PointMode, points: List<Offset>, paint: Paint) {
+        val color = argb(paint)
+        when (pointMode) {
+            PointMode.Points -> {
+                val r = max(strokeWidth(paint) / 2f, 0.5f)
+                val soup = TriangleSoup()
+                for (p in points) {
+                    soup.tri(p.x - r, p.y - r, p.x + r, p.y - r, p.x + r, p.y + r, color)
+                    soup.tri(p.x - r, p.y - r, p.x + r, p.y + r, p.x - r, p.y + r, color)
+                }
+                emitSoup(soup)
+            }
+            PointMode.Lines -> {
+                val contours = ArrayList<List<Offset>>()
+                var i = 0
+                while (i + 1 < points.size) {
+                    contours += listOf(points[i], points[i + 1])
+                    i += 2
+                }
+                emitSoup(strokeContours(contours, strokeWidth(paint), StrokeCap.Butt, StrokeJoin.Bevel, color))
+            }
+            PointMode.Polygon -> {
+                if (points.size >= 2) {
+                    emitSoup(strokeContours(listOf(points), strokeWidth(paint), paint.strokeCap, paint.strokeJoin, color))
+                }
+            }
+        }
+    }
 
-    override fun drawVertices(vertices: Vertices, blendMode: BlendMode, paint: Paint) = Unit
+    override fun drawRawPoints(pointMode: PointMode, points: FloatArray, paint: Paint) {
+        val list = ArrayList<Offset>(points.size / 2)
+        var i = 0
+        while (i + 1 < points.size) {
+            list += Offset(points[i], points[i + 1])
+            i += 2
+        }
+        drawPoints(pointMode, list, paint)
+    }
+
+    override fun drawVertices(vertices: Vertices, blendMode: BlendMode, paint: Paint) {
+        // Vertex textures are not supported; positions and per-vertex colors are honored.
+        val positions = vertices.positions
+        val colors = vertices.colors
+        val indices = vertices.indices
+        val fallback = argb(paint)
+        fun colorAt(i: Int): Int = if (i in colors.indices) colors[i] else fallback
+        val soup = TriangleSoup()
+        fun tri(a: Int, b: Int, c: Int) {
+            soup.positions.add(positions[a * 2]); soup.positions.add(positions[a * 2 + 1])
+            soup.positions.add(positions[b * 2]); soup.positions.add(positions[b * 2 + 1])
+            soup.positions.add(positions[c * 2]); soup.positions.add(positions[c * 2 + 1])
+            soup.colors.add(colorAt(a)); soup.colors.add(colorAt(b)); soup.colors.add(colorAt(c))
+        }
+        val count = positions.size / 2
+        if (indices.isNotEmpty()) {
+            var i = 0
+            when (vertices.vertexMode) {
+                VertexMode.Triangles -> while (i + 2 < indices.size) {
+                    tri(indices[i].toInt(), indices[i + 1].toInt(), indices[i + 2].toInt())
+                    i += 3
+                }
+                VertexMode.TriangleStrip -> while (i + 2 < indices.size) {
+                    if (i % 2 == 0) tri(indices[i].toInt(), indices[i + 1].toInt(), indices[i + 2].toInt())
+                    else tri(indices[i + 1].toInt(), indices[i].toInt(), indices[i + 2].toInt())
+                    i++
+                }
+                else -> while (i + 2 < indices.size) {
+                    tri(indices[0].toInt(), indices[i + 1].toInt(), indices[i + 2].toInt())
+                    i++
+                }
+            }
+        } else {
+            when (vertices.vertexMode) {
+                VertexMode.Triangles -> {
+                    var i = 0
+                    while (i + 2 < count) {
+                        tri(i, i + 1, i + 2)
+                        i += 3
+                    }
+                }
+                VertexMode.TriangleStrip -> {
+                    var i = 0
+                    while (i + 2 < count) {
+                        if (i % 2 == 0) tri(i, i + 1, i + 2) else tri(i + 1, i, i + 2)
+                        i++
+                    }
+                }
+                else -> {
+                    var i = 1
+                    while (i + 1 < count) {
+                        tri(0, i, i + 1)
+                        i++
+                    }
+                }
+            }
+        }
+        emitSoup(soup)
+    }
+
+    private fun emitSoup(soup: TriangleSoup) {
+        if (soup.isEmpty()) return
+        emit { g -> flushSoup(g, soup) }
+    }
+
+    private fun flushSoup(graphics: GuiGraphics, soup: TriangleSoup) {
+        val matrix = graphics.pose().last().pose()
+        // Batch into the shared RenderType.gui() buffer so all color geometry of the pass
+        // merges into one draw call with vanilla fills. gui() culls back faces: the GUI
+        // projection flips Y, so only triangles with negative signed area (in post-transform
+        // coordinates) survive — normalize winding per triangle before writing.
+        val consumer = graphics.bufferSource().getBuffer(RenderType.gui())
+        val mirrored = matrix.m00() * matrix.m11() - matrix.m01() * matrix.m10() < 0f
+        val pos = soup.positions
+        val col = soup.colors
+        var i = 0
+        var v = 0
+        while (i < pos.size) {
+            var c1 = col[v]
+            var c2 = col[v + 1]
+            var c3 = col[v + 2]
+            val x1 = pos[i]
+            val y1 = pos[i + 1]
+            var x2 = pos[i + 2]
+            var y2 = pos[i + 3]
+            var x3 = pos[i + 4]
+            var y3 = pos[i + 5]
+            val area2 = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)
+            val backFacing = if (mirrored) area2 < 0f else area2 > 0f
+            if (backFacing) {
+                val tx = x2; x2 = x3; x3 = tx
+                val ty = y2; y2 = y3; y3 = ty
+                val tc = c2; c2 = c3; c3 = tc
+            }
+            // As QUADS with degenerate 4th vertex
+            consumer.vertex(matrix, x1, y1, 0f)
+                .color((c1 ushr 16) and 0xFF, (c1 ushr 8) and 0xFF, c1 and 0xFF, (c1 ushr 24) and 0xFF)
+                .endVertex()
+            consumer.vertex(matrix, x2, y2, 0f)
+                .color((c2 ushr 16) and 0xFF, (c2 ushr 8) and 0xFF, c2 and 0xFF, (c2 ushr 24) and 0xFF)
+                .endVertex()
+            consumer.vertex(matrix, x3, y3, 0f)
+                .color((c3 ushr 16) and 0xFF, (c3 ushr 8) and 0xFF, c3 and 0xFF, (c3 ushr 24) and 0xFF)
+                .endVertex()
+            consumer.vertex(matrix, x3, y3, 0f)
+                .color((c3 ushr 16) and 0xFF, (c3 ushr 8) and 0xFF, c3 and 0xFF, (c3 ushr 24) and 0xFF)
+                .endVertex()
+            i += 6
+            v += 3
+        }
+    }
 
     override fun enableZ() = Unit
 
     override fun disableZ() = Unit
 }
 
-private fun GuiGraphics.fillTriangle(
-    x1: Float, y1: Float,
-    x2: Float, y2: Float,
-    x3: Float, y3: Float,
-    color: Int,
-) {
-    val matrix = pose().last().pose()
-    val r = ((color ushr 16) and 0xFF) / 255.0f
-    val g = ((color ushr 8) and 0xFF) / 255.0f
-    val b = (color and 0xFF) / 255.0f
-    val a = ((color ushr 24) and 0xFF) / 255.0f
-    RenderSystem.enableBlend()
-    RenderSystem.defaultBlendFunc()
-    RenderSystem.setShader(GameRenderer::getPositionColorShader)
-    val builder = Tesselator.getInstance().getBuilder()
-    builder.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR)
-    builder.vertex(matrix, x1, y1, 0f).color(r, g, b, a)
-    builder.vertex(matrix, x2, y2, 0f).color(r, g, b, a)
-    builder.vertex(matrix, x3, y3, 0f).color(r, g, b, a)
-    BufferUploader.drawWithShader(builder.end())
-    RenderSystem.disableBlend()
-}
+/**
+ * GL texture backing for framework [ImageBitmap]s. Uploads once per bitmap
+ * instance and re-uploads when its pixel generation changes; GL ids are
+ * deleted when replaced. Must be used on the render thread.
+ */
+internal object McTextureCache {
+    internal data class Entry(val id: Int, val generation: Int, val width: Int, val height: Int)
 
-private typealias IntOffset = androidx.compose.ui.unit.IntOffset
-private typealias IntSize = androidx.compose.ui.unit.IntSize
+    private val cache = WeakHashMap<ImageBitmap, Entry>()
+
+    fun textureFor(image: ImageBitmap): Entry? {
+        val width = image.width
+        val height = image.height
+        if (width <= 0 || height <= 0) return null
+        val generation = runCatching { image.jvmGeneration() }.getOrNull() ?: 0
+        val cached = cache[image]
+        if (cached != null && cached.generation == generation && cached.width == width && cached.height == height) {
+            return cached
+        }
+        if (cached != null) {
+            runCatching { GL11.glDeleteTextures(cached.id) }
+        }
+        val pixels = runCatching { image.jvmArgb() }.getOrNull() ?: return null
+        if (pixels.size != width * height) return null
+        val id = GL11.glGenTextures()
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, id)
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR)
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR)
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE)
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE)
+        // GL 驱动只接受直接内存；逐像素展开为 RGBA 字节，避免任何字节序歧义。
+        val buffer = MemoryUtil.memAlloc(pixels.size * 4)
+        try {
+            for (pixel in pixels) {
+                buffer.put((pixel shr 16).toByte())
+                buffer.put((pixel shr 8).toByte())
+                buffer.put(pixel.toByte())
+                buffer.put((pixel ushr 24).toByte())
+            }
+            buffer.flip()
+            GL11.glTexImage2D(
+                GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, width, height, 0,
+                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer,
+            )
+        } finally {
+            MemoryUtil.memFree(buffer)
+        }
+        val entry = Entry(id, generation, width, height)
+        cache[image] = entry
+        return entry
+    }
+}

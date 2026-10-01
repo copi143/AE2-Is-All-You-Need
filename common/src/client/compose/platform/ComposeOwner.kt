@@ -116,6 +116,7 @@ import net.minecraft.client.gui.GuiGraphics
 import org.lwjgl.glfw.GLFW
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.concurrent.withLock
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 
@@ -131,7 +132,7 @@ import kotlin.math.roundToInt
  * tree ([mousePosition]) is in **global logical** coordinates (local + [uiOrigin]) so it stays
  * comparable with `positionInWindow()`.
  */
-internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
+internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner, PositionCalculator {
 
     override var density: Density = Density(1f)
     override var layoutDirection: LayoutDirection = LayoutDirection.Ltr
@@ -313,29 +314,43 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
 
     val tooltipHost = TooltipHost()
 
-    /** Per-frame callbacks (smooth-scroll stepping etc.); advanced at the start of [render]. */
+    /** Per-frame callbacks (smooth-scroll stepping etc.); advanced at the start of [updateAndRecord]. */
     val frameCallbacks = FrameCallbackHost()
 
     /** Logical-space origin of this layer inside the window, added to `positionInWindow()`. */
     var uiOrigin: Offset = Offset.Zero
+        set(value) {
+            if (field != value) {
+                field = value
+                drawDirty = true
+            }
+        }
 
     /** Whole-UI zoom factor applied around every render pass (see [setUiScaleFactor]). */
     var uiScale by mutableFloatStateOf(1f)
+        private set
 
-    fun setUiScaleFactor(scale: Float) {
-        uiScale = scale.coerceIn(MIN_UI_SCALE, MAX_UI_SCALE)
+    fun setUiScaleFactor(scale: Float) = updateLock.withLock {
+        val clamped = scale.coerceIn(MIN_UI_SCALE, MAX_UI_SCALE)
+        if (clamped != uiScale) {
+            uiScale = clamped
+            drawDirty = true
+        }
     }
 
-    fun onScreenResize() {
+    fun onScreenResize() = updateLock.withLock {
         // A window resize may change the GUI-scaled size without changing root constraints in a
         // way that triggers a measure; force the whole tree to re-measure against the new bounds.
         if (::measureAndLayoutDelegate.isInitialized) measureAndLayoutDelegate.requestRemeasure(root, forced = true)
+        drawDirty = true
     }
 
     private var mouseDown = false
     private var pressedPrimary = false
     private var pressedSecondary = false
     private var pressedTertiary = false
+
+    @Volatile
     private var hoverPosition: Offset? = null
 
     /** Logical root-space mouse position for the current frame, updated every render / input event. */
@@ -378,44 +393,136 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     }
 
     // -------------------------------------------------------------------------------------------
-    // Rendering
+    // Rendering: two-phase pipeline
+    //
+    // [ComposeFrameDriver] calls [updateAndRecord] at the start of every game frame — synchronously
+    // at the GUI stage in GUI_STAGE mode, or on the UI worker thread overlapping world rendering
+    // in PARALLEL mode: recomposition, layout, pointer dispatch and — only when something changed —
+    // a full draw-pass recording. [render] (GUI stage) joins the worker and replays the recorded
+    // commands against the live [GuiGraphics]. When the UI is idle the GUI stage costs a single
+    // op-list replay.
+    //
+    // Threading: [updateLock] serializes every access to the compose tree. [updateAndRecord] holds
+    // it (on whichever thread it runs); render-thread entry points (input, resize, dispose) take it
+    // too. The worker never blocks on the render thread while holding the lock, so no deadlock.
     // -------------------------------------------------------------------------------------------
 
-    fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+    /** Serializes compose-tree access between the UI worker thread and the render thread. */
+    internal val updateLock = java.util.concurrent.locks.ReentrantLock()
+
+    /** Parallel mode: handle of this frame's worker-side [updateAndRecord] task. */
+    internal var pendingFrame: java.util.concurrent.Future<*>? = null
+
+    /** Frame counter of the last [updateAndRecord]; used to fall back to a GUI-stage update. */
+    @Volatile
+    internal var lastUpdateFrame = -1L
+        private set
+
+    /** Set by any state write / input / geometry change; cleared after each recording. */
+    @Volatile
+    private var drawDirty = true
+
+    private var recordedOps: List<(GuiGraphics) -> Unit> = emptyList()
+
+    private var lastDispatchMouse: Offset? = null
+
+    // Any snapshot write (state change) anywhere dirties the UI — conservative catch-all that
+    // covers draw-only state reads which never reach recomposition or layout.
+    private val snapshotWriteObserver = Snapshot.registerGlobalWriteObserver { drawDirty = true }
+
+    /** Marks the next [updateAndRecord] to re-record the draw pass (e.g. non-state UI changes). */
+    fun invalidateDraw() {
+        drawDirty = true
+    }
+
+    /**
+     * Advances animations, applies pending recomposition/layout, dispatches hover and — when the
+     * UI changed since the last recording — re-records the draw pass. Pure CPU work: no GL calls
+     * happen here, so it is safe to run on the UI worker thread during the world-render stage.
+     */
+    fun updateAndRecord(frame: Long, mouseX: Int, mouseY: Int, partialTick: Float): Unit = updateLock.withLock {
+        lastUpdateFrame = frame
         // Drive suspendable animations (Recomposer loop + animation effects) with this frame.
         frameClock.onNewFrame()
         val scale = uiScale
         // Per-frame callbacks (e.g. scroll-state smoothing) run before the snapshot apply / measure
-        // / draw of the same frame, so animation refresh rate == game frame rate, no coroutine lag.
+        // / record of the same frame, so animation refresh rate == game frame rate, no coroutine lag.
         frameCallbacks.advance()
-        SnapshotSync.requestApply()
+        Snapshot.sendApplyNotifications()
         val size = sizeProvider()
         measureAndLayoutDelegate.updateRootConstraints(
             Constraints(maxWidth = size.width, maxHeight = size.height),
         )
+        if (measureAndLayoutDelegate.hasPendingMeasureOrLayout ||
+            measureAndLayoutDelegate.hasPendingOnPositionedCallbacks
+        ) {
+            drawDirty = true
+        }
         measureAndLayout()
         dispatchMouseMove(mouseX / scale - uiOrigin.x, mouseY / scale - uiOrigin.y)
-        McPointerCursor.apply(if (hoverPosition == null) null else pointerIconService.getIcon())
+        if (drawDirty) {
+            // Cleared only after a successful recording so a failed pass retries next frame.
+            record()
+            drawDirty = false
+        }
+    }
+
+    /** Records the draw pass into a replayable command list (CPU only; tessellation happens here). */
+    private fun record() {
+        val recorder = McDrawRecorder()
+        val scale = uiScale
+        // Mirror the base transform applied live at replay so recorded scissor rects line up.
+        recorder.poseStack.pushPose()
+        recorder.poseStack.translate(uiOrigin.x * scale, uiOrigin.y * scale, 0f)
+        recorder.poseStack.scale(scale, scale, 1f)
+        McGraphics.activeRecorder = recorder
+        McScissor.reset()
+        try {
+            root.draw(McCanvas(null, recorder), null)
+        } finally {
+            McGraphics.activeRecorder = null
+            McScissor.reset()
+        }
+        recordedOps = recorder.ops
+    }
+
+    /** GUI stage (render thread): joins the worker's update, then replays the recorded commands. */
+    fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+        // Parallel mode: wait for the worker-side update+record of this frame (already finished
+        // when world rendering took longer; waits when the UI thread is the long pole).
+        pendingFrame?.let { future ->
+            pendingFrame = null
+            runCatching { future.get() }.onFailure { it.printStackTrace() }
+        }
+        // Fallback for frames the frame driver did not cover (GUI_STAGE mode / first frame).
+        if (lastUpdateFrame != ComposeFrameDriver.frameCounter) {
+            updateAndRecord(ComposeFrameDriver.frameCounter, mouseX, mouseY, partialTick)
+        }
+        val scale = uiScale
         McGraphics.current = graphics
         McScissor.reset(graphics)
         try {
             graphics.pose().pushPose()
             graphics.pose().translate(uiOrigin.x * scale, uiOrigin.y * scale, 0f)
             graphics.pose().scale(scale, scale, 1f)
-            root.draw(McCanvas(graphics), null)
+            for (op in recordedOps) op(graphics)
             graphics.pose().popPose()
+            graphics.flush()
         } finally {
             McScissor.reset(graphics)
             McGraphics.current = null
         }
+        // GLFW cursor state must be touched on the render thread.
+        McPointerCursor.apply(if (hoverPosition == null) null else pointerIconService.getIcon())
     }
 
     // -------------------------------------------------------------------------------------------
     // Mouse input (layer-local logical coordinates)
     // -------------------------------------------------------------------------------------------
 
-    fun onMouseClicked(x: Float, y: Float, button: Int): Boolean {
-        val pointerButton = pointerButtonOf(button) ?: return false
+    fun onMouseClicked(x: Float, y: Float, button: Int): Boolean = updateLock.withLock {
+        val pointerButton = pointerButtonOf(button) ?: return@withLock false
+        drawDirty = true
         setPressed(pointerButton, true)
         mouseDown = anyPressed()
         val position = Offset(x, y)
@@ -432,13 +539,14 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         )
     }
 
-    fun onMouseReleased(x: Float, y: Float, button: Int): Boolean {
-        val pointerButton = pointerButtonOf(button) ?: return false
+    fun onMouseReleased(x: Float, y: Float, button: Int): Boolean = updateLock.withLock {
+        val pointerButton = pointerButtonOf(button) ?: return@withLock false
+        drawDirty = true
         setPressed(pointerButton, false)
         mouseDown = anyPressed()
         val position = Offset(x, y)
         updateMousePosition(position)
-        return processPointerEvent(
+        return@withLock processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Release,
                 position = position,
@@ -450,10 +558,11 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         )
     }
 
-    fun onMouseScrolled(x: Float, y: Float, delta: Double): Boolean {
+    fun onMouseScrolled(x: Float, y: Float, delta: Double): Boolean = updateLock.withLock {
+        drawDirty = true
         val position = Offset(x, y)
         updateMousePosition(position)
-        return processPointerEvent(
+        return@withLock processPointerEvent(
             buildPointerEvent(
                 eventType = PointerEventType.Scroll,
                 position = position,
@@ -468,6 +577,12 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     private fun dispatchMouseMove(x: Float, y: Float) {
         val position = Offset(x, y)
         updateMousePosition(position)
+        if (position != lastDispatchMouse) {
+            // Hover-dependent drawing (e.g. McCarriedStack) captures the pointer position at
+            // record time, so any movement must re-record even if no state changed.
+            drawDirty = true
+            lastDispatchMouse = position
+        }
         val size = sizeProvider()
         val inside = x in 0f..size.width.toFloat() && y in 0f..size.height.toFloat()
         if (!inside) {
@@ -525,7 +640,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     }
 
     private fun processPointerEvent(event: PointerInputEvent): Boolean {
-        val result = pointerInputEventProcessor.process(event, IdentityPositionCalculator)
+        val result = pointerInputEventProcessor.process(event, this)
         return result.anyChangeConsumed
     }
 
@@ -534,15 +649,14 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
     // -------------------------------------------------------------------------------------------
 
     /** Forwards a raw key-press to the active text input session; true when a field consumed it. */
-    fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
+    fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean = updateLock.withLock {
         mcTextInputService.onKeyPressed(keyCode, modifiers)
-
-    /** Forwards a raw key-release. Text fields currently ignore releases. */
-    fun onKeyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean = false
+    }
 
     /** Forwards a committed character (direct key or IME) to the active text input session. */
-    fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =
+    fun onCharTyped(codePoint: Int, modifiers: Int): Boolean = updateLock.withLock {
         mcTextInputService.onCharTyped(codePoint, modifiers)
+    }
 
     // -------------------------------------------------------------------------------------------
     // Owner
@@ -668,9 +782,10 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner {
         session: suspend PlatformTextInputSessionScope.() -> Nothing,
     ): Nothing = error("text input is not supported by the Compose owner")
 
-    fun dispose() {
-        if (disposed) return
+    fun dispose() = updateLock.withLock {
+        if (disposed) return@withLock
         disposed = true
+        snapshotWriteObserver.dispose()
         McPointerCursor.apply(null)
         composition?.dispose()
         composition = null
@@ -723,11 +838,6 @@ private fun buildPointerEvent(
     )
 }
 
-private object IdentityPositionCalculator : PositionCalculator {
-    override fun screenToLocal(positionOnScreen: Offset): Offset = positionOnScreen
-    override fun localToScreen(localPosition: Offset): Offset = localPosition
-}
-
 private object McTypeface : Typeface {
     override val fontFamily: FontFamily get() = FontFamily.Default
 }
@@ -735,20 +845,19 @@ private object McTypeface : Typeface {
 @Suppress("DEPRECATION")
 private fun createViewConfiguration(density: Density): ViewConfiguration = DefaultViewConfiguration(density)
 
-internal object SnapshotSync {
-    fun requestApply() {
-        Snapshot.sendApplyNotifications()
-    }
-}
-
 /**
  * Dispatches coroutines onto the Minecraft client (game) thread — the thread that owns
  * the UI. It replaces [kotlinx.coroutines.Dispatchers.Main], which requires a platform
  * provider (swing/android/javafx) that is not available inside Minecraft.
+ *
+ * On the UI worker thread (PARALLEL update mode, see [ComposeFrameDriver]) continuations resume
+ * inline: recomposition/animation work follows the frame clock onto the worker instead of
+ * bouncing back to the render thread, which would both lose the parallelism and risk a deadlock
+ * (worker holds [ComposeOwner.updateLock] while the render thread waits on the same lock).
  */
 private object MinecraftDispatcher : CoroutineDispatcher() {
     override fun isDispatchNeeded(context: CoroutineContext): Boolean =
-        !Minecraft.getInstance().isSameThread
+        !Minecraft.getInstance().isSameThread && !ComposeFrameDriver.isUiThread()
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {
         Minecraft.getInstance().execute(block)

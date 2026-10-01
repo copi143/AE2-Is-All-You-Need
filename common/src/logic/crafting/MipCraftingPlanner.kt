@@ -5,25 +5,27 @@ import allyouneed.util.logger
 import appeng.api.crafting.IPatternDetails
 import appeng.api.stacks.AEKey
 import appeng.api.stacks.KeyCounter
+import averith.planner.MipPlanner
 import net.minecraft.world.level.Level
 import java.math.BigInteger
 import kotlin.math.roundToLong
 
 /**
- * 用 ojalgo 求解合成计划的 MIP 建模，带大数折叠分解。
- *
- * 数值核心（MIP 建模、折叠分解、目标库存一次性记账）在 [CraftingSolverCore]，
- * 本类只负责把 [CraftingSolverCore.Solve] 包装成带 AE 类型的 [Result]：
+ * AE 侧的合成规划适配层：把通用 [MipPlanner] 的纯数值解包装成带 AE 类型的 [Result]：
  * patternTimes / usedItems / emittedItems / missingItems，以及工具损耗回填。
  *
- * ## 建模要点（详见 [CraftingSolverCore]）
+ * 规划核心（MIP 建模、折叠分解、目标库存一次性记账）在 averith.planner 的
+ * [MipPlanner]，本类只负责类型映射与 AE 特有的工具损耗计算
+ * （循环调用 [IPatternDetails.IInput.getRemainingKey]）。
+ *
+ * ## 建模要点（详见 [MipPlanner]）
  * - 只建模 sources（CompletelyConsumed + ByProduct 消耗）与 targets（产出），
  *   Constant 催化剂不消耗、不产出，直接忽略。
  * - SlowlyConsumed 工具（lossy catalyst）不做预估：主树定死后按执行次数
  *   循环调用 [IPatternDetails.IInput.getRemainingKey] 计算真实工具损耗。
  * - 两阶段：`minimise Σ x_r` 满足目标 → 最优计划；不可行时 `maximise 目标产出`
  *   → 最大可达产量 P，缺货 = Q − P，天然实现 CRAFT_LESS。
- * - 需求超过精确域时按 [CraftingSolverCore.FOLD_BASE] 折叠放大，[BigInteger]
+ * - 需求超过精确域时按 [MipPlanner.FOLD_BASE] 折叠放大，[BigInteger]
  *   精确校验库存倍率；目标物品自身库存只一次性满足，不参与放大。
  */
 class MipCraftingPlanner(
@@ -32,30 +34,15 @@ class MipCraftingPlanner(
     private val output: AEKey,
     private val requestedAmount: Long,
 ) {
-    private val nItems = snapshot.resources.size
-    private val mRecipes = snapshot.recipes.size
-    private val targetId: Int = snapshot.keyIndex.getOrDefault(output, -1)
+    private val nItems = snapshot.graph.stock.size
+    private val targetId: Int = snapshot.graph.target
     /** 初始库存，BigInteger 精确表示。 */
-    private val baseStock = Array(nItems) { i -> snapshot.resources[i].stack.valBig }
-    private val isEmitter = BooleanArray(mRecipes) { r -> snapshot.recipes[r].pattern.contains(-1) }
-    /** deltaByItem[item] = map(recipe -> 净变化)，正 = 产出，负 = 消耗。 */
-    private val deltaByItem = Array(nItems) { HashMap<Int, Long>() }
-
-    private val core = CraftingSolverCore(
-        nItems = nItems,
-        mRecipes = mRecipes,
-        deltaByItem = deltaByItem,
-        targetId = targetId,
-        isEmitter = isEmitter,
-    )
+    private val baseStock = snapshot.graph.stock
+    private val planner = MipPlanner(snapshot.graph)
 
     init {
         if (targetId < 0) {
             throw IllegalStateException("Target $output is not reachable in the crafting snapshot")
-        }
-        for ((r, recipe) in snapshot.recipes.withIndex()) {
-            for (ref in recipe.sources) deltaByItem[ref.id].merge(r, -ref.amount, Long::plus)
-            for (ref in recipe.targets) deltaByItem[ref.id].merge(r, ref.amount, Long::plus)
         }
     }
 
@@ -74,7 +61,7 @@ class MipCraftingPlanner(
 
     fun plan(): Result {
         try {
-            return buildResult(core.plan(requestedAmount, baseStock.copyOf()))
+            return buildResult(planner.plan(requestedAmount))
         } catch (e: Throwable) {
             logger.error("MIP solver failed for ${requestedAmount}x$output", e)
             return missingResult(requestedAmount)
@@ -82,12 +69,13 @@ class MipCraftingPlanner(
     }
 
     /** 把纯数值解包装成带 AE 类型的 [Result]：工具损耗回填 + 缺货/使用量精确记账。 */
-    private fun buildResult(solve: CraftingSolverCore.Solve): Result {
+    private fun buildResult(solve: MipPlanner.Solve): Result {
         val patternTimes = HashMap<IPatternDetails, Long>()
-        for ((r, recipe) in snapshot.recipes.withIndex()) {
+        for ((r, recipe) in snapshot.graph.recipes.withIndex()) {
             val times = solve.xs[r]
             if (times <= 0) continue
-            val pid = recipe.pattern.firstOrNull { it >= 0 } ?: continue
+            val pid = recipe.payload
+            if (pid < 0) continue
             patternTimes.merge(snapshot.patterns[pid], times) { a, b -> a + b }
         }
         val bytes = patternTimes.values.sum() * 8
@@ -120,8 +108,8 @@ class MipCraftingPlanner(
         }
 
         val emittedItems = KeyCounter()
-        for ((r, recipe) in snapshot.recipes.withIndex()) {
-            if (solve.xs[r] <= 0 || !isEmitter[r]) continue
+        for ((r, recipe) in snapshot.graph.recipes.withIndex()) {
+            if (solve.xs[r] <= 0 || !recipe.emitter) continue
             for (ref in recipe.targets) {
                 emittedItems.add(
                     snapshot.resources[ref.id].stack.key,
@@ -138,7 +126,7 @@ class MipCraftingPlanner(
             missingItems = missing,
             bytes = bytes,
             simulation = solve.simulation || inventoryShort,
-            multiplePaths = snapshot.resources.any { it.recipes.size > 1 },
+            multiplePaths = snapshot.multiplePaths,
             net = solve.net,
         )
     }
@@ -154,7 +142,7 @@ class MipCraftingPlanner(
             missingItems = missing,
             bytes = 0,
             simulation = true,
-            multiplePaths = snapshot.resources.any { it.recipes.size > 1 },
+            multiplePaths = snapshot.multiplePaths,
             net = Array(nItems) { BigInteger.ZERO },
         )
     }
@@ -165,10 +153,11 @@ class MipCraftingPlanner(
 
     private fun toolLossByKey(xs: LongArray): Map<AEKey, Long> {
         val result = HashMap<AEKey, Long>()
-        for ((r, recipe) in snapshot.recipes.withIndex()) {
+        for ((r, recipe) in snapshot.graph.recipes.withIndex()) {
             val times = xs[r]
             if (times <= 0) continue
-            val pid = recipe.pattern.firstOrNull { it >= 0 } ?: continue
+            val pid = recipe.payload
+            if (pid < 0) continue
             val pattern = snapshot.patterns[pid]
             for (input in pattern.inputs) {
                 val possible = input.possibleInputs

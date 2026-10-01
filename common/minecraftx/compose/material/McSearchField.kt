@@ -44,7 +44,6 @@ fun McSearchField(
             }
         },
         imeEnabled = imeEnabled,
-        singleLine = true,
         width = width,
         height = height,
         placeholder = placeholder,

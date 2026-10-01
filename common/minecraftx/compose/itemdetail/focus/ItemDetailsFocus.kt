@@ -1,6 +1,8 @@
 package minecraftx.compose.itemdetail.focus
 
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.phys.BlockHitResult
@@ -10,8 +12,9 @@ import net.minecraft.world.phys.BlockHitResult
  *
  *  1. EMI's hovered stack (via `EmiApi.getHoveredStack`),
  *  2. JEI's ingredient list / bookmark overlay under the mouse,
- *  3. the block the player is looking at (vanilla raycast),
- *  4. the item currently held in hand.
+ *  3. the hovered slot of an open container screen,
+ *  4. the block the player is looking at (vanilla raycast),
+ *  5. the item currently held in hand.
  *
  * EMI and JEI are accessed through reflection so that the common module stays
  * loadable even when either mod is absent.
@@ -27,14 +30,14 @@ object ItemDetailsFocus {
     }
 
     private fun containerSlot(): ItemStack? {
-        val screen = Minecraft.getInstance().screen as? net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<*>
+        val screen = Minecraft.getInstance().screen as? AbstractContainerScreen<*>
             ?: return null
         val slot = runCatching {
-            val field = net.minecraft.client.gui.screens.inventory.AbstractContainerScreen::class.java
+            val field = AbstractContainerScreen::class.java
                 .getDeclaredField("hoveredSlot")
             field.isAccessible = true
             field.get(screen)
-        }.getOrNull() as? net.minecraft.world.inventory.Slot ?: return null
+        }.getOrNull() as? Slot ?: return null
         val stack = slot.item
         return if (stack.isEmpty) null else stack
     }

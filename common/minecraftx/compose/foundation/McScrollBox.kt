@@ -65,8 +65,6 @@ fun McScrollBox(
     state: ScrollState = rememberScrollState(),
     backgroundColor: Color? = null,
     scrollbarWidth: Int = 4,
-    scrollbarColor: Color = McTheme.colors.scrollbarBar,
-    scrollbarTrackColor: Color = McTheme.colors.scrollbarTrack,
     content: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier.then(if (scrollable) Modifier.mcScroll(state) else Modifier)) {
@@ -107,8 +105,6 @@ fun McScrollBox(
                     .size(scrollbarWidth.dp, viewportH.dp),
                 trackWidth = scrollbarWidth.dp,
                 barWidth = scrollbarWidth.dp,
-                trackColor = scrollbarTrackColor,
-                barColor = scrollbarColor,
             )
         }
     }
@@ -134,8 +130,7 @@ private fun Modifier.layoutUnboundedHeight(onHeight: (Int) -> Unit): Modifier =
  * content pass finishes.
  */
 private fun Modifier.scissorClip(): Modifier = drawWithContent {
-    val g = McGraphics.current ?: return@drawWithContent
-    val matrix = g.pose().last().pose()
+    val matrix = McGraphics.currentPose() ?: return@drawWithContent
     val nodeX = matrix.m30()
     val nodeY = matrix.m31()
     val scaleX = matrix.m00()
@@ -145,10 +140,10 @@ private fun Modifier.scissorClip(): Modifier = drawWithContent {
     val clipRight = max(nodeX, nodeX + size.width * scaleX).toInt()
     val clipBottom = max(nodeY, nodeY + size.height * scaleY).toInt()
     if (clipRight <= clipLeft || clipBottom <= clipTop) return@drawWithContent
-    McScissor.push(g, clipLeft, clipTop, clipRight, clipBottom)
+    McScissor.push(null, clipLeft, clipTop, clipRight, clipBottom)
     try {
         drawContent()
     } finally {
-        McScissor.pop(g)
+        McScissor.pop(null)
     }
 }

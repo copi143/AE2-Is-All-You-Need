@@ -48,3 +48,7 @@ enum class NetworkLogKind(val category: NetworkLogCategory, val level: NetworkLo
         fun byOrdinal(ordinal: Int): NetworkLogKind = entries.getOrElse(ordinal) { Unknown }
     }
 }
+
+/** Category mask per kind ordinal: flat IntArray for allocation-free filter scans over log columns. */
+internal val KIND_CATEGORY_MASKS: IntArray =
+    IntArray(NetworkLogKind.entries.size) { NetworkLogKind.entries[it].category.mask }

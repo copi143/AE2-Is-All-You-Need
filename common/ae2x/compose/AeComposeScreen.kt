@@ -11,7 +11,6 @@ import appeng.client.gui.StackWithBounds
 import appeng.client.gui.style.ScreenStyle
 import appeng.menu.AEBaseMenu
 import appeng.menu.slot.AppEngSlot
-import minecraftx.compose.theme.McTheme
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.renderer.Rect2i
@@ -48,7 +47,7 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
         }
         layer.setContent {
             CompositionLocalProvider(LocalAeHost provides this) {
-                McTheme { Content() }
+                Content()
             }
         }
     }
@@ -102,11 +101,6 @@ abstract class AeComposeScreen<M : AEBaseMenu>(
     override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
         if (layer.onKeyPressed(keyCode, scanCode, modifiers)) return true
         return super.keyPressed(keyCode, scanCode, modifiers)
-    }
-
-    override fun keyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
-        if (layer.onKeyReleased(keyCode, scanCode, modifiers)) return true
-        return super.keyReleased(keyCode, scanCode, modifiers)
     }
 
     override fun charTyped(codePoint: Char, modifiers: Int): Boolean {

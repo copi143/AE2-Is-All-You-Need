@@ -9,7 +9,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.constrainHeight
@@ -18,6 +17,7 @@ import minecraftx.compose.text.LocalMcTextEngine
 import minecraftx.compose.text.McSpanStyle
 import minecraftx.compose.text.McStyledString
 import minecraftx.compose.text.McTextEngine
+import minecraftx.compose.text.paintDeferred
 import minecraftx.compose.text.McTextLayout
 import minecraftx.compose.theme.McTheme
 
@@ -46,7 +46,7 @@ fun McMarkdown(
     Layout(
         content = {},
         modifier = modifier.drawBehind {
-            if (McGraphics.current == null) return@drawBehind
+            if (!McGraphics.active) return@drawBehind
             for (cmd in cmds) drawCmd(cmd, engine)
         },
     ) { _, constraints ->
@@ -268,9 +268,7 @@ private class LayoutBuilder(private val engine: McTextEngine, private val maxW: 
 
 private fun DrawScope.drawCmd(cmd: Cmd, engine: McTextEngine) {
     when (cmd) {
-        is Cmd.Text -> translate(cmd.x.toFloat(), cmd.y.toFloat()) {
-            with(engine) { paint(cmd.layout, cmd.fallback) }
-        }
+        is Cmd.Text -> paintDeferred(engine, cmd.layout, cmd.fallback, cmd.x.toFloat(), cmd.y.toFloat())
         is Cmd.Box -> drawRect(cmd.color, Offset(cmd.x.toFloat(), cmd.y.toFloat()), Size(cmd.w.toFloat(), cmd.h.toFloat()))
         is Cmd.HLine -> drawRect(cmd.color, Offset(cmd.x.toFloat(), cmd.y.toFloat()), Size(cmd.w.toFloat(), cmd.thickness.toFloat()))
         is Cmd.VLine -> drawRect(cmd.color, Offset(cmd.x.toFloat(), cmd.y.toFloat()), Size(cmd.thickness.toFloat(), cmd.h.toFloat()))

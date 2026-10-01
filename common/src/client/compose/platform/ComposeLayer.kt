@@ -43,7 +43,8 @@ import kotlin.math.roundToInt
 class ComposeLayer {
 
     private var logicalSize = IntSize(1, 1)
-    private val owner by lazy { ComposeOwner { logicalSize } }
+    private val ownerLazy = lazy { ComposeOwner { logicalSize } }
+    private val owner by ownerLazy
 
     /** Whole-UI zoom factor applied around every render pass. */
     val uiScale: Float get() = owner.uiScale
@@ -60,7 +61,13 @@ class ComposeLayer {
     fun setUiScaleFactor(scale: Float) = owner.setUiScaleFactor(scale)
 
     /** Attaches [content] as the layer's root; safe to call only once per layer. */
-    fun setContent(content: @Composable () -> Unit) = owner.setContent(content)
+    fun setContent(content: @Composable () -> Unit) {
+        owner.setContent(content)
+        ComposeFrameDriver.register(owner)
+    }
+
+    /** Forces a re-record of the draw pass on the next frame (e.g. non-state-backed changes). */
+    fun invalidateDraw() = owner.invalidateDraw()
 
     /** Forces a re-measure after the host window / layout size changed. */
     fun onScreenResize() = owner.onScreenResize()
@@ -117,10 +124,6 @@ class ComposeLayer {
     fun onKeyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
         owner.onKeyPressed(keyCode, scanCode, modifiers)
 
-    /** Forwards a key-release (GLFW keyCode/scanCode/modifiers). */
-    fun onKeyReleased(keyCode: Int, scanCode: Int, modifiers: Int): Boolean =
-        owner.onKeyReleased(keyCode, scanCode, modifiers)
-
     /** Forwards a committed character (direct key or IME); true when a text field consumed it. */
     fun onCharTyped(codePoint: Int, modifiers: Int): Boolean =
         owner.onCharTyped(codePoint, modifiers)
@@ -133,5 +136,9 @@ class ComposeLayer {
     val hasTextInputFocus: Boolean get() = owner.mcTextInputService.hasActiveSession
 
     /** Releases the composition and coroutine scopes; call from the host's `removed` / `onClose`. */
-    fun dispose() = owner.dispose()
+    fun dispose() {
+        if (!ownerLazy.isInitialized()) return
+        ComposeFrameDriver.unregister(owner)
+        owner.dispose()
+    }
 }

@@ -52,8 +52,8 @@ common/minecraftx/compose/                          # 实际 sourceSet: common/m
   任何引擎都能解释;Compose 1.12.0-beta03 的 SpanStyle/TextDecoration 构造器已 internal 化,无法使用 |
 | layout/paint 分离 | 对标官方 TextMeasurer:排版结果可缓存,表格两遍测宽/大文档重排友好 |
 | 切换机制 | 双层:`CompositionLocalProvider(LocalMcTextEngine provides ...)` 局部覆盖 +
-  `McThemeSettings.textEngineId` 全局开关(持久化到 client properties;demo 有 vanilla/spaced
-  字间距变体实时对比);缓存 key 含 engine 实例 |
+  `McThemeSettings.textEngineId` 全局开关(持久化到 client properties;demo 可实时切换);
+  缓存 key 含 engine 实例 |
 | 折行 | 自研贪心折行器:空格断点 + CJK 全字符断点 + 超宽硬断,单行模式等效旧 substrByWidth 截断 |
 | 解析器 | `org.jetbrains:markdown-jvm:0.7.9`(Apache-2.0,零第三方依赖,GFM 表格/删除线/任务列表
   CHECK_BOX 内建;fabric include + forge jarJar 已随包分发) |
@@ -61,7 +61,7 @@ common/minecraftx/compose/                          # 实际 sourceSet: common/m
 
 ### 第二步(已落地):`MsdfTextEngine` —— 系统字体 + 纯 JVM MSDF
 
-> 现状:已接入。Demo 的引擎按钮可切 `vanilla` / `spaced` / `msdf`。
+> 现状:已接入。Demo 的引擎按钮可切 `vanilla` / `msdf`。
 
 相对初稿的路线修正:
 

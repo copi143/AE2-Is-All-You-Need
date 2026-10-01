@@ -119,13 +119,15 @@ fun AeSortToggle(
                 }
             }
             .drawBehind {
-                val graphics = McGraphics.current ?: return@drawBehind
-                graphics.blit(Icon.TEXTURE, 0, 0, Icon.TOOLBAR_BUTTON_BACKGROUND.x, Icon.TOOLBAR_BUTTON_BACKGROUND.y, ICON, ICON)
-                Blitter.texture(texture, TEX, TEX)
-                    .src(0, 0, TEX, TEX)
-                    .dest(0, 0, ICON, ICON)
-                    .colorArgb(tint)
-                    .blit(graphics)
+                val tintNow = tint
+                McGraphics.defer { graphics ->
+                    graphics.blit(Icon.TEXTURE, 0, 0, Icon.TOOLBAR_BUTTON_BACKGROUND.x, Icon.TOOLBAR_BUTTON_BACKGROUND.y, ICON, ICON)
+                    Blitter.texture(texture, TEX, TEX)
+                        .src(0, 0, TEX, TEX)
+                        .dest(0, 0, ICON, ICON)
+                        .colorArgb(tintNow)
+                        .blit(graphics)
+                }
                 val p = mouse.inDensity(density)
                 if (minecraftx.compose.geometry.PanelGeometry.containsHalfOpen(p.x, p.y, nodePos.x, nodePos.y, ICON)) {
                     drawRect(color = hover)
