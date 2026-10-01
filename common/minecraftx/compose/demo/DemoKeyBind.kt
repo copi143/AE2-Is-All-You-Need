@@ -31,7 +31,7 @@ object DemoKeyBind {
         registered = true
         Platform.registerKeyBinding(openDemo)
         Platform.registerKeyBinding(openEmbedded)
-        Platform.onClientTick(::tick)
+        Platform.onClientTickEnd { tick() }
     }
 
     private fun tick() {

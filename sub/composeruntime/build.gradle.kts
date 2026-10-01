@@ -25,6 +25,15 @@ dependencies {
     compileOnly(libs.compose.ui.graphics)
 }
 
+// The PathIterator replacement constructs PathSegment via its module-internal
+// constructor; friend-paths grants access to the official ui-graphics internals.
+configurations.detachedConfiguration(dependencies.create(libs.compose.ui.graphics.get())).let {
+    it.isTransitive = false
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions.freeCompilerArgs.add(provider { "-Xfriend-paths=${it.singleFile.absolutePath}" })
+    }
+}
+
 tasks.named<Jar>("jar") {
     description =
         "Produces a Compose desktop runtime jar without skiko, with the skiko-dependent ui-graphics classes replaced by the local implementations."
