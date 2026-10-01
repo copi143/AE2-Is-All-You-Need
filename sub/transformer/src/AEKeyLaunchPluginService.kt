@@ -39,11 +39,20 @@ class AEKeyLaunchPluginService : ILaunchPluginService {
         if (phase != ILaunchPluginService.Phase.AFTER) return false
         if (isMixin(classNode)) return false
         ensureRuntime()
-        if (runtimeFailed) return false
+        if (classNode.name == Constants.GSON_RTAF) {
+            return RuntimeClasses.gsonInstalled && GsonFastPathTransformer.apply(classNode)
+        }
+        // Component$Serializer 的 toJson/fromJson 委托 + Style$Serializer 字段访问器注入
+        val componentJson = ComponentJsonTransformer.isTarget(classNode.name) && ComponentJsonTransformer.apply(classNode)
+        // 声明式 JSON 序列化流式化（ServerStatus 等；Streams 钩子在 onLoad 已先发装入）
+        val jsonStream = JsonStreamTransformer.isTarget(classNode.name) && JsonStreamTransformer.apply(classNode)
+        // Forge 下 gson 位于 BOOT 层不可变换，只能改写 GAME 层的 Gson 构造调用点
+        val gsonCallSites = if (RuntimeClasses.gsonInstalled) GsonFastPathTransformer.applyCallSites(classNode) else 0
+        if (runtimeFailed) return gsonCallSites > 0 || componentJson || jsonStream
         KeyResolver.cacheKeyFromSuper(classNode.name, classNode.superName)
         val ae = NewCallTransformer.apply(classNode) { name -> KeyResolver.isKey(name) } > 0
         val rl = NewCallTransformer.applyResourceLocation(classNode) > 0
-        return ae || rl
+        return ae || rl || gsonCallSites > 0 || componentJson || jsonStream
     }
 
     private fun isMixin(cn: ClassNode): Boolean {

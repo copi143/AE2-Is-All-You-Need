@@ -25,6 +25,11 @@ class AEKeyTransformationService : ITransformationService {
     override fun onLoad(environment: IEnvironment, otherServices: Set<String>) {
         System.setProperty(AEKeyLaunchPluginService.INSTALLED_PROP, "true")
         logger.info("ITransformationService onLoad (launch-plugin injector shell)")
+        // Forge 的 JarJar 在 mod discovery 阶段（晚于本回调、早于首次 processClass）就会
+        // 通过 Gson POJO 绑定加载 ReflectiveTypeAdapterFactory；此时 BOOT 层已可解析 gson，
+        // 抢先安装运行时并替换 RTAF，赢得加载器字典的时序窗口。失败由调用点改写兜底。
+        val loader = Thread.currentThread().contextClassLoader ?: javaClass.classLoader
+        RuntimeClasses.installGson(loader, true)
     }
 
     override fun initialize(environment: IEnvironment) {

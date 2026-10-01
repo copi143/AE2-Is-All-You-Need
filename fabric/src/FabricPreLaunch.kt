@@ -1,5 +1,9 @@
 package allyouneed
 
+import allyouneed.transformer.ComponentJsonTransformer
+import allyouneed.transformer.Constants
+import allyouneed.transformer.GsonFastPathTransformer
+import allyouneed.transformer.JsonStreamTransformer
 import allyouneed.transformer.KeyResolver
 import allyouneed.transformer.NewCallTransformer
 import allyouneed.transformer.RuntimeClasses
@@ -32,7 +36,9 @@ class FabricPreLaunch : PreLaunchEntrypoint {
     }
 
     private fun install() {
-        RuntimeClasses.install()
+        // 必须先装代理再安装 gson 运行时：GsonFastPath 初始化会做元数据反射，
+        // 连带加载 RTAF 内部类与 nest host RTAF 本体；只有代理已就位，RTAF 才能
+        // 经变换管线打上钩子（gsonInstalled 已在初始化前置位，见 RuntimeClasses）。
         val knot = Thread.currentThread().contextClassLoader
         val delegate = field(knot, "delegate") ?: throw IllegalStateException("Knot delegate missing")
         val mixinTransformer =
@@ -40,6 +46,7 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         val wrapped = wrapMixinTransformer(mixinTransformer)
         putField(delegate, "mixinTransformer", wrapped)
         logger.info("Wrapped Knot mixin transformer for lazy AEKey intern (post-mixin)")
+        RuntimeClasses.install()
     }
 
     private fun wrapMixinTransformer(original: Any): Any {
@@ -62,11 +69,23 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         cr.accept(cn, 0)
         if (cn.name.startsWith("allyouneed/transformer/")) return bytes
         if (isMixin(cn)) return bytes
+        if (cn.name == Constants.GSON_RTAF) {
+            if (!RuntimeClasses.gsonInstalled || !GsonFastPathTransformer.apply(cn)) return bytes
+            val cw = ClassWriter(cr, ClassWriter.COMPUTE_FRAMES)
+            cn.accept(cw)
+            return cw.toByteArray()
+        }
         KeyResolver.cacheKeyFromSuper(cn.name, cn.superName)
         val ae = NewCallTransformer.apply(cn) { name -> KeyResolver.isKey(name) }
         val rl = NewCallTransformer.applyResourceLocation(cn)
-        val rewritten = ae + rl
-        if (rewritten == 0) return bytes
+        // RTAF 直接钩子失效时的冗余保障：双包装是幂等的（FastFactory.wrap 对生成适配器原样返回）
+        val gsonSites = if (RuntimeClasses.gsonInstalled) GsonFastPathTransformer.applyCallSites(cn) else 0
+        val componentJson = ComponentJsonTransformer.isTarget(cn.name) && ComponentJsonTransformer.apply(cn)
+        // 声明式 JSON 序列化流式化 + Streams.write 流式钩子（经 Knot 管线，与 mixin 兼容）
+        val jsonStream = RuntimeClasses.gsonInstalled &&
+            JsonStreamTransformer.isTarget(cn.name) && JsonStreamTransformer.apply(cn)
+        val rewritten = ae + rl + gsonSites
+        if (rewritten == 0 && !componentJson && !jsonStream) return bytes
         val cw = ClassWriter(cr, ClassWriter.COMPUTE_FRAMES)
         cn.accept(cw)
         return cw.toByteArray()
