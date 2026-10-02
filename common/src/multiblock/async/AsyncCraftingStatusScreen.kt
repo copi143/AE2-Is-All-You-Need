@@ -1,5 +1,8 @@
 package allyouneed.multiblock.async
 
+import allyouneed.util.mcTranslate
+import allyouneed.util.setDarkRed
+import allyouneed.util.setGreen
 import appeng.client.gui.AEBaseScreen
 import appeng.client.gui.style.ScreenStyle
 import appeng.menu.AEBaseMenu
@@ -45,10 +48,8 @@ class AsyncCraftingStatusScreen<M>(
         )
         setTextContent(
             "grid_connected",
-            Component.translatable(
-                if (connected) "gui.ae2isallyouneed.async.status.connected"
-                else "gui.ae2isallyouneed.async.status.disconnected",
-            ).withStyle(if (connected) ChatFormatting.GREEN else ChatFormatting.DARK_RED),
+            if (connected) "gui.ae2isallyouneed.async.status.connected".mcTranslate.setGreen()
+            else "gui.ae2isallyouneed.async.status.disconnected".mcTranslate.setDarkRed(),
         )
         setTextContent(
             "swallowed",

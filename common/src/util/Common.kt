@@ -2,12 +2,12 @@
 
 package allyouneed.util
 
+import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.resources.ResourceLocation
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
-import java.math.BigInteger
 
 fun idify(value: String): String = value.lowercase().replace(" ", "_").replace("-", "_").replace(".", "_")
 
@@ -28,6 +28,28 @@ fun ResourceLocation.joinChild(child: String): ResourceLocation {
 val String.mcText: MutableComponent get() = Component.literal(this)
 val String.mcTranslate: MutableComponent get() = Component.translatable(this)
 fun String.mcTranslate(vararg args: Any?): MutableComponent = Component.translatable(this, *args)
+
+fun MutableComponent.setBlack(): MutableComponent = this.withStyle(ChatFormatting.BLACK)
+fun MutableComponent.setDarkBlue(): MutableComponent = this.withStyle(ChatFormatting.DARK_BLUE)
+fun MutableComponent.setDarkGreen(): MutableComponent = this.withStyle(ChatFormatting.DARK_GREEN)
+fun MutableComponent.setDarkAqua(): MutableComponent = this.withStyle(ChatFormatting.DARK_AQUA)
+fun MutableComponent.setDarkRed(): MutableComponent = this.withStyle(ChatFormatting.DARK_RED)
+fun MutableComponent.setDarkPurple(): MutableComponent = this.withStyle(ChatFormatting.DARK_PURPLE)
+fun MutableComponent.setGold(): MutableComponent = this.withStyle(ChatFormatting.GOLD)
+fun MutableComponent.setGray(): MutableComponent = this.withStyle(ChatFormatting.GRAY)
+fun MutableComponent.setDarkGray(): MutableComponent = this.withStyle(ChatFormatting.DARK_GRAY)
+fun MutableComponent.setBlue(): MutableComponent = this.withStyle(ChatFormatting.BLUE)
+fun MutableComponent.setGreen(): MutableComponent = this.withStyle(ChatFormatting.GREEN)
+fun MutableComponent.setAqua(): MutableComponent = this.withStyle(ChatFormatting.AQUA)
+fun MutableComponent.setRed(): MutableComponent = this.withStyle(ChatFormatting.RED)
+fun MutableComponent.setLightPurple(): MutableComponent = this.withStyle(ChatFormatting.LIGHT_PURPLE)
+fun MutableComponent.setYellow(): MutableComponent = this.withStyle(ChatFormatting.YELLOW)
+fun MutableComponent.setWhite(): MutableComponent = this.withStyle(ChatFormatting.WHITE)
+fun MutableComponent.setObfuscated(): MutableComponent = this.withStyle(ChatFormatting.OBFUSCATED)
+fun MutableComponent.setBold(): MutableComponent = this.withStyle(ChatFormatting.BOLD)
+fun MutableComponent.setStrikethrough(): MutableComponent = this.withStyle(ChatFormatting.STRIKETHROUGH)
+fun MutableComponent.setUnderline(): MutableComponent = this.withStyle(ChatFormatting.UNDERLINE)
+fun MutableComponent.setItalic(): MutableComponent = this.withStyle(ChatFormatting.ITALIC)
 
 /**
  * 将 2^N 格式化为带数量级词头的形式

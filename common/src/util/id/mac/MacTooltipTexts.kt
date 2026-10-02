@@ -1,12 +1,12 @@
 package allyouneed.util.id.mac
 
 import allyouneed.util.MODID
-import net.minecraft.ChatFormatting
+import allyouneed.util.mcTranslate
+import allyouneed.util.setDarkAqua
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.nbt.Tag
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
-import kotlin.collections.iterator
 
 object MacTooltipTexts {
     const val SERVER_TAG = "ayn_macs"
@@ -56,11 +56,11 @@ object MacTooltipTexts {
         for ((name, mac) in macs) {
             val formatted = MacAddress.format(mac)
             val line = if (singleDefault) {
-                Component.translatable(LANG_MAC, formatted)
+                LANG_MAC.mcTranslate(formatted)
             } else {
-                Component.translatable(LANG_MAC_NAMED, displayTagName(name), formatted)
+                LANG_MAC_NAMED.mcTranslate(displayTagName(name), formatted)
             }
-            lines.add(line.withStyle(ChatFormatting.DARK_AQUA))
+            lines.add(line.setDarkAqua())
         }
         return lines
     }
@@ -72,11 +72,11 @@ object MacTooltipTexts {
         for ((name, mac) in macs) {
             val formatted = MacAddress.format(mac)
             val line = if (macs.size == 1 && name in DEFAULT_TAG_NAMES) {
-                Component.translatable(LANG_MAC_ITEM, formatted)
+                LANG_MAC_ITEM.mcTranslate(formatted)
             } else {
-                Component.translatable(LANG_MAC_NAMED, displayTagName(name), formatted)
+                LANG_MAC_NAMED.mcTranslate(displayTagName(name), formatted)
             }
-            lines.add(line.withStyle(ChatFormatting.DARK_AQUA))
+            lines.add(line.setDarkAqua())
         }
     }
 

@@ -85,6 +85,14 @@ dependencies {
     testImplementation(files(configurations.named("compileClasspath").map { classpath ->
         classpath.filter { it.name.startsWith("joml-") }
     }))
+    // Component 继承 Brigadier 的 Message，文本组件测试需要与 Minecraft 一致的类定义。
+    testImplementation(files(configurations.named("compileClasspath").map { classpath ->
+        classpath.filter { it.name.startsWith("brigadier-") }
+    }))
+    // 文本样式初始化 ExtraCodecs 时会引用 Authlib 的 Property。
+    testRuntimeOnly(files(configurations.named("compileClasspath").map { classpath ->
+        classpath.filter { it.name.startsWith("authlib-") }
+    }))
     // PoseStack 初始化 Minecraft.Util 时需要 Mojang 的日志桥接。
     testRuntimeOnly(files(configurations.named("compileClasspath").map { classpath ->
         classpath.filter { it.name.startsWith("logging-") }
