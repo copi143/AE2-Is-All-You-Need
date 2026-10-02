@@ -44,9 +44,9 @@ class SkiaBackedPaint : Paint {
 
     override var strokeCap: StrokeCap = StrokeCap.Butt
 
-    override var strokeJoin: StrokeJoin = StrokeJoin.Round
+    override var strokeJoin: StrokeJoin = StrokeJoin.Miter
 
-    override var strokeMiterLimit: Float = 0f
+    override var strokeMiterLimit: Float = 4f
 
     override var filterQuality: FilterQuality = FilterQuality.Medium
 

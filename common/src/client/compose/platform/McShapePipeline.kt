@@ -36,8 +36,8 @@ internal object McShapePipeline {
     private var sdfVbo = 0
     private var failed = false
 
-    /** xyz per vertex: x, y, color-bits-as-float. */
-    private var verts = FloatArray(3 * 1024)
+    /** Transformed xy positions; colors are uploaded as explicit RGBA bytes. */
+    private var verts = FloatArray(2 * 1024)
 
     /**
      * Draws [soup] immediately, CPU-transformed by the current GUI pose. Returns false when the
@@ -59,9 +59,8 @@ internal object McShapePipeline {
         while (v < vertexCount) {
             val x = soup.positions[i]
             val y = soup.positions[i + 1]
-            verts[v * 3] = pose.m00() * x + pose.m10() * y + pose.m30()
-            verts[v * 3 + 1] = pose.m01() * x + pose.m11() * y + pose.m31()
-            verts[v * 3 + 2] = Float.fromBits(soup.colors[v])
+            verts[v * 2] = pose.m00() * x + pose.m10() * y + pose.m30()
+            verts[v * 2 + 1] = pose.m01() * x + pose.m11() * y + pose.m31()
             v++
             i += 2
         }
@@ -81,8 +80,12 @@ internal object McShapePipeline {
             val bytes = vertexCount * 12
             val native = MemoryUtil.memAlloc(bytes)
             try {
-                native.asFloatBuffer().put(verts, 0, vertexCount * 3)
-                native.limit(bytes)
+                for (vertex in 0 until vertexCount) {
+                    native.putFloat(verts[vertex * 2])
+                    native.putFloat(verts[vertex * 2 + 1])
+                    native.putRgba(soup.colors[vertex])
+                }
+                native.flip()
                 GL30.glBindVertexArray(vao)
                 GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vbo)
                 GL15.glBufferData(GL15.GL_ARRAY_BUFFER, native, GL15.GL_STREAM_DRAW)
@@ -168,18 +171,17 @@ internal object McShapePipeline {
         val pose = graphics.pose().last().pose()
         val cx = (left + right) / 2f
         val cy = (top + bottom) / 2f
-        // pos.xy (pose-transformed) + local.xy + argb → 5 floats per vertex.
-        val data = FloatArray(6 * 5)
+        // pos.xy (pose-transformed) + local.xy; the RGBA attribute is appended during upload.
+        val data = FloatArray(6 * 4)
         val xs = floatArrayOf(left, right, right, left, right, left)
         val ys = floatArrayOf(top, top, bottom, top, bottom, bottom)
         val lx = floatArrayOf(-hw, hw, hw, -hw, hw, -hw)
         val ly = floatArrayOf(-hh, -hh, hh, -hh, hh, hh)
         for (v in 0 until 6) {
-            data[v * 5] = pose.m00() * xs[v] + pose.m10() * ys[v] + pose.m30()
-            data[v * 5 + 1] = pose.m01() * xs[v] + pose.m11() * ys[v] + pose.m31()
-            data[v * 5 + 2] = lx[v]
-            data[v * 5 + 3] = ly[v]
-            data[v * 5 + 4] = Float.fromBits(color)
+            data[v * 4] = pose.m00() * xs[v] + pose.m10() * ys[v] + pose.m30()
+            data[v * 4 + 1] = pose.m01() * xs[v] + pose.m11() * ys[v] + pose.m31()
+            data[v * 4 + 2] = lx[v]
+            data[v * 4 + 3] = ly[v]
         }
 
         val prevProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)
@@ -194,10 +196,13 @@ internal object McShapePipeline {
         try {
             if (sdfVao == 0) sdfVao = GL30.glGenVertexArrays()
             if (sdfVbo == 0) sdfVbo = GL15.glGenBuffers()
-            val native = MemoryUtil.memAlloc(data.size * 4)
+            val native = MemoryUtil.memAlloc(6 * 20)
             try {
-                native.asFloatBuffer().put(data)
-                native.limit(data.size * 4)
+                for (vertex in 0 until 6) {
+                    for (component in 0..3) native.putFloat(data[vertex * 4 + component])
+                    native.putRgba(color)
+                }
+                native.flip()
                 GL30.glBindVertexArray(sdfVao)
                 GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, sdfVbo)
                 GL15.glBufferData(GL15.GL_ARRAY_BUFFER, native, GL15.GL_STREAM_DRAW)
@@ -241,7 +246,7 @@ internal object McShapePipeline {
     }
 
     private fun ensureCap(vertices: Int) {
-        val need = vertices * 3
+        val need = vertices * 2
         if (need <= verts.size) return
         var cap = verts.size
         while (cap < need) cap *= 2

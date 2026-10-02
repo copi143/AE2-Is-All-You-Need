@@ -41,7 +41,6 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
-import kotlin.math.tan
 
 /**
  * Bridges the official androidx.compose Canvas drawing commands to Minecraft's [GuiGraphics]
@@ -91,7 +90,8 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
 
     private fun argb(paint: Paint): Int = withAlpha(paint.color.toArgb())
 
-    private fun strokeWidth(paint: Paint): Float = max(paint.strokeWidth, 1f)
+    // Preserve fractional positive widths. Zero-width hairlines retain the logical-pixel fallback.
+    private fun strokeWidth(paint: Paint): Float = if (paint.strokeWidth > 0f) paint.strokeWidth else 1f
 
     /** Executes [op] now (live mode) or appends it to the recording (record mode). */
     private inline fun emit(crossinline op: (GuiGraphics) -> Unit) {
@@ -115,14 +115,8 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
     }
 
     private fun strokeRect(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
-        val color = argb(paint)
-        val w = strokeWidth(paint)
-        emit { g ->
-            g.fill(left.toInt(), top.toInt(), right.toInt(), (top + w).toInt(), color)
-            g.fill(left.toInt(), (bottom - w).toInt(), right.toInt(), bottom.toInt(), color)
-            g.fill(left.toInt(), top.toInt(), (left + w).toInt(), bottom.toInt(), color)
-            g.fill((right - w).toInt(), top.toInt(), right.toInt(), bottom.toInt(), color)
-        }
+        emitSoup(rectangleGeometry(Rect(left, top, right, bottom), argb(paint), strokeWidth(paint),
+            paint.strokeJoin, paint.strokeMiterLimit, paint.isAntiAlias))
     }
 
     override fun save() {
@@ -156,8 +150,8 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
         poseOp { pose ->
             pose.mulPoseMatrix(
                 Matrix4f().set(
-                    1f, tan(sx), 0f, 0f,
-                    tan(sy), 1f, 0f, 0f,
+                    1f, sy, 0f, 0f,
+                    sx, 1f, 0f, 0f,
                     0f, 0f, 1f, 0f,
                     0f, 0f, 0f, 1f,
                 ),
@@ -194,11 +188,21 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
     }
 
     override fun drawRect(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
+        val rect = Rect(left, top, right, bottom)
+        if (rect.isEmpty) return
         if (paint.style == PaintingStyle.Stroke) {
             strokeRect(left, top, right, bottom, paint)
         } else {
             val color = argb(paint)
-            emit { g -> g.fill(left.toInt(), top.toInt(), right.toInt(), bottom.toInt(), color) }
+            val matrix = (recorder?.poseStack ?: graphics!!.pose()).last().pose()
+            val integerLocal = listOf(left, top, right, bottom).all { it == it.toInt().toFloat() }
+            val aligned = integerLocal && ClipGeometry.axisAligned(matrix) &&
+                ClipGeometry.rectangle(rect, matrix).all { it.x == it.x.toInt().toFloat() && it.y == it.y.toInt().toFloat() }
+            if (aligned) {
+                emit { g -> g.fill(left.toInt(), top.toInt(), right.toInt(), bottom.toInt(), color) }
+            } else {
+                emitSoup(rectangleGeometry(rect, color, antiAlias = paint.isAntiAlias))
+            }
         }
     }
 
@@ -443,7 +447,7 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
         val color = argb(paint)
         when (pointMode) {
             PointMode.Points -> {
-                val r = max(strokeWidth(paint) / 2f, 0.5f)
+                val r = strokeWidth(paint) / 2f
                 val soup = TriangleSoup()
                 for (p in points) {
                     soup.tri(p.x - r, p.y - r, p.x + r, p.y - r, p.x + r, p.y + r, color)

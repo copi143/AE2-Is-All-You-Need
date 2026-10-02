@@ -120,7 +120,8 @@ fun strokeContours(
     color: Int,
 ): TriangleSoup {
     val soup = TriangleSoup()
-    val w = (width / 2f).coerceAtLeast(0.5f)
+    if (!width.isFinite() || width <= 0f) return soup
+    val w = width / 2f
     for (raw in contours) {
         // Detect closure on the raw contour: cleanedOpen drops the duplicated
         // closing point, after which first==last can never hold.

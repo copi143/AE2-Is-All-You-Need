@@ -289,6 +289,9 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
    调度到游戏线程；`Minecraft.getInstance().isSameThread` 判定。
 3. **绘制桥**：`McCanvas` 把 Compose Canvas 指令转成 `GuiGraphics` 调用；
    所有绘制发生在 `pose.scale(scale)` 之内，因此整树自动跟随 Ctrl+滚轮缩放。
+   整数对齐的矩形填充保留快速路径，小数坐标及旋转矩形用浮点三角形绘制。
+   矩形描边沿边界居中，核心及抗锯齿边缘不重叠，支持 Miter/Bevel/Round 连接与 miter limit。
+   正线宽保留小于 1 的值；零宽 hairline 仍回退为 1 个逻辑像素，尚非缩放无关的设备像素线。
 4. **graphicsLayer**：`PassthroughLayer` 支持二维平移/缩放/旋转、自定义变换中心以及
    `clip = true` 的矩形、圆角和路径形状；坐标映射与形状命中判断同步更新。
    alpha 仍逐次作用于绘制，`saveLayer` 的整组透明度合成尚未实现。
