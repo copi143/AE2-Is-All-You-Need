@@ -66,11 +66,13 @@ private annotation class ComponentDsl
  */
 @ComponentDsl
 @Suppress("NOTHING_TO_INLINE")
-class Components @PublishedApi internal constructor(private val theme: ComponentTheme) {
+class Components @PublishedApi internal constructor(val theme: ComponentTheme) {
     private val lines: ArrayList<MutableComponent> = ArrayList()
     private var current: MutableComponent = Component.empty()
     private var dirty: Boolean = false
-    private var currentStyle: Style = theme.base
+
+    @PublishedApi
+    internal var currentStyle: Style = theme.base
 
     val newLine
         get() = run {
@@ -90,30 +92,30 @@ class Components @PublishedApi internal constructor(private val theme: Component
     inline fun text(text: String) = appendText(str(text))
     inline fun l10nText(l10nText: String, vararg args: Any?) = appendText(l10n(l10nText, *args))
 
-    fun lines(components: Iterable<Component>) {
+    inline fun lines(components: Iterable<Component>) {
         components.forEach { line(it) }
     }
 
     /** 标题或分节标题。 */
-    fun title(builder: Components.() -> Unit) = style(theme.title, builder)
+    inline fun title(builder: Components.() -> Unit) = style(theme.title, builder)
     /** 背景简介：这是什么；短 tooltip 可直接使用 [feature]，避免重复说明。 */
-    fun description(builder: Components.() -> Unit) = style(theme.description, builder)
+    inline fun description(builder: Components.() -> Unit) = style(theme.description, builder)
     /** 使用方法及操作步骤；步骤的编号、缩进由调用处提供。 */
-    fun usage(builder: Components.() -> Unit) = style(theme.usage, builder)
+    inline fun usage(builder: Components.() -> Unit) = style(theme.usage, builder)
     /** 核心功能：能做什么。 */
-    fun feature(builder: Components.() -> Unit) = style(theme.feature, builder)
+    inline fun feature(builder: Components.() -> Unit) = style(theme.feature, builder)
     /** 相比普通版的增强。 */
-    fun enhancement(builder: Components.() -> Unit) = style(theme.enhancement, builder)
+    inline fun enhancement(builder: Components.() -> Unit) = style(theme.enhancement, builder)
     /** 使用前提与限制；“需要供电”属于条件，“断电会丢失进度”属于 [warning]。 */
-    fun requirement(builder: Components.() -> Unit) = style(theme.requirement, builder)
+    inline fun requirement(builder: Components.() -> Unit) = style(theme.requirement, builder)
     /** 配方、能耗、吞吐、优先级等机制与计算规则。 */
-    fun rule(builder: Components.() -> Unit) = style(theme.rule, builder)
+    inline fun rule(builder: Components.() -> Unit) = style(theme.rule, builder)
 
     /**
      * 当前状态；[level] 由调用处根据实际状态选择，默认显示常规信息。
      * 注意和故障级别在主题的 status 样式上叠加，保留其未被覆盖的属性。
      */
-    fun status(level: ComponentStatusLevel = ComponentStatusLevel.NORMAL, builder: Components.() -> Unit) {
+    inline fun status(level: ComponentStatusLevel = ComponentStatusLevel.NORMAL, builder: Components.() -> Unit) {
         val statusStyle = when (level) {
             ComponentStatusLevel.NORMAL -> theme.status
             ComponentStatusLevel.ATTENTION -> theme.statusAttention.applyTo(theme.status)
@@ -123,13 +125,13 @@ class Components @PublishedApi internal constructor(private val theme: Component
     }
 
     /** 快捷操作、展开说明等辅助提示；完整操作方法使用 [usage]。 */
-    fun hint(builder: Components.() -> Unit) = style(theme.hint, builder)
+    inline fun hint(builder: Components.() -> Unit) = style(theme.hint, builder)
     /** 标识、来源等用于辨认或排查的次要信息。 */
-    fun detail(builder: Components.() -> Unit) = style(theme.detail, builder)
+    inline fun detail(builder: Components.() -> Unit) = style(theme.detail, builder)
     /** 风险与操作后果；当前故障使用 [status] 的 ERROR 级别。 */
-    fun warning(builder: Components.() -> Unit) = style(theme.warning, builder)
+    inline fun warning(builder: Components.() -> Unit) = style(theme.warning, builder)
 
-    fun style(style: Style, builder: Components.() -> Unit) {
+    inline fun style(style: Style, builder: Components.() -> Unit) {
         val previous = currentStyle
         currentStyle = style.applyTo(previous)
         try {
@@ -139,31 +141,32 @@ class Components @PublishedApi internal constructor(private val theme: Component
         }
     }
 
-    fun color(rgb: Int, builder: Components.() -> Unit) = style(Style.EMPTY.withColor(rgb), builder)
-    fun bold(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withBold(enabled), builder)
-    fun italic(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withItalic(enabled), builder)
-    fun underline(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withUnderlined(enabled), builder)
-    fun strikethrough(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withStrikethrough(enabled), builder)
-    fun obfuscated(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withObfuscated(enabled), builder)
+    inline fun color(rgb: Int, builder: Components.() -> Unit) = style(Style.EMPTY.withColor(rgb), builder)
+    inline fun bold(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withBold(enabled), builder)
+    inline fun italic(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withItalic(enabled), builder)
+    inline fun underline(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withUnderlined(enabled), builder)
+    inline fun strikethrough(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withStrikethrough(enabled), builder)
+    inline fun obfuscated(enabled: Boolean = true, builder: Components.() -> Unit) = style(Style.EMPTY.withObfuscated(enabled), builder)
 
-    private fun format(formatting: ChatFormatting): Style = Style.EMPTY.applyFormat(formatting)
+    @PublishedApi
+    internal fun format(formatting: ChatFormatting): Style = Style.EMPTY.applyFormat(formatting)
 
-    fun black(builder: Components.() -> Unit) = style(format(ChatFormatting.BLACK), builder)
-    fun darkBlue(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_BLUE), builder)
-    fun darkGreen(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_GREEN), builder)
-    fun darkAqua(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_AQUA), builder)
-    fun darkRed(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_RED), builder)
-    fun darkPurple(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_PURPLE), builder)
-    fun gold(builder: Components.() -> Unit) = style(format(ChatFormatting.GOLD), builder)
-    fun gray(builder: Components.() -> Unit) = style(format(ChatFormatting.GRAY), builder)
-    fun darkGray(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_GRAY), builder)
-    fun blue(builder: Components.() -> Unit) = style(format(ChatFormatting.BLUE), builder)
-    fun green(builder: Components.() -> Unit) = style(format(ChatFormatting.GREEN), builder)
-    fun aqua(builder: Components.() -> Unit) = style(format(ChatFormatting.AQUA), builder)
-    fun red(builder: Components.() -> Unit) = style(format(ChatFormatting.RED), builder)
-    fun lightPurple(builder: Components.() -> Unit) = style(format(ChatFormatting.LIGHT_PURPLE), builder)
-    fun yellow(builder: Components.() -> Unit) = style(format(ChatFormatting.YELLOW), builder)
-    fun white(builder: Components.() -> Unit) = style(format(ChatFormatting.WHITE), builder)
+    inline fun black(builder: Components.() -> Unit) = style(format(ChatFormatting.BLACK), builder)
+    inline fun darkBlue(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_BLUE), builder)
+    inline fun darkGreen(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_GREEN), builder)
+    inline fun darkAqua(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_AQUA), builder)
+    inline fun darkRed(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_RED), builder)
+    inline fun darkPurple(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_PURPLE), builder)
+    inline fun gold(builder: Components.() -> Unit) = style(format(ChatFormatting.GOLD), builder)
+    inline fun gray(builder: Components.() -> Unit) = style(format(ChatFormatting.GRAY), builder)
+    inline fun darkGray(builder: Components.() -> Unit) = style(format(ChatFormatting.DARK_GRAY), builder)
+    inline fun blue(builder: Components.() -> Unit) = style(format(ChatFormatting.BLUE), builder)
+    inline fun green(builder: Components.() -> Unit) = style(format(ChatFormatting.GREEN), builder)
+    inline fun aqua(builder: Components.() -> Unit) = style(format(ChatFormatting.AQUA), builder)
+    inline fun red(builder: Components.() -> Unit) = style(format(ChatFormatting.RED), builder)
+    inline fun lightPurple(builder: Components.() -> Unit) = style(format(ChatFormatting.LIGHT_PURPLE), builder)
+    inline fun yellow(builder: Components.() -> Unit) = style(format(ChatFormatting.YELLOW), builder)
+    inline fun white(builder: Components.() -> Unit) = style(format(ChatFormatting.WHITE), builder)
 
 
     @PublishedApi
