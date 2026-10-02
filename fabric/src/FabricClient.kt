@@ -23,11 +23,9 @@ import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
 import allyouneed.pattern.term.UnifiedPatternEncodingTermScreen
 import allyouneed.terminal.WirelessOmniTerminalMenu
 import allyouneed.terminal.WirelessOmniTerminalScreen
-import allyouneed.fabric.init.FabricItems
 import allyouneed.util.notify.DesktopNotify
 import allyouneed.util.MODID
 import allyouneed.util.logger
-import appeng.api.features.P2PTunnelAttunement
 import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader
 import minecraftx.compose.text.McTextEngines
@@ -63,9 +61,9 @@ fun initClient() {
     }
     allyouneed.client.render.AEKeyRenderers.init()
     allyouneed.client.PacketItemModels.init()
-    // 与 Forge FMLCommonSetupEvent 对齐，AE2 已完成 AEConfig/注册表初始化后执行，保证单次成功（由 AppEngClient 初始化后触发）
-    CommonMain.commonSetup()
-    P2PTunnelAttunement.registerAttunementTag(FabricItems.ENTITY_P2P_TUNNEL)
+    // 与 Forge FMLCommonSetupEvent 对齐：AEConfig 就绪则直接执行，否则由 AppEngClientStartupMixin
+    // 在 AE2 客户端初始化完成后触发，两种入口顺序都恰好一次
+    FabricAE2Hooks.afterAE2InitIfReady()
     try {
         IayGuide.init()
     } catch (e: Throwable) {

@@ -7,8 +7,12 @@
   "mixins": [
     "InitKeyTypesMixin"
   ],
-  "client": [],
-  "server": [],
+  "client": [
+    "AppEngClientStartupMixin"
+  ],
+  "server": [
+    "AppEngServerStartupMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
