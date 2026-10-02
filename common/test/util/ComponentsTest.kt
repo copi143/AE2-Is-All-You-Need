@@ -14,6 +14,85 @@ import kotlin.test.assertTrue
 
 class ComponentsTest {
     @Test
+    fun `translation namespace expands insertion markers and preserves absolute keys`() {
+        val keys = listOf("aaa/bbb.ccc", "/aaa", "aaa/", "/", "aaa.bbb", "aaa/bbb/ccc")
+        val result = Components.build(namespace = "xxx.yyy") {
+            keys.forEach { l10nLine(it) }
+        }
+
+        assertEquals(
+            listOf("aaa.xxx.yyy.bbb.ccc", "xxx.yyy.aaa", "aaa.xxx.yyy", "xxx.yyy", "aaa.bbb", "aaa.xxx.yyy.bbb.xxx.yyy.ccc"),
+            result.map { assertIs<TranslatableContents>(it.contents).key },
+        )
+    }
+
+    @Test
+    fun `namespace applies to all translation helpers without rewriting arguments or existing components`() {
+        val argument = Component.translatable("/argument")
+        val source = Component.translatable("/source")
+        val result = Components.build {
+            namespace("xxx.yyy") {
+                title {
+                    line(l10n("/factory", argument, 42, null))
+                    l10nLine("prefix/line", "value")
+                    l10nText("fragment/", argument)
+                    line(source)
+                }
+                line("/literal")
+            }
+        }
+
+        val factory = assertIs<TranslatableContents>(result[0].contents)
+        assertEquals("xxx.yyy.factory", factory.key)
+        assertEquals(listOf(argument, 42, null), factory.args.toList())
+        assertSame(argument, factory.args[0])
+        val line = assertIs<TranslatableContents>(result[1].contents)
+        assertEquals("prefix.xxx.yyy.line", line.key)
+        assertEquals(listOf("value"), line.args.toList())
+        val fragment = result[2].siblings.single()
+        assertEquals("fragment.xxx.yyy", assertIs<TranslatableContents>(fragment.contents).key)
+        assertSame(argument, assertIs<TranslatableContents>(fragment.contents).args.single())
+        assertEquals("/argument", assertIs<TranslatableContents>(argument.contents).key)
+        assertEquals("/source", assertIs<TranslatableContents>(result[3].contents).key)
+        assertEquals("/literal", result[4].string)
+        assertTrue(result.take(2).all { it.style.isBold })
+        assertTrue(fragment.style.isBold)
+        assertTrue(source.style.isEmpty)
+    }
+
+    @Test
+    fun `nested namespaces restore after normal and exceptional exits and builds are independent`() {
+        val result = Components.build {
+            l10nLine("/before")
+            namespace("outer") {
+                namespace("inner") { l10nLine("/nested") }
+                l10nLine("/restored")
+                try {
+                    namespace("failing") {
+                        l10nLine("/failure")
+                        error("expected")
+                    }
+                } catch (_: IllegalStateException) {
+                    l10nLine("/recovered")
+                }
+                namespace("") {
+                    l10nLine("prefix/suffix")
+                    l10nLine("/leading")
+                    l10nLine("trailing/")
+                }
+            }
+            l10nLine("/after")
+        }
+
+        assertEquals(
+            listOf("/before", "inner.nested", "outer.restored", "failing.failure", "outer.recovered", "prefix.suffix", "leading", "trailing", "/after"),
+            result.map { assertIs<TranslatableContents>(it.contents).key },
+        )
+        val independent = Components.build { l10nLine("/independent") }.single()
+        assertEquals("/independent", assertIs<TranslatableContents>(independent.contents).key)
+    }
+
+    @Test
     fun `semantic blocks apply theme styles and preserve content order`() {
         val theme = ComponentTheme(base = Style.EMPTY.withUnderlined(true))
         val result = Components.build(theme) {

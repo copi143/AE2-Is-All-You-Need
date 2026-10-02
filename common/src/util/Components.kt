@@ -74,6 +74,9 @@ class Components @PublishedApi internal constructor(val theme: ComponentTheme) {
     @PublishedApi
     internal var currentStyle: Style = theme.base
 
+    @PublishedApi
+    internal var currentNamespace: String? = null
+
     val newLine
         get() = run {
             lines.add(current)
@@ -82,7 +85,8 @@ class Components @PublishedApi internal constructor(val theme: ComponentTheme) {
         }
 
     inline fun str(str: String): MutableComponent = Component.literal(str)
-    inline fun l10n(l10n: String, vararg args: Any?): MutableComponent = Component.translatable(l10n, *args)
+    /** 按当前 [namespace] 展开翻译键，参数原样传递；没有命名空间或没有 `/` 时使用原键。 */
+    inline fun l10n(l10n: String, vararg args: Any?): MutableComponent = Component.translatable(resolveTranslationKey(l10n), *args)
 
     inline fun line(line: Component) = appendLine(line.copy())
     inline fun line(line: String) = appendLine(str(line))
@@ -94,6 +98,34 @@ class Components @PublishedApi internal constructor(val theme: ComponentTheme) {
 
     inline fun lines(components: Iterable<Component>) {
         components.forEach { line(it) }
+    }
+
+    /**
+     * 在作用域内用 `/` 标记翻译命名空间的插入位置，适用于 [l10n]、[l10nLine]、[l10nText]。
+     *
+     * 例如命名空间为 `xxx.yyy`：`aaa/bbb.ccc` → `aaa.xxx.yyy.bbb.ccc`，
+     * `/aaa` → `xxx.yyy.aaa`，`aaa/` → `aaa.xxx.yyy`，`/` → `xxx.yyy`。
+     * 每个 `/` 都插入一次命名空间，并用点连接非空部分；不含 `/` 的键保持原样。
+     * 嵌套块替换外层命名空间，退出（包括异常退出）后恢复；空字符串表示插入空命名空间。
+     * 仅影响本构建器创建的翻译组件，不改写传入的 Component 或翻译参数。
+     */
+    inline fun namespace(namespace: String, builder: Components.() -> Unit) {
+        val previous = currentNamespace
+        currentNamespace = namespace
+        try {
+            builder()
+        } finally {
+            currentNamespace = previous
+        }
+    }
+
+    @PublishedApi
+    internal fun resolveTranslationKey(key: String): String {
+        val namespace = currentNamespace ?: return key
+        if ('/' !in key) return key
+        return key.split('/').flatMapIndexed { index, part ->
+            if (index == 0) listOf(part) else listOf(namespace, part)
+        }.filter { it.isNotEmpty() }.joinToString(".")
     }
 
     /** 标题或分节标题。 */
@@ -198,6 +230,9 @@ class Components @PublishedApi internal constructor(val theme: ComponentTheme) {
         inline fun build(builder: Components.() -> Unit) = build(defaultTheme, builder)
 
         inline fun build(theme: ComponentTheme, builder: Components.() -> Unit) = Components(theme).apply(builder).finish()
+
+        inline fun build(namespace: String, theme: ComponentTheme = defaultTheme, builder: Components.() -> Unit) =
+            build(theme) { namespace(namespace, builder) }
     }
 }
 
