@@ -68,8 +68,9 @@ fun McScrollBox(
     content: @Composable BoxScope.() -> Unit,
 ) {
     BoxWithConstraints(modifier.then(if (scrollable) Modifier.mcScroll(state) else Modifier)) {
-        val sbWidth = if (scrollbarWidth > 0) scrollbarWidth
-            else McTheme.style.scrollbarTrackWidth.value.toInt()
+        val style = McTheme.style
+        val sbWidth = if (scrollbarWidth >= 0) scrollbarWidth
+            else style.scrollbarTrackWidth.value.toInt()
         val resolvedWidth = contentWidth ?: constraints.maxWidth
         val viewportW = min(constraints.maxWidth, resolvedWidth)
         // flow 模式:首次测量前高度未知(取 0),测量完成后写回真实内容高度再重排。
@@ -106,7 +107,7 @@ fun McScrollBox(
                     .offset((viewportW - sbWidth).dp, 0.dp)
                     .size(sbWidth.dp, viewportH.dp),
                 trackWidth = sbWidth.dp,
-                barWidth = sbWidth.dp,
+                barWidth = if (scrollbarWidth < 0) style.scrollbarBarWidth else sbWidth.dp,
             )
         }
     }

@@ -4,7 +4,6 @@ import allyouneed.client.compose.platform.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -15,7 +14,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.theme.McColorScheme
 import minecraftx.compose.theme.McTheme
-import kotlin.math.max
 
 /**
  * Slim vertical scrollbar bound to a [ScrollState]. Clicking the track jumps directly; dragging
@@ -40,7 +38,7 @@ fun McScrollbar(
         if (state.maxScroll <= 0f) return@BoxWithConstraints
         val style = McTheme.style
         val trackHeight = constraints.maxHeight
-        val barHeight = max(16, trackHeight * trackHeight / (trackHeight + state.maxScroll.toInt()))
+        val barHeight = scrollbarThumbHeight(trackHeight, state.maxScroll)
         val travel = trackHeight - barHeight
         val barY = (travel * state.display / state.maxScroll).toInt()
         Box(
@@ -89,10 +87,16 @@ fun McScrollbar(
         )
         Box(
             Modifier
-                .fillMaxWidth()
                 .offset(x = ((trackWidth - barWidth) / 2), y = barY.dp)
                 .size(barWidth, barHeight.dp)
                 .drawBehind { with(style) { scrollbarBarChrome(colors) } },
         )
     }
+}
+
+/** Keep the minimum thumb size within the viewport, including very short tracks. */
+internal fun scrollbarThumbHeight(trackHeight: Int, maxScroll: Float): Int {
+    if (trackHeight <= 0) return 0
+    return (trackHeight.toDouble() * trackHeight / (trackHeight.toDouble() + maxScroll.coerceAtLeast(0f)))
+        .toInt().coerceIn(minOf(16, trackHeight), trackHeight)
 }

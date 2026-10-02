@@ -21,6 +21,23 @@ import kotlin.math.abs
 
 class PathTessellationTest {
 
+    @Test
+    fun `diagonal stroke follows endpoints and square caps extend its area`() {
+        val points = listOf(Offset(0f, 0f), Offset(3f, 4f))
+        val butt = strokeContours(listOf(points), 2f, StrokeCap.Butt, StrokeJoin.Bevel, -1)
+        val square = strokeContours(listOf(points), 2f, StrokeCap.Square, StrokeJoin.Bevel, -1)
+        assertEquals(10.0, soupArea(butt), 1e-3)
+        assertEquals(14.0, soupArea(square), 1e-3)
+        for (v in butt.colors.indices step 3) {
+            if (!isCoreTri(butt, v)) continue
+            for (i in v until v + 3) {
+                val x = butt.positions[i * 2]
+                val y = butt.positions[i * 2 + 1]
+                assertTrue(abs(4f * x - 3f * y) / 5f <= 1.001f)
+            }
+        }
+    }
+
     /** True when all three vertices of triangle [t] are fully opaque (i.e. not a feather fringe). */
     private fun isCoreTri(soup: TriangleSoup, t: Int): Boolean {
         val c = soup.colors

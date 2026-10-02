@@ -134,8 +134,18 @@ fun strokeContours(
         // Segment quads + edge feather.
         val count = ring.size
         for (i in 0 until (if (closed) count else count - 1)) {
-            val a = ring[i]
-            val b = ring[(i + 1) % count]
+            var a = ring[i]
+            var b = ring[(i + 1) % count]
+            if (!closed && cap == StrokeCap.Square) {
+                val dx = b.x - a.x
+                val dy = b.y - a.y
+                val length = sqrt(dx * dx + dy * dy)
+                if (length > 0f) {
+                    val extension = Offset(dx / length * w, dy / length * w)
+                    if (i == 0) a -= extension
+                    if (i == count - 2) b += extension
+                }
+            }
             quadForSegment(soup, a, b, w, color)
             featherSegment(soup, a, b, w, color)
         }

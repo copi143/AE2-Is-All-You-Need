@@ -204,17 +204,7 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
     }
 
     override fun drawLine(p1: Offset, p2: Offset, paint: Paint) {
-        val color = argb(paint)
-        val w = strokeWidth(paint)
-        val left = min(p1.x, p2.x)
-        val top = min(p1.y, p2.y)
-        val width = abs(p2.x - p1.x)
-        val height = abs(p2.y - p1.y)
-        if (width >= height) {
-            emit { g -> g.fill(left.toInt(), (top - w / 2).toInt(), (left + width).toInt(), (top - w / 2 + w).toInt(), color) }
-        } else {
-            emit { g -> g.fill((left - w / 2).toInt(), top.toInt(), (left - w / 2 + w).toInt(), (top + height).toInt(), color) }
-        }
+        emitSoup(strokeContours(listOf(listOf(p1, p2)), strokeWidth(paint), paint.strokeCap, paint.strokeJoin, argb(paint)))
     }
 
     override fun drawRect(left: Float, top: Float, right: Float, bottom: Float, paint: Paint) {
