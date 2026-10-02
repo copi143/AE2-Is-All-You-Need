@@ -180,17 +180,8 @@ private fun DrawScope.drawField(
     colors: McColorScheme,
 ) {
     val matrix = McGraphics.currentPose() ?: return
-    val nodeX = matrix.m30()
-    val nodeY = matrix.m31()
-    val scaleX = matrix.m00()
-    val scaleY = matrix.m11()
-    // Mirror the safe min/max clip construction used by McText (handles flipped / zoomed matrices).
-    val clipLeft = max(nodeX, nodeX + 1f * scaleX)
-    val clipTop = max(nodeY, nodeY + 1f * scaleY)
-    val clipRight = minOf(nodeX + width * scaleX, nodeX + (width - 1) * scaleX)
-    val clipBottom = minOf(nodeY + height * scaleY, nodeY + (height - 1) * scaleY)
-    if (clipRight > clipLeft && clipBottom > clipTop) {
-        McScissor.push(null, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
+    if (width > 2 && height > 2) {
+        McScissor.pushRect(null, androidx.compose.ui.geometry.Rect(1f, 1f, width - 1f, height - 1f), matrix)
         try {
             drawContent(engine, value, scrollX, blinkTick, focused, width, height, placeholder, colors)
         } finally {

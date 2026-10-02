@@ -505,8 +505,11 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner, Po
             graphics.pose().pushPose()
             graphics.pose().translate(uiOrigin.x * scale, uiOrigin.y * scale, 0f)
             graphics.pose().scale(scale, scale, 1f)
-            for (op in recordedOps) op(graphics)
-            graphics.pose().popPose()
+            try {
+                for (op in recordedOps) op(graphics)
+            } finally {
+                graphics.pose().popPose()
+            }
             graphics.flush()
         } finally {
             McScissor.reset(graphics)
@@ -792,6 +795,7 @@ internal class ComposeOwner(private val sizeProvider: () -> IntSize) : Owner, Po
         mcTextInputService.stopInput()
         recomposer.cancel()
         scope.cancel()
+        com.mojang.blaze3d.systems.RenderSystem.recordRenderCall { McClipTarget.destroyUnused() }
     }
 
     // Attach after every property has been initialized: LayoutNode.attach reads owner.rectManager

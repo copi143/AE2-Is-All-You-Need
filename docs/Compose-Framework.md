@@ -24,7 +24,8 @@ common/src/client/compose/platform/             # 实际 sourceSet: common/src (
 ├── PathTessellation.kt      # 路径 CPU 三角化（earcut 填洞 + 描边展开）
 ├── McTextInputService.kt    # 文本输入桥：无 IME（服务端）时的原生键盘码 → EditCommand 映射
 ├── McPointerCursor.kt       # PointerIcon → GLFW 系统光标
-└── PassthroughLayer.kt      # 官方 OwnedLayer 的空透传实现（graphicsLayer 退化）
+ ├── McClipTarget.kt          # 路径裁剪的独立离屏目标与遮罩合成
+ └── PassthroughLayer.kt      # OwnedLayer 的二维变换、形状裁剪与逐绘制 alpha
 
 # 界面定义层（minecraftx.compose.*，全部基于基础兼容层构建）
 common/minecraftx/compose/                      # 实际 sourceSet: common/minecraftx
@@ -119,7 +120,7 @@ UI 静止时 GUI 阶段只剩一次命令回放，重composition/布局/三角�
 
 - 全屏层（`origin=0`）：上述与旧行为逐字节等价。
 - 内嵌层：宿主只给 `render` 传矩形 + 鼠标 raw px，其余全自动。
-- scissor 裁剪（`McText` 半行可见时）：从 pose 矩阵读 `m30/m31/m00/m11`
+- 裁剪（`McText` 半行可见时）：统一变换局部矩形四角，轴对齐时用 scissor，旋转/倾斜时用离屏遮罩
   换算逻辑坐标 → 屏幕 px，调用 `GuiGraphics.enableScissor`。
 - 鼠标经官方命中测试路由：滚轮事件只送到光标悬停的滚动节点，宿主屏**无需**自算
   "光标是否在面板内"。
@@ -232,9 +233,10 @@ IME 会话（Minecraft 内没有 Android IME），而是由 `McTextInputService`
   时把偏移钳回 `[0, maxScroll]`。
 - **ignore**：`clip=false` 时内容无条件溢出（尽量不用）。
 
-裁剪用与 `McText.clipFrame` 相同的硬件 scissor：从 `GuiGraphics` 实时 modelview pose 推导
-节点屏幕矩形，随缩放保持像素对齐；内容子节点因此**不应**再自带 `clipFrame`（scissor 区域
-不支持嵌套）。参考：`demo/ComposeDemoScreen.kt` 的整页滚动与 McScrollBox 段、item-details 内容区。
+裁剪与 `McText.clipFrame` 共用 `McScissor`：局部矩形经完整二维变换后，轴对齐区域使用
+硬件 scissor，旋转/倾斜矩形与圆角路径使用独立离屏遮罩。支持嵌套相交，退出时恢复父级区域；
+子节点可以按需添加自己的 `clipFrame`。参考：`demo/ComposeDemoScreen.kt` 的整页滚动与
+McScrollBox 段、item-details 内容区。
 
 `Modifier.mcScroll` 现在会**消费**滚轮增量，因此嵌套滚动容器（外层整页 McScrollBox 内的
 McVirtualColumn / 内层 McScrollBox）不会一次滚两处：内层按叶子优先命中先处理并消费，外层
@@ -287,8 +289,11 @@ McPanel(width = 200.dp, height = 100.dp, colors = LightColorScheme) { ... }
    调度到游戏线程；`Minecraft.getInstance().isSameThread` 判定。
 3. **绘制桥**：`McCanvas` 把 Compose Canvas 指令转成 `GuiGraphics` 调用；
    所有绘制发生在 `pose.scale(scale)` 之内，因此整树自动跟随 Ctrl+滚轮缩放。
-4. **graphicsLayer 退化**：`PassthroughLayer` 直绘，`graphicsLayer {}` 的绘制合成
-   是空的（demo 用单个 Box 验证 alpha 动画场景可用）。
+4. **graphicsLayer**：`PassthroughLayer` 支持二维平移/缩放/旋转、自定义变换中心以及
+   `clip = true` 的矩形、圆角和路径形状；坐标映射与形状命中判断同步更新。
+   alpha 仍逐次作用于绘制，`saveLayer` 的整组透明度合成尚未实现。
+   路径裁剪先复制背景，在独立目标绘制，再按遮罩混合原背景与结果；支持 Intersect/Difference。
+   目标按嵌套深度复用，关闭 owner 后回收。每层离屏目标使用视口尺寸，复杂嵌套会增加显存与拷贝开销。
 5. **tooltip**：`TooltipHost` 注册的浮动 tooltip 在树绘制后、pose 弹出后绘制，
    锚点按 `mouse * uiScale`（全局逻辑 → 屏幕 px），全屏/内嵌一致。
    默认走 **vanilla 渲染**（`renderMcTooltip`，EMI/ItemSlot 用）；需要参与 Compose 布局的
@@ -353,7 +358,7 @@ McText(if (formed == 1) "已成形" else "未成形")
 | `ComposeLayer` 为唯一嵌入面 | 全屏与内嵌共用同一坐标/输入契约，宿主只需透传 render 与鼠标事件 |
 | 返回栈留在遗留 vanilla `ItemDetailsScreen` | 重构以框架抽取为目标，不改动已验证的屏幕流转行为 |
 | `Density(1f)`，1dp=1逻辑px | 让 item-details 原有逻辑像素常量（ItemDetailsLayout）可直接复用，杜绝双重缩放 |
-| 裁剪统一走硬件 scissor（`drawClipped`/`McScrollBox.scissorClip`） | 从实时 pose 推导屏幕矩形，随缩放保持像素对齐；不依赖 graphicsLayer 离屏 |
+| 裁剪统一走 `McScissor`（Canvas/文本/滚动容器） | 轴对齐矩形走 scissor，其余走独立离屏遮罩；支持完整二维变换与嵌套恢复 |
 | 文本输入走原生键盘事件直通（`McTextInputService`）而非 suspend IME 会话 | MC 无 Android IME；`keyPressed/charTyped` 在游戏线程同步可达，语义与 `GuiEditBox` 对齐 |
 | 不发射 `MoveCursorCommand` / 折叠光标 `BackspaceCommand`，用 `SetSelectionCommand`+`BreakIterator` 表达移动与删除 | 这两个命令的 `applyTo` 依赖 skiko `BreakIterator`（`NoClassDefFoundError`）；字符边界改用纯 JDK `java.text.BreakIterator`，选区先造好即可复用官方纯删选区分支 |
 | item-details 小屏自适应（BoxWithConstraints 钳制面板 + 动态重算 maxScroll） | 缩放窗口/小屏时面板收缩到可用尺寸而非被切掉，内容区高度变化后自动重新钳制滚动偏移 |

@@ -157,16 +157,10 @@ private fun drawClipped(
         return
     }
     val matrix = McGraphics.currentPose() ?: return
-    val nodeX = matrix.m30()
-    val nodeY = matrix.m31()
-    val scaleX = matrix.m00()
-    val scaleY = matrix.m11()
-    val clipLeft = max(nodeX, nodeX + clipFrame.left * scaleX)
-    val clipTop = max(nodeY, nodeY + clipFrame.top * scaleY)
-    val clipRight = min(nodeX + widthPx * scaleX, nodeX + clipFrame.right * scaleX)
-    val clipBottom = min(nodeY + lineHeightPx * scaleY, nodeY + clipFrame.bottom * scaleY)
-    if (clipRight <= clipLeft || clipBottom <= clipTop) return
-    McScissor.push(null, clipLeft.toInt(), clipTop.toInt(), clipRight.toInt(), clipBottom.toInt())
+    val localClip = Rect(max(0f, clipFrame.left), max(0f, clipFrame.top),
+        min(widthPx.toFloat(), clipFrame.right), min(lineHeightPx.toFloat(), clipFrame.bottom))
+    if (localClip.isEmpty) return
+    McScissor.pushRect(null, localClip, matrix)
     try {
         McGraphics.defer { engine.paint(layout, Color(color), shadow) }
     } finally {

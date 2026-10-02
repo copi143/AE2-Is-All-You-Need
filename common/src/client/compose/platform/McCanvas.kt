@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Vertices
 import androidx.compose.ui.graphics.flattenContours
 import androidx.compose.ui.graphics.jvmArgb
 import androidx.compose.ui.graphics.jvmGeneration
-import androidx.compose.ui.graphics.singleRectOrNull
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -50,8 +49,8 @@ import kotlin.math.tan
  * directly into GuiGraphics calls or GL triangle/texture draws, so the Compose tree paints with
  * vanilla MC rendering state.
  *
- * Transform support: translate / scale / rotate / skew / concat and intersecting clipRect /
- * clipPath (rectangular paths stay pixel-exact, general paths clip to their bounds).
+ * Transform support: translate / scale / rotate / skew / concat and intersect/difference clips.
+ * Axis-aligned rectangles use scissor; transformed rectangles and paths use offscreen masks.
  * Path fill uses CPU ear-clipping triangulation (EvenOdd holes supported); path stroke is
  * expanded to triangles (miter renders as bevel). Known gaps, kept deliberately:
  * paint shaders / color filters / path effects, saveLayer alpha compositing, vertex textures,
@@ -181,26 +180,13 @@ class McCanvas internal constructor(private val graphics: GuiGraphics?, private 
     }
 
     override fun clipRect(left: Float, top: Float, right: Float, bottom: Float, clipOp: ClipOp) {
-        if (clipOp != ClipOp.Intersect) return
         val matrix = (recorder?.poseStack ?: graphics!!.pose()).last().pose()
-        val x0 = matrix.m30() + left * matrix.m00()
-        val y0 = matrix.m31() + top * matrix.m11()
-        val x1 = matrix.m30() + right * matrix.m00()
-        val y1 = matrix.m31() + bottom * matrix.m11()
-        McScissor.push(
-            graphics,
-            min(x0, x1).toInt(),
-            min(y0, y1).toInt(),
-            max(x0, x1).toInt(),
-            max(y0, y1).toInt(),
-        )
+        McScissor.pushRect(graphics, Rect(left, top, right, bottom), matrix, clipOp)
     }
 
     override fun clipPath(path: Path, clipOp: ClipOp) {
-        if (clipOp != ClipOp.Intersect) return
-        // Rectangular paths stay pixel-exact; anything else clips to its bounds.
-        val rect = path.singleRectOrNull() ?: path.getBounds()
-        clipRect(rect.left, rect.top, rect.right, rect.bottom, ClipOp.Intersect)
+        val matrix = (recorder?.poseStack ?: graphics!!.pose()).last().pose()
+        McScissor.pushPath(graphics, path, matrix, clipOp)
     }
 
     override fun drawLine(p1: Offset, p2: Offset, paint: Paint) {

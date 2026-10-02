@@ -18,12 +18,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import minecraftx.compose.material.McScrollbar
 import minecraftx.compose.theme.McTheme
-import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -51,8 +51,7 @@ import kotlin.math.min
  *  - **ignore**: with [clip] disabled the content overflows unconditionally — use sparingly.
  *
  * Content children are clipped pixel-perfectly by the same hardware-scissor technique as [minecraftx.compose.material.McText]'s
- * `clipFrame`; content children should therefore not need their own [minecraftx.compose.material.McText] `clipFrame` (nested
- * scissor regions are not supported).
+ * `clipFrame`; nested clips intersect and restore the parent region on exit.
  */
 @Composable
 fun McScrollBox(
@@ -134,16 +133,7 @@ private fun Modifier.layoutUnboundedHeight(onHeight: (Int) -> Unit): Modifier =
  */
 private fun Modifier.scissorClip(): Modifier = drawWithContent {
     val matrix = McGraphics.currentPose() ?: return@drawWithContent
-    val nodeX = matrix.m30()
-    val nodeY = matrix.m31()
-    val scaleX = matrix.m00()
-    val scaleY = matrix.m11()
-    val clipLeft = min(nodeX, nodeX + size.width * scaleX).toInt()
-    val clipTop = min(nodeY, nodeY + size.height * scaleY).toInt()
-    val clipRight = max(nodeX, nodeX + size.width * scaleX).toInt()
-    val clipBottom = max(nodeY, nodeY + size.height * scaleY).toInt()
-    if (clipRight <= clipLeft || clipBottom <= clipTop) return@drawWithContent
-    McScissor.push(null, clipLeft, clipTop, clipRight, clipBottom)
+    McScissor.pushRect(null, Rect(0f, 0f, size.width, size.height), matrix)
     try {
         drawContent()
     } finally {

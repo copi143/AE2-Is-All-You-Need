@@ -1,47 +1,91 @@
 package allyouneed.client.compose.platform
 
 import net.minecraft.client.gui.GuiGraphics
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.flattenContours
+import androidx.compose.ui.graphics.singleRectOrNull
+import com.mojang.blaze3d.systems.RenderSystem
+import org.joml.Matrix4f
 
 /**
- * 1:1 wrapper around [GuiGraphics] scissor. Vanilla already keeps a nested stack and intersects
- * on push; each [push] must be paired with exactly one [pop]. Calling [GuiGraphics.disableScissor]
- * when the vanilla stack is empty throws `Scissor stack underflow`.
+ * Unified clip stack. Axis-aligned rectangles use [GuiGraphics] scissor; other paths use independent
+ * offscreen masks. Every push has one pop, including empty regions and difference clips.
  *
  * Record-aware: while [McGraphics.activeRecorder] is set (record phase), [push]/[pop] append the
  * equivalent scissor command to the recording instead of touching GL, and [graphics] may be null.
- * The [depth] counter tracks both modes so save/restore marks stay consistent.
+ * Recording depth and the live cleanup stack are separate so interrupted replay can unwind safely.
  */
 object McScissor {
-    private var enabled = 0
+    private var recordedDepth = 0
+    // Live/replay entries are tracked separately: a replay may abort halfway through a recording.
+    private val live = ArrayDeque<(() -> Unit)>()
 
-    val depth: Int get() = enabled
+    val depth: Int get() = if (McGraphics.activeRecorder != null) recordedDepth else live.size
 
-    fun push(graphics: GuiGraphics?, left: Int, top: Int, right: Int, bottom: Int) {
+    fun pushRect(graphics: GuiGraphics?, rect: Rect, matrix: Matrix4f, clipOp: ClipOp = ClipOp.Intersect) {
+        if (rect.isEmpty && clipOp == ClipOp.Intersect) {
+            push(graphics, 0, 0, 0, 0)
+        } else if (ClipGeometry.axisAligned(matrix) && clipOp == ClipOp.Intersect) {
+            val b = ClipGeometry.bounds(ClipGeometry.rectangle(rect, matrix))
+            push(graphics, b[0], b[1], b[2], b[3])
+        } else {
+            pushPath(graphics, Path().apply { if (!rect.isEmpty) addRect(rect) }, matrix, clipOp)
+        }
+    }
+
+    fun pushPath(graphics: GuiGraphics?, path: Path, matrix: Matrix4f, clipOp: ClipOp = ClipOp.Intersect) {
+        val rect = path.singleRectOrNull()
+        if (rect != null && ClipGeometry.axisAligned(matrix) && clipOp == ClipOp.Intersect) {
+            pushRect(graphics, rect, matrix)
+            return
+        }
+        val contours = path.flattenContours(0.25f).map { ClipGeometry.transform(it, matrix) }
+        val mask = fillContours(contours, path.fillType, -1)
+        enqueue(graphics) { g ->
+            g.flush()
+            val projection = Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix())
+            val layer = McClipTarget.begin(mask, projection, clipOp == ClipOp.Difference)
+            live.addLast { try { g.flush() } finally { layer.finish() } }
+        }
+    }
+
+    private fun enqueue(graphics: GuiGraphics?, op: (GuiGraphics) -> Unit) {
         val recorder = McGraphics.activeRecorder
         if (recorder != null) {
-            recorder.ops += { g -> g.enableScissor(left, top, right, bottom) }
+            recorder.ops += op
+            recordedDepth++
         } else {
-            (graphics ?: McGraphics.current)!!.enableScissor(left, top, right, bottom)
+            op((graphics ?: McGraphics.current)!!)
         }
-        enabled++
+    }
+
+    fun push(graphics: GuiGraphics?, left: Int, top: Int, right: Int, bottom: Int) {
+        enqueue(graphics) { g ->
+            g.enableScissor(left, top, right, bottom)
+            live.addLast { g.disableScissor() }
+        }
     }
 
     fun pop(graphics: GuiGraphics?) {
-        if (enabled <= 0) return
         val recorder = McGraphics.activeRecorder
         if (recorder != null) {
-            recorder.ops += { g -> g.disableScissor() }
+            if (recordedDepth <= 0) return
+            recorder.ops += { popLive() }
+            recordedDepth--
         } else {
-            (graphics ?: McGraphics.current)!!.disableScissor()
+            popLive()
         }
-        enabled--
     }
+
+    private fun popLive() { if (live.isNotEmpty()) live.removeLast().invoke() }
 
     fun reset(graphics: GuiGraphics? = null) {
         if (graphics == null) {
-            enabled = 0
+            recordedDepth = 0
             return
         }
-        while (enabled > 0) pop(graphics)
+        while (live.isNotEmpty()) popLive()
     }
 }

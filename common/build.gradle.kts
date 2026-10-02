@@ -81,6 +81,14 @@ dependencies {
     }
     // fastutil 由 Minecraft 内嵌提供（不在测试 classpath），这里仅为测试暴露其类。
     testImplementation("it.unimi.dsi:fastutil:8.5.9")
+    // 裁剪测试直接使用 Minecraft 编译环境的 JOML，保持矩阵实现与游戏运行时一致。
+    testImplementation(files(configurations.named("compileClasspath").map { classpath ->
+        classpath.filter { it.name.startsWith("joml-") }
+    }))
+    // PoseStack 初始化 Minecraft.Util 时需要 Mojang 的日志桥接。
+    testRuntimeOnly(files(configurations.named("compileClasspath").map { classpath ->
+        classpath.filter { it.name.startsWith("logging-") }
+    }))
     // NetworkLogPage 等类型继承 AE2 的 PacketWritable，测试需要其类定义在 classpath 上。
     testImplementation(libs.ae2.forge)
     // NBT 相关测试需要 Minecraft 类；直接使用 MDG 产出的 merged jar（与 main 编译用的一致）。
