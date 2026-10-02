@@ -48,15 +48,15 @@ object JsonStreamTransformer {
         "addProperty(Ljava/lang/String;Ljava/lang/Character;)V",
     )
 
-    /** 每格式一行：owner#method desc */
-    private val ENTRIES = listOf(
-        "net/minecraft/network/protocol/status/ServerStatus\$Serializer#serialize " +
-            "(Lnet/minecraft/network/protocol/status/ServerStatus;Ljava/lang/reflect/Type;Lcom/google/gson/JsonSerializationContext;)Lcom/google/gson/JsonElement;",
-        "net/minecraft/network/protocol/status/ServerStatus\$Players\$Serializer#serialize " +
-            "(Lnet/minecraft/network/protocol/status/ServerStatus\$Players;Ljava/lang/reflect/Type;Lcom/google/gson/JsonSerializationContext;)Lcom/google/gson/JsonElement;",
-        "net/minecraft/network/protocol/status/ServerStatus\$Version\$Serializer#serialize " +
-            "(Lnet/minecraft/network/protocol/status/ServerStatus\$Version;Ljava/lang/reflect/Type;Lcom/google/gson/JsonSerializationContext;)Lcom/google/gson/JsonElement;",
-    )
+    /**
+     * 每格式一行：owner#method desc。
+     *
+     * 当前为空：1.20.1 原版没有热的 Gson 树序列化路径——ServerStatus/进度包都已是
+     * Codec/二进制，唯一的热路径 Component 已由手写流式化（ComponentJsonFast）覆盖。
+     * 机制本身（委托者 + Streams 钩子 + 熔断）保持武装，发现符合白名单形状的
+     * serialize 方法时按行添加即可（mod 的 JsonSerializer 实现是典型候选）。
+     */
+    private val ENTRIES = listOf<String>()
 
     fun isTarget(className: String): Boolean =
         className == Constants.GSON_STREAMS || ENTRIES.any { it.substringBefore('#') == className }
