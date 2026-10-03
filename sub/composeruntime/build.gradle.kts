@@ -4,6 +4,13 @@ plugins {
 
 version = "0.1.0+compose.${libs.versions.compose.get().replace('-', '.')}"
 
+// 项目依赖必须使用重打包后的主 jar；编译目录不包含嵌入的 Compose 类与资源。
+listOf("apiElements", "runtimeElements").forEach {
+    configurations.named(it) {
+        outgoing.variants.clear()
+    }
+}
+
 val composeRuntime = configurations.create("composeRuntime") {
     isCanBeResolved = true
     isCanBeConsumed = false

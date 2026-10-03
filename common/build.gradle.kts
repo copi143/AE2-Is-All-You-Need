@@ -6,9 +6,6 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// 需要在配置期拿到 :composeruntime 的 jar 任务（classpath 用其 repacked 输出）。
-evaluationDependsOn(":composeruntime")
-
 legacyForge {
     mcpVersion = libs.versions.neoForm.get()
     // Automatically enable AccessTransformers if the file exists
@@ -39,9 +36,7 @@ dependencies {
     api(libs.compose.material)
     // 编译期也可见 composeruntime 的 skiko 替换类（含新增的 Path/ImageBitmap 纯 JVM 实现）；
     // 运行时 fabric include / forge jarJar 本来打包的就是这个 repacked jar。
-    // 注：不用 compileOnly(project(...))，改用 jar 任务输出，以保证 classpath 上拿到的是
-    // 含替换类的 repacked jar。
-    compileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
+    compileOnly(project(":composeruntime"))
     api(libs.ojalgo)
     api(libs.jetbrains.markdown)
     api(libs.netty.codec.http)
@@ -57,6 +52,7 @@ dependencies {
     // (net.minecraftforge.common.extensions.*) that GTCEu's IMachineBlockEntity extends.
     compileOnly(variantOf(libs.forge) { classifier("universal") })
     modCompileOnly(libs.gtceu)
+    jarJarCompileOnly(libs.gtceu)
 
     // Botania mana integration compiles against the api classifier (Xplat interfaces +
     // BotaniaForgeCapabilities). Runtime is optional; registration only happens when loaded.
@@ -70,7 +66,7 @@ dependencies {
     testImplementation(project(":transformer"))
     testImplementation(project(path = ":transformer", configuration = "injectClasses"))
     testImplementation(libs.slf4j)
-    testCompileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
+    testCompileOnly(project(":composeruntime"))
 
     testImplementation("org.lwjgl:lwjgl:3.3.1")
     testRuntimeOnly("org.lwjgl:lwjgl:3.3.1:natives-linux")
@@ -110,16 +106,13 @@ dependencies {
     testRuntimeOnly(project(":msdftext"))
 }
 
-configurations["testRuntimeClasspath"].exclude(
-    group = "org.jetbrains.compose.ui",
-    module = "ui-graphics-desktop",
-)
-// 编译期统一用 composeruntime 的 repacked jar 提供 androidx.compose.ui.graphics
+// 主源码、测试编译与测试运行统一使用 composeruntime 的重打包 jar。
 //（官方 ui-graphics-desktop 会遮挡其中的 skiko 替换类与新增 API）。
-configurations["compileClasspath"].exclude(
-    group = "org.jetbrains.compose.ui",
-    module = "ui-graphics-desktop",
-)
+listOf("compileClasspath", "testCompileClasspath", "testRuntimeClasspath").forEach {
+    configurations.named(it) {
+        exclude(group = "org.jetbrains.compose.ui", module = "ui-graphics-desktop")
+    }
+}
 // datafixerupper 6.0.8 依赖的 guava 31.0.1/error_prone 2.7.1 不在本地缓存；强制到已缓存版本以支持离线构建。
 configurations["testRuntimeClasspath"].resolutionStrategy {
     force("com.google.guava:guava:31.1-jre")

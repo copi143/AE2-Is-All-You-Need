@@ -1,12 +1,10 @@
+import org.gradle.internal.extensions.stdlib.capitalized
+
 plugins {
     id("multiloader-loader")
     alias(libs.plugins.loom)
     alias(libs.plugins.kotlin.compose)
 }
-
-// common 源码随 loader 重编译；编译期同样用 composeruntime 的 repacked jar 提供
-// androidx.compose.ui.graphics（见 common/build.gradle.kts 注释）。
-evaluationDependsOn(":composeruntime")
 
 val modId = project.property("modId") as String
 
@@ -58,7 +56,8 @@ dependencies {
     // net.minecraftforge.* classes without the userdev zip.
     compileOnly(variantOf(libs.forge) { classifier("universal") })
     modCompileOnly(libs.gtceu)
-    compileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
+    jarJarCompileOnly(libs.gtceu)
+    compileOnly(project(":composeruntime"))
 }
 
 configurations["compileClasspath"].exclude(
@@ -67,26 +66,18 @@ configurations["compileClasspath"].exclude(
 )
 
 loom {
-    val aw = project(":common").file("resources/${modId}.aw")
-    if (aw.exists()) {
-        accessWidenerPath.set(aw)
-    }
+    project(":common").file("resources/${modId}.aw").takeIf { it.exists() }?.let { accessWidenerPath.set(it) }
     mixin {
         useLegacyMixinAp = true
         defaultRefmapName.set("${modId}.refmap.json")
     }
     runs {
-        named("client") {
-            client()
-            displayName = "Fabric Client"
+        configureEach {
+            displayName = "Fabric ${name.capitalized()}"
             generateRunConfig = true
-            runDirectory.dir("runs/client")
+            runDirectory.dir("runs/$name")
         }
-        named("server") {
-            server()
-            displayName = "Fabric Server"
-            generateRunConfig = true
-            runDirectory.dir("runs/server")
-        }
+        named("client") { client() }
+        named("server") { server() }
     }
 }

@@ -1,7 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
 
 plugins {
     id("multiloader-base")
@@ -74,7 +72,6 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 val r8Output = layout.buildDirectory.file("r8/shrunk.jar")
-val pluginOutput = layout.buildDirectory.file("libs/ae2isallyouneed-transformer.jar")
 val r8Rules = layout.projectDirectory.file("r8.pro")
 val r8Jdk = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
@@ -91,11 +88,14 @@ val r8Jar = tasks.register<JavaExec>("r8Jar") {
     inputs.files(r8Lib)
     inputs.file(r8Rules)
     outputs.file(r8Output)
+    doFirst {
+        val out = r8Output.get().asFile
+        out.parentFile.mkdirs()
+        out.delete()
+    }
     argumentProviders.add(
         CommandLineArgumentProvider {
             val out = r8Output.get().asFile
-            out.parentFile.mkdirs()
-            out.delete()
             buildList {
                 add("--release")
                 add("--classfile")
@@ -129,11 +129,14 @@ val r8InjectJar = tasks.register<JavaExec>("r8InjectJar") {
     inputs.files(project.configurations.getByName("injectCompileClasspath"))
     inputs.file(injectR8Rules)
     outputs.file(injectR8Output)
+    doFirst {
+        val out = injectR8Output.get().asFile
+        out.parentFile.mkdirs()
+        out.delete()
+    }
     argumentProviders.add(
         CommandLineArgumentProvider {
             val out = injectR8Output.get().asFile
-            out.parentFile.mkdirs()
-            out.delete()
             buildList {
                 add("--release")
                 add("--classfile")
@@ -153,70 +156,6 @@ val r8InjectJar = tasks.register<JavaExec>("r8InjectJar") {
             }
         },
     )
-}
-
-val pluginJar = tasks.register("pluginJar") {
-    group = "build"
-    description = "Package R8 output as the plugin jar"
-    dependsOn(r8Jar, r8InjectJar)
-    inputs.file(r8Output)
-    inputs.file(injectR8Output)
-    outputs.file(pluginOutput)
-    doLast {
-        val src = r8Output.get().asFile
-        val dest = pluginOutput.get().asFile
-        dest.parentFile.mkdirs()
-        ZipFile(src).use { zip ->
-            ZipOutputStream(dest.outputStream().buffered()).use { out ->
-                val entries = zip.entries()
-                while (entries.hasMoreElements()) {
-                    val entry = entries.nextElement()
-                    val name = entry.name
-                    if (name == "META-INF/versions" || name.startsWith("META-INF/versions/")) continue
-                    if (name.startsWith("META-INF/maven/")) continue
-                    if (name.endsWith(".kotlin_builtins") || name.endsWith("module-info.class")) continue
-                    if (name.endsWith(".kotlin_module")) continue
-                    val bytes = if (name == "META-INF/MANIFEST.MF") {
-                        buildString {
-                            appendLine("Manifest-Version: 1.0")
-                            appendLine("Automatic-Module-Name: allyouneed.transformer")
-                        }.toByteArray()
-                    } else {
-                        zip.getInputStream(entry).readBytes()
-                    }
-                    out.putNextEntry(ZipEntry(name))
-                    out.write(bytes)
-                    out.closeEntry()
-                }
-                val injectNames = ArrayList<String>()
-                ZipFile(injectR8Output.get().asFile).use { inj ->
-                    val injEntries = inj.entries()
-                    while (injEntries.hasMoreElements()) {
-                        val entry = injEntries.nextElement()
-                        val name = entry.name
-                        if (!name.endsWith(".class") || name.contains("module-info")) continue
-                        out.putNextEntry(ZipEntry("META-INF/inject/$name"))
-                        out.write(inj.getInputStream(entry).readBytes())
-                        out.closeEntry()
-                        injectNames.add(name.removeSuffix(".class").replace('/', '.'))
-                    }
-                }
-                val ordered = injectNames.sortedWith(
-                    compareBy<String> {
-                        when {
-                            it.endsWith(".KeyContent") -> 0
-                            it.endsWith(".AEKeyAsm") -> 3
-                            it.endsWith(".KeyInterner") -> 2
-                            else -> 1
-                        }
-                    }.thenBy { it },
-                )
-                out.putNextEntry(ZipEntry("META-INF/inject/classes.txt"))
-                out.write(ordered.joinToString("\n").toByteArray())
-                out.closeEntry()
-            }
-        }
-    }
 }
 
 tasks.named("classes") {
@@ -255,6 +194,26 @@ val writeInjectIndex = tasks.register("writeInjectIndex") {
     }
 }
 
+val pluginJar = tasks.register<Jar>("pluginJar") {
+    group = "build"
+    description = "Package R8 output as the plugin jar"
+    archiveFileName.set("ae2isallyouneed-transformer.jar")
+    dependsOn(r8Jar, r8InjectJar)
+    from(r8Output.map { zipTree(it) }) {
+        exclude("META-INF/MANIFEST.MF", "META-INF/versions/**", "META-INF/maven/**")
+        exclude("**/*.kotlin_builtins", "**/*module-info.class", "**/*.kotlin_module")
+    }
+    from(injectR8Output.map { zipTree(it) }) {
+        into("META-INF/inject")
+        include("**/*.class")
+        exclude("**/*module-info*")
+    }
+    from(writeInjectIndex) {
+        into("META-INF/inject")
+    }
+    manifest.attributes["Automatic-Module-Name"] = "allyouneed.transformer"
+}
+
 val withInjectJar = tasks.register<Jar>("withInjectJar") {
     archiveClassifier.set("withInject")
     dependsOn(tasks.jar, r8InjectJar, writeInjectIndex)
@@ -268,9 +227,7 @@ val withInjectJar = tasks.register<Jar>("withInjectJar") {
 }
 
 artifacts {
-    add("plugin", pluginOutput) {
-        builtBy(pluginJar)
-    }
+    add("plugin", pluginJar)
     add("withInject", withInjectJar)
 }
 

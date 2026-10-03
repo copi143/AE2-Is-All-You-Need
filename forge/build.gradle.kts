@@ -4,17 +4,12 @@ import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 
 plugins {
-    kotlin("kapt")
     id("multiloader-loader")
     alias(libs.plugins.moddev)
     alias(libs.plugins.kotlin.compose)
 }
 
 val modId = project.property("modId") as String
-
-// common 源码随 loader 重编译；编译期同样用 composeruntime 的 repacked jar 提供
-// androidx.compose.ui.graphics（见 common/build.gradle.kts 注释）。
-evaluationDependsOn(":composeruntime")
 
 mixin {
     add(sourceSets.main.get(), "$modId.refmap.json")
@@ -23,33 +18,29 @@ mixin {
 }
 
 tasks.jar {
-    manifest {
-        attributes["MixinConfigs"] = "$modId.mixins.json,$modId.forge.mixins.json"
-    }
+    manifest.attributes["MixinConfigs"] = "$modId.mixins.json,$modId.forge.mixins.json"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-val copyTransformerToRunMods = tasks.register("copyTransformerToRunMods") {
+val transformerPlugin = configurations.create("transformerPlugin") {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+dependencies {
+    transformerPlugin(project(path = ":transformer", configuration = "plugin"))
+}
+
+val copyTransformerToRunMods = tasks.register<Copy>("copyTransformerToRunMods") {
     group = "build"
-    dependsOn(":transformer:pluginJar")
-    val src = project(":transformer").layout.buildDirectory.file("libs/ae2isallyouneed-transformer.jar")
-    val dest = layout.projectDirectory.file("run/mods/ae2isallyouneed-transformer.jar")
-    inputs.file(src)
-    outputs.file(dest)
-    doLast {
-        val destFile = dest.asFile
-        destFile.parentFile.mkdirs()
-        src.get().asFile.copyTo(destFile, overwrite = true)
-    }
+    from(transformerPlugin)
+    into(layout.projectDirectory.dir("run/mods"))
 }
 
 legacyForge {
     version = libs.versions.forge.get()
-    // Automatically enable neoforge AccessTransformers if the file exists
-    val at = project(":common").file("resources/META-INF/accesstransformer.cfg")
-    if (at.exists()) {
-        accessTransformers.from(at.absolutePath)
-    }
+    project(":common").file("resources/META-INF/accesstransformer.cfg").takeIf { it.exists() }
+        ?.let { accessTransformers.from(it.absolutePath) }
     parchment {
         minecraftVersion = libs.versions.parchmentMC
         mappingsVersion = libs.versions.parchment
@@ -60,15 +51,8 @@ legacyForge {
             ideName = "Forge ${name.capitalized()} (${project.path})" // Unify the run config names with fabric
             taskBefore(copyTransformerToRunMods)
         }
-        register("client") {
-            client()
-        }
-        register("data") {
-            data()
-        }
-        register("server") {
-            server()
-        }
+        register("client") { client() }
+        register("server") { server() }
     }
     mods {
         register(modId) {
@@ -80,16 +64,12 @@ legacyForge {
     }
 }
 
-kapt {
-    keepJavacAnnotationProcessors = true
-}
-
 dependencies {
     implementation(libs.kff)
     annotationProcessor(variantOf(libs.mixin) { classifier("processor") })
 
     implementation(libs.compose.runtime)
-    compileOnly(files(rootProject.project(":composeruntime").tasks.named("jar")))
+    compileOnly(project(":composeruntime"))
 
     jarJar(project(":kaptor"))
     jarJar(project(":averith"))
@@ -112,7 +92,11 @@ dependencies {
     modImplementation(libs.guideme)
     modImplementation(libs.ae2.forge)
 
-    modImplementation(libs.gtceu)
+    // ========================= 兼容模组 =========================
+
+    modCompileOnly(libs.gtceu)
+    jarJarCompileOnly(libs.gtceu)
+    modRuntimeOnly(libs.gtceu)
 
     modCompileOnly(variantOf(libs.mek) { classifier("api") })
     modRuntimeOnly(libs.mek)
@@ -121,12 +105,27 @@ dependencies {
     modRuntimeOnly(variantOf(libs.mek) { classifier("tools") })
 
     modCompileOnly(variantOf(libs.botania) { classifier("api") })
-//    modRuntimeOnly(libs.botania)
+    modRuntimeOnly(libs.botania)
+    modRuntimeOnly("maven.modrinth:nU0bVIaL:94dtOLgZ") // Patchouli
+    modRuntimeOnly("maven.modrinth:vvuO3ImH:IPQlZkz1") // Curios API
+
+    // ========================= AE 扩展 =========================
+
+    modRuntimeOnly("maven.modrinth:UhW5uCKw:eoUaDkZf") // Glodium
+    modRuntimeOnly("maven.modrinth:JiOqfoFM:uq3lO4ER") // Extended AE
+
+    // ========================= 测试环境 =========================
+
+    modRuntimeOnly("maven.modrinth:lhGA9TYQ:1MKTLiiG") // Architectury API
+    modRuntimeOnly("maven.modrinth:9s6osm5g:t8TXrZvZ") // Cloth Config API
+    modRuntimeOnly("maven.modrinth:KZO4S4DO:xDOvxyqP") // Powah!
+    modRuntimeOnly("maven.modrinth:tIm2nV03:WUzj4tgJ") // Immersive Engineering
+    modRuntimeOnly("maven.modrinth:LNytGWDc:8amzvn9x") // Create
 
     testImplementation(libs.asm.tree)
 }
 
-configurations["compileClasspath"].exclude(
+configurations.compileClasspath.get().exclude(
     group = "org.jetbrains.compose.ui",
     module = "ui-graphics-desktop",
 )
@@ -139,16 +138,6 @@ tasks.matching {
     val n = it.name
     n.startsWith("run") || (n.startsWith("prepare") && n.contains("Run"))
 }.configureEach { usesTransformerJar() }
-
-afterEvaluate {
-    listOf(
-        "runClient", "runServer", "runData",
-        "prepareClientRun", "prepareServerRun", "prepareDataRun",
-        "prepareRunClient", "prepareRunServer", "prepareRunData",
-    ).forEach { name ->
-        tasks.findByName(name)?.usesTransformerJar()
-    }
-}
 
 // Drop module-info so atomicfu does not require a separate kotlin.stdlib module (KFF provides Kotlin).
 tasks.named("jarJar") {
@@ -192,9 +181,7 @@ val wrapForgeJar = tasks.register<Jar>("wrapForgeJar") {
         exclude("META-INF/MANIFEST.MF")
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    manifest {
-        attributes["Automatic-Module-Name"] = "allyouneed.transformer"
-    }
+    manifest.attributes["Automatic-Module-Name"] = "allyouneed.transformer"
 }
 
 afterEvaluate {
