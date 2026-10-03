@@ -1,6 +1,7 @@
 package allyouneed
 
 import allyouneed.client.guide.IayGuide
+import allyouneed.client.integration.emi.EmiClassificationDump
 import allyouneed.multiblock.async.AsyncBlockKind
 import allyouneed.multiblock.async.AsyncBlockRegistry
 import allyouneed.multiblock.async.AsyncCraftingStatusMenu
@@ -31,6 +32,8 @@ import appeng.client.gui.style.StyleManager
 import appeng.client.render.SimpleModelLoader
 import minecraftx.compose.text.McTextEngines
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.model.ModelLoadingRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener
@@ -48,6 +51,16 @@ import java.util.concurrent.Executor
 
 fun initClient() {
     logger.info("Initializing Client...")
+    if (Platform.isModLoaded("emi")) {
+        ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
+            dispatcher.register(
+                ClientCommandManager.literal("ae2inya").then(
+                    ClientCommandManager.literal("dump-emi-classification")
+                        .executes { EmiClassificationDump.request() },
+                ),
+            )
+        }
+    }
     allyouneed.client.render.AEKeyRenderers.init()
     allyouneed.client.PacketItemModels.init()
     // 与 Forge FMLCommonSetupEvent 对齐，AE2 已完成 AEConfig/注册表初始化后执行，保证单次成功（由 AppEngClient 初始化后触发）

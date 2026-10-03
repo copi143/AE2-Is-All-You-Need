@@ -68,7 +68,13 @@
     "client.ae2.CPUSelectionListMixin",
     "client.ae2.MEStorageScreenMixin",
     "client.ae2.RepoMixin",
-    "client.minecraft.ItemPropertiesAccessor"
+    "client.minecraft.ItemPropertiesAccessor",
+    "emi.EmiScreenSpaceFoldMixin",
+    "emi.EmiScreenSpaceOutlineMixin",
+    "emi.EmiMouseClickFoldMixin",
+    "emi.EmiScreenManagerLayoutMixin",
+    "emi.EmiScreenManagerAccessor",
+    "emi.EmiSidebarNavigationMixin"
   ],
   "server": [],
   "injectors": {

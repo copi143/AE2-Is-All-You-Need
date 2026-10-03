@@ -1,5 +1,9 @@
 package allyouneed.client.integration.emi
 
+import allyouneed.client.integration.emi.fold.FoldedGroupIngredient
+import allyouneed.client.integration.emi.fold.FoldedGroupSerializer
+import allyouneed.client.integration.emi.fold.GroupedIngredient
+import allyouneed.client.integration.emi.fold.GroupedIngredientSerializer
 import allyouneed.pattern.term.PatternEncodingTransfer
 import allyouneed.pattern.term.UnifiedPatternEncodingTermMenu
 import appeng.core.definitions.AEParts
@@ -22,6 +26,9 @@ class MyEmiPlugin : EmiPlugin {
     }
 
     override fun register(registry: EmiRegistry) {
+        // 同类物品折叠：分组 ingredient 序列化（收藏夹/历史持久化）
+        registry.addIngredientSerializer(FoldedGroupIngredient::class.java, FoldedGroupSerializer())
+        registry.addIngredientSerializer(GroupedIngredient::class.java, GroupedIngredientSerializer())
         registry.addRecipeHandler(
             UnifiedPatternEncodingTermMenu.TYPE,
             UnifiedEmiEncodePatternHandler(),

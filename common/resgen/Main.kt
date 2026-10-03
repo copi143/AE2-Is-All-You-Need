@@ -123,6 +123,27 @@ fun main(args: Array<String>) {
         // Machine assembler: recipe-category → accepted machine items (optional mods ignored)
         machineItemTags()
 
+        // EMI 同类折叠 tooltip 文案
+        translation("tooltip.$modId.emi_fold.group", "%s (×%s)")
+        translation("tooltip.$modId.emi_fold.more", "... and %s more")
+        translation("tooltip.$modId.emi_fold.hint_expand", "Alt+Click to expand")
+        translation("tooltip.$modId.emi_fold.hint_collapse", "Alt+Click to collapse")
+        translation("tooltip.$modId.emi_fold.member", "Group: %s · Alt+Click to collapse")
+        translation("tooltip.$modId.emi_fold.hint_open", "Alt+Click to browse this group")
+        translation("tooltip.$modId.emi_fold.hint_inline_expand", "Alt+Click to expand this group here")
+        translation("tooltip.$modId.emi_fold.back", "Back to the previous group")
+        translation("tooltip.$modId.emi_fold.root", "Back to all groups in this category")
+        translation("tooltip.$modId.emi_fold.building", "Classifying...")
+        translation("tooltip.$modId.emi_fold.filter", "%s · %s matching entries")
+        translation("tooltip.$modId.emi_fold.search_results", "Search: %s entries")
+        for ((kind, name, short) in listOf(
+            Triple("all", "All", "A"), Triple("block", "Blocks", "B"), Triple("item", "Items", "I"),
+            Triple("fluid", "Fluids", "F"), Triple("custom", "Other resources", "O"),
+        )) {
+            translation("tooltip.$modId.emi_fold.kind_$kind", name)
+            translation("tooltip.$modId.emi_fold.kind_${kind}_short", short)
+        }
+
         translation("itemGroup.$modId", "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.CATEGORY_ID, "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.KEY_ID, "Open Item Details")

@@ -1,5 +1,6 @@
 package allyouneed.mixin.gtceu;
 
+import allyouneed.client.render.QuadVerticesInterner;
 import com.gregtechceu.gtceu.client.util.StaticFaceBakery;
 import com.gregtechceu.gtceu.core.IGTBakedQuad;
 
