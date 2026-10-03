@@ -182,7 +182,10 @@ class JsonStreamTransformerTest {
         }
         val cn = ClassNode()
         ClassReader(bytes).accept(cn, 0)
-        assertTrue(JsonStreamTransformer.apply(cn, emptyList()), "Streams hook must install on gson 2.10 bytes")
+        assertFalse(JsonStreamTransformer.needsStreamsHook)
+        assertFalse(JsonStreamTransformer.isTarget(cn.name))
+        assertFalse(JsonStreamTransformer.apply(cn), "empty production registry must leave Streams untouched")
+        assertTrue(JsonStreamTransformer.applyStreamsHook(cn), "explicit hook must remain testable on gson 2.10 bytes")
         val write = cn.methods.first { it.name == "write" }
         val insns = write.instructions.toArray().filterIsInstance<MethodInsnNode>()
         assertTrue(
@@ -192,5 +195,36 @@ class JsonStreamTransformerTest {
             },
             "hook call missing",
         )
+    }
+
+    @Test
+    fun externalCastsArraysAndCapturedObjectsAreRejected() {
+        for (name in listOf("serializeCast", "serializeInstanceOf", "serializeArray", "serializeLambda")) {
+            val cn = ClassNode()
+            ClassReader(resourceBytes("gsonfast/pojos/FakeTreeSerializer.class")).accept(cn, 0)
+            val entry = "gsonfast/pojos/FakeTreeSerializer#$name (Lcom/google/gson/JsonElement;)Lcom/google/gson/JsonElement;"
+            assertFalse(JsonStreamTransformer.apply(cn, listOf(entry)), name)
+            // Rejection must leave the original class loadable and callable.
+            val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+            cn.accept(cw)
+            val cls = ChildCL("gsonfast.pojos.FakeTreeSerializer", cw.toByteArray(), javaClass.classLoader)
+                .loadClass("gsonfast.pojos.FakeTreeSerializer")
+            assertTrue(cls.getMethod(name, JsonElement::class.java).invoke(cls.getConstructor().newInstance(), JsonObject()) is JsonObject)
+        }
+    }
+
+    @Test
+    fun repeatedPropertiesMatchTreeIncludingOrderAndNulls() {
+        val stream = com.google.gson.internal.bind.StreamJsonObject("test.duplicates." + UUID.randomUUID())
+        val tree = JsonObject()
+        stream.addProperty("a", 1); tree.addProperty("a", 1)
+        stream.addProperty("b", true); tree.addProperty("b", true)
+        stream.addProperty("a", "replacement"); tree.addProperty("a", "replacement")
+        stream.add("b", JsonNull.INSTANCE); tree.add("b", JsonNull.INSTANCE)
+        stream.add("nested", JsonObject().apply { addProperty("x", 3) })
+        tree.add("nested", JsonObject().apply { addProperty("x", 3) })
+        assertEquals(Gson().toJson(tree), hookWrite(stream))
+        assertEquals(tree.toString(), stream.toString())
+        assertEquals(tree, stream.materialize())
     }
 }

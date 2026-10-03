@@ -6,6 +6,7 @@ import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
+import org.objectweb.asm.tree.InvokeDynamicInsnNode
 import org.objectweb.asm.tree.JumpInsnNode
 import org.objectweb.asm.tree.LabelNode
 import org.objectweb.asm.tree.LdcInsnNode
@@ -53,18 +54,20 @@ object JsonStreamTransformer {
      *
      * 当前为空：1.20.1 原版没有热的 Gson 树序列化路径——ServerStatus/进度包都已是
      * Codec/二进制，唯一的热路径 Component 已由手写流式化（ComponentJsonFast）覆盖。
-     * 机制本身（委托者 + Streams 钩子 + 熔断）保持武装，发现符合白名单形状的
-     * serialize 方法时按行添加即可（mod 的 JsonSerializer 实现是典型候选）。
+     * 空列表时不安装 Streams 钩子；添加真实入口后再启用整条流式路径。
      */
     private val ENTRIES = listOf<String>()
 
+    val needsStreamsHook: Boolean
+        get() = ENABLED && ENTRIES.isNotEmpty()
+
     fun isTarget(className: String): Boolean =
-        className == Constants.GSON_STREAMS || ENTRIES.any { it.substringBefore('#') == className }
+        needsStreamsHook && (className == Constants.GSON_STREAMS || ENTRIES.any { it.substringBefore('#') == className })
 
     fun apply(cn: ClassNode): Boolean = apply(cn, ENTRIES)
 
     internal fun apply(cn: ClassNode, entries: List<String>): Boolean {
-        if (!ENABLED) return false
+        if (!ENABLED || entries.isEmpty()) return false
         if (cn.name == Constants.GSON_STREAMS) return applyStreamsHook(cn)
         var done = 0
         for (entry in entries) {
@@ -121,7 +124,8 @@ object JsonStreamTransformer {
             when (insn) {
                 is TypeInsnNode -> when {
                     insn.opcode == Opcodes.NEW && insn.desc == JSON_OBJECT -> news.add(insn)
-                    insn.desc.containsJsonObject() -> return miss("${cn.name}.${mn.name}: ${insn.opcode} JsonObject")
+                    insn.desc == JSON_OBJECT || insn.desc.containsJsonObject() ->
+                        return miss("${cn.name}.${mn.name}: ${insn.opcode} JsonObject")
                 }
 
                 is MethodInsnNode -> when {
@@ -150,6 +154,10 @@ object JsonStreamTransformer {
 
                 is MultiANewArrayInsnNode ->
                     if (insn.desc.containsJsonObject()) return miss("${cn.name}.${mn.name}: multianewarray JsonObject")
+
+                // A lambda/method reference can capture a JsonObject through its bootstrap
+                // signature. Until escape analysis exists, keep such methods untouched.
+                is InvokeDynamicInsnNode -> return miss("${cn.name}.${mn.name}: invokedynamic")
             }
         }
         if (news.isEmpty() || inits.size != news.size) return miss("${cn.name}.${mn.name}: JsonObject construction")

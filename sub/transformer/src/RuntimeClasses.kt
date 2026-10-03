@@ -16,6 +16,13 @@ object RuntimeClasses {
     var gsonInstalled = false
         private set
 
+    @Volatile
+    var gsonFactoryHooked = false
+        private set
+
+    val gsonCallSitesNeeded: Boolean
+        get() = gsonInstalled && !gsonFactoryHooked
+
     @Synchronized
     fun install() {
         if (installed) return
@@ -55,7 +62,7 @@ object RuntimeClasses {
             val entryPoint = Constants.GSON_PACKAGE + "GsonFastPath"
             val ordered = gsonClasses.sortedBy {
                 when {
-                    it.endsWith(".FastFactory") -> 0
+                    it.endsWith(".FastFactory") || it.endsWith(".FastAdapterCache") -> 0
                     it == entryPoint -> 1
                     it.endsWith(".FrameSafeClassWriter") -> 2
                     it.endsWith(".FastAdapterEntry") -> 3
@@ -66,6 +73,8 @@ object RuntimeClasses {
             }
             var found = false
             for (name in ordered) {
+                // This superclass links Gson's Adapter nest; define it only after pre-emption.
+                if (name.endsWith(".FastReflectiveAdapter")) continue
                 define(lookup, loader, name)
                 if (name.endsWith(".FastFactory")) {
                     // FastFactory 的 clinit 为空，初始化安全；由其补 ASM 模块读边
@@ -81,7 +90,10 @@ object RuntimeClasses {
             // 置位必须在初始化之前：初始化连带加载 RTAF 本体，Fabric 下该类经 Knot
             // 变换管线时要求 gsonInstalled 已置位，否则钩子变换被跳过。
             gsonInstalled = true
-            Class.forName(entryPoint, true, loader)
+            ordered.filter { it.endsWith(".FastReflectiveAdapter") }.forEach { define(lookup, loader, it) }
+            val entryClass = Class.forName(entryPoint, true, loader)
+            gsonFactoryHooked = entryClass.getMethod("factoryHooked").invoke(null) as Boolean
+            if (gsonFactoryHooked) logger.info("gson factory hook confirmed; construction-site fallback disabled")
             logger.info("installed gson fast path runtime classes")
         } catch (t: Throwable) {
             logger.error("gson fast path runtime install failed; gson fast path disabled", t)
@@ -131,10 +143,12 @@ object RuntimeClasses {
     private fun preemptRtaf(lookup: MethodHandles.Lookup, loader: ClassLoader) {
         // Lookup.defineClass 要求与目标类同包：Streams 需以 com.google.gson.internal
         // 包内的类为锚点另建 lookup
-        val targets = listOf<Pair<String, (ClassNode) -> Boolean>>(
-            Constants.GSON_STREAMS to { cn -> JsonStreamTransformer.applyStreamsHook(cn) },
-            Constants.GSON_RTAF to { cn -> GsonFastPathTransformer.apply(cn) },
-        )
+        val targets = buildList<Pair<String, (ClassNode) -> Boolean>> {
+            if (JsonStreamTransformer.needsStreamsHook) {
+                add(Constants.GSON_STREAMS to { cn -> JsonStreamTransformer.applyStreamsHook(cn) })
+            }
+            add(Constants.GSON_RTAF to { cn -> GsonFastPathTransformer.apply(cn) })
+        }
         for ((name, transform) in targets) {
             try {
                 val anchorName = if (name.startsWith("com/google/gson/internal/bind/")) {

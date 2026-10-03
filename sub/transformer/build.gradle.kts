@@ -14,6 +14,25 @@ sourceSets.create("inject") {
 
 sourceSets["test"].java.setSrcDirs(listOf("test"))
 
+val benchmarkSource = sourceSets.create("benchmark") {
+    java.setSrcDirs(listOf("benchmark"))
+}
+configurations[benchmarkSource.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+dependencies {
+    add(benchmarkSource.implementationConfigurationName, sourceSets.main.get().output)
+    add(benchmarkSource.implementationConfigurationName, libs.jmh.core)
+    add(benchmarkSource.annotationProcessorConfigurationName, libs.jmh.generator)
+}
+tasks.register<JavaExec>("benchmark") {
+    group = "verification"
+    description = "Run forked Gson JMH benchmarks (use --args for JMH options)"
+    classpath = benchmarkSource.runtimeClasspath
+    mainClass.set("org.openjdk.jmh.Main")
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    workingDir(rootProject.file(".tmp"))
+    doFirst { workingDir.mkdirs() }
+}
+
 configurations.create("injectClasses") {
     isCanBeConsumed = true
     isCanBeResolved = false

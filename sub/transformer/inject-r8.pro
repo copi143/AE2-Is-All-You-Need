@@ -7,7 +7,9 @@
 -keep,allowoptimization class com.google.gson.internal.bind.GsonFastPath { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.FastFactory { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.FastAdapterGenerator { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.FastReflectiveAdapter { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.FastAdapterEntry { *; }
+-keep,allowoptimization class com.google.gson.internal.bind.FastAdapterCache { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.FrameSafeClassWriter { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.StreamJsonObject { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.FallbackSignal { *; }

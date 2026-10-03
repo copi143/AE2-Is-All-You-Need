@@ -10,7 +10,9 @@ import com.google.gson.reflect.TypeToken;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +32,10 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class GsonFastPath {
     private static final boolean ENABLED = !"false".equals(System.getProperty("allyouneed.gsonfast"));
+    private static final boolean CACHE_ENABLED = !"false".equals(System.getProperty("allyouneed.gsonfast.cache"));
+    private static final FastAdapterCache CACHE = new FastAdapterCache();
+    private static final int MAX_LAYOUTS_PER_TYPE = 64;
+    private static final boolean FACTORY_HOOKED = detectFactoryHook();
 
     private static final AtomicLong GENERATED = new AtomicLong();
     private static final AtomicLong FALLBACK = new AtomicLong();
@@ -152,12 +158,12 @@ public final class GsonFastPath {
     }
 
     /**
-     * Forge 场景：gson 在 BOOT 层不可被变换，改为在调用点构造 Gson 后
+     * RTAF 直接钩子未安装时的备用路径：在调用点构造 Gson 后
      * 把 factories 里的 ReflectiveTypeAdapterFactory 换成生成适配器的委托工厂。
      * factories 是不可变 List，整体替换；Gson 实例此刻尚未缓存任何适配器。
      */
     private static Gson wrapGson(Gson gson) {
-        if (!ENABLED || BF1_CLASS == null) return gson;
+        if (!ENABLED || BF1_CLASS == null || FACTORY_HOOKED) return gson;
         try {
             Field factoriesField = Gson.class.getDeclaredField("factories");
             factoriesField.setAccessible(true);
@@ -186,8 +192,22 @@ public final class GsonFastPath {
         return gson;
     }
 
+    /** Number of hidden adapter classes defined, excluding cache hits. */
     public static long generatedCount() {
         return GENERATED.get();
+    }
+
+    public static boolean factoryHooked() {
+        return FACTORY_HOOKED;
+    }
+
+    private static boolean detectFactoryHook() {
+        try {
+            Field marker = ReflectiveTypeAdapterFactory.class.getDeclaredField("allyouneed$gsonFastPathHooked");
+            return marker.getType() == boolean.class && Modifier.isStatic(marker.getModifiers());
+        } catch (ReflectiveOperationException e) {
+            return false;
+        }
     }
 
     public static long fallbackCount() {
@@ -248,7 +268,7 @@ public final class GsonFastPath {
                 Object acc = accessor(f, false);
                 if (acc == null) return adapter;
                 writes.add(new FastAdapterEntry(
-                        e.getKey(), f.getDeclaringClass(), f.getType(), false,
+                        e.getKey(), false,
                         acc instanceof MethodHandle, writeData.size()));
                 writeData.add(acc);
                 writeData.add(writeAdapter);
@@ -257,20 +277,52 @@ public final class GsonFastPath {
                 Object acc = accessor(f, true);
                 if (acc == null) return adapter;
                 reads.add(new FastAdapterEntry(
-                        e.getKey(), f.getDeclaringClass(), f.getType(), nullSkip,
+                        e.getKey(), nullSkip,
                         acc instanceof MethodHandle, readData.size()));
                 readData.add(acc);
                 readData.add(fieldAdapter);
             }
         }
 
+        MethodHandle constructor = constructor(raw, writes, reads);
+        return (TypeAdapter<?>) constructor.invokeExact(ctor, writeData.toArray(), readData.toArray());
+    }
+
+    private static MethodHandle constructor(Class<?> raw, List<FastAdapterEntry> writes, List<FastAdapterEntry> reads) throws Throwable {
+        if (!CACHE_ENABLED) return generateConstructor(raw, writes, reads);
+        // Only facts used by the bytecode generator belong in the key. Adapters,
+        // constructors and accessors are always supplied by the current Gson instance.
+        List<Object> layout = new ArrayList<>(2 + writes.size() * 2 + reads.size() * 3);
+        layout.add(writes.size());
+        for (FastAdapterEntry entry : writes) {
+            layout.add(entry.jsonName);
+            layout.add(entry.methodHandle);
+        }
+        layout.add(reads.size());
+        for (FastAdapterEntry entry : reads) {
+            layout.add(entry.jsonName);
+            layout.add(entry.methodHandle);
+            layout.add(entry.nullSkip);
+        }
+        Map<List<Object>, MethodHandle> layouts = CACHE.get(raw);
+        synchronized (layouts) {
+            MethodHandle cached = layouts.get(layout);
+            if (cached != null) return cached;
+            MethodHandle generated = generateConstructor(raw, writes, reads);
+            // Arbitrary FieldNamingStrategy implementations can create unlimited layouts.
+            if (layouts.size() < MAX_LAYOUTS_PER_TYPE) layouts.put(layout, generated);
+            return generated;
+        }
+    }
+
+    private static MethodHandle generateConstructor(Class<?> raw, List<FastAdapterEntry> writes, List<FastAdapterEntry> reads) throws Throwable {
         byte[] bytes = FastAdapterGenerator.generate(raw, writes, reads);
-        Class<?> gen = MethodHandles.lookup().defineHiddenClass(bytes, true).lookupClass();
-        TypeAdapter<?> result = (TypeAdapter<?>) gen
-                .getDeclaredConstructor(ObjectConstructor.class, Object[].class, Object[].class)
-                .newInstance(ctor, writeData.toArray(), readData.toArray());
+        MethodHandles.Lookup lookup = MethodHandles.lookup().defineHiddenClass(bytes, true);
+        MethodHandle constructor = lookup.findConstructor(lookup.lookupClass(),
+                MethodType.methodType(void.class, ObjectConstructor.class, Object[].class, Object[].class))
+                .asType(MethodType.methodType(TypeAdapter.class, ObjectConstructor.class, Object[].class, Object[].class));
         GENERATED.incrementAndGet();
-        return result;
+        return constructor;
     }
 
     private static Object accessor(Field f, boolean setter) {
@@ -289,7 +341,15 @@ public final class GsonFastPath {
         if (!accessible) return null;
         try {
             MethodHandles.Lookup pl = MethodHandles.privateLookupIn(f.getDeclaringClass(), MethodHandles.lookup());
-            return setter ? pl.unreflectSetter(f) : pl.unreflectGetter(f);
+            MethodHandle handle = setter ? pl.unreflectSetter(f) : pl.unreflectGetter(f);
+            if (Modifier.isStatic(f.getModifiers())) {
+                handle = MethodHandles.dropArguments(handle, 0, Object.class);
+            }
+            // Keep application types out of the generated class's constant pool:
+            // they may be private, unexported, or defined in a child class loader.
+            return handle.asType(setter
+                    ? MethodType.methodType(void.class, Object.class, Object.class)
+                    : MethodType.methodType(Object.class, Object.class));
         } catch (Throwable t) {
             return f;
         }

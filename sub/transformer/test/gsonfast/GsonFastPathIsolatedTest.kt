@@ -174,4 +174,19 @@ class GsonFastPathIsolatedTest {
             assertEquals(controlOut, toJson.invoke(gson, obj), "$method roundtrip mismatch")
         }
     }
+
+    @Test
+    fun directHookSkipsFallbackFactoryEvenAtPreviouslyRewrittenSites() {
+        for (hooked in listOf(false, true)) {
+            val cl = ChildCL(gsonJar(), injectClasses(), hooked, bridgeParent())
+            val consumer = cl.loadClass("gsonfast.pojos.GsonConsumer")
+            val gson = consumer.getMethod("makeGson").invoke(null)
+            val factories = gson.javaClass.getDeclaredField("factories").apply { isAccessible = true }.get(gson) as List<*>
+            assertEquals(!hooked, factories.any { it!!.javaClass.name.endsWith(".FastFactory") })
+            assertEquals(hooked, cl.loadClass("com.google.gson.internal.bind.GsonFastPath").getMethod("factoryHooked").invoke(null))
+            val pojo = cl.loadClass("gsonfast.pojos.IsolatedPojo")
+            val adapter = gson.javaClass.getMethod("getAdapter", Class::class.java).invoke(gson, pojo)
+            assertTrue(adapter.javaClass.isHidden, "both the direct hook and fallback must still accelerate POJOs")
+        }
+    }
 }

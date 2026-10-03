@@ -83,6 +83,46 @@ tasks.withType<Test> {
     dependsOn(":composeruntime:jar")
 }
 
+// Ordinary unit tests use Minecraft stubs. Component parity tests need the real
+// mapped game classes, so keep their classpath separate from those stubs.
+val componentTestSource = sourceSets.create("componentTest") {
+    kotlin.setSrcDirs(listOf("componentTest"))
+    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+}
+configurations[componentTestSource.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[componentTestSource.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+val componentTest = tasks.register<Test>("componentTest") {
+    description = "Compare component JSON behavior against the real Minecraft serializers"
+    group = "verification"
+    testClassesDirs = componentTestSource.output.classesDirs
+    classpath = componentTestSource.runtimeClasspath
+}
+tasks.named("check") { dependsOn(componentTest) }
+
+val benchmarkSource = sourceSets.create("benchmark") {
+    java.setSrcDirs(listOf("benchmark", rootProject.file("sub/transformer/benchmark")))
+    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+}
+configurations[benchmarkSource.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[benchmarkSource.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+dependencies {
+    add(benchmarkSource.implementationConfigurationName, libs.jmh.core)
+    // This project uses kapt, which disables javac annotation processing.
+    add("kaptBenchmark", libs.jmh.generator)
+}
+tasks.register<JavaExec>("benchmark") {
+    group = "verification"
+    description = "Run component JSON JMH benchmarks against real Minecraft classes"
+    classpath = benchmarkSource.runtimeClasspath
+    mainClass.set("org.openjdk.jmh.Main")
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    workingDir(rootProject.file(".tmp"))
+    doFirst { workingDir.mkdirs() }
+    args("perf.ComponentJsonBenchmark")
+}
+
 configurations {
     create("commonJava") {
         isCanBeResolved = false

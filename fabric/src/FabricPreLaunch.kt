@@ -78,8 +78,8 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         KeyResolver.cacheKeyFromSuper(cn.name, cn.superName)
         val ae = NewCallTransformer.apply(cn) { name -> KeyResolver.isKey(name) }
         val rl = NewCallTransformer.applyResourceLocation(cn)
-        // RTAF 直接钩子失效时的冗余保障：双包装是幂等的（FastFactory.wrap 对生成适配器原样返回）
-        val gsonSites = if (RuntimeClasses.gsonInstalled) GsonFastPathTransformer.applyCallSites(cn) else 0
+        // Only use construction-site wrapping if the loaded RTAF lacks our direct hook.
+        val gsonSites = if (RuntimeClasses.gsonCallSitesNeeded) GsonFastPathTransformer.applyCallSites(cn) else 0
         val componentJson = ComponentJsonTransformer.isTarget(cn.name) && ComponentJsonTransformer.apply(cn)
         // 声明式 JSON 序列化流式化 + Streams.write 流式钩子（经 Knot 管线，与 mixin 兼容）
         val jsonStream = RuntimeClasses.gsonInstalled &&

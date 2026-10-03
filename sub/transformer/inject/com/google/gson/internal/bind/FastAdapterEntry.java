@@ -7,16 +7,12 @@ package com.google.gson.internal.bind;
  */
 final class FastAdapterEntry {
     final String jsonName;
-    final Class<?> owner;
-    final Class<?> fieldType;
     final boolean nullSkip;
     final boolean methodHandle;
     final int dataIndex;
 
-    FastAdapterEntry(String jsonName, Class<?> owner, Class<?> fieldType, boolean nullSkip, boolean methodHandle, int dataIndex) {
+    FastAdapterEntry(String jsonName, boolean nullSkip, boolean methodHandle, int dataIndex) {
         this.jsonName = jsonName;
-        this.owner = owner;
-        this.fieldType = fieldType;
         this.nullSkip = nullSkip;
         this.methodHandle = methodHandle;
         this.dataIndex = dataIndex;

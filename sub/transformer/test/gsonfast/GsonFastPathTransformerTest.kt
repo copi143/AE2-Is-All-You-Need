@@ -30,6 +30,8 @@ class GsonFastPathTransformerTest {
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
         cn.accept(cw)
         cw.toByteArray()
+        assertTrue(cn.fields.any { it.name == GsonFastPathTransformer.HOOK_MARKER })
+        assertFalse(GsonFastPathTransformer.apply(cn), "the factory hook must be idempotent")
     }
 
     @Test
