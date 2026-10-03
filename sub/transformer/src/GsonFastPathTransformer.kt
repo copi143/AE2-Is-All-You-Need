@@ -3,6 +3,7 @@ package allyouneed.transformer
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.TypeInsnNode
@@ -18,6 +19,7 @@ import org.objectweb.asm.tree.VarInsnNode
  * 特征任一缺失都 no-op，保证 gson 版本变动时静默回退。
  */
 object GsonFastPathTransformer {
+    const val HOOK_MARKER = "allyouneed\$gsonFastPathHooked"
     private const val CREATE_DESC = "(Lcom/google/gson/Gson;Lcom/google/gson/reflect/TypeToken;)Lcom/google/gson/TypeAdapter;"
     private const val GET_RAW_TYPE = "com/google/gson/reflect/TypeToken"
     private const val CTOR_CTOR = "com/google/gson/internal/ConstructorConstructor"
@@ -32,6 +34,7 @@ object GsonFastPathTransformer {
 
     fun apply(cn: ClassNode): Boolean {
         if (cn.name != Constants.GSON_RTAF) return false
+        if (cn.fields.any { it.name == HOOK_MARKER }) return false
         val create = cn.methods.firstOrNull { it.name == "create" && it.desc == CREATE_DESC } ?: return miss("create")
         val insns = create.instructions.toArray()
 
@@ -53,6 +56,8 @@ object GsonFastPathTransformer {
         hook.add(VarInsnNode(Opcodes.ALOAD, ctorLocal))
         hook.add(MethodInsnNode(Opcodes.INVOKESTATIC, Constants.GSON_FAST_PATH_HOOK, "wrap", WRAP_DESC, false))
         create.instructions.insertBefore(ret, hook)
+        cn.fields.add(FieldNode(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL or Opcodes.ACC_SYNTHETIC,
+            HOOK_MARKER, "Z", null, 1))
         logger.info("installed gson fast path hook into ReflectiveTypeAdapterFactory.create")
         return true
     }

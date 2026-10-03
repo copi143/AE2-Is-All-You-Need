@@ -162,9 +162,11 @@ class GsonFastPathTest {
     }
 
     @Test
-    fun statsCountUp() {
+    fun repeatedLayoutReusesGeneratedClass() {
+        val first = fastAdapter(TypeToken.get(SimplePojo::class.java), SimplePojo::class.java)
         val before = GsonFastPath.generatedCount()
-        fastAdapter(TypeToken.get(SimplePojo::class.java), SimplePojo::class.java)
-        assertEquals(before + 1, GsonFastPath.generatedCount())
+        val second = fastAdapter(TypeToken.get(SimplePojo::class.java), SimplePojo::class.java)
+        assertEquals(first.javaClass, second.javaClass)
+        assertEquals(before, GsonFastPath.generatedCount())
     }
 }

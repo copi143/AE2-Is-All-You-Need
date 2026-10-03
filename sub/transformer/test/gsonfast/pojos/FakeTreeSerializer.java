@@ -89,4 +89,31 @@ public class FakeTreeSerializer implements JsonSerializer<FakeTreeSerializer.Sta
         out.add(gson.toJson(new Status("nullSample", 1, true, null, com.google.gson.JsonNull.INSTANCE)));
         return out;
     }
+
+    public JsonElement serializeCast(JsonElement input) {
+        JsonObject fresh = new JsonObject();
+        fresh.addProperty("fresh", 1);
+        ((JsonObject) input).addProperty("external", 2);
+        return fresh;
+    }
+
+    public JsonElement serializeInstanceOf(JsonElement input) {
+        JsonObject fresh = new JsonObject();
+        fresh.addProperty("object", input instanceof JsonObject);
+        return fresh;
+    }
+
+    public JsonElement serializeArray(JsonElement input) {
+        JsonObject fresh = new JsonObject();
+        Object[] objects = new JsonObject[1];
+        objects[0] = fresh;
+        return (JsonElement) objects[0];
+    }
+
+    public JsonElement serializeLambda(JsonElement input) {
+        JsonObject fresh = new JsonObject();
+        Runnable update = () -> fresh.addProperty("updated", true);
+        update.run();
+        return fresh;
+    }
 }

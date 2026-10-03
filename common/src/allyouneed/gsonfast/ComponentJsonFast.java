@@ -275,10 +275,14 @@ public final class ComponentJsonFast {
         ClickEvent clickEvent = null;
         HoverEvent hoverEvent = null;
         ResourceLocation font = null;
+        int seen = 0;
 
         r.beginObject();
         while (r.hasNext()) {
             String name = r.nextName();
+            int bit = componentPropertyBit(name);
+            if ((seen & bit) != 0) throw new FallbackSignal("duplicate component property " + name);
+            seen |= bit;
             switch (name) {
                 case "text" -> text = nextStringValue(r);
                 case "translate" -> translate = nextStringValue(r);
@@ -370,8 +374,41 @@ public final class ComponentJsonFast {
     }
 
     private static int flag(int mask, int idx, Boolean v) {
+        mask &= ~(3 << (idx * 2));
         if (v == null) return mask;
         return mask | (1 << (idx * 2)) | (v ? (2 << (idx * 2)) : 0);
+    }
+
+    // Avoid allocating a key set on the common path. Unknown properties are ignored
+    // by vanilla too; duplicate recognized properties require its tree semantics.
+    private static int componentPropertyBit(String name) {
+        return switch (name) {
+            case "text" -> 1;
+            case "translate" -> 1 << 1;
+            case "fallback" -> 1 << 2;
+            case "with" -> 1 << 3;
+            case "score" -> 1 << 4;
+            case "selector" -> 1 << 5;
+            case "separator" -> 1 << 6;
+            case "keybind" -> 1 << 7;
+            case "nbt" -> 1 << 8;
+            case "interpret" -> 1 << 9;
+            case "block" -> 1 << 10;
+            case "entity" -> 1 << 11;
+            case "storage" -> 1 << 12;
+            case "extra" -> 1 << 13;
+            case "bold" -> 1 << 14;
+            case "italic" -> 1 << 15;
+            case "underlined" -> 1 << 16;
+            case "strikethrough" -> 1 << 17;
+            case "obfuscated" -> 1 << 18;
+            case "color" -> 1 << 19;
+            case "insertion" -> 1 << 20;
+            case "clickEvent" -> 1 << 21;
+            case "hoverEvent" -> 1 << 22;
+            case "font" -> 1 << 23;
+            default -> 0;
+        };
     }
 
     private static Object readWithArg(JsonReader r) throws IOException {
@@ -451,7 +488,7 @@ public final class ComponentJsonFast {
 
         static StyleAccess resolve() {
             try {
-                Class<?> ser = Class.forName("net.minecraft.network.chat.Style$Serializer");
+                Class<?> ser = Style.Serializer.class;
                 MethodHandles.Lookup lookup = MethodHandles.publicLookup();
                 MethodHandle flags = lookup.findStatic(ser, "allyouneed$rawStyleFlags", MethodType.methodType(int.class, Style.class));
                 MethodHandle font = lookup.findStatic(ser, "allyouneed$rawFont", MethodType.methodType(ResourceLocation.class, Style.class));

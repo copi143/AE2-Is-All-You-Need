@@ -57,7 +57,7 @@ public final class StreamJsonObject extends JsonElement {
 
     public void add(String property, JsonElement value) {
         if (property == null) throw new NullPointerException("key == null");
-        JsonObject m = eager;
+        JsonObject m = objectForProperty(property);
         if (m != null) {
             m.add(property, value);
             return;
@@ -84,13 +84,23 @@ public final class StreamJsonObject extends JsonElement {
 
     private void addValue(String property, Object value) {
         if (property == null) throw new NullPointerException("key == null");
-        JsonObject m = eager;
+        JsonObject m = objectForProperty(property);
         if (m != null) {
             putPrimitive(m, property, value);
             return;
         }
         ops.add(property);
         ops.add(value == null ? JsonNull.INSTANCE : value);
+    }
+
+    private JsonObject objectForProperty(String property) {
+        if (eager != null) return eager;
+        // A repeated key must replace its value without moving its insertion position.
+        // Keep the usual small-object path allocation-free; let JsonObject handle updates.
+        for (int i = 0; i < ops.size(); i += 2) {
+            if (property.equals(ops.get(i))) return materialize();
+        }
+        return null;
     }
 
     private static void putPrimitive(JsonObject m, String property, Object value) {

@@ -19,6 +19,7 @@ import java.util.TreeMap;
  */
 final class FastAdapterGenerator implements Opcodes {
     private static final String SUPER = "com/google/gson/TypeAdapter";
+    private static final String REFLECTIVE_SUPER = "com/google/gson/internal/bind/FastReflectiveAdapter";
     private static final String HELPER = "com/google/gson/internal/bind/GsonFastPath";
     private static final String MH = "java/lang/invoke/MethodHandle";
     private static final String FIELD = "java/lang/reflect/Field";
@@ -38,7 +39,7 @@ final class FastAdapterGenerator implements Opcodes {
         String name = "com/google/gson/internal/bind/FastReflectiveAdapter$" + simple;
 
         ClassWriter cw = new FrameSafeClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        cw.visit(V17, ACC_FINAL | ACC_SUPER, name, null, SUPER, null);
+        cw.visit(V17, ACC_FINAL | ACC_SUPER, name, null, REFLECTIVE_SUPER, null);
 
         cw.visitField(ACC_PRIVATE | ACC_FINAL, "ctor", OBJ_CTOR_DESC, null, null).visitEnd();
         for (int i = 0; i < writes.size(); i++) {
@@ -69,7 +70,7 @@ final class FastAdapterGenerator implements Opcodes {
                 "(" + OBJ_CTOR_DESC + "[Ljava/lang/Object;[Ljava/lang/Object;)V", null, null);
         mv.visitCode();
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKESPECIAL, SUPER, "<init>", "()V", false);
+        mv.visitMethodInsn(INVOKESPECIAL, REFLECTIVE_SUPER, "<init>", "()V", false);
         mv.visitVarInsn(ALOAD, 0);
         mv.visitVarInsn(ALOAD, 1);
         mv.visitFieldInsn(PUTFIELD, name, "ctor", OBJ_CTOR_DESC);
@@ -117,10 +118,8 @@ final class FastAdapterGenerator implements Opcodes {
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitFieldInsn(GETFIELD, name, "wAcc" + i, accDesc(e));
                 mv.visitVarInsn(ALOAD, 2);
-                mv.visitTypeInsn(CHECKCAST, Type.getInternalName(e.owner));
                 mv.visitMethodInsn(INVOKEVIRTUAL, MH, "invokeExact",
-                        "(" + Type.getDescriptor(e.owner) + ")" + Type.getDescriptor(e.fieldType), false);
-                box(mv, e.fieldType);
+                        "(Ljava/lang/Object;)Ljava/lang/Object;", false);
             } else {
                 mv.visitVarInsn(ALOAD, 0);
                 mv.visitFieldInsn(GETFIELD, name, "wAcc" + i, accDesc(e));
@@ -237,11 +236,9 @@ final class FastAdapterGenerator implements Opcodes {
                         mv.visitVarInsn(ALOAD, 0);
                         mv.visitFieldInsn(GETFIELD, name, "rAcc" + i, accDesc(e));
                         mv.visitVarInsn(ALOAD, 2);
-                        mv.visitTypeInsn(CHECKCAST, Type.getInternalName(e.owner));
                         mv.visitVarInsn(ALOAD, 4);
-                        castTo(mv, e.fieldType);
                         mv.visitMethodInsn(INVOKEVIRTUAL, MH, "invokeExact",
-                                "(" + Type.getDescriptor(e.owner) + Type.getDescriptor(e.fieldType) + ")V", false);
+                                "(Ljava/lang/Object;Ljava/lang/Object;)V", false);
                     } else {
                         mv.visitVarInsn(ALOAD, 0);
                         mv.visitFieldInsn(GETFIELD, name, "rAcc" + i, accDesc(e));
@@ -283,35 +280,4 @@ final class FastAdapterGenerator implements Opcodes {
         mv.visitEnd();
     }
 
-    private static void box(MethodVisitor mv, Class<?> t) {
-        if (!t.isPrimitive()) return;
-        if (t == boolean.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
-        else if (t == byte.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Byte", "valueOf", "(B)Ljava/lang/Byte;", false);
-        else if (t == char.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Character", "valueOf", "(C)Ljava/lang/Character;", false);
-        else if (t == short.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Short", "valueOf", "(S)Ljava/lang/Short;", false);
-        else if (t == int.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false);
-        else if (t == long.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false);
-        else if (t == float.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", false);
-        else if (t == double.class) mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
-    }
-
-    private static void castTo(MethodVisitor mv, Class<?> t) {
-        if (!t.isPrimitive()) {
-            mv.visitTypeInsn(CHECKCAST, Type.getInternalName(t));
-            return;
-        }
-        if (t == boolean.class) unbox(mv, "java/lang/Boolean", "booleanValue", "()Z");
-        else if (t == byte.class) unbox(mv, "java/lang/Byte", "byteValue", "()B");
-        else if (t == char.class) unbox(mv, "java/lang/Character", "charValue", "()C");
-        else if (t == short.class) unbox(mv, "java/lang/Short", "shortValue", "()S");
-        else if (t == int.class) unbox(mv, "java/lang/Integer", "intValue", "()I");
-        else if (t == long.class) unbox(mv, "java/lang/Long", "longValue", "()J");
-        else if (t == float.class) unbox(mv, "java/lang/Float", "floatValue", "()F");
-        else if (t == double.class) unbox(mv, "java/lang/Double", "doubleValue", "()D");
-    }
-
-    private static void unbox(MethodVisitor mv, String wrapper, String method, String desc) {
-        mv.visitTypeInsn(CHECKCAST, wrapper);
-        mv.visitMethodInsn(INVOKEVIRTUAL, wrapper, method, desc, false);
-    }
 }

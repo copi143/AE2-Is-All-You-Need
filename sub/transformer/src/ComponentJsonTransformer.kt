@@ -39,32 +39,48 @@ object ComponentJsonTransformer {
     private val flagFields = arrayOf("bold", "italic", "underlined", "strikethrough", "obfuscated")
 
     fun isTarget(className: String): Boolean =
-        className == COMPONENT_SERIALIZER || className == STYLE_SERIALIZER
+        className == COMPONENT_SERIALIZER || className == STYLE_SERIALIZER ||
+            className == ComponentJsonNames.INTERMEDIARY_COMPONENT_SERIALIZER ||
+            className == ComponentJsonNames.INTERMEDIARY_STYLE_SERIALIZER
 
-    fun apply(cn: ClassNode): Boolean = when (cn.name) {
-        COMPONENT_SERIALIZER -> applyComponentSerializer(cn)
-        STYLE_SERIALIZER -> applyStyleSerializer(cn)
-        else -> false
+    fun apply(cn: ClassNode): Boolean {
+        val names = ComponentJsonNames.forClass(cn)
+        return when (cn.name) {
+            names.type(COMPONENT_SERIALIZER) -> applyComponentSerializer(cn, names)
+            names.type(STYLE_SERIALIZER) -> applyStyleSerializer(cn, names)
+            else -> false
+        }
     }
 
-    private fun applyComponentSerializer(cn: ClassNode): Boolean {
+    private fun applyComponentSerializer(cn: ClassNode, names: ComponentJsonNames): Boolean {
+        val expected = mapOf(
+            "toJson" to "(L$COMPONENT;)Ljava/lang/String;",
+            "fromJson" to "(Ljava/lang/String;)L$MUTABLE_COMPONENT;",
+            "fromJsonLenient" to "(Ljava/lang/String;)L$MUTABLE_COMPONENT;",
+        )
+        if (expected.any { (name, desc) -> cn.methods.none {
+            it.name == names.method(name) && it.desc == names.descriptor(desc) && it.access and Opcodes.ACC_STATIC != 0
+        } }) {
+            logger.warn("component json: missing entry points in {}; leaving original methods intact", cn.name)
+            return false
+        }
         var done = 0
         for (mn in cn.methods) {
             val replacement: InsnList = when {
-                mn.name == "toJson" && mn.desc == "(L$COMPONENT;)Ljava/lang/String;" -> InsnList().apply {
+                mn.name == names.method("toJson") && mn.desc == names.descriptor(expected.getValue("toJson")) -> InsnList().apply {
                     add(VarInsnNode(Opcodes.ALOAD, 0))
                     add(MethodInsnNode(Opcodes.INVOKESTATIC, FAST, "toJson", "(L$COMPONENT;)Ljava/lang/String;", false))
                     add(InsnNode(Opcodes.ARETURN))
                 }
 
-                mn.name == "fromJson" && mn.desc == "(Ljava/lang/String;)L$MUTABLE_COMPONENT;" -> InsnList().apply {
+                mn.name == names.method("fromJson") && mn.desc == names.descriptor(expected.getValue("fromJson")) -> InsnList().apply {
                     add(VarInsnNode(Opcodes.ALOAD, 0))
                     add(InsnNode(Opcodes.ICONST_0))
                     add(MethodInsnNode(Opcodes.INVOKESTATIC, FAST, "fromJson", "(Ljava/lang/String;Z)L$MUTABLE_COMPONENT;", false))
                     add(InsnNode(Opcodes.ARETURN))
                 }
 
-                mn.name == "fromJsonLenient" && mn.desc == "(Ljava/lang/String;)L$MUTABLE_COMPONENT;" -> InsnList().apply {
+                mn.name == names.method("fromJsonLenient") && mn.desc == names.descriptor(expected.getValue("fromJsonLenient")) -> InsnList().apply {
                     add(VarInsnNode(Opcodes.ALOAD, 0))
                     add(InsnNode(Opcodes.ICONST_1))
                     add(MethodInsnNode(Opcodes.INVOKESTATIC, FAST, "fromJson", "(Ljava/lang/String;Z)L$MUTABLE_COMPONENT;", false))
@@ -73,6 +89,7 @@ object ComponentJsonTransformer {
 
                 else -> continue
             }
+            names.remap(replacement)
             mn.instructions = replacement
             mn.tryCatchBlocks?.clear()
             mn.localVariables?.clear()
@@ -83,11 +100,11 @@ object ComponentJsonTransformer {
         return done > 0
     }
 
-    private fun applyStyleSerializer(cn: ClassNode): Boolean {
+    private fun applyStyleSerializer(cn: ClassNode, names: ComponentJsonNames): Boolean {
         if (cn.methods.any { it.name == FLAGS_METHOD }) return false
-        cn.methods.add(buildFlagsMethod())
-        cn.methods.add(buildFontMethod())
-        cn.methods.add(buildStyleMethod())
+        cn.methods.add(names.remap(buildFlagsMethod()))
+        cn.methods.add(names.remap(buildFontMethod()))
+        cn.methods.add(names.remap(buildStyleMethod()))
         logger.info("injected style field accessors into {}", cn.name.replace('/', '.'))
         return true
     }
