@@ -162,79 +162,90 @@ fun gen(inputDir: Path, outputDir: Path, mod: ModInfo) {
         machineItemTags()
 
         // EMI 同类折叠 tooltip 文案
-        translation("tooltip.$modId.emi_fold.group", "%s (×%s)")
-        translation("tooltip.$modId.emi_fold.more", "... and %s more")
-        translation("tooltip.$modId.emi_fold.hint_expand", "Alt+Click to expand")
-        translation("tooltip.$modId.emi_fold.hint_collapse", "Alt+Click to collapse")
-        translation("tooltip.$modId.emi_fold.member", "Group: %s · Alt+Click to collapse")
-        translation("tooltip.$modId.emi_fold.hint_open", "Alt+Click to browse this group")
-        translation("tooltip.$modId.emi_fold.hint_inline_expand", "Alt+Click to expand this group here")
-        translation("tooltip.$modId.emi_fold.back", "Back to the previous group")
-        translation("tooltip.$modId.emi_fold.root", "Back to all groups in this category")
-        translation("tooltip.$modId.emi_fold.building", "Classifying...")
-        translation("tooltip.$modId.emi_fold.filter", "%s · %s matching entries")
-        translation("tooltip.$modId.emi_fold.search_results", "Search: %s entries")
-        for ((kind, name, short) in listOf(
-            Triple("all", "All", "A"), Triple("block", "Blocks", "B"), Triple("item", "Items", "I"),
-            Triple("fluid", "Fluids", "F"), Triple("custom", "Other resources", "O"),
-        )) {
-            translation("tooltip.$modId.emi_fold.kind_$kind", name)
-            translation("tooltip.$modId.emi_fold.kind_${kind}_short", short)
+        tooltip("emi_fold") {
+            text("group", "%s (×%s)")
+            text("more", "... and %s more")
+            text("hint_expand", "Alt+Click to expand")
+            text("hint_collapse", "Alt+Click to collapse")
+            text("member", "Group: %s · Alt+Click to collapse")
+            text("hint_open", "Alt+Click to browse this group")
+            text("hint_inline_expand", "Alt+Click to expand this group here")
+            text("back", "Back to the previous group")
+            text("root", "Back to all groups in this category")
+            text("building", "Classifying...")
+            text("filter", "%s · %s matching entries")
+            text("search_results", "Search: %s entries")
+            for ((kind, name, short) in listOf(
+                Triple("all", "All", "A"), Triple("block", "Blocks", "B"), Triple("item", "Items", "I"),
+                Triple("fluid", "Fluids", "F"), Triple("custom", "Other resources", "O"),
+            )) {
+                text("kind_$kind", name)
+                text("kind_${kind}_short", short)
+            }
         }
 
         translation("itemGroup.$modId", "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.CATEGORY_ID, "AE2 Is All You Need")
         translation(ItemDetailsKeyBind.KEY_ID, "Open Item Details")
-        gui("group.all", "ALL")
-        gui("group.ae2", "AE2")
+        gui("group") {
+            text("all", "ALL")
+            text("ae2", "AE2")
+        }
         gui("adaptive_probability", "Probability (p)")
         gui("adaptive_timeout", "Timeout (T)")
         gui("machine_assembler", "Molecular Assembler")
         gui("pattern_encoding_terminal", "ME Pattern Encoding Terminal")
-        gui("encoding.machine", "Machine Pattern")
-        gui("encoding.processing", "Processing Pattern")
-        gui("encoding.probability", "Probability Pattern")
-        gui("encoding.pseudo", "Pseudo Pattern")
+        gui("encoding") {
+            text("machine", "Machine Pattern")
+            text("processing", "Processing Pattern")
+            text("probability", "Probability Pattern")
+            text("pseudo", "Pseudo Pattern")
+        }
         gui("encode_failed", "Cannot encode pattern")
         gui("machine_slot", "Machine")
         gui("machine_slot_no_machine", "No machine selected")
         gui("machine_slot_hint", "Click to change machine")
 
         // Async processing status GUI
-        gui("async.status.title", "Async Processing Status")
-        gui("async.status.formed", "Formed")
-        gui("async.status.unformed", "Not formed")
-        gui("async.status.connected", "Grid connected")
-        gui("async.status.disconnected", "No grid connection")
-        gui("async.status.swallowed", "Channels swallowed: %s")
-        gui("async.status.swallowed_infinite", "Channels swallowed: Infinite")
-        gui("async.status.storage", "Storage: %s MB")
-        gui("async.status.block_count", "Blocks: %s")
-        gui("async.status.working", "Working")
-        gui("async.status.not_working", "Not working")
+        gui("async.status") {
+            text("title", "Async Processing Status")
+            text("formed", "Formed")
+            text("unformed", "Not formed")
+            text("connected", "Grid connected")
+            text("disconnected", "No grid connection")
+            text("swallowed", "Channels swallowed: %s")
+            text("swallowed_infinite", "Channels swallowed: Infinite")
+            text("storage", "Storage: %s MB")
+            text("block_count", "Blocks: %s")
+            text("working", "Working")
+            text("not_working", "Not working")
+        }
 
         gui("mac", "MAC: %s")
         gui("mac_named", "MAC (%s): %s")
         gui("mac_item", "MAC: %s")
         translation("config.jade.plugin_$modId.mac", "MAC Address")
-        translation(
-            "tooltip.$modId.plane_bus.members",
-            "Annihilation planes: %s | Formation planes: %s",
-        )
-        translation("tooltip.$modId.plane_bus.unformed", "Structure not formed")
-        translation("tooltip.$modId.plane_bus.buses", "Interconnected plane buses: %s")
+        tooltip("plane_bus") {
+            text("members", "Annihilation planes: %s | Formation planes: %s")
+            text("unformed", "Structure not formed")
+            text("buses", "Interconnected plane buses: %s")
+        }
 
-        gui("machine.crafting", "Crafting")
-        gui("machine.smelting", "Smelting")
-        gui("machine.blasting", "Blasting")
-        gui("machine.smoking", "Smoking")
-        gui("machine.example_custom", "Example Custom")
+        gui("machine") {
+            text("crafting", "Crafting")
+            text("smelting", "Smelting")
+            text("blasting", "Blasting")
+            text("smoking", "Smoking")
+            text("example_custom", "Example Custom")
+        }
 
         // Mana key display names (MetricLevelKey: gui.<modid>.<type>.<metric>)
-        gui("mana.ae2", "AM")
-        gui("mana.botania", "Botania Mana")
-        gui("mana.bloodmagic", "Blood Magic LP")
-        gui("mana.ars_nouveau", "Ars Nouveau Mana")
+        gui("mana") {
+            text("ae2", "AM")
+            text("botania", "Botania Mana")
+            text("bloodmagic", "Blood Magic LP")
+            text("ars_nouveau", "Ars Nouveau Mana")
+        }
 
         for (cell in energyCells) {
             if (cell.isCreative) {
@@ -254,13 +265,25 @@ fun gen(inputDir: Path, outputDir: Path, mod: ModInfo) {
                 // Tower: directional faces (horizontal row of towers → east/west, vertical → up/down).
                 "TOWER" -> asyncBlock(
                     async.id, async.displayName, async.hasFacing, async.hasPowered,
-                    faces = listOf("tower", "tower_h", "tower", "tower_h", "tower_v", "tower_v"),
+                    faces = faces {
+                        all("tower")
+                        east("tower_h")
+                        west("tower_h")
+                        up("tower_v")
+                        down("tower_v")
+                    },
                 )
                 // Module interface: the socket face (with pin holes) points in the facing direction.
                 "INTERFACE" -> asyncBlock(
                     async.id, async.displayName, async.hasFacing, async.hasPowered,
-                    faces = listOf("socket_up", "socket", "socket", "socket", "socket", "socket"),
-                    formedFaces = listOf("socket_up_formed", "socket", "socket", "socket", "socket", "socket"),
+                    faces = faces {
+                        all("socket")
+                        north("socket_up")
+                    },
+                    formedFaces = faces {
+                        all("socket")
+                        north("socket_up_formed")
+                    },
                 )
 
                 else -> asyncBlock(async.id, async.displayName, async.hasFacing, async.hasPowered)
@@ -279,43 +302,49 @@ fun gen(inputDir: Path, outputDir: Path, mod: ModInfo) {
         simpleBlock("me_io_drive", "ME IO Drive")
         simpleBlock("network_logger", "ME Network Logger")
 
-        gui("log.title", "ME Network Logger")
-        gui("log.cat.topology", "Topology")
-        gui("log.cat.device", "Devices")
-        gui("log.cat.energy", "Energy")
-        gui("log.cat.crafting", "Crafting")
-        gui("log.status.online", "Online · %s entries")
-        gui("log.status.offline", "Offline · %s entries")
-        gui("log.status.conflict", "Conflict · %s entries")
-        gui("log.conflict_banner", "Multiple loggers on this network; all recording is stopped.")
-        gui("log.page", "%s–%s / %s")
-        gui("log.clear", "Clear")
-        gui("log.download", "Download")
-        gui("log.downloaded", "Saved logs to %s")
-        gui("log.download_failed", "Failed to save logs: %s")
-        gui("log.boot_start", "Network boot started")
-        gui("log.boot_end", "Network boot finished")
-        gui("log.controller_online", "Controller online")
-        gui("log.controller_none", "No controller")
-        gui("log.controller_conflict", "Controller conflict")
-        gui("log.channel_req", "Channel requirement changed: %s @ %s")
-        gui("log.node_added", "Device joined: %s @ %s")
-        gui("log.node_removed", "Device left: %s @ %s")
-        gui("log.node_power_on", "Device powered: %s @ %s")
-        gui("log.node_power_off", "Device unpowered: %s @ %s")
-        gui("log.node_channel_on", "Device got channel: %s @ %s")
-        gui("log.node_channel_off", "Device lost channel: %s @ %s")
-        gui("log.power_on", "Network powered")
-        gui("log.power_off", "Network lost power")
-        gui("log.craft_submit_ok", "Crafting submitted: %s")
-        gui("log.craft_submit_fail", "Crafting submit failed: %s (%s)")
-        gui("log.craft_start", "Crafting started: %s")
-        gui("log.craft_done", "Crafting finished: %s")
-        gui("log.craft_cancel", "Crafting cancelled: %s")
-        gui("log.cpu_change", "Crafting CPU changed: %s @ %s")
-        gui("log.logger_conflict", "Logger conflict (%s devices)")
-        gui("log.logger_ok", "Logger conflict cleared")
-        gui("log.unknown", "Unknown event")
+        gui("log") {
+            text("title", "ME Network Logger")
+            group("cat") {
+                text("topology", "Topology")
+                text("device", "Devices")
+                text("energy", "Energy")
+                text("crafting", "Crafting")
+            }
+            group("status") {
+                text("online", "Online · %s entries")
+                text("offline", "Offline · %s entries")
+                text("conflict", "Conflict · %s entries")
+            }
+            text("conflict_banner", "Multiple loggers on this network; all recording is stopped.")
+            text("page", "%s–%s / %s")
+            text("clear", "Clear")
+            text("download", "Download")
+            text("downloaded", "Saved logs to %s")
+            text("download_failed", "Failed to save logs: %s")
+            text("boot_start", "Network boot started")
+            text("boot_end", "Network boot finished")
+            text("controller_online", "Controller online")
+            text("controller_none", "No controller")
+            text("controller_conflict", "Controller conflict")
+            text("channel_req", "Channel requirement changed: %s @ %s")
+            text("node_added", "Device joined: %s @ %s")
+            text("node_removed", "Device left: %s @ %s")
+            text("node_power_on", "Device powered: %s @ %s")
+            text("node_power_off", "Device unpowered: %s @ %s")
+            text("node_channel_on", "Device got channel: %s @ %s")
+            text("node_channel_off", "Device lost channel: %s @ %s")
+            text("power_on", "Network powered")
+            text("power_off", "Network lost power")
+            text("craft_submit_ok", "Crafting submitted: %s")
+            text("craft_submit_fail", "Crafting submit failed: %s (%s)")
+            text("craft_start", "Crafting started: %s")
+            text("craft_done", "Crafting finished: %s")
+            text("craft_cancel", "Crafting cancelled: %s")
+            text("cpu_change", "Crafting CPU changed: %s @ %s")
+            text("logger_conflict", "Logger conflict (%s devices)")
+            text("logger_ok", "Logger conflict cleared")
+            text("unknown", "Unknown event")
+        }
 
         // Adaptive Pattern item (just an item model, no block)
         item("adaptive_pattern", "Adaptive Pattern")
@@ -323,7 +352,11 @@ fun gen(inputDir: Path, outputDir: Path, mod: ModInfo) {
         // Storage cells: LED item model + drive-cell block model pipeline, one group per key type
         for ((_, cells) in storageCellGroups) {
             for (cell in cells) {
-                cellItem(cell.id, cell.displayName)
+                item(cell.id, cell.displayName) {
+                    layer("item/${cell.id}")
+                    // Status LED: layer1 is tinted by ItemColors.
+                    layer("item/item_storage_cell_light")
+                }
                 driveCellModel(cell.itemCellId)
             }
         }
@@ -383,163 +416,106 @@ fun gen(inputDir: Path, outputDir: Path, mod: ModInfo) {
     retexture(output) {
         val gradientHex = AE2_GRADIENT.map { it.hex }
 
-        // FG template base hue (dominant opaque pixel of energy_cell/energy_cell_fg.png ≈ rgb 152,194,231)
-        source(sourceTextures, "#98C2E7")
-
-        // Energy cells: bg + fg(tint) + fullness/creative + optional self-powered badge
-        for (cell in energyCells) {
-            val badge = if (cell.isSelfPowered) listOf("energy_cell/energy_cell_self_powered") else emptyList()
-            if (cell.isCreative) {
-                // AE2-style vertical strip: fg cycles through AE2_GRADIENT with interpolation
-                layeredAnimated(
-                    bg = "energy_cell/energy_cell_bg",
-                    mid = "energy_cell/energy_cell_fg",
-                    top = "energy_cell/energy_cell_creative",
-                    outputPrefix = cell.id,
-                    midColors = gradientHex,
-                    frameTime = 4,
-                    interpolate = true,
-                    overlays = badge,
-                )
-            } else {
-                layeredTarget(
-                    bg = "energy_cell/energy_cell_bg",
-                    mid = "energy_cell/energy_cell_fg",
-                    top = "energy_cell/energy_cell",
-                    outputPrefix = cell.id,
-                    color = cell.color,
-                    levels = 0..4,
-                    overlays = badge,
-                )
+        source(sourceTextures) {
+            // Energy-cell FG dominant color ≈ rgb 152,194,231.
+            source("energy_cell", color = "#98C2E7") {
+                for (cell in energyCells) {
+                    layered(cell.id) {
+                        layer("energy_cell_bg")
+                        if (cell.isCreative) {
+                            layer("energy_cell_fg", colors = gradientHex)
+                            layer("energy_cell_creative")
+                        } else {
+                            layer("energy_cell_fg", color = cell.color)
+                            layer("energy_cell", levels = 0..4)
+                        }
+                        if (cell.isSelfPowered) layer("energy_cell_self_powered")
+                    }
+                }
             }
-        }
 
-        // Non-item cell backgrounds: derived from the item-cell template (unified style),
-        // retinted from the item drive-cell theme to each type's drive-cell theme. The theme
-        // references are the tinted drive plates; the near-neutral item bg itself would be an
-        // unstable chroma source. Written back under resgen/textures.
-        for (type in storageCellGroups.keys - "item") {
-            deriveTemplate(
-                srcDir = sourceTextures.resolve("storage_cell"),
-                source = "item_storage_cell_bg",
-                themeFrom = "drive_item_cell_bg",
-                themeTo = "drive_${type}_cell_bg",
-                output = "${type}_storage_cell_bg",
-            )
-        }
+            // Storage-cell FG dominant color ≈ rgb 154,130,255.
+            source("storage_cell", color = "#9A82FF") {
+                // Derive type backgrounds from the item template using drive-plate themes.
+                // The near-neutral item background itself is an unstable chroma source.
+                for (type in storageCellGroups.keys - "item") {
+                    deriveTemplate(
+                        source = "item_storage_cell_bg",
+                        themeFrom = "drive_item_cell_bg",
+                        themeTo = "drive_${type}_cell_bg",
+                        output = "${type}_storage_cell_bg",
+                    )
+                }
 
-        // Item storage cell FG base hue (dominant opaque ≈ rgb 154,130,255)
-        source(sourceTextures, "#9A82FF")
+                for ((type, cells) in storageCellGroups) {
+                    for (cell in cells) {
+                        layered(cell.id, dir = "item") {
+                            layer("${type}_storage_cell_bg")
+                            layer("storage_cell_fg", color = cell.color)
+                        }
+                        // The drive-cell model samples only rows/columns 0–6.
+                        layered("drive/cells/${cell.itemCellId}") {
+                            layer("drive_${type}_cell_bg")
+                            layer("drive_cell_fg", color = cell.color)
+                        }
+                    }
+                }
 
-        // Storage cells: bg (type-tinted, no tint applied here) + fg (tint per tier), output to textures/item
-        for ((type, cells) in storageCellGroups) {
-            for (cell in cells) {
-                layeredTarget(
-                    bg = "storage_cell/${type}_storage_cell_bg",
-                    mid = "storage_cell/storage_cell_fg",
-                    top = null,
-                    outputPrefix = cell.id,
-                    color = cell.color,
-                    levels = null,
-                    dir = "item",
-                )
+                // Component FG dominant color ≈ rgb 94,170,251; same source directory.
+                source(".", color = "#5EAAFB") {
+                    for ((i, tier) in tiers.withIndex()) {
+                        layered("cell_component_${tier.lowercase()}", dir = "item") {
+                            layer("cell_component_bg")
+                            layer("cell_component_fg", color = AE2_COLORS[i].hex)
+                        }
+                    }
+                }
+
+                for (type in storageCellGroups.keys) {
+                    layered("${type}_cell_housing", dir = "item") {
+                        layer("${type}_storage_cell_bg")
+                        layer("storage_cell_case_fg")
+                    }
+                }
             }
-        }
 
-        // Drive cell faces: bg (opaque plate, per type) + fg (tint per tier). The drive_cell model
-        // samples only rows 0-6 / cols 0-6, so these templates are designed for that region.
-        for ((type, cells) in storageCellGroups) {
-            for (cell in cells) {
-                layeredTarget(
-                    bg = "storage_cell/drive_${type}_cell_bg",
-                    mid = "storage_cell/drive_cell_fg",
-                    top = null,
-                    outputPrefix = "drive/cells/${cell.itemCellId}",
-                    color = cell.color,
-                    levels = null,
-                )
+            // Crafting-storage FG dominant color ≈ rgb 235,142,75.
+            source("crafting_storage", color = "#EB8E4B") {
+                for (storage in craftingStorages) {
+                    layered(storage.id) {
+                        layer("crafting_storage_bg")
+                        layer("crafting_storage_fg", color = storage.color)
+                    }
+                    layered("crafting/${storage.id}_light") {
+                        layer("crafting_storage_light", color = storage.color)
+                    }
+                }
             }
-        }
 
-        // Cell components: bg (static grey) + fg (tint per tier), 20 tiers.
-        // Source FG dominant ~ #5EAAFB (94,170,251)
-        source(sourceTextures, "#5EAAFB")
-        for ((i, tier) in tiers.withIndex()) {
-            val id = "cell_component_${tier.lowercase()}"
-            layeredTarget(
-                bg = "storage_cell/cell_component_bg",
-                mid = "storage_cell/cell_component_fg",
-                top = null,
-                outputPrefix = id,
-                color = AE2_COLORS[i].hex,
-                levels = null,
-                dir = "item",
-            )
-        }
+            // White glow masks use flat tinting, which needs no source color.
+            source("async") {
+                for (variant in listOf("c", "h", "v")) {
+                    layered("async/frame_${variant}_formed") {
+                        layer("frame_$variant")
+                        layer("frame_light_$variant", colors = gradientHex, tint = true)
+                    }
+                }
 
-        // Cell housings: <type>_storage_cell_bg + storage_cell_case_fg (per type, no tint)
-        for (type in storageCellGroups.keys) {
-            layeredTarget(
-                bg = "storage_cell/${type}_storage_cell_bg",
-                mid = "storage_cell/storage_cell_case_fg",
-                top = null,
-                outputPrefix = "${type}_cell_housing",
-                color = null,
-                levels = null,
-                dir = "item",
-            )
-        }
-
-        // Crafting storage FG base hue (dominant opaque ≈ rgb 235,142,75)
-        source(sourceTextures, "#EB8E4B")
-
-        // Crafting storage unformed: bg (no tint) + fg (tint); light still flat recolor
-        for (storage in craftingStorages) {
-            layeredTarget(
-                bg = "crafting_storage/crafting_storage_bg",
-                mid = "crafting_storage/crafting_storage_fg",
-                top = null,
-                outputPrefix = storage.id,
-                color = storage.color,
-                levels = null,
-            )
-            targetSingle("crafting_storage/crafting_storage_light", "crafting/${storage.id}_light", storage.color)
-        }
-
-        // Async machine frame: animated formed-state glow strips. The base frame_* textures are
-        // copied to the output below; here each light overlay (white strip, alpha 55/133) is tinted
-        // flat through AE2_GRADIENT and stacked into a vertical animation strip per face variant.
-        for (variant in listOf("c", "h", "v")) {
-            layeredAnimatedTint(
-                bg = "async/frame_$variant",
-                mid = "async/frame_light_$variant",
-                outputPrefix = "async/frame_${variant}_formed",
-                midColors = gradientHex,
-                frameTime = 4,
-                interpolate = true,
-            )
-        }
-
-        // Async cores: the hand-drawn `*_formed_light` overlays are the formed-state glow mask,
-        // animated exactly like the frame lights above. The static `*_formed.png` files in the
-        // source are just design previews; the output `_formed` strips are generated from the
-        // base + light overlay and written under the block-id names the models reference.
-        for (core in listOf("storage_core", "execution_core")) {
-            layeredAnimatedTint(
-                bg = "async/$core",
-                mid = "async/${core}_formed_light",
-                outputPrefix = "async/async_${core}_formed",
-                midColors = gradientHex,
-                frameTime = 4,
-                interpolate = true,
-            )
+                // Source *_formed.png files are previews; generate the animated strips from masks.
+                for (core in listOf("storage_core", "execution_core")) {
+                    layered("async/async_${core}_formed") {
+                        layer(core)
+                        layer("${core}_formed_light", colors = gradientHex, tint = true)
+                    }
+                }
+            }
         }
 
         // Async structure blocks: dedicated pixel-art textures (AsyncTextures) are generated after
         // the retexture block below, shared by both the GT and the no-GT definition files.
     }
 
-    generateRecipes(dataOutput)
+    generateRecipes(dataOutput, modId)
 
     val texOut = output.resolve("textures/block")
     texOut.createDirectories()

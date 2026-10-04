@@ -7,76 +7,77 @@ import java.nio.file.Path
 import javax.imageio.ImageIO
 import kotlin.io.path.exists
 
-class TextureGen(private val output: Path) {
+@DslMarker
+annotation class TextureGenDsl
 
-    @JvmRecord
-    private data class RecolorEntry(
-        val sourceTemplate: String,
-        val outputPrefix: String,
-        val targetColor: RGB,
-        val sourceHz: JzCzHz,
-    )
-
-    /**
-     * bg (no recolor) + mid (recolor) + optional top (no recolor, per level or single)
-     * + optional [overlays] (no recolor, always on top, single file each).
-     */
-    @JvmRecord
-    private data class LayeredEntry(
-        val bgTemplate: String,
-        val midTemplate: String,
-        val topTemplate: String?,
-        val outputPrefix: String,
-        val targetColor: RGB?,
+@TextureGenDsl
+class TextureLayers {
+    internal data class Layer(
+        val template: String,
+        val colors: List<RGB>?,
         val levels: IntRange?,
-        val overlays: List<String> = emptyList(),
-        val dir: String = "block",
-        val sourceHz: JzCzHz,
+        val tint: Boolean,
     )
 
-    /**
-     * Same layering as [LayeredEntry], but [mid] is recolored once per color in [midColors]
-     * and frames are stacked vertically (vanilla/AE2 animation strip). Writes `.png.mcmeta`.
-     */
-    @JvmRecord
-    private data class AnimatedLayeredEntry(
-        val bgTemplate: String,
-        val midTemplate: String,
-        val topTemplate: String,
+    internal val layers = mutableListOf<Layer>()
+    var frameTime: Int = 4
+    var interpolate: Boolean = true
+
+    /** Layers are composited in declaration order, from bottom to top. */
+    fun layer(template: String, color: String? = null, levels: IntRange? = null, tint: Boolean = false) {
+        require(levels == null || !levels.isEmpty()) { "levels must not be empty" }
+        layers += Layer(template, color?.let { listOf(RGB(it)) }, levels, tint)
+    }
+
+    /** Each color produces an animation frame; tint uses flat color with the original alpha. */
+    fun layer(template: String, colors: List<String>, tint: Boolean = false) {
+        require(colors.isNotEmpty()) { "colors must not be empty" }
+        layers += Layer(template, colors.map { RGB(it) }, null, tint)
+        animated = true
+    }
+
+    internal var animated = false
+        private set
+}
+
+@TextureGenDsl
+class TextureGen(private val output: Path) {
+    private data class Entry(
+        val sourceDir: Path,
+        val sourceHz: JzCzHz?,
         val outputPrefix: String,
-        val midColors: List<RGB>,
+        val dir: String,
+        val layers: List<TextureLayers.Layer>,
+        val levels: IntRange?,
+        val animated: Boolean,
+        val frameCount: Int,
         val frameTime: Int,
         val interpolate: Boolean,
-        val overlays: List<String> = emptyList(),
-        val sourceHz: JzCzHz,
     )
 
-    /**
-     * Like [AnimatedLayeredEntry] but the mid's opaque pixels are tinted flat to each [midColors]
-     * entry (alpha preserved) instead of JzCzHz-recolored - for white glow overlays whose shape is
-     * cycled through the gradient. Composites bg + tinted mid per frame, stacked as an animation
-     * strip with `.png.mcmeta`.
-     */
-    @JvmRecord
-    private data class AnimatedTintEntry(
-        val bgTemplate: String,
-        val midTemplate: String,
-        val outputPrefix: String,
-        val midColors: List<RGB>,
-        val frameTime: Int,
-        val interpolate: Boolean,
-    )
-
-    private val entries = mutableListOf<RecolorEntry>()
-    private val layered = mutableListOf<LayeredEntry>()
-    private val animatedLayered = mutableListOf<AnimatedLayeredEntry>()
-    private val animatedTints = mutableListOf<AnimatedTintEntry>()
+    private val entries = mutableListOf<Entry>()
     private var sourceDir: Path? = null
     private var sourceColorHz: JzCzHz? = null
 
-    fun source(dir: Path, color: String) {
+    /** Binds a source directory and optional base color; restores the outer scope even on failure. */
+    fun source(dir: Path, color: String? = null, init: TextureGen.() -> Unit) {
+        val previousDir = sourceDir
+        val previousColor = sourceColorHz
+        val scopedColor = color?.let { RGB(it).toJzCzHz() } ?: previousColor
         sourceDir = dir
-        sourceColorHz = RGB(color).toJzCzHz()
+        sourceColorHz = scopedColor
+        try {
+            init()
+        } finally {
+            sourceDir = previousDir
+            sourceColorHz = previousColor
+        }
+    }
+
+    /** Resolves [dir] against the enclosing source directory, inheriting its color unless overridden. */
+    fun source(dir: String, color: String? = null, init: TextureGen.() -> Unit) {
+        val parent = sourceDir ?: error("Relative source() requires an enclosing source scope")
+        source(parent.resolve(dir), color, init)
     }
 
     /**
@@ -89,7 +90,13 @@ class TextureGen(private val output: Path) {
      * theme's saturation level. Lightness stays proportional. Idempotent: never reads its own
      * output, safe to run every generateAssets pass.
      */
-    fun deriveTemplate(srcDir: Path, source: String, themeFrom: String, themeTo: String, output: String) {
+    fun deriveTemplate(
+        srcDir: Path = sourceDir ?: error("Call deriveTemplate() inside source {} or specify srcDir"),
+        source: String,
+        themeFrom: String,
+        themeTo: String,
+        output: String,
+    ) {
         val srcFile = srcDir.resolve("$source.png")
         val fromFile = srcDir.resolve("$themeFrom.png")
         val toFile = srcDir.resolve("$themeTo.png")
@@ -121,240 +128,76 @@ class TextureGen(private val output: Path) {
         ).toJzCzHz()
     }
 
-    private fun currentSourceHz(): JzCzHz =
-        sourceColorHz ?: error("Call source() before registering texture targets")
-
-    fun targetSingle(sourceTemplate: String, outputPrefix: String, color: String) {
-        entries += RecolorEntry(sourceTemplate, outputPrefix, RGB(color), currentSourceHz())
-    }
-
-    /**
-     * Composite: [bg] (bottom, no recolor) + [mid] (recolored if [color] set) + optional [top] (no recolor)
-     * + optional [overlays] (no recolor, stacked last).
-     * With [levels], top is `{topTemplate}_{level}.png` and outputs `{outputPrefix}_{level}.png`.
-     * Without levels / without top: single output `{outputPrefix}.png` (bg+mid[+overlays]).
-     */
-    fun layeredTarget(
-        bg: String,
-        mid: String,
-        top: String? = null,
-        outputPrefix: String,
-        color: String?,
-        levels: IntRange? = 0..4,
-        overlays: List<String> = emptyList(),
-        dir: String = "block",
-    ) {
-        layered += LayeredEntry(
-            bg, mid, top, outputPrefix, color?.let { RGB(it) }, levels, overlays, dir, currentSourceHz(),
-        )
-    }
-
-    /**
-     * AE2-style animated texture: vertical frame strip + `.png.mcmeta`.
-     * Each frame composites bg + mid(recolored to [midColors][i]) + top + overlays.
-     */
-    fun layeredAnimated(
-        bg: String,
-        mid: String,
-        top: String,
-        outputPrefix: String,
-        midColors: List<String>,
-        frameTime: Int = 4,
-        interpolate: Boolean = true,
-        overlays: List<String> = emptyList(),
-    ) {
-        require(midColors.isNotEmpty()) { "midColors must not be empty" }
-        animatedLayered += AnimatedLayeredEntry(
-            bg, mid, top, outputPrefix,
-            midColors.map { RGB(it) },
-            frameTime, interpolate, overlays,
-            currentSourceHz(),
-        )
-    }
-
-    /**
-     * White-overlay gradient cycle: [mid] is tinted flat to each [midColors][i] (opaque pixels keep
-     * their alpha) and composited over [bg], stacked into a vertical animation strip.
-     */
-    fun layeredAnimatedTint(
-        bg: String,
-        mid: String,
-        outputPrefix: String,
-        midColors: List<String>,
-        frameTime: Int = 4,
-        interpolate: Boolean = true,
-    ) {
-        require(midColors.isNotEmpty()) { "midColors must not be empty" }
-        animatedTints += AnimatedTintEntry(
-            bg, mid, outputPrefix,
-            midColors.map { RGB(it) },
-            frameTime, interpolate,
+    /** Level layers read `<template>_<level>.png` and produce `<name>_<level>.png`. */
+    fun layered(name: String, dir: String = "block", init: TextureLayers.() -> Unit) {
+        val spec = TextureLayers().apply(init)
+        require(spec.layers.isNotEmpty()) { "Texture $name must have at least one layer" }
+        require(spec.frameTime > 0) { "frameTime must be positive" }
+        val levels = spec.layers.mapNotNull { it.levels }.distinct()
+        require(levels.size <= 1) { "Layers of $name must use the same levels" }
+        val frameCounts = spec.layers.mapNotNull { it.colors?.size }.filter { it > 1 }.distinct()
+        require(frameCounts.size <= 1) { "Animated layers of $name must have the same frame count" }
+        require(sourceColorHz != null || spec.layers.none { it.colors != null && !it.tint }) {
+            "Texture $name needs a source color for recoloring; set color in source {}"
+        }
+        entries += Entry(
+            sourceDir ?: error("Declare layered() inside source {}"), sourceColorHz, name, dir,
+            spec.layers.toList(), levels.singleOrNull(), spec.animated,
+            frameCounts.singleOrNull() ?: 1, spec.frameTime, spec.interpolate,
         )
     }
 
     fun generate() {
-        val srcDir = sourceDir ?: error("Call source() first")
-
-        for (entry in entries) {
-            generateRecolor(srcDir, entry)
-        }
-        for (entry in layered) {
-            generateLayered(srcDir, entry)
-        }
-        for (entry in animatedLayered) {
-            generateAnimatedLayered(srcDir, entry)
-        }
-        for (entry in animatedTints) {
-            generateAnimatedTint(srcDir, entry)
-        }
+        for (entry in entries) generate(entry)
     }
 
-    private fun generateRecolor(srcDir: Path, entry: RecolorEntry) {
-        val srcHz = entry.sourceHz
-        val targetHz = entry.targetColor.toJzCzHz()
-        val (hueShift, chromaScale, lightnessScale) = colorTransform(srcHz, targetHz)
-
-        val file = srcDir.resolve("${entry.sourceTemplate}.png")
-        if (!file.exists()) return
-        val dstImage = recolorImage(ImageIO.read(file.toFile()), hueShift, chromaScale, lightnessScale)
-        writePng(dstImage, entry.outputPrefix, "")
-    }
-
-    private fun generateLayered(srcDir: Path, entry: LayeredEntry) {
-        val srcHz = entry.sourceHz
-        val bgFile = srcDir.resolve("${entry.bgTemplate}.png")
-        val midFile = srcDir.resolve("${entry.midTemplate}.png")
-        if (!bgFile.exists() || !midFile.exists()) {
-            println("[texture] missing bg/mid for ${entry.outputPrefix}")
-            return
-        }
-
-        val bg = ensureArgb(ImageIO.read(bgFile.toFile()))
-        val midSrc = ensureArgb(ImageIO.read(midFile.toFile()))
-
-        val mid: BufferedImage = if (entry.targetColor != null) {
-            val (hueShift, chromaScale, lightnessScale) = colorTransform(srcHz, entry.targetColor.toJzCzHz())
-            recolorImage(midSrc, hueShift, chromaScale, lightnessScale)
-        } else {
-            midSrc
-        }
-
-        val overlayImages = entry.overlays.mapNotNull { name ->
-            val file = srcDir.resolve("$name.png")
-            if (!file.exists()) {
-                println("[texture] missing overlay $file")
-                null
-            } else {
-                ensureArgb(ImageIO.read(file.toFile()))
-            }
-        }
-
-        val tops: List<Pair<String, BufferedImage?>> = when {
-            entry.topTemplate == null -> listOf("" to null)
-            entry.levels != null -> entry.levels.map { level ->
-                val file = srcDir.resolve("${entry.topTemplate}_$level.png")
-                if (!file.exists()) {
-                    println("[texture] missing top $file")
-                    "_$level" to null
-                } else {
-                    "_$level" to ensureArgb(ImageIO.read(file.toFile()))
+    private fun generate(entry: Entry) {
+        val images = mutableMapOf<String, BufferedImage>()
+        val variants = entry.levels?.map { it to "_$it" } ?: listOf(null to "")
+        for ((level, suffix) in variants) {
+            val sources = entry.layers.map { layer ->
+                val template = layer.template + if (layer.levels != null) "_$level" else ""
+                images.getOrPut(template) {
+                    val file = entry.sourceDir.resolve("$template.png")
+                    check(file.exists()) { "Missing layer $file for ${entry.outputPrefix}" }
+                    ensureArgb(ImageIO.read(file.toFile()))
                 }
             }
-
-            else -> {
-                val file = srcDir.resolve("${entry.topTemplate}.png")
-                if (!file.exists()) {
-                    println("[texture] missing top $file")
-                    emptyList()
-                } else {
-                    listOf("" to ensureArgb(ImageIO.read(file.toFile())))
+            fun frame(index: Int): BufferedImage {
+                val layers = entry.layers.zip(sources).map { (layer, image) ->
+                    val color = layer.colors?.let { it[if (it.size == 1) 0 else index] }
+                    when {
+                        color == null -> image
+                        layer.tint -> tint(image, color)
+                        else -> {
+                            val (hue, chroma, lightness) = colorTransform(checkNotNull(entry.sourceHz), color.toJzCzHz())
+                            recolorImage(image, hue, chroma, lightness)
+                        }
+                    }
                 }
+                return if (layers.size == 1) layers.single() else composite(*layers.toTypedArray())
             }
-        }
-
-        for ((suffix, top) in tops) {
-            if (entry.topTemplate != null && top == null) continue
-            val layers = buildList {
-                add(bg)
-                add(mid)
-                if (top != null) add(top)
-                addAll(overlayImages)
-            }
-            val composed = composite(*layers.toTypedArray())
-            writePng(composed, entry.outputPrefix, suffix, entry.dir)
-        }
-    }
-
-    private fun generateAnimatedLayered(srcDir: Path, entry: AnimatedLayeredEntry) {
-        val srcHz = entry.sourceHz
-        val bgFile = srcDir.resolve("${entry.bgTemplate}.png")
-        val midFile = srcDir.resolve("${entry.midTemplate}.png")
-        val topFile = srcDir.resolve("${entry.topTemplate}.png")
-        if (!bgFile.exists() || !midFile.exists() || !topFile.exists()) {
-            println("[texture] missing layers for animated ${entry.outputPrefix}")
-            return
-        }
-
-        val bg = ensureArgb(ImageIO.read(bgFile.toFile()))
-        val midSrc = ensureArgb(ImageIO.read(midFile.toFile()))
-        val top = ensureArgb(ImageIO.read(topFile.toFile()))
-        val overlayImages = entry.overlays.mapNotNull { name ->
-            val file = srcDir.resolve("$name.png")
-            if (!file.exists()) {
-                println("[texture] missing overlay $file")
-                null
+            val image = if (entry.animated) {
+                val width = sources.first().width
+                val height = sources.first().height
+                val strip = BufferedImage(width, height * entry.frameCount, BufferedImage.TYPE_INT_ARGB)
+                val graphics = strip.createGraphics()
+                try {
+                    for (i in 0 until entry.frameCount) graphics.drawImage(frame(i), 0, i * height, null)
+                } finally {
+                    graphics.dispose()
+                }
+                strip
             } else {
-                ensureArgb(ImageIO.read(file.toFile()))
+                frame(0)
+            }
+            writePng(image, entry.outputPrefix, suffix, entry.dir)
+            if (entry.animated) {
+                writeAnimationMcmeta(
+                    entry.outputPrefix + suffix, entry.frameCount, entry.frameTime, entry.interpolate, entry.dir,
+                )
             }
         }
-
-        val frameH = bg.height
-        val frameW = bg.width
-        val strip = BufferedImage(frameW, frameH * entry.midColors.size, BufferedImage.TYPE_INT_ARGB)
-        val g = strip.createGraphics()
-
-        for ((i, color) in entry.midColors.withIndex()) {
-            val (hueShift, chromaScale, lightnessScale) = colorTransform(srcHz, color.toJzCzHz())
-            val mid = recolorImage(midSrc, hueShift, chromaScale, lightnessScale)
-            val layers = buildList {
-                add(bg)
-                add(mid)
-                add(top)
-                addAll(overlayImages)
-            }
-            val frame = composite(*layers.toTypedArray())
-            g.drawImage(frame, 0, i * frameH, null)
-        }
-        g.dispose()
-
-        writePng(strip, entry.outputPrefix, "")
-        writeAnimationMcmeta(entry.outputPrefix, entry.midColors.size, entry.frameTime, entry.interpolate)
-    }
-
-    private fun generateAnimatedTint(srcDir: Path, entry: AnimatedTintEntry) {
-        val bgFile = srcDir.resolve("${entry.bgTemplate}.png")
-        val midFile = srcDir.resolve("${entry.midTemplate}.png")
-        if (!bgFile.exists() || !midFile.exists()) {
-            println("[texture] missing layers for animated tint ${entry.outputPrefix}")
-            return
-        }
-
-        val bg = ensureArgb(ImageIO.read(bgFile.toFile()))
-        val mid = ensureArgb(ImageIO.read(midFile.toFile()))
-
-        val frameH = bg.height
-        val frameW = bg.width
-        val strip = BufferedImage(frameW, frameH * entry.midColors.size, BufferedImage.TYPE_INT_ARGB)
-        val g = strip.createGraphics()
-
-        for ((i, color) in entry.midColors.withIndex()) {
-            val frame = composite(bg, tint(mid, color))
-            g.drawImage(frame, 0, i * frameH, null)
-        }
-        g.dispose()
-
-        writePng(strip, entry.outputPrefix, "")
-        writeAnimationMcmeta(entry.outputPrefix, entry.midColors.size, entry.frameTime, entry.interpolate)
     }
 
     /** Replaces the opaque pixels of [src] with [color], preserving their alpha. */
@@ -382,8 +225,9 @@ class TextureGen(private val output: Path) {
         frameCount: Int,
         frameTime: Int,
         interpolate: Boolean,
+        dir: String,
     ) {
-        val (outRelative, outName) = splitOutput(outputPrefix, "block")
+        val (outRelative, outName) = splitOutput(outputPrefix, dir)
         val outDir = output.resolve(outRelative)
         outDir.toFile().mkdirs()
 

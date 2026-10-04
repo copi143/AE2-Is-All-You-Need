@@ -28,24 +28,32 @@ class AssetGen(
     private val translations = linkedMapOf<String, String>()
 
     fun cubeAll(name: String, texture: String = "block/$name") {
-        val modelJson = JsonObject().apply {
-            addProperty("parent", "minecraft:block/cube_all")
-            add("textures", JsonObject().apply {
-                addProperty("all", "$modId:$texture")
-            })
-        }
-        blockModels += GeneratedFile("models/block/$name.json", modelJson)
+        blockModels += GeneratedFile("models/block/$name.json", cubeAllModel("$modId:$texture"))
     }
 
     fun translation(key: String, value: String) {
         translations[key] = value
     }
 
+    fun translation(prefix: String, init: TranslationGroup.() -> Unit) {
+        TranslationGroup(prefix, ::translation).apply(init)
+    }
+
     fun gui(key: String, value: String) = translation("gui.$modId.$key", value)
+
+    fun gui(prefix: String, init: TranslationGroup.() -> Unit) = translation("gui.$modId.$prefix", init)
 
     fun block(key: String, value: String) = translation("block.$modId.$key", value)
 
+    fun block(prefix: String, init: TranslationGroup.() -> Unit) = translation("block.$modId.$prefix", init)
+
     fun itemLang(key: String, value: String) = translation("item.$modId.$key", value)
+
+    fun itemLang(prefix: String, init: TranslationGroup.() -> Unit) = translation("item.$modId.$prefix", init)
+
+    fun tooltip(key: String, value: String) = translation("tooltip.$modId.$key", value)
+
+    fun tooltip(prefix: String, init: TranslationGroup.() -> Unit) = translation("tooltip.$modId.$prefix", init)
 
     /**
      * 写入物品标签 `data/<modId>/tags/items/<path>.json`。
@@ -76,16 +84,19 @@ class AssetGen(
     }
 
     fun item(name: String, displayName: String, texture: String = "item/$name") {
-        translations["item.$modId.$name"] = displayName
-
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "minecraft:item/generated")
-            add("textures", JsonObject().apply {
-                addProperty("layer0", "$modId:$texture")
-            })
+        item(name, displayName) {
+            layer(texture)
         }
+    }
+
+    fun item(name: String, displayName: String, init: ItemModelLayers.() -> Unit) {
+        val itemJson = itemModel(init)
+        translations["item.$modId.$name"] = displayName
         itemModels += GeneratedFile("models/item/$name.json", itemJson)
     }
+
+    private fun itemModel(init: ItemModelLayers.() -> Unit): JsonObject =
+        ItemModelLayers().apply(init).build(modId)
 
     /**
      * 合并封包物品：单个物品，按 NBT 类型通过 `ae2isallyouneed:type` item property
@@ -96,12 +107,9 @@ class AssetGen(
     fun packetItem(name: String, displayName: String, variants: List<Pair<String, String>>, overlayTexture: String = "item/packet_overlay") {
         translations["item.$modId.$name"] = displayName
 
-        fun modelJson(contentTexture: String) = JsonObject().apply {
-            addProperty("parent", "minecraft:item/generated")
-            add("textures", JsonObject().apply {
-                addProperty("layer0", "$modId:$contentTexture")
-                addProperty("layer1", "$modId:$overlayTexture")
-            })
+        fun modelJson(contentTexture: String) = itemModel {
+            layer(contentTexture)
+            layer(overlayTexture)
         }
 
         for ((variant, contentTexture) in variants) {
@@ -124,29 +132,11 @@ class AssetGen(
     }
 
     /**
-     * Storage cell item: generated model with a tintable status-LED layer on top
-     * (layer1 tinted via ItemColors, like vanilla item_storage_cell).
-     */
-    fun cellItem(name: String, displayName: String, texture: String = "item/$name") {
-        translations["item.$modId.$name"] = displayName
-
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "minecraft:item/generated")
-            add("textures", JsonObject().apply {
-                addProperty("layer0", "$modId:$texture")
-                addProperty("layer1", "$modId:item/item_storage_cell_light")
-            })
-        }
-        itemModels += GeneratedFile("models/item/$name.json", itemJson)
-    }
-
-    /**
      * Drive-cell block model (rendered inside ME drives via StorageCellModels),
      * mirroring vanilla `ae2:block/drive/cells/1k_item_cell`.
      */
     fun driveCellModel(name: String) {
-        val modelJson = JsonObject().apply {
-            addProperty("parent", "ae2:block/drive/drive_cell")
+        val modelJson = parentModel("ae2:block/drive/drive_cell").apply {
             add("textures", JsonObject().apply {
                 addProperty("cell", "$modId:block/drive/cells/$name")
             })
@@ -163,32 +153,19 @@ class AssetGen(
     ) {
         translations["block.$modId.$name"] = displayName
         for (i in 0..maxFullness) {
-            val modelJson = JsonObject().apply {
-                addProperty("parent", "minecraft:block/cube_all")
-                add("textures", JsonObject().apply {
-                    addProperty("all", "$modId:block/${texturePrefix}_$i")
-                })
+            cubeAll("${name}_$i", "block/${texturePrefix}_$i")
+        }
+
+        blockState(name, JsonObject().apply {
+            for (i in 0..maxFullness) {
+                add("fullness=$i", modelReference("$modId:block/${name}_$i"))
             }
-            blockModels += GeneratedFile("models/block/${name}_$i.json", modelJson)
-        }
+        })
 
-        val stateJson = JsonObject().apply {
-            add("variants", JsonObject().apply {
-                for (i in 0..maxFullness) {
-                    add("fullness=$i", JsonObject().apply {
-                        addProperty("model", "$modId:block/${name}_$i")
-                    })
-                }
-            })
-        }
-        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
-
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "$modId:block/${name}_0")
+        val itemJson = parentModel("$modId:block/${name}_0").apply {
             add("overrides", JsonArray().apply {
                 for (i in 1..maxFullness) {
-                    add(JsonObject().apply {
-                        addProperty("model", "$modId:block/${name}_$i")
+                    add(modelReference("$modId:block/${name}_$i").apply {
                         add("predicate", JsonObject().apply {
                             addProperty(predicateKey, i * (1.0 / maxFullness))
                         })
@@ -200,29 +177,7 @@ class AssetGen(
     }
 
     fun simpleBlock(name: String, displayName: String, texture: String = "block/$name") {
-        translations["block.$modId.$name"] = displayName
-
-        val modelJson = JsonObject().apply {
-            addProperty("parent", "minecraft:block/cube_all")
-            add("textures", JsonObject().apply {
-                addProperty("all", "$modId:$texture")
-            })
-        }
-        blockModels += GeneratedFile("models/block/$name.json", modelJson)
-
-        val stateJson = JsonObject().apply {
-            add("variants", JsonObject().apply {
-                add("", JsonObject().apply {
-                    addProperty("model", "$modId:block/$name")
-                })
-            })
-        }
-        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
-
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "$modId:block/$name")
-        }
-        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+        singleModelBlock(name, displayName, cubeAllModel("$modId:$texture"))
     }
 
     /**
@@ -230,26 +185,14 @@ class AssetGen(
      * AE2's molecular assembler shell via `ae2:block/molecular_assembler`.
      */
     fun parentedBlock(name: String, displayName: String, parent: String) {
+        singleModelBlock(name, displayName, parentModel(parent))
+    }
+
+    private fun singleModelBlock(name: String, displayName: String, model: JsonObject) {
         translations["block.$modId.$name"] = displayName
-
-        val modelJson = JsonObject().apply {
-            addProperty("parent", parent)
-        }
-        blockModels += GeneratedFile("models/block/$name.json", modelJson)
-
-        val stateJson = JsonObject().apply {
-            add("variants", JsonObject().apply {
-                add("", JsonObject().apply {
-                    addProperty("model", "$modId:block/$name")
-                })
-            })
-        }
-        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
-
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "$modId:block/$name")
-        }
-        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+        blockModels += GeneratedFile("models/block/$name.json", model)
+        blockState(name, JsonObject().apply { add("", modelReference("$modId:block/$name")) })
+        blockItem(name, "$modId:block/$name")
     }
 
     /**
@@ -258,40 +201,24 @@ class AssetGen(
     fun craftingStorageBlock(name: String, displayName: String) {
         translations["block.$modId.$name"] = displayName
 
-        val unformedModel = JsonObject().apply {
-            addProperty("parent", "minecraft:block/cube_all")
-            add("textures", JsonObject().apply {
-                addProperty("all", "$modId:block/$name")
-            })
-        }
-        blockModels += GeneratedFile("models/block/$name.json", unformedModel)
+        cubeAll(name)
 
         // Empty stub; geometry from BuiltInModelHooks (same as AE2 formed models)
         blockModels += GeneratedFile("models/block/crafting/${name}_formed.json", JsonObject())
 
-        val stateJson = JsonObject().apply {
-            add("variants", JsonObject().apply {
-                add("formed=false", JsonObject().apply {
-                    addProperty("model", "$modId:block/$name")
-                })
-                add("formed=true", JsonObject().apply {
-                    addProperty("model", "$modId:block/crafting/${name}_formed")
-                })
-            })
-        }
-        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
+        blockState(name, JsonObject().apply {
+            add("formed=false", modelReference("$modId:block/$name"))
+            add("formed=true", modelReference("$modId:block/crafting/${name}_formed"))
+        })
 
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "$modId:block/$name")
-        }
-        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+        blockItem(name, "$modId:block/$name")
     }
 
     /**
      * Async crafting multiblock unit: unformed + formed variants. By default both are `cube_all`
      * using the block's own textures; when [faces] is given the block renders as a directional cube
-     * with a per-face texture per [FRAME_FACE_ORDER] entry (texture names under `block/async/`),
-     * and [formedFaces] (same order) overrides the formed per-face set, defaulting to [faces].
+     * with named face textures (texture names under `block/async/`),
+     * and [formedFaces] overrides the formed per-face set, defaulting to [faces].
      * [hasFacing] blocks (host/connector) also vary on `facing` (with y-rotation so the model's
      * `north` face points in the facing direction); the connector additionally varies on `powered`
      * (all formed/unformed combos are emitted so every reachable state matches a model).
@@ -306,8 +233,8 @@ class AssetGen(
         displayName: String,
         hasFacing: Boolean,
         hasPowered: Boolean,
-        faces: List<String>? = null,
-        formedFaces: List<String>? = null,
+        faces: CubeFaces? = null,
+        formedFaces: CubeFaces? = null,
         hasFormed: Boolean = true,
     ) {
         translations["block.$modId.$name"] = displayName
@@ -325,8 +252,7 @@ class AssetGen(
         val variants = JsonObject()
 
         fun addVariant(key: String, model: String, y: Int = 0) {
-            variants.add(key, JsonObject().apply {
-                addProperty("model", "$modId:block/async/$model")
+            variants.add(key, modelReference("$modId:block/async/$model").apply {
                 if (y != 0) addProperty("y", y)
             })
         }
@@ -364,28 +290,39 @@ class AssetGen(
             else -> addVariant("", name)
         }
 
-        val stateJson = JsonObject().apply { add("variants", variants) }
-        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
+        blockState(name, variants)
 
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "$modId:block/async/$name")
-        }
-        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+        blockItem(name, "$modId:block/async/$name")
     }
 
-    private fun cubeAllModel(texture: String): JsonObject = JsonObject().apply {
-        addProperty("parent", "minecraft:block/cube_all")
+    private fun parentModel(parent: String): JsonObject = JsonObject().apply {
+        addProperty("parent", parent)
+    }
+
+    private fun modelReference(model: String): JsonObject = JsonObject().apply {
+        addProperty("model", model)
+    }
+
+    private fun blockState(name: String, variants: JsonObject) {
+        val json = JsonObject().apply { add("variants", variants) }
+        blockStates += GeneratedFile("blockstates/$name.json", json)
+    }
+
+    private fun blockItem(name: String, parent: String) {
+        itemModels += GeneratedFile("models/item/$name.json", parentModel(parent))
+    }
+
+    private fun cubeAllModel(texture: String): JsonObject = parentModel("minecraft:block/cube_all").apply {
         add("textures", JsonObject().apply { addProperty("all", texture) })
     }
 
-    /** `block/cube` model with per-face textures in [FRAME_FACE_ORDER], particle = first face. */
-    private fun faceCubeModel(faces: List<String>): JsonObject = JsonObject().apply {
-        addProperty("parent", "minecraft:block/cube")
+    /** `block/cube` model with named textures; particles use the north face. */
+    private fun faceCubeModel(faces: CubeFaces): JsonObject = parentModel("minecraft:block/cube").apply {
         add("textures", JsonObject().apply {
-            for ((i, face) in FRAME_FACE_ORDER.withIndex()) {
-                addProperty(face, "$modId:block/async/${faces[i]}")
+            for (face in FRAME_FACE_ORDER) {
+                addProperty(face, "$modId:block/async/${faces[face]}")
             }
-            addProperty("particle", "$modId:block/async/${faces[0]}")
+            addProperty("particle", "$modId:block/async/${faces["north"]}")
         })
     }
 
@@ -430,28 +367,17 @@ class AssetGen(
             blockModels += GeneratedFile("models/block/${modelId}_formed.json", cubeModel(formedTextures))
         }
 
-        val stateJson = JsonObject().apply {
-            add("variants", JsonObject().apply {
-                for ((mask, modelId) in modelByMask) {
-                    add("connections=$mask,formed=false", JsonObject().apply {
-                        addProperty("model", "$modId:block/$modelId")
-                    })
-                    add("connections=$mask,formed=true", JsonObject().apply {
-                        addProperty("model", "$modId:block/${modelId}_formed")
-                    })
-                }
-            })
-        }
-        blockStates += GeneratedFile("blockstates/$name.json", stateJson)
+        blockState(name, JsonObject().apply {
+            for ((mask, modelId) in modelByMask) {
+                add("connections=$mask,formed=false", modelReference("$modId:block/$modelId"))
+                add("connections=$mask,formed=true", modelReference("$modId:block/${modelId}_formed"))
+            }
+        })
 
-        val itemJson = JsonObject().apply {
-            addProperty("parent", "$modId:block/${modelByMask.getValue(0)}")
-        }
-        itemModels += GeneratedFile("models/item/$name.json", itemJson)
+        blockItem(name, "$modId:block/${modelByMask.getValue(0)}")
     }
 
-    private fun cubeModel(textures: JsonObject): JsonObject = JsonObject().apply {
-        addProperty("parent", "minecraft:block/cube")
+    private fun cubeModel(textures: JsonObject): JsonObject = parentModel("minecraft:block/cube").apply {
         add("textures", textures)
     }
 
@@ -526,8 +452,7 @@ class AssetGen(
                 // Facing rotations match GT's generated machine blockstate (x/y Euler + `gtceu:z`).
                 val variants = JsonObject().apply {
                     fun addVariant(facing: String, y: Int = 0, x: Int = 0, z: Int = 0) {
-                        add("facing=$facing", JsonObject().apply {
-                            addProperty("model", "$modId:$loaderModelPath")
+                        add("facing=$facing", modelReference("$modId:$loaderModelPath").apply {
                             if (z != 0) addProperty("gtceu:z", z)
                             if (y != 0) addProperty("y", y)
                             if (x != 0) addProperty("x", x)
@@ -540,14 +465,9 @@ class AssetGen(
                     addVariant("west", y = 270)
                     addVariant("east", y = 90)
                 }
-                blockStates += GeneratedFile(
-                    "blockstates/$name.json",
-                    JsonObject().apply { add("variants", variants) },
-                )
+                blockState(name, variants)
 
-                itemModels += GeneratedFile("models/item/$name.json", JsonObject().apply {
-                    addProperty("parent", "$modId:$loaderModelPath")
-                })
+                blockItem(name, "$modId:$loaderModelPath")
             }
         }
     }
