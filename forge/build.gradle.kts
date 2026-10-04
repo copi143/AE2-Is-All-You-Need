@@ -94,7 +94,6 @@ dependencies {
 
     // ========================= 兼容模组 =========================
 
-    modCompileOnly(libs.gtceu)
     jarJarCompileOnly(libs.gtceu)
     modRuntimeOnly(libs.gtceu)
 

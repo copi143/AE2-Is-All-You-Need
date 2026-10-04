@@ -3,8 +3,8 @@ package allyouneed.resgen
 import allyouneed.util.idify
 import com.google.gson.JsonParser
 import minecraftx.compose.itemdetail.ItemDetailsKeyBind
-import java.nio.file.Path
 import java.awt.image.BufferedImage
+import java.nio.file.Path
 import javax.imageio.ImageIO
 import kotlin.io.path.copyTo
 import kotlin.io.path.createDirectories
@@ -63,10 +63,10 @@ data class AsyncBlockDef(
 )
 
 /**
- * Reads one of the two async block definition files from common/resgen/definitions/.
+ * Reads one of the two async block definition files from the supplied definitions directory.
  */
-private fun loadAsyncDefinitions(fileName: String): List<AsyncBlockDef> {
-    val path = Path.of("common/resgen/definitions", fileName)
+private fun loadAsyncDefinitions(definitionsDir: Path, fileName: String): List<AsyncBlockDef> {
+    val path = definitionsDir.resolve(fileName)
     require(path.exists()) { "Missing async block definitions: $path" }
     val root = JsonParser.parseReader(path.toFile().reader()).asJsonObject
     return root.getAsJsonArray("blocks").map { element ->
@@ -83,9 +83,9 @@ private fun loadAsyncDefinitions(fileName: String): List<AsyncBlockDef> {
     }
 }
 
-private fun loadAsyncBlockSet(): List<AsyncBlockDef> {
-    val gt = loadAsyncDefinitions("async_blocks_gt.json")
-    val vanilla = loadAsyncDefinitions("async_blocks_vanilla.json")
+private fun loadAsyncBlockSet(definitionsDir: Path): List<AsyncBlockDef> {
+    val gt = loadAsyncDefinitions(definitionsDir, "async_blocks_gt.json")
+    val vanilla = loadAsyncDefinitions(definitionsDir, "async_blocks_vanilla.json")
 
     // Both files must describe the exact same blocks; only the isGt flags may differ. The static
     // cube_all models are always emitted for all 16 so a Forge install without GTCEu (and Fabric)
@@ -104,22 +104,60 @@ private fun loadAsyncBlockSet(): List<AsyncBlockDef> {
     return vanilla
 }
 
+class ModInfo(
+    val id: String,
+    val name: String,
+    val author: String,
+    val license: String,
+    val credits: String,
+    val description: String,
+)
+
 fun main(args: Array<String>) {
-    if (args.isNotEmpty()) {
-        println("Arguments: ${args.joinToString(" ")}")
-        println("Error: No arguments are expected, as this is a simple asset generator.")
-        throw IllegalArgumentException("No arguments are expected")
+    require(args.isNotEmpty())
+    require(args.size % 2 == 0)
+
+    var inputDir: Path? = null
+    var outputDir: Path? = null
+    var modId = ""
+    var modName = ""
+    var modAuthor = ""
+    var modLicense = ""
+    var modCredits = ""
+    var modDescription = ""
+
+    args.asList().chunked(2) {
+        when (it[0]) {
+            "-i" -> inputDir = Path.of(it[1]).toAbsolutePath().normalize()
+            "-o" -> outputDir = Path.of(it[1]).toAbsolutePath().normalize()
+            "-m" -> modId = it[1]
+            "-n" -> modName = it[1]
+            "-a" -> modAuthor = it[1]
+            "-l" -> modLicense = it[1]
+            "-c" -> modCredits = it[1]
+            "-d" -> modDescription = it[1]
+            else -> throw IllegalArgumentException("Unknown argument `${it[0]}`")
+        }
     }
 
-    val modId = "ae2isallyouneed"
-    val output = Path.of("common/res").resolve("assets/$modId")
-    val dataOutput = Path.of("common/res").resolve("data/$modId")
-    val sourceTextures = Path.of("common/resgen/textures")
-    val langDir = Path.of("common/resgen/lang")
+    if (inputDir == null || !inputDir.exists()) throw IllegalArgumentException("Missing or invalid input directory `-i <inputDir>`")
+    if (outputDir == null) throw IllegalArgumentException("Missing output directory `-o <outputDir>`")
+    if (modId.isEmpty()) throw IllegalArgumentException("Missing required argument `-m <modId>`")
+    if (modName.isEmpty()) modName = modId
 
-    val asyncStructureBlocks = loadAsyncBlockSet()
+    gen(inputDir, outputDir, ModInfo(modId, modName, modAuthor, modLicense, modCredits, modDescription))
+}
 
-    assetGen(modId, output, langDir, dataOutput) {
+fun gen(inputDir: Path, outputDir: Path, mod: ModInfo) {
+    val modId = mod.id
+    val output = outputDir.resolve("assets/${mod.id}")
+    val dataOutput = outputDir.resolve("data/${mod.id}")
+    val sourceTextures = inputDir.resolve("textures")
+    val langDir = inputDir.resolve("lang")
+
+    val asyncStructureBlocks = loadAsyncBlockSet(inputDir.resolve("definitions"))
+
+    assetGen(mod.id, output, langDir, dataOutput) {
         // Machine assembler: recipe-category → accepted machine items (optional mods ignored)
         machineItemTags()
 
@@ -327,15 +365,17 @@ fun main(args: Array<String>) {
 
         // Packet item: single item; icon switches per AEKeyType via model overrides.
         // 变体顺序与 AllPackets.ICON_VALUES 的谓词值一一对应（0.125 起，0.125 步进）。
-        packetItem("packet", "Packet", listOf(
-            "item" to "item/item_icon",
-            "fluid" to "item/fluid_icon",
-            "energy" to "item/energy_icon",
-            "mana" to "item/mana_icon",
-            "hp" to "item/hp_icon",
-            "sta" to "item/sta_icon",
-            "xp" to "item/xp_icon",
-        ))
+        packetItem(
+            "packet", "Packet", listOf(
+                "item" to "item/item_icon",
+                "fluid" to "item/fluid_icon",
+                "energy" to "item/energy_icon",
+                "mana" to "item/mana_icon",
+                "hp" to "item/hp_icon",
+                "sta" to "item/sta_icon",
+                "xp" to "item/xp_icon",
+            )
+        )
 
         translation("item.$modId.packet.typed", "Packet (%s)")
     }
@@ -558,7 +598,7 @@ fun main(args: Array<String>) {
 
     // Light overlays live under block/crafting/; ensure atlas + dummy model stitch them
     // (vanilla already scans textures/block/, but keep explicit for clarity).
-    val atlasDir = Path.of("common/res").resolve("assets/minecraft/atlases")
+    val atlasDir = outputDir.resolve("assets/minecraft/atlases")
     atlasDir.createDirectories()
     atlasDir.resolve("blocks.json").writeText(
         """
@@ -600,14 +640,7 @@ fun main(args: Array<String>) {
 
     // Packet item textures: copy content icons + overlay
     for (tex in listOf(
-        "packet_overlay",
-        "energy_icon",
-        "mana_icon",
-        "fluid_icon",
-        "item_icon",
-        "hp_icon",
-        "sta_icon",
-        "xp_icon"
+        "packet_overlay", "energy_icon", "mana_icon", "fluid_icon", "item_icon", "hp_icon", "sta_icon", "xp_icon"
     )) {
         val src = sourceTextures.resolve("packet/$tex.png")
         require(src.exists())
@@ -641,12 +674,11 @@ fun main(args: Array<String>) {
     // GUI textures (machine slot square + molecular_assembler GUI with a baked machine slot)
     val guiTexOut = output.resolve("textures/guis")
     guiTexOut.createDirectories()
-    val guiSrc = Path.of("common/resgen/textures/guis")
+    val guiSrc = sourceTextures.resolve("guis")
     guiSrc.resolve("machine_slot.png").copyTo(guiTexOut.resolve("machine_slot.png"), overwrite = true)
     guiSrc.resolve("molecular_assembler.png").copyTo(guiTexOut.resolve("molecular_assembler.png"), overwrite = true)
     guiSrc.resolve("async_crafting_status.png").copyTo(guiTexOut.resolve("async_crafting_status.png"), overwrite = true)
-    guiSrc.toFile().listFiles()
-        ?.filter { it.name.startsWith("sort_") && it.extension.equals("png", ignoreCase = true) }
+    guiSrc.toFile().listFiles()?.filter { it.name.startsWith("sort_") && it.extension.equals("png", ignoreCase = true) }
         ?.forEach { copyAlphaMaskIcon(it.toPath(), guiTexOut.resolve(it.name)) }
 }
 

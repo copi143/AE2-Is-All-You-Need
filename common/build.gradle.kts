@@ -1,5 +1,4 @@
 plugins {
-    kotlin("kapt")
     id("multiloader-common")
     alias(libs.plugins.moddev)
     alias(libs.plugins.kotlin.compose)
@@ -8,11 +7,8 @@ plugins {
 
 legacyForge {
     mcpVersion = libs.versions.neoForm.get()
-    // Automatically enable AccessTransformers if the file exists
-    val at = file("resources/META-INF/accesstransformer.cfg")
-    if (at.exists()) {
-        accessTransformers.from(at.absolutePath)
-    }
+    file("resources/META-INF/accesstransformer.cfg").takeIf { it.exists() }
+        ?.let { accessTransformers.from(it.absolutePath) }
     parchment {
         minecraftVersion = libs.versions.parchmentMC
         mappingsVersion = libs.versions.parchment
@@ -51,7 +47,6 @@ dependencies {
     // The moddev-generated minecraft jar does not carry the Forge extension interfaces
     // (net.minecraftforge.common.extensions.*) that GTCEu's IMachineBlockEntity extends.
     compileOnly(variantOf(libs.forge) { classifier("universal") })
-    modCompileOnly(libs.gtceu)
     jarJarCompileOnly(libs.gtceu)
 
     // Botania mana integration compiles against the api classifier (Xplat interfaces +
@@ -104,6 +99,11 @@ dependencies {
 
     testRuntimeOnly(project(":composeruntime"))
     testRuntimeOnly(project(":msdftext"))
+
+    "resgenImplementation"("com.github.ajalt.colormath:colormath:3.6.1")
+    "resgenImplementation"("com.google.code.gson:gson:2.10.1")
+    "resgenImplementation"(libs.compose.runtime)
+    "resgenImplementation"(libs.ojalgo)
 }
 
 // 主源码、测试编译与测试运行统一使用 composeruntime 的重打包 jar。
@@ -122,64 +122,9 @@ tasks.withType<Test> {
     dependsOn(":composeruntime:jar")
 }
 
-configurations {
-    create("commonJava") {
-        isCanBeResolved = false
-        isCanBeConsumed = true
-    }
-    create("commonKotlin") {
-        isCanBeResolved = false
-        isCanBeConsumed = true
-    }
-    create("commonResources") {
-        isCanBeResolved = false
-        isCanBeConsumed = true
-    }
-}
-
 sourceSets.main {
     kotlin.srcDirs("minecraftx", "ae2x")
     // KSP 生成目录显式挂入：loader 模块经 commonKotlin 配置重编译 common 源码，
     // 生成代码随之流入（artifacts 块在配置期求值，早于 KSP 插件自动注册 srcDir）。
     kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/main/kotlin"))
-    resources.srcDirs("res")
-}
-
-sourceSets.create("resgen") {
-    compileClasspath += sourceSets.main.get().output
-    runtimeClasspath += sourceSets.main.get().output
-    kotlin.srcDir("resgen")
-}.let {
-    tasks.register<JavaExec>("generateAssets") {
-        description = "Generates assets for the mod using the resgen source set."
-        dependsOn(it.compileClasspath)
-        dependsOn(tasks.named("classes"))
-        classpath = it.runtimeClasspath
-        mainClass.set("allyouneed.resgen.MainKt")
-        javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
-        workingDir = rootProject.layout.projectDirectory.asFile
-        inputs.dir(layout.projectDirectory.dir("resgen"))
-        outputs.dir(layout.projectDirectory.dir("res"))
-    }
-    tasks.jar {
-        dependsOn(it.classesTaskName)
-    }
-    dependencies {
-        "resgenImplementation"("com.github.ajalt.colormath:colormath:3.6.1")
-        "resgenImplementation"("com.google.code.gson:gson:2.10.1")
-        "resgenImplementation"(libs.compose.runtime)
-        "resgenImplementation"(libs.ojalgo)
-    }
-}
-
-artifacts {
-    sourceSets.main.get().java.sourceDirectories.forEach { resourceDir ->
-        add("commonJava", resourceDir)
-    }
-    sourceSets.main.get().kotlin.sourceDirectories.forEach { resourceDir ->
-        add("commonKotlin", resourceDir)
-    }
-    sourceSets.main.get().resources.sourceDirectories.forEach { resourceDir ->
-        add("commonResources", resourceDir)
-    }
 }

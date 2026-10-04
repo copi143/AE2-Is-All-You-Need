@@ -55,7 +55,6 @@ dependencies {
     // Forge universal jar (compile-only) to resolve the hierarchy. The classifier artifact ships the
     // net.minecraftforge.* classes without the userdev zip.
     compileOnly(variantOf(libs.forge) { classifier("universal") })
-    modCompileOnly(libs.gtceu)
     jarJarCompileOnly(libs.gtceu)
     compileOnly(project(":composeruntime"))
 }

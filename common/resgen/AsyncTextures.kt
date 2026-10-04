@@ -18,7 +18,7 @@ import javax.imageio.ImageIO
  * The `_formed` variant lights the block's active elements up (hot near-white) and adds an
  * energised inner ring + corner nodes. All textures are fully opaque.
  *
- * The generator reads the block definitions from common/resgen/definitions (see Main.kt). The GT
+ * The generator reads block definitions from the supplied resgen directory (see Main.kt). The GT
  * runtime consumes the very same `block/async/` texture files via GTRegistrate machine models, so
  * both definition files intentionally share this output.
  */
