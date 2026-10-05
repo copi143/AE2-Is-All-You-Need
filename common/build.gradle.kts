@@ -146,6 +146,11 @@ val benchmarkSource = sourceSets.create("benchmark") {
 }
 configurations[benchmarkSource.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
 configurations[benchmarkSource.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+// These source sets already include Minecraft's compile classpath (SLF4J 2.x).
+// Do not prepend DataFixerUpper's transitive 1.8 beta API to its Log4j provider.
+listOf(componentTestSource, benchmarkSource).forEach { source ->
+    configurations[source.runtimeClasspathConfigurationName].exclude(group = "org.slf4j", module = "slf4j-api")
+}
 dependencies {
     add(benchmarkSource.implementationConfigurationName, libs.jmh.core)
     add(benchmarkSource.annotationProcessorConfigurationName, libs.jmh.generator)
