@@ -48,11 +48,12 @@ class AEKeyLaunchPluginService : ILaunchPluginService {
         val jsonStream = JsonStreamTransformer.isTarget(classNode.name) && JsonStreamTransformer.apply(classNode)
         // Pre-emption normally installs the factory hook; call-site wrapping is its fallback.
         val gsonCallSites = if (RuntimeClasses.gsonCallSitesNeeded) GsonFastPathTransformer.applyCallSites(classNode) else 0
-        if (runtimeFailed) return gsonCallSites > 0 || componentJson || jsonStream
+        val mapSites = if (RuntimeClasses.mapAccumulationInstalled) MapAccumulationTransformer.apply(classNode) else 0
+        if (runtimeFailed) return gsonCallSites > 0 || componentJson || jsonStream || mapSites > 0
         KeyResolver.cacheKeyFromSuper(classNode.name, classNode.superName)
         val ae = NewCallTransformer.apply(classNode) { name -> KeyResolver.isKey(name) } > 0
         val rl = NewCallTransformer.applyResourceLocation(classNode) > 0
-        return ae || rl || gsonCallSites > 0 || componentJson || jsonStream
+        return ae || rl || gsonCallSites > 0 || componentJson || jsonStream || mapSites > 0
     }
 
     private fun isMixin(cn: ClassNode): Boolean {

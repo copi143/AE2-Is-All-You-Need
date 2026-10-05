@@ -4,6 +4,7 @@ import allyouneed.transformer.ComponentJsonTransformer
 import allyouneed.transformer.Constants
 import allyouneed.transformer.GsonFastPathTransformer
 import allyouneed.transformer.JsonStreamTransformer
+import allyouneed.transformer.MapAccumulationTransformer
 import allyouneed.transformer.KeyResolver
 import allyouneed.transformer.NewCallTransformer
 import allyouneed.transformer.RuntimeClasses
@@ -84,7 +85,8 @@ class FabricPreLaunch : PreLaunchEntrypoint {
         // 声明式 JSON 序列化流式化 + Streams.write 流式钩子（经 Knot 管线，与 mixin 兼容）
         val jsonStream = RuntimeClasses.gsonInstalled &&
             JsonStreamTransformer.isTarget(cn.name) && JsonStreamTransformer.apply(cn)
-        val rewritten = ae + rl + gsonSites
+        val mapSites = if (RuntimeClasses.mapAccumulationInstalled) MapAccumulationTransformer.apply(cn) else 0
+        val rewritten = ae + rl + gsonSites + mapSites
         if (rewritten == 0 && !componentJson && !jsonStream) return bytes
         val cw = ClassWriter(cr, ClassWriter.COMPUTE_FRAMES)
         cn.accept(cw)

@@ -13,3 +13,5 @@
 -keep,allowoptimization class com.google.gson.internal.bind.FrameSafeClassWriter { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.StreamJsonObject { *; }
 -keep,allowoptimization class com.google.gson.internal.bind.FallbackSignal { *; }
+-keep,allowoptimization class it.unimi.dsi.fastutil.objects.IdentityKeyClasses { *; }
+-keep,allowoptimization class it.unimi.dsi.fastutil.objects.MapAccumulationSupport { *; }

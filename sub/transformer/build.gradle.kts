@@ -61,6 +61,11 @@ val r8 = configurations.create("r8").withDependencies {
     add(libs.r8.get())
 }
 
+val mapFixtures = configurations.create("mapFixtures") {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+
 dependencies {
     listOf(
         libs.slf4j,
@@ -82,8 +87,16 @@ dependencies {
     "injectCompileOnly"(libs.gson)
     "injectCompileOnly"(libs.asm)
     "injectCompileOnly"(libs.slf4j)
+    "injectCompileOnly"(libs.fastutil.mc)
     testImplementation(sourceSets["inject"].output)
     testImplementation(libs.gson)
+    testImplementation(libs.fastutil.mc)
+    mapFixtures(libs.gtceu)
+}
+
+tasks.named<Test>("test") {
+    inputs.files(mapFixtures)
+    doFirst { systemProperty("mapAccumulation.gtJar", mapFixtures.singleFile.absolutePath) }
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -174,7 +187,7 @@ val r8InjectJar = tasks.register<JavaExec>("r8InjectJar") {
                 val injectCp = project.configurations.getByName("injectCompileClasspath")
                 injectCp.filter {
                     val n = it.name
-                    "appliedenergistics" in n || "gson" in n || n.startsWith("asm-") || "slf4j" in n
+                    "appliedenergistics" in n || "gson" in n || n.startsWith("asm-") || "slf4j" in n || n.startsWith("fastutil-")
                 }.forEach {
                     add("--lib")
                     add(it.absolutePath)

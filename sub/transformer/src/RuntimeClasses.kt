@@ -23,6 +23,10 @@ object RuntimeClasses {
     val gsonCallSitesNeeded: Boolean
         get() = gsonInstalled && !gsonFactoryHooked
 
+    @Volatile
+    var mapAccumulationInstalled = false
+        private set
+
     @Synchronized
     fun install() {
         if (installed) return
@@ -30,6 +34,24 @@ object RuntimeClasses {
         val names = classNames()
         if (!gsonInstalled) {
             installGson(loader, loader.javaClass.name.contains("TransformingClassLoader"))
+        }
+        if (MapAccumulationTransformer.enabled && !mapAccumulationInstalled) {
+            try {
+                val mapClass = Class.forName("it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap", false, loader)
+                val merge = mapClass.getMethod(
+                    "merge", Any::class.java, Int::class.javaPrimitiveType,
+                    java.util.function.BiFunction::class.java,
+                )
+                check(merge.returnType == Int::class.javaPrimitiveType && merge.declaringClass == mapClass)
+                mapClass.install(
+                    names.filter { it.startsWith("it.unimi.dsi.fastutil.objects.") }
+                        .sortedBy { if (it.endsWith(".IdentityKeyClasses")) 0 else 1 },
+                )
+                mapAccumulationInstalled = true
+                logger.info("installed experimental map accumulation guards")
+            } catch (t: Throwable) {
+                logger.warn("map accumulation runtime unavailable; leaving original calls intact", t)
+            }
         }
         Class.forName("appeng.api.stacks.AEKey", false, loader)
             .install(names.filter { it.startsWith("appeng.api.stacks.") })
