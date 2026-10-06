@@ -15,13 +15,9 @@ import net.minecraft.world.level.block.state.BlockState
 class SelfPoweredEnergyCellBlockEntity(type: BlockEntityType<*>, pos: BlockPos, state: BlockState) :
     EnergyCellBlockEntity(type, pos, state) {
 
-    override fun getTickingRequest(node: IGridNode): TickingRequest {
-        // Always awake, every tick (parent sleeps after neighbor updates).
-        return TickingRequest(1, 1, false, true)
-    }
+    override fun getTickingRequest(node: IGridNode) = tickingRequest
 
     override fun tickingRequest(node: IGridNode, ticksSinceLastCall: Int): TickRateModulation {
-        // Preserve parent neighbor/comparator update behavior.
         super.tickingRequest(node, ticksSinceLastCall)
 
         val max = aeMaxPower
@@ -32,5 +28,10 @@ class SelfPoweredEnergyCellBlockEntity(type: BlockEntityType<*>, pos: BlockPos, 
             injectAEPower(amount, Actionable.MODULATE)
         }
         return TickRateModulation.SAME
+    }
+
+    companion object {
+        // Always awake, every tick (parent sleeps after neighbor updates).
+        val tickingRequest = TickingRequest(1, 1, false, true)
     }
 }

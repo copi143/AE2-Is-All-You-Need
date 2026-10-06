@@ -60,12 +60,12 @@ open class StorageCellItem(
         advancedTooltips: TooltipFlag,
     ) {
         val inv = StorageCells.getCellInventory(stack, null) as? StorageCellView ?: return
-        lines.add(Tooltips.bytesUsed(inv.getUsedBytes(), inv.getTotalBytes()))
-        lines.add(Tooltips.typesUsed(inv.getStoredItemTypes(), inv.getTotalItemTypes()))
-        if (inv.isPreformatted()) {
+        lines.add(Tooltips.bytesUsed(inv.usedBytes, inv.totalBytes))
+        lines.add(Tooltips.typesUsed(inv.storedItemTypes, inv.totalItemTypes))
+        if (inv.isPreformatted) {
             val line = GuiText.Partitioned.withSuffix(" - ").appendPartitionInfo(
-                inv.getPartitionListMode(),
-                inv.isFuzzy(),
+                inv.partitionListMode,
+                inv.isFuzzy,
             )
             lines.add(Tooltips.of(line))
         }

@@ -7,14 +7,13 @@ import appeng.block.crafting.ICraftingUnitType
 import appeng.blockentity.AEBaseBlockEntity
 import appeng.blockentity.crafting.CraftingBlockEntity
 import net.minecraft.world.item.Item
-import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntityType
 import java.math.BigInteger
 import java.util.function.Supplier
 
-class CraftingStorage(size: Long = -1) : ICellBlock(size, "Crafting Storage"), ICraftingUnitType,
-    NeedRegisterBlockEntity {
-    override val blockSupplier = Supplier<Block> { CraftingUnitBlock(this) }
+class CraftingStorage(size: Long = -1) : ICellBlock<AEBaseEntityBlock<CraftingBlockEntity>>(size, "Crafting Storage"),
+    ICraftingUnitType, NeedRegisterBlockEntity {
+    override val blockSupplier = Supplier { CraftingUnitBlock(this) }
 
     override fun getStorageBytes(): Long = if (isCreative) Long.MAX_VALUE else size
 
@@ -29,9 +28,8 @@ class CraftingStorage(size: Long = -1) : ICellBlock(size, "Crafting Storage"), I
 
     override fun getItemFromType(): Item = define.asItem()
 
-    @Suppress("UNCHECKED_CAST")
     override fun registerBlockEntity() {
-        (define.block() as AEBaseEntityBlock<CraftingBlockEntity>).setBlockEntity(
+        define.block().setBlockEntity(
             CraftingBlockEntity::class.java,
             blockEntityType,
             null,

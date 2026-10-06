@@ -114,13 +114,13 @@ sealed class ICell(val size: Long) {
     }
 }
 
-abstract class ICellBlock(size: Long, val postfix: String, protected val postfix2: String = postfix) : ICell(size) {
+abstract class ICellBlock<B: Block>(size: Long, val postfix: String, protected val postfix2: String = postfix) : ICell(size) {
     open val blockName: String = "$prefixUpper $postfix"
     protected val blockName2: String = "$prefixUpper $postfix2"
     open val blockId: ResourceLocation = idify("$prefixUpper $postfix").rl
     protected val blockId2: ResourceLocation = idify("$prefixUpper $postfix2").rl
-    abstract val blockSupplier: Supplier<Block>
-    open val define: BlockDefinition<Block> by lazy {
+    abstract val blockSupplier: Supplier<out B>
+    open val define: BlockDefinition<out B> by lazy {
         val block = blockSupplier.get()
         val item = itemFactory?.apply(block, Item.Properties()) ?: if (block is AEBaseBlock) {
             AEBaseBlockItem(block, Item.Properties())
@@ -131,7 +131,7 @@ abstract class ICellBlock(size: Long, val postfix: String, protected val postfix
             MainCreativeTab.add(this)
         }
     }
-    open val itemFactory: BiFunction<Block, Item.Properties, BlockItem>? = null
+    open val itemFactory: BiFunction<in B, Item.Properties, BlockItem>? = null
     open val blockEntityFactory: BiFunction<BlockPos, BlockState, BlockEntity>? = null
 }
 

@@ -1,8 +1,8 @@
 package allyouneed.cell
 
 import allyouneed.logic.aekey.EnergyKey
-import allyouneed.util.interfaces.NeedRegisterBlockEntity
 import allyouneed.util.idify
+import allyouneed.util.interfaces.NeedRegisterBlockEntity
 import allyouneed.util.rl
 import appeng.block.AEBaseEntityBlock
 import appeng.block.networking.CreativeEnergyCellBlock
@@ -18,9 +18,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType
 import java.util.function.BiFunction
 import java.util.function.Supplier
 
-class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlock(size, "Energy Cell"),
-    NeedRegisterBlockEntity {
-    private fun cellBlock(priority: Int): Block = EnergyCellBlock(
+class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) :
+    ICellBlock<AEBaseEntityBlock<*>>(size, "Energy Cell"), NeedRegisterBlockEntity {
+    private fun cellBlock(priority: Int) = EnergyCellBlock(
         size.toDouble() * EnergyKey.ENERGY_PER_BYTE,
         size * 4.0,
         sizeExp * 10 + priority,
@@ -31,12 +31,12 @@ class EnergyCell(size: Long = -1, val isSelfPowered: Boolean = false) : ICellBlo
     override val blockId = idify(blockName).rl
 
     override val blockSupplier = when {
-        isCreative -> Supplier<Block> { CreativeEnergyCellBlock() }
-        isSelfPowered -> Supplier<Block> { cellBlock(1000) }
-        else -> Supplier<Block> { cellBlock(0) }
+        isCreative -> Supplier { CreativeEnergyCellBlock() }
+        isSelfPowered -> Supplier { cellBlock(1000) }
+        else -> Supplier { cellBlock(0) }
     }
 
-    override val itemFactory = if (size < 0) null else BiFunction<Block, Item.Properties, BlockItem> { block, props ->
+    override val itemFactory = if (size < 0) null else BiFunction<AEBaseEntityBlock<*>, Item.Properties, BlockItem> { block, props ->
         EnergyCellBlockItem(block, props)
     }
 

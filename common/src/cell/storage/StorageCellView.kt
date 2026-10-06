@@ -9,13 +9,13 @@ import net.minecraft.world.item.ItemStack
  * 中对 `StorageCellInventory / BigIntegerStorageCellInventory` 的重复 `when` 分支。
  */
 interface StorageCellView {
-    fun getUsedBytes(): Long
-    fun getTotalBytes(): Long
-    fun getStoredItemTypes(): Long
-    fun getTotalItemTypes(): Long
-    fun isPreformatted(): Boolean
-    fun getPartitionListMode(): IncludeExclude
-    fun isFuzzy(): Boolean
-    fun getUpgradeStacks(): List<ItemStack>
-    fun getTooltipStacks(): List<GenericStack>
+    val usedBytes: Long
+    val totalBytes: Long
+    val storedItemTypes: Long
+    val totalItemTypes: Long
+    val isPreformatted: Boolean
+    val partitionListMode: IncludeExclude
+    val isFuzzy: Boolean
+    val upgradeStacks: List<ItemStack>
+    val tooltipStacks: List<GenericStack>
 }

@@ -56,18 +56,18 @@ object StorageCellHandler : ICellHandler {
         val inv = getCellInventory(stack, null) as? StorageCellView ?: return Optional.empty()
 
         val upgrades: List<ItemStack> = if (AEConfig.instance().isTooltipShowCellUpgrades) {
-            inv.getUpgradeStacks()
+            inv.upgradeStacks
         } else {
             emptyList()
         }
 
-        val isPreformatted = inv.isPreformatted()
+        val isPreformatted = inv.isPreformatted
 
         val content: List<GenericStack>
         val hasMoreContent: Boolean
         if (AEConfig.instance().isTooltipShowCellContent) {
             val maxCountShown = AEConfig.instance().tooltipMaxCellContentShown
-            val all = inv.getTooltipStacks()
+            val all = inv.tooltipStacks
             hasMoreContent = all.size > maxCountShown
             content = if (all.size > maxCountShown) all.subList(0, maxCountShown) else all
         } else {

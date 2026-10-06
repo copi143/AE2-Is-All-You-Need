@@ -6,10 +6,7 @@ import allyouneed.item.packet.AllPackets
 import appeng.api.config.Actionable
 import appeng.api.config.IncludeExclude
 import appeng.api.networking.security.IActionSource
-import appeng.api.stacks.AEItemKey
-import appeng.api.stacks.AEKey
-import appeng.api.stacks.AEKeyType
-import appeng.api.stacks.KeyCounter
+import appeng.api.stacks.*
 import appeng.api.storage.StorageCells
 import appeng.api.storage.cells.CellState
 import appeng.api.storage.cells.ISaveProvider
@@ -19,7 +16,6 @@ import appeng.core.definitions.AEItems
 import appeng.util.ConfigInventory
 import appeng.util.prioritylist.FuzzyPriorityList
 import appeng.util.prioritylist.IPartitionList
-import appeng.api.stacks.GenericStack
 import it.unimi.dsi.fastutil.objects.Object2LongMap
 import it.unimi.dsi.fastutil.objects.Object2LongMaps
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
@@ -52,7 +48,7 @@ class StorageCellInventory(
     private val amountPerByte: Long = keyType.amountPerByte.toLong()
 
     /** Total capacity in bytes (long, unlike vanilla's int). */
-    private val totalBytes: Long = cell.size
+    override val totalBytes: Long = cell.size
 
     /** Bytes reserved per distinct item type (scales with tier, like vanilla). */
     private val bytesPerType: Long = cell.bytesPerType
@@ -60,7 +56,7 @@ class StorageCellInventory(
     private val maxItemTypes: Int = StorageCellTypeLimits.of(keyType)
 
     private val partitionList: IPartitionList
-    private val partitionListMode: IncludeExclude
+    override val partitionListMode: IncludeExclude
     private val hasVoidUpgrade: Boolean
     private val maxItemsPerType: Long
 
@@ -162,7 +158,7 @@ class StorageCellInventory(
             if (count == 0) return CellState.EMPTY
             // need full state
         }
-        if (getStoredItemTypes() == 0L) return CellState.EMPTY
+        if (storedItemTypes == 0L) return CellState.EMPTY
         if (canHoldNewItem()) return CellState.NOT_EMPTY
         if (getRemainingItemCount() > 0) return CellState.TYPES_FULL
         return CellState.FULL
@@ -245,7 +241,7 @@ class StorageCellInventory(
         val inserted = innerInsert(what, amount, mode)
 
         // A void card on a full unformatted cell must not void items it isn't even storing.
-        if (!isPreformatted() && hasVoidUpgrade && !canHoldNewItem()) {
+        if (!isPreformatted && hasVoidUpgrade && !canHoldNewItem()) {
             return if (getCellItemsInternal().containsKey(what)) amount else inserted
         }
         return if (hasVoidUpgrade) amount else inserted
@@ -340,21 +336,22 @@ class StorageCellInventory(
         return storedItemCount
     }
 
-    override fun getStoredItemTypes(): Long = getCellItemsInternal().size.toLong()
+    override val storedItemTypes: Long
+        get() = getCellItemsInternal().size.toLong()
 
-    override fun getTotalItemTypes(): Long = maxItemTypes.toLong()
-
-    override fun getTotalBytes(): Long = totalBytes
+    override val totalItemTypes: Long
+        get() = maxItemTypes.toLong()
 
     fun getBytesPerType(): Long = bytesPerType
 
-    override fun getUsedBytes(): Long {
-        // ensure count is up to date
-        getCellItemsInternal()
-        return (storedItemCount + getUnusedItemCount()) / amountPerByte + getStoredItemTypes() * bytesPerType
-    }
+    override val usedBytes: Long
+        get() {
+            // ensure count is up to date
+            getCellItemsInternal()
+            return (storedItemCount + getUnusedItemCount()) / amountPerByte + storedItemTypes * bytesPerType
+        }
 
-    fun getFreeBytes(): Long = totalBytes - getUsedBytes()
+    fun getFreeBytes(): Long = totalBytes - usedBytes
 
     fun getUnusedItemCount(): Int {
         val remainder = (storedItemCount % amountPerByte).toInt()
@@ -365,23 +362,24 @@ class StorageCellInventory(
         maxOf(0L, getFreeBytes() * amountPerByte + getUnusedItemCount())
 
     fun getRemainingItemTypes(): Long =
-        minOf(getFreeBytes() / bytesPerType, getTotalItemTypes() - getStoredItemTypes())
+        minOf(getFreeBytes() / bytesPerType, totalItemTypes - storedItemTypes)
 
     fun canHoldNewItem(): Boolean =
         (getFreeBytes() > bytesPerType || (getFreeBytes() == bytesPerType && getUnusedItemCount() > 0)) &&
-            getRemainingItemTypes() > 0
+                getRemainingItemTypes() > 0
 
-    override fun isPreformatted(): Boolean = !partitionList.isEmpty
+    override val isPreformatted: Boolean
+        get() = !partitionList.isEmpty
 
-    override fun getPartitionListMode(): IncludeExclude = partitionListMode
-
-    override fun isFuzzy(): Boolean = partitionList is FuzzyPriorityList
+    override val isFuzzy: Boolean
+        get() = partitionList is FuzzyPriorityList
 
     // ---- StorageCellView ----
-    override fun getUpgradeStacks(): List<ItemStack> = getUpgradesInventory().toList()
+    override val upgradeStacks: List<ItemStack>
+        get() = getUpgradesInventory().toList()
 
-    override fun getTooltipStacks(): List<GenericStack> =
-        getCellItemsInternal().let { map ->
+    override val tooltipStacks: List<GenericStack>
+        get() = getCellItemsInternal().let { map ->
             ArrayList<GenericStack>(map.size).also { out ->
                 for (e in Object2LongMaps.fastIterable(map)) {
                     out.add(GenericStack(e.key, e.longValue))
