@@ -71,7 +71,6 @@ dependencies {
     implementation(libs.compose.runtime)
     compileOnly(project(":composeruntime"))
 
-    jarJar(project(":kaptor"))
     jarJar(project(":averith"))
     jarJar(project(":indexing"))
     jarJar(project(":composeruntime"))

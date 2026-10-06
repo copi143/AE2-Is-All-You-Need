@@ -20,7 +20,6 @@ dependencies {
     compileOnlyApi(project(":valueschema"))
     ksp(project(":valueschema"))
     api(libs.kotlinx.coroutines.core)
-    api(project(":kaptor"))
     api(project(":averith"))
     api(project(":msdftext"))
     api(project(":indexing"))

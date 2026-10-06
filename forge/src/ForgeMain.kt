@@ -4,7 +4,6 @@ import allyouneed.cell.CraftingStorage
 import allyouneed.cell.EnergyCell
 import allyouneed.client.ForgeCreativeTab
 import allyouneed.forge.init.*
-import allyouneed.logic.script.ScriptDsl
 import allyouneed.util.MODID
 import allyouneed.util.logger
 import net.minecraft.resources.ResourceLocation
@@ -54,13 +53,5 @@ class ForgeMain {
 
         CommonMain.init()
 
-        // Initialize the scripting system
-        try {
-            val configDir = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get()
-            ScriptDsl.init(configDir)
-            logger.info("Script system initialized")
-        } catch (e: Exception) {
-            logger.error("Failed to initialize script system", e)
-        }
     }
 }

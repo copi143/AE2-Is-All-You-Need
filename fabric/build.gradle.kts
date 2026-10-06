@@ -24,7 +24,6 @@ dependencies {
     compileOnly(project(":transformer"))
     listOf(
         include(project(path = ":transformer", configuration = "withInject")),
-        include(project(":kaptor")),
         include(project(":averith")),
         include(project(":indexing")),
         include(project(":composeruntime")),
