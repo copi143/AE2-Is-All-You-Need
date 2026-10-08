@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.zip.ZipFile
 
 plugins {
-    id("multiloader-base")
+    id("kotlin-project")
 }
 
 sourceSets.create("inject") {

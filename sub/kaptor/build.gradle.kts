@@ -1,6 +1,6 @@
 plugins {
     id("java-library")
-    id("multiloader-base")
+    id("kotlin-project")
     id("antlr")
 }
 

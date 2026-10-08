@@ -1,5 +1,5 @@
 plugins {
-    id("multiloader-base")
+    id("kotlin-project")
 }
 
 group = "allyouneed.indexing"

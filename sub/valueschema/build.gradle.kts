@@ -1,5 +1,5 @@
 plugins {
-    id("multiloader-base")
+    id("kotlin-project")
     alias(libs.plugins.ksp)
     alias(libs.plugins.jmh)
 }

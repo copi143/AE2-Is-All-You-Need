@@ -1,5 +1,5 @@
 plugins {
-    id("multiloader-base")
+    id("kotlin-project")
 }
 
 version = "0.1.0+compose.${libs.versions.compose.get().replace('-', '.')}"
