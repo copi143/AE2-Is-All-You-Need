@@ -113,7 +113,7 @@ class ValueSchemaGeneratorTest {
         )
         val code = generate(model)
         assertContains(code, "const val STRIDE: Int = 1")
-        assertContains(code, "(data[base + 0] and 1L) != 0L")
+        assertContains(code, "(packed.data[base + 0] and 1L) != 0L")
         assertContains(code, "data[base + 0] = (if (x) 1L else 0L) or ((if (y) 1L else 0L) shl 1)")
     }
 
@@ -264,9 +264,56 @@ class ValueSchemaGeneratorTest {
         assertContains(code, "kind: Kind,")
         assertContains(code, "kinds[size] = (kind).ordinal")
         assertContains(code, "return Event(ids[index], Kind.entries[kinds[index]], flags[index])")
-        // packed: id(64) slot0; kind 2 bits + flag 1 bit share slot1
+        // packed: id(64) slot0; kind 2 bits + flag 1 bit share slot1, loaded once into w1
         assertContains(code, "public const val STRIDE: Int = 2")
-        assertContains(code, "Kind.entries[(data[base + 1] and 3L).toInt()]")
+        assertContains(code, "val w1 = data[base + 1]")
+        assertContains(code, "Kind.entries[(w1 and 3L).toInt()]")
+    }
+
+    @Test
+    fun `packed get loads each slot word once`() {
+        val code = generate()
+        assertContains(code, "val w0 = data[base + 0]")
+        assertContains(code, "val w1 = data[base + 1]")
+        assertContains(code, "val w2 = data[base + 2]")
+    }
+
+    @Test
+    fun `packed view carries base to avoid index stride multiply in hot loops`() {
+        val code = generate()
+        assertContains(code, "return QuotePackedView(this, index, index * STRIDE)")
+        assertContains(code, "v.base = b")
+        assertContains(code, "b += STRIDE")
+        assertContains(code, "packed.data[base + 1]")
+    }
+
+    @Test
+    fun `packed filterTo copies whole rows without decoding`() {
+        val code = generate()
+        assertContains(code, "destination.appendRowWords(data, v.base)")
+        assertContains(code, "java.lang.System.arraycopy(src, srcBase, data, size * STRIDE, STRIDE)")
+    }
+
+    @Test
+    fun `generates withView scoped cursor for both storages`() {
+        val code = generate()
+        assertContains(code, "inline fun withView(")
+        assertContains(code, "action(QuoteView(this, index))")
+        assertContains(code, "action(QuotePackedView(this, index, index * STRIDE))")
+    }
+
+    @Test
+    fun `addAll hoists capacity check for sized inputs`() {
+        val code = generate()
+        assertContains(code, "if (values is Collection<*>) ensureCapacity(size + values.size)")
+    }
+
+    @Test
+    fun `generates removeAtSwapLast for both storages`() {
+        val code = generate()
+        assertContains(code, "fun removeAtSwapLast(index: Int)")
+        assertContains(code, "prices[index] = prices[last]")
+        assertContains(code, "java.lang.System.arraycopy(data, last * STRIDE, data, index * STRIDE, STRIDE)")
     }
 
     @Test

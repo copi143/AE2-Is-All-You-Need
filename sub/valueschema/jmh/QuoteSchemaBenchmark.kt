@@ -70,8 +70,36 @@ open class QuoteSchemaBenchmark {
     }
 
     @Benchmark
+    fun appendColumnsBulk(): QuoteColumns {
+        val c = QuoteColumns(1)
+        c.addAll(rows.asList())
+        return c
+    }
+
+    @Benchmark
+    fun appendColumnsGrow(): QuoteColumns {
+        val c = QuoteColumns(1)
+        for (q in rows) c.add(q.id, q.price, q.ts)
+        return c
+    }
+
+    @Benchmark
     fun appendPackedPrimitive(): QuotePacked {
         val p = QuotePacked(n)
+        for (q in rows) p.add(q.id, q.price, q.ts)
+        return p
+    }
+
+    @Benchmark
+    fun appendPackedBulk(): QuotePacked {
+        val p = QuotePacked(1)
+        p.addAll(rows.asList())
+        return p
+    }
+
+    @Benchmark
+    fun appendPackedGrow(): QuotePacked {
+        val p = QuotePacked(1)
         for (q in rows) p.add(q.id, q.price, q.ts)
         return p
     }
@@ -132,6 +160,25 @@ open class QuoteSchemaBenchmark {
     fun filterColumns(): QuoteColumns = columns.filtered { it.price < 500 }
 
     @Benchmark
+    fun filterPacked(): QuotePacked = packed.filtered { it.price < 500 }
+
+    @Benchmark
+    fun removeColumnsSwap(): QuoteColumns {
+        val c = QuoteColumns(n)
+        c.addAll(rows.asList())
+        while (c.size > n / 2) c.removeAtSwapLast(0)
+        return c
+    }
+
+    @Benchmark
+    fun removePackedSwap(): QuotePacked {
+        val p = QuotePacked(n)
+        p.addAll(rows.asList())
+        while (p.size > n / 2) p.removeAtSwapLast(0)
+        return p
+    }
+
+    @Benchmark
     fun materializeAos(bh: Blackhole) {
         for (i in idx) bh.consume(aos[i])
     }
@@ -139,5 +186,17 @@ open class QuoteSchemaBenchmark {
     @Benchmark
     fun materializeColumns(bh: Blackhole) {
         for (i in idx) bh.consume(columns[i])
+    }
+
+    @Benchmark
+    fun materializePacked(bh: Blackhole) {
+        for (i in idx) bh.consume(packed[i])
+    }
+
+    @Benchmark
+    fun readPackedView(bh: Blackhole) {
+        var sum = 0L
+        for (i in idx) packed.withView(i) { sum += it.price }
+        bh.consume(sum)
     }
 }

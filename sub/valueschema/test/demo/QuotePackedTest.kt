@@ -37,6 +37,36 @@ class QuotePackedTest {
     }
 
     @Test
+    fun `withView reads a single row without materializing`() {
+        val packed = sample()
+        var seen = 0L
+        packed.withView(1) { seen = it.id + it.price + it.ts }
+        assertEquals(2L + 200 + 2000L, seen)
+        assertFailsWith<IndexOutOfBoundsException> { packed.withView(3) {} }
+    }
+
+    @Test
+    fun `addAll appends a sized collection`() {
+        val packed = QuotePacked(1)
+        packed.addAll(listOf(Quote(1L, 100, 1000L), Quote(2L, 200, 2000L)))
+        assertEquals(listOf(Quote(1L, 100, 1000L), Quote(2L, 200, 2000L)), packed.toList())
+    }
+
+    @Test
+    fun `removeAtSwapLast moves the last row into the gap`() {
+        val packed = sample()
+        packed.removeAtSwapLast(0)
+        assertEquals(2, packed.size)
+        assertEquals(Quote(3L, 300, 3000L), packed[0])
+        assertEquals(Quote(2L, 200, 2000L), packed[1])
+        packed.removeAtSwapLast(1)
+        assertEquals(listOf(Quote(3L, 300, 3000L)), packed.toList())
+        packed.removeAtSwapLast(0)
+        assertEquals(emptyList(), packed.toList())
+        assertFailsWith<IndexOutOfBoundsException> { packed.removeAtSwapLast(0) }
+    }
+
+    @Test
     fun `updateAll transforms rows in value style`() {
         val packed = sample()
         packed.updateAll { q -> if (q.price > 150) q.copy(price = q.price / 2) else q }

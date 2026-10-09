@@ -39,6 +39,36 @@ class QuoteColumnsTest {
     }
 
     @Test
+    fun `withView reads a single row without materializing`() {
+        val columns = sample()
+        var seen = 0L
+        columns.withView(1) { seen = it.id + it.price + it.ts }
+        assertEquals(2L + 200 + 2000L, seen)
+        assertFailsWith<IndexOutOfBoundsException> { columns.withView(3) {} }
+    }
+
+    @Test
+    fun `addAll appends a sized collection`() {
+        val columns = QuoteColumns(1)
+        columns.addAll(listOf(Quote(1L, 100, 1000L), Quote(2L, 200, 2000L)))
+        assertEquals(listOf(Quote(1L, 100, 1000L), Quote(2L, 200, 2000L)), columns.toList())
+    }
+
+    @Test
+    fun `removeAtSwapLast moves the last row into the gap`() {
+        val columns = sample()
+        columns.removeAtSwapLast(0)
+        assertEquals(2, columns.size)
+        assertEquals(Quote(3L, 300, 3000L), columns[0])
+        assertEquals(Quote(2L, 200, 2000L), columns[1])
+        columns.removeAtSwapLast(1)
+        assertEquals(listOf(Quote(3L, 300, 3000L)), columns.toList())
+        columns.removeAtSwapLast(0)
+        assertEquals(emptyList(), columns.toList())
+        assertFailsWith<IndexOutOfBoundsException> { columns.removeAtSwapLast(0) }
+    }
+
+    @Test
     fun `updateAll transforms rows in value style`() {
         val columns = sample()
         columns.updateAll { q -> if (q.price > 150) q.copy(price = q.price / 2) else q }

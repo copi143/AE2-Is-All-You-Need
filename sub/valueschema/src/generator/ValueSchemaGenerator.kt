@@ -18,6 +18,7 @@ import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.SHORT
+import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
@@ -106,7 +107,12 @@ object ValueSchemaGenerator {
             )
             .addFunction(
                 FunSpec.builder("addAll")
+                    .addKdoc("Appends all rows; the capacity check is hoisted when [values] is a sized collection.")
                     .addParameter("values", ClassName("kotlin.collections", "Iterable").parameterizedBy(cls))
+                    .addStatement(
+                        "if (values is %T) ensureCapacity(size + values.size)",
+                        ClassName("kotlin.collections", "Collection").parameterizedBy(STAR),
+                    )
                     .beginControlFlow("for (value in values)")
                     .addStatement("add(value)")
                     .endControlFlow()
@@ -156,6 +162,20 @@ object ValueSchemaGenerator {
                     .returns(view)
                     .addStatement("checkIndex(index)")
                     .addStatement("return %T(this, index)", view)
+                    .build(),
+            )
+            .addFunction(
+                FunSpec.builder("withView")
+                    .addKdoc(
+                        "Zero-allocation random read: runs [action] with a cursor over row [index] without materializing a [%T]. " +
+                            "The cursor is stack-local and scalar-replaced by C2 in hot code; do not store it.",
+                        cls,
+                    )
+                    .addModifiers(KModifier.INLINE)
+                    .addParameter("index", INT)
+                    .addParameter("action", lambdaOf(view, UNIT))
+                    .addStatement("checkIndex(index)")
+                    .addStatement("action(%T(this, index))", view)
                     .build(),
             )
             .addFunction(
@@ -237,6 +257,26 @@ object ValueSchemaGenerator {
                     .build(),
             )
             .addFunction(
+                FunSpec.builder("removeAtSwapLast")
+                    .addKdoc("Removes row [index] in O(1) by moving the last row into its slot; order is not preserved.")
+                    .addParameter("index", INT)
+                    .addStatement("checkIndex(index)")
+                    .addStatement("val last = size - 1")
+                    .beginControlFlow("if (index != last)")
+                    .apply {
+                        leaves.forEach { leaf ->
+                            addStatement(
+                                "%N[index] = %N[last]",
+                                columnName(leaf.flatName),
+                                columnName(leaf.flatName),
+                            )
+                        }
+                    }
+                    .endControlFlow()
+                    .addStatement("size--")
+                    .build(),
+            )
+            .addFunction(
                 FunSpec.builder("resize")
                     .addKdoc(
                         "Grows to [newSize] rows; new rows are filled with @Default values (zero/false otherwise), " +
@@ -268,7 +308,9 @@ object ValueSchemaGenerator {
             )
             .addFunction(
                 FunSpec.builder("checkIndex")
-                    .addModifiers(KModifier.PRIVATE)
+                    .addKdoc("Bounds check; internal but visible to inline accessors.")
+                    .addModifiers(KModifier.INTERNAL)
+                    .addAnnotation(PublishedApi::class)
                     .addParameter("index", INT)
                     .beginControlFlow("if (index < 0 || index >= size)")
                     .addStatement("throw %T(\"index \" + index + \", size \" + size)", IndexOutOfBoundsException::class)
@@ -440,7 +482,12 @@ object ValueSchemaGenerator {
             )
             .addFunction(
                 FunSpec.builder("addAll")
+                    .addKdoc("Appends all rows; the capacity check is hoisted when [values] is a sized collection.")
                     .addParameter("values", ClassName("kotlin.collections", "Iterable").parameterizedBy(cls))
+                    .addStatement(
+                        "if (values is %T) ensureCapacity(size + values.size)",
+                        ClassName("kotlin.collections", "Collection").parameterizedBy(STAR),
+                    )
                     .beginControlFlow("for (value in values)")
                     .addStatement("add(value)")
                     .endControlFlow()
@@ -453,11 +500,12 @@ object ValueSchemaGenerator {
                     .returns(cls)
                     .addStatement("checkIndex(index)")
                     .addStatement("val base = index * STRIDE")
+                    .apply { emitPackedLoads(layout) }
                     .addStatement(
                         "return %L",
                         constructorCall(model, cls) { leaf ->
                             val i = leaves.indexOfFirst { it.flatName == leaf.flatName }
-                            slotRead(leaf, layout[i], "data[base + ${layout[i].slot}]")
+                            slotRead(leaf, layout[i], "w${layout[i].slot}")
                         },
                     )
                     .build(),
@@ -491,7 +539,21 @@ object ValueSchemaGenerator {
                     .addParameter("index", INT)
                     .returns(view)
                     .addStatement("checkIndex(index)")
-                    .addStatement("return %T(this, index)", view)
+                    .addStatement("return %T(this, index, index * STRIDE)", view)
+                    .build(),
+            )
+            .addFunction(
+                FunSpec.builder("withView")
+                    .addKdoc(
+                        "Zero-allocation random read: runs [action] with a cursor over row [index] without materializing a [%T]. " +
+                            "The cursor is stack-local and scalar-replaced by C2 in hot code; do not store it.",
+                        cls,
+                    )
+                    .addModifiers(KModifier.INLINE)
+                    .addParameter("index", INT)
+                    .addParameter("action", lambdaOf(view, UNIT))
+                    .addStatement("checkIndex(index)")
+                    .addStatement("action(%T(this, index, index * STRIDE))", view)
                     .build(),
             )
             .addFunction(
@@ -504,10 +566,13 @@ object ValueSchemaGenerator {
                     .addParameter("action", lambdaOf(view, UNIT))
                     .addStatement("val v = %T(this, 0)", view)
                     .addStatement("var i = 0")
+                    .addStatement("var b = 0")
                     .beginControlFlow("while (i < size)")
                     .addStatement("v.index = i")
+                    .addStatement("v.base = b")
                     .addStatement("action(v)")
                     .addStatement("i++")
+                    .addStatement("b += STRIDE")
                     .endControlFlow()
                     .build(),
             )
@@ -538,16 +603,29 @@ object ValueSchemaGenerator {
             )
             .addFunction(
                 FunSpec.builder("filterTo")
+                    .addKdoc("Copies matching rows word-for-word; no field is decoded or re-encoded.")
                     .addModifiers(KModifier.INLINE)
                     .addParameter("destination", packed)
                     .addParameter("predicate", lambdaOf(view, BOOLEAN))
                     .returns(packed)
                     .beginControlFlow("forEachView { v ->")
                     .beginControlFlow("if (predicate(v))")
-                    .addStatement("destination.add(v.toValue())")
+                    .addStatement("destination.appendRowWords(data, v.base)")
                     .endControlFlow()
                     .endControlFlow()
                     .addStatement("return destination")
+                    .build(),
+            )
+            .addFunction(
+                FunSpec.builder("appendRowWords")
+                    .addKdoc("Appends one raw row of STRIDE words starting at [srcBase]; backing for [filterTo].")
+                    .addModifiers(KModifier.INTERNAL)
+                    .addAnnotation(PublishedApi::class)
+                    .addParameter("src", LONG_ARRAY)
+                    .addParameter("srcBase", INT)
+                    .addStatement("ensureCapacity(size + 1)")
+                    .addStatement("java.lang.System.arraycopy(src, srcBase, data, size * STRIDE, STRIDE)")
+                    .addStatement("size++")
                     .build(),
             )
             .addFunction(
@@ -570,6 +648,18 @@ object ValueSchemaGenerator {
             .addFunction(
                 FunSpec.builder("clear")
                     .addStatement("size = 0")
+                    .build(),
+            )
+            .addFunction(
+                FunSpec.builder("removeAtSwapLast")
+                    .addKdoc("Removes row [index] in O(1) by moving the last row into its slot; order is not preserved.")
+                    .addParameter("index", INT)
+                    .addStatement("checkIndex(index)")
+                    .addStatement("val last = size - 1")
+                    .beginControlFlow("if (index != last)")
+                    .addStatement("java.lang.System.arraycopy(data, last * STRIDE, data, index * STRIDE, STRIDE)")
+                    .endControlFlow()
+                    .addStatement("size--")
                     .build(),
             )
             .addFunction(
@@ -612,7 +702,9 @@ object ValueSchemaGenerator {
             )
             .addFunction(
                 FunSpec.builder("checkIndex")
-                    .addModifiers(KModifier.PRIVATE)
+                    .addKdoc("Bounds check; internal but visible to inline accessors.")
+                    .addModifiers(KModifier.INTERNAL)
+                    .addAnnotation(PublishedApi::class)
                     .addParameter("index", INT)
                     .beginControlFlow("if (index < 0 || index >= size)")
                     .addStatement("throw %T(\"index \" + index + \", size \" + size)", IndexOutOfBoundsException::class)
@@ -665,6 +757,11 @@ object ValueSchemaGenerator {
                     .addModifiers(KModifier.INTERNAL)
                     .addParameter("packed", packed)
                     .addParameter("index", INT)
+                    .addParameter(
+                        ParameterSpec.builder("base", INT)
+                            .defaultValue("index * %N.STRIDE", packedName)
+                            .build(),
+                    )
                     .build(),
             )
             .addProperty(
@@ -682,13 +779,21 @@ object ValueSchemaGenerator {
                     .initializer("index")
                     .build(),
             )
+            .addProperty(
+                PropertySpec.builder("base", INT)
+                    .mutable()
+                    .addModifiers(KModifier.INTERNAL)
+                    .addAnnotation(PublishedApi::class)
+                    .initializer("base")
+                    .build(),
+            )
             .addProperties(leaves.mapIndexed { i, leaf ->
                 PropertySpec.builder(leaf.flatName, leafType(leaf))
                     .getter(
                         FunSpec.getterBuilder()
                             .addStatement(
                                 "return %L",
-                                slotRead(leaf, layout[i], "packed.data[index * $packedName.STRIDE + ${layout[i].slot}]"),
+                                slotRead(leaf, layout[i], "packed.data[base + ${layout[i].slot}]"),
                             )
                             .build(),
                     )
@@ -755,11 +860,12 @@ object ValueSchemaGenerator {
         parseParams(transform.params).forEach { builder.addParameter(it) }
         builder.addStatement("checkIndex(index)")
         if (kind == StorageKind.PACKED) builder.addStatement("val base = index * STRIDE")
+        if (kind == StorageKind.PACKED) builder.emitPackedLoads(layout!!)
         leaves.forEachIndexed { i, leaf ->
             when (kind) {
                 StorageKind.COLUMNS -> builder.addStatement("var %N = %L", leaf.flatName, columnRead(leaf, CodeBlock.of("%N[index]", columnName(leaf.flatName))))
                 StorageKind.PACKED ->
-                    builder.addStatement("var %N = %L", leaf.flatName, slotRead(leaf, layout!![i], "data[base + ${layout[i].slot}]"))
+                    builder.addStatement("var %N = %L", leaf.flatName, slotRead(leaf, layout!![i], "w${layout[i].slot}"))
             }
         }
         builder.addCode(CodeBlock.of("%L", transform.body.trim().let { if (it.isEmpty()) "" else it + "\n" }))
@@ -773,11 +879,21 @@ object ValueSchemaGenerator {
     }
 
     /**
+     * Loads each distinct 64-bit slot word once into a `w<slot>` local. Readers (get,
+     * transforms) decode all leaves from these locals so fields sharing a slot never
+     * reload the same word.
+     */
+    private fun FunSpec.Builder.emitPackedLoads(layout: List<Placement>) {
+        layout.map { it.slot }.distinct().forEach { slot ->
+            addStatement("val w$slot = data[base + $slot]")
+        }
+    }
+
+    /**
      * Emits one direct store per 64-bit slot. Every generated writer always writes ALL leaf
      * fields, so no slot ever contains foreign bits worth preserving: fields sharing a slot
      * are OR-folded into a single full-slot value instead of a read-modify-write per field.
-     */
-    private fun FunSpec.Builder.emitPackedStores(
+     */    private fun FunSpec.Builder.emitPackedStores(
         leaves: List<LeafColumn>,
         layout: List<Placement>,
         valueExpr: (LeafColumn) -> String,
